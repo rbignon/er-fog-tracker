@@ -75,12 +75,14 @@ pub enum OutgoingMessage {
         target: String,
         target_map_id: u32,
     },
-    /// Send a discovery event v2 (with positions, server resolves zone names)
+    /// Send a discovery event v2 (with positions and play region IDs, server resolves zone names)
     DiscoveryV2 {
         source_map_id: u32,
         source_pos: Position,
+        source_play_region_id: Option<u32>,
         target_map_id: u32,
         target_pos: Position,
+        target_play_region_id: Option<u32>,
     },
     /// Respond to server ping
     Pong,
@@ -127,8 +129,12 @@ enum ServerMessage {
     DiscoveryV2 {
         source_map_id: String,
         source_pos: Position,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        source_play_region_id: Option<u32>,
         target_map_id: String,
         target_pos: Position,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        target_play_region_id: Option<u32>,
     },
     Pong,
 }
@@ -260,13 +266,15 @@ impl WebSocketClient {
         }
     }
 
-    /// Send a discovery event v2 to the server (with positions, server resolves zone names)
+    /// Send a discovery event v2 to the server (with positions and play region IDs, server resolves zone names)
     pub fn send_discovery_v2(
         &self,
         source_map_id: u32,
         source_pos: (f32, f32, f32),
+        source_play_region_id: Option<u32>,
         target_map_id: u32,
         target_pos: (f32, f32, f32),
+        target_play_region_id: Option<u32>,
     ) {
         if let Some(tx) = &self.tx {
             let _ = tx.try_send(OutgoingMessage::DiscoveryV2 {
@@ -276,12 +284,14 @@ impl WebSocketClient {
                     y: source_pos.1,
                     z: source_pos.2,
                 },
+                source_play_region_id,
                 target_map_id,
                 target_pos: Position {
                     x: target_pos.0,
                     y: target_pos.1,
                     z: target_pos.2,
                 },
+                target_play_region_id,
             });
         }
     }
@@ -515,21 +525,25 @@ fn message_loop(
             Ok(OutgoingMessage::DiscoveryV2 {
                 source_map_id,
                 ref source_pos,
+                source_play_region_id,
                 target_map_id,
                 ref target_pos,
+                target_play_region_id,
             }) => {
                 let source_map_str = format_map_id(source_map_id);
                 let target_map_str = format_map_id(target_map_id);
                 println!(
-                    "[WS TX] Discovery v2: {} ({:.1}, {:.1}, {:.1}) → {} ({:.1}, {:.1}, {:.1})",
-                    source_map_str, source_pos.x, source_pos.y, source_pos.z,
-                    target_map_str, target_pos.x, target_pos.y, target_pos.z
+                    "[WS TX] Discovery v2: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?}",
+                    source_map_str, source_pos.x, source_pos.y, source_pos.z, source_play_region_id,
+                    target_map_str, target_pos.x, target_pos.y, target_pos.z, target_play_region_id
                 );
                 let msg = ServerMessage::DiscoveryV2 {
                     source_map_id: source_map_str,
                     source_pos: source_pos.clone(),
+                    source_play_region_id,
                     target_map_id: target_map_str,
                     target_pos: target_pos.clone(),
+                    target_play_region_id,
                 };
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket

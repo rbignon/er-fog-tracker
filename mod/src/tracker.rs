@@ -2,6 +2,7 @@
 
 use std::time::{Duration, Instant};
 
+use libeldenring::memedit::PointerChain;
 use libeldenring::pointers::Pointers;
 use windows::Win32::Foundation::HINSTANCE;
 
@@ -19,7 +20,11 @@ pub(crate) struct PendingFogEvent {
     entry_zone_name: String,
     entry_map_id: u32,
     entry_pos: (f32, f32, f32),
+    entry_play_region_id: Option<u32>,
 }
+
+/// Offset of PlayRegionId within CS::FieldArea structure
+const FIELD_AREA_PLAY_REGION_ID_OFFSET: usize = 0xE4;
 
 /// Animation ID for fog wall traversal
 const FOG_WALL_ANIM_ID: u32 = 60060;
@@ -38,6 +43,8 @@ pub struct FogRandoTracker {
     pub(crate) config: Config,
     pub(crate) status_message: Option<(String, Instant)>,
     pub(crate) ws_client: WebSocketClient,
+    /// Pointer chain to read PlayRegionId from FieldArea
+    play_region_id_ptr: PointerChain<u32>,
 }
 
 impl FogRandoTracker {
@@ -64,6 +71,12 @@ impl FogRandoTracker {
         );
 
         let pointers = Pointers::new();
+
+        // Create pointer chain for PlayRegionId (FieldArea + 0xE4)
+        let play_region_id_ptr = PointerChain::<u32>::new(&[
+            pointers.base_addresses.field_area,
+            FIELD_AREA_PLAY_REGION_ID_OFFSET,
+        ]);
 
         // Wait for the game to be loaded
         let poll_interval = Duration::from_millis(100);
@@ -99,6 +112,7 @@ impl FogRandoTracker {
             config,
             status_message: None,
             ws_client,
+            play_region_id_ptr,
         })
     }
 
@@ -120,17 +134,19 @@ impl FogRandoTracker {
             let is_valid_position = map_id != 0xFFFFFFFF && (x != 0.0 || y != 0.0 || z != 0.0);
 
             if is_fog && !was_fog && is_valid_position {
-                // Animation just started - record entry zone and position
+                // Animation just started - record entry zone, position, and play region
                 let entry_zone = get_zone_name(map_id);
                 let map_id_str = format_map_id(map_id);
+                let entry_play_region_id = self.play_region_id_ptr.read();
                 println!(
-                    "[FOG] Entry detected [{}] zone={} pos=({:.1}, {:.1}, {:.1})",
-                    map_id_str, entry_zone, x, y, z
+                    "[FOG] Entry detected [{}] zone={} pos=({:.1}, {:.1}, {:.1}) region={:?}",
+                    map_id_str, entry_zone, x, y, z, entry_play_region_id
                 );
                 self.pending_fog = Some(PendingFogEvent {
                     entry_zone_name: entry_zone,
                     entry_map_id: map_id,
                     entry_pos: (x, y, z),
+                    entry_play_region_id,
                 });
             } else if self.pending_fog.is_some() && !is_fog && is_valid_position {
                 // We had a pending fog entry AND animation is no longer fog AND position is valid
@@ -138,9 +154,10 @@ impl FogRandoTracker {
                     let exit_zone = get_zone_name(map_id);
                     let map_id_str = format_map_id(map_id);
                     let entry_map_id_str = format_map_id(pending.entry_map_id);
+                    let exit_play_region_id = self.play_region_id_ptr.read();
                     println!(
-                        "[FOG] Exit detected [{}] zone={} pos=({:.1}, {:.1}, {:.1})",
-                        map_id_str, exit_zone, x, y, z
+                        "[FOG] Exit detected [{}] zone={} pos=({:.1}, {:.1}, {:.1}) region={:?}",
+                        map_id_str, exit_zone, x, y, z, exit_play_region_id
                     );
                     println!(
                         "[FOG] Traversal complete: {} [{}] → {} [{}]",
@@ -150,21 +167,25 @@ impl FogRandoTracker {
                     // Send discovery to server if connected
                     if self.ws_client.is_connected() {
                         println!(
-                            "[FOG] Sending to server: {} ({:.1}, {:.1}, {:.1}) → {} ({:.1}, {:.1}, {:.1})",
+                            "[FOG] Sending to server: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?}",
                             entry_map_id_str,
                             pending.entry_pos.0,
                             pending.entry_pos.1,
                             pending.entry_pos.2,
+                            pending.entry_play_region_id,
                             map_id_str,
                             x,
                             y,
-                            z
+                            z,
+                            exit_play_region_id
                         );
                         self.ws_client.send_discovery_v2(
                             pending.entry_map_id,
                             pending.entry_pos,
+                            pending.entry_play_region_id,
                             map_id,
                             (x, y, z),
+                            exit_play_region_id,
                         );
                     } else {
                         println!("[FOG] Not connected to server, discovery not sent");

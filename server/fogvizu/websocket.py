@@ -264,22 +264,30 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                         )
 
                 elif msg_type == "discovery_v2":
-                    # New discovery with map_id + position (server resolves zone names)
+                    # New discovery with map_id + position + play_region_id (server resolves zone names)
                     source_map_id = data.get("source_map_id")
                     source_pos = data.get("source_pos", {})
+                    source_play_region_id = data.get("source_play_region_id")
                     target_map_id = data.get("target_map_id")
                     target_pos = data.get("target_pos", {})
+                    target_play_region_id = data.get("target_play_region_id")
+
+                    # Convert play_region_id to Col format (hXXYYZZ)
+                    source_col = f"h{source_play_region_id:06x}" if source_play_region_id else None
+                    target_col = f"h{target_play_region_id:06x}" if target_play_region_id else None
 
                     logger.info(
-                        "[MOD] Discovery v2: %s (%.1f, %.1f, %.1f) → %s (%.1f, %.1f, %.1f)",
+                        "[MOD] Discovery v2: %s (%.1f, %.1f, %.1f) col=%s → %s (%.1f, %.1f, %.1f) col=%s",
                         source_map_id,
                         source_pos.get("x", 0),
                         source_pos.get("y", 0),
                         source_pos.get("z", 0),
+                        source_col,
                         target_map_id,
                         target_pos.get("x", 0),
                         target_pos.get("y", 0),
                         target_pos.get("z", 0),
+                        target_col,
                     )
 
                     if not source_map_id or not target_map_id:
@@ -289,8 +297,27 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                         )
                         continue
 
-                    # Get all candidate zones for source and target
                     resolver = get_resolver()
+
+                    # Try exact Col resolution first (if available)
+                    source_col_internal, source_col_display = None, None
+                    target_col_internal, target_col_display = None, None
+
+                    if source_col:
+                        source_col_internal, source_col_display = resolver.resolve_by_col(
+                            source_map_id, source_col
+                        )
+                        if source_col_display:
+                            logger.info("[MOD] Source resolved by Col: %s", source_col_display)
+
+                    if target_col:
+                        target_col_internal, target_col_display = resolver.resolve_by_col(
+                            target_map_id, target_col
+                        )
+                        if target_col_display:
+                            logger.info("[MOD] Target resolved by Col: %s", target_col_display)
+
+                    # Get all candidate zones for source and target (fallback)
                     source_candidates = resolver.resolve_all_candidates(
                         source_map_id,
                         source_pos.get("x", 0),
@@ -303,6 +330,16 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                         target_pos.get("y", 0),
                         target_pos.get("z", 0),
                     )
+
+                    # If Col resolved, prepend to candidates with highest priority
+                    if source_col_internal:
+                        source_candidates = [(source_col_internal, source_col_display)] + [
+                            c for c in source_candidates if c[0] != source_col_internal
+                        ]
+                    if target_col_internal:
+                        target_candidates = [(target_col_internal, target_col_display)] + [
+                            c for c in target_candidates if c[0] != target_col_internal
+                        ]
 
                     logger.debug(
                         "[MOD] Zone candidates: source=%s, target=%s",

@@ -62,6 +62,8 @@ class ZoneResolver:
         self.zone_display_names: dict[str, str] = {}
         # map_id -> set of possible zone names (from foglocations2.txt)
         self.map_zones: dict[str, set[str]] = {}
+        # (map_id, col) -> internal zone name (from foglocations2.txt Cols)
+        self.col_zones: dict[tuple[str, str], str] = {}
 
         if data_dir:
             self._load_data()
@@ -201,8 +203,8 @@ class ZoneResolver:
         current_zone = None
         current_fog_map = None
 
-        # Pattern to extract map_id from Col: m10_01_00_00_h001000
-        col_pattern = re.compile(r"(m\d+_\d+_\d+_\d+)_h\d+")
+        # Pattern to extract map_id and col from: m10_01_00_00_h001000
+        col_pattern = re.compile(r"(m\d+_\d+_\d+_\d+)_(h[0-9a-fA-F]+)")
 
         for line in content.split("\n"):
             line_stripped = line.strip()
@@ -213,13 +215,17 @@ class ZoneResolver:
                 current_fog_map = None  # Reset fog gate context
             elif line_stripped.startswith("Cols:") and current_zone:
                 cols = line_stripped.replace("Cols:", "").strip().split()
-                for col in cols:
-                    match = col_pattern.match(col)
+                for col_entry in cols:
+                    match = col_pattern.match(col_entry)
                     if match:
                         map_id = match.group(1)
+                        col = match.group(2)
+                        # Store in map_zones
                         if map_id not in self.map_zones:
                             self.map_zones[map_id] = set()
                         self.map_zones[map_id].add(current_zone)
+                        # Store in col_zones for exact matching
+                        self.col_zones[(map_id, col)] = current_zone
             # Fog gate definitions (nested under zones)
             elif line_stripped.startswith("- Map:"):
                 current_fog_map = line_stripped.replace("- Map:", "").strip()
@@ -318,6 +324,31 @@ class ZoneResolver:
                 results.append((internal_name, display_name))
 
         return results
+
+    def resolve_by_col(self, map_id: str, col: str) -> tuple[str | None, str | None]:
+        """
+        Resolve map_id + col to zone (exact match).
+
+        Args:
+            map_id: Map ID (e.g., "m10_01_00_00")
+            col: Col identifier (e.g., "h001000")
+
+        Returns:
+            Tuple of (internal_name, display_name). Both may be None if not found.
+        """
+        internal_name = self.col_zones.get((map_id, col))
+        if internal_name:
+            display_name = self.zone_display_names.get(
+                internal_name, internal_name.replace("_", " ").title()
+            )
+            logger.debug(
+                "Col match: %s -> %s (%s)",
+                col,
+                internal_name,
+                display_name,
+            )
+            return internal_name, display_name
+        return None, None
 
     def resolve_all_candidates(
         self, map_id: str, x: float, y: float, z: float
