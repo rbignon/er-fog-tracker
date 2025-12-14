@@ -3,8 +3,7 @@ repos:
     rev: v0.8.4
     hooks:
       - id: ruff
-        args: [--fix, --config, server/pyproject.toml]
+        args: [--fix]
         files: server/
       - id: ruff-format
-        args: [--config, server/pyproject.toml]
         files: server/

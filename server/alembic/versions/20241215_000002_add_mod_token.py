@@ -8,6 +8,7 @@ Create Date: 2024-12-15
 import secrets
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
