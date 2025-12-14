@@ -46,11 +46,9 @@ jobs:
       - name: Prepare distribution package
         run: |
           mkdir dist
-          cp target/release/route_tracking.dll dist/
-          cp target/release/route-tracker-injector.exe dist/
-          cp route_tracker_config.toml dist/
-          cp src/WorldMapLegacyConvParam.csv dist/
-          cp GoodsEvents.tsv dist/
+          cp target/release/fog_rando_tracker.dll dist/
+          cp target/release/fog-rando-tracker-injector.exe dist/
+          cp fog_rando_tracker.toml dist/
 
       - name: Upload distribution package
         uses: actions/upload-artifact@v4
