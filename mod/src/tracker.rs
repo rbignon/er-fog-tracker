@@ -14,20 +14,10 @@ use crate::zone_names::{format_map_id, get_zone_name};
 // FOG EVENTS
 // =============================================================================
 
-/// Completed fog wall traversal
-#[derive(Clone, Debug)]
-pub struct FogEvent {
-    pub entry_zone_name: String,
-    pub exit_zone_name: String,
-    pub entry_timestamp_ms: u64,
-    pub exit_timestamp_ms: u64,
-}
-
 /// Pending fog event (entry recorded, waiting for exit)
 #[derive(Clone, Debug)]
-struct PendingFogEvent {
+pub(crate) struct PendingFogEvent {
     entry_zone_name: String,
-    entry_timestamp_ms: u64,
 }
 
 /// Animation ID for fog wall traversal
@@ -40,14 +30,13 @@ const FOG_WALL_ANIM_ID: u32 = 60060;
 /// Fog gate traversal tracking state
 pub struct FogRandoTracker {
     pub(crate) pointers: Pointers,
-    pub(crate) fog_traversals: Vec<FogEvent>,
+    pub(crate) fog_traversal_count: u32,
     pub(crate) last_anim: Option<u32>,
     pub(crate) pending_fog: Option<PendingFogEvent>,
     pub(crate) show_ui: bool,
     pub(crate) config: Config,
     pub(crate) status_message: Option<(String, Instant)>,
     pub(crate) ws_client: WebSocketClient,
-    pub(crate) start_time: Instant,
 }
 
 impl FogRandoTracker {
@@ -102,14 +91,13 @@ impl FogRandoTracker {
 
         Some(Self {
             pointers,
-            fog_traversals: Vec::new(),
+            fog_traversal_count: 0,
             last_anim: None,
             pending_fog: None,
             show_ui: true,
             config,
             status_message: None,
             ws_client,
-            start_time: Instant::now(),
         })
     }
 
@@ -119,8 +107,6 @@ impl FogRandoTracker {
             self.pointers.global_position.read(),
             self.pointers.global_position.read_map_id(),
         ) {
-            let timestamp_ms = self.start_time.elapsed().as_millis() as u64;
-
             // Detect fog wall traversal
             let current_anim = self.pointers.cur_anim.read();
             let is_fog = current_anim.map(|a| a == FOG_WALL_ANIM_ID).unwrap_or(false);
@@ -139,7 +125,6 @@ impl FogRandoTracker {
                 info!("Fog wall entry [{}] - {}", map_id_str, entry_zone);
                 self.pending_fog = Some(PendingFogEvent {
                     entry_zone_name: entry_zone,
-                    entry_timestamp_ms: timestamp_ms,
                 });
             } else if self.pending_fog.is_some() && !is_fog && is_valid_position {
                 // We had a pending fog entry AND animation is no longer fog AND position is valid
@@ -161,12 +146,7 @@ impl FogRandoTracker {
                         );
                     }
 
-                    self.fog_traversals.push(FogEvent {
-                        entry_zone_name: pending.entry_zone_name,
-                        exit_zone_name: exit_zone,
-                        entry_timestamp_ms: pending.entry_timestamp_ms,
-                        exit_timestamp_ms: timestamp_ms,
-                    });
+                    self.fog_traversal_count += 1;
                 }
             }
             self.last_anim = current_anim;

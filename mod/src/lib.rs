@@ -37,10 +37,12 @@ use std::ffi::c_void;
 
 use hudhook::hooks::dx12::ImguiDx12Hooks;
 use hudhook::{eject, Hudhook};
+#[allow(unused_imports)]
 use windows::Win32::Foundation::HINSTANCE;
+#[allow(unused_imports)]
 use windows::Win32::System::SystemServices::DLL_PROCESS_ATTACH;
 
-use tracker::FogRandoTracker;
+use crate::tracker::FogRandoTracker;
 
 // =============================================================================
 // DLL ENTRY POINT

@@ -105,7 +105,7 @@ impl FogRandoTracker {
         ui.text_colored(color, format!("● {}", text));
 
         // Show fog traversal count
-        ui.text(format!("Fog traversals: {}", self.fog_traversals.len()));
+        ui.text(format!("Fog traversals: {}", self.fog_traversal_count));
     }
 
     /// Render keybindings help section
