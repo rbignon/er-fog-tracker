@@ -77,6 +77,41 @@ def find_zone_pair(zone_pairs: list[dict], source: str, target: str) -> dict | N
     return None
 
 
+def find_matching_zone_pair(
+    zone_pairs: list[dict],
+    source_candidates: list[tuple[str, str]],
+    target_candidates: list[tuple[str, str]],
+) -> tuple[str, str, dict] | None:
+    """
+    Find a matching zone pair from lists of candidates.
+
+    Tries all combinations of source and target candidates until finding
+    a match in zone_pairs. Candidates are assumed to be ordered by likelihood.
+
+    Args:
+        zone_pairs: List of zone pairs from the spoiler log
+        source_candidates: List of (internal_name, display_name) for source, best first
+        target_candidates: List of (internal_name, display_name) for target, best first
+
+    Returns:
+        Tuple of (source_display, target_display, zone_pair) if found, None otherwise.
+    """
+    for source_internal, source_display in source_candidates:
+        for target_internal, target_display in target_candidates:
+            pair = find_zone_pair(zone_pairs, source_display, target_display)
+            if pair:
+                logger.debug(
+                    "[MATCH] Found pair: '%s' → '%s' (tried %s → %s)",
+                    source_display,
+                    target_display,
+                    source_internal,
+                    target_internal,
+                )
+                return source_display, target_display, pair
+
+    return None
+
+
 def find_candidate_zones(zone_pairs: list[dict], zone_name: str) -> list[dict]:
     """Find all zone pairs that contain a zone name (for debugging)."""
     candidates = []

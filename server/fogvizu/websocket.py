@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fogvizu.config import settings
 from fogvizu.database import Game, User, async_session
-from fogvizu.game_logic import propagate_discovery
+from fogvizu.game_logic import find_matching_zone_pair, propagate_discovery
 from fogvizu.zone_resolver import get_resolver
 
 logger = logging.getLogger(__name__)
@@ -289,35 +289,89 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                         )
                         continue
 
-                    # Resolve zone names using position
+                    # Get all candidate zones for source and target
                     resolver = get_resolver()
-                    source_internal, source_display = resolver.resolve(
+                    source_candidates = resolver.resolve_all_candidates(
                         source_map_id,
                         source_pos.get("x", 0),
                         source_pos.get("y", 0),
                         source_pos.get("z", 0),
                     )
-                    target_internal, target_display = resolver.resolve(
+                    target_candidates = resolver.resolve_all_candidates(
                         target_map_id,
                         target_pos.get("x", 0),
                         target_pos.get("y", 0),
                         target_pos.get("z", 0),
                     )
 
-                    logger.info(
-                        "[MOD] Resolved zones: '%s' (%s) → '%s' (%s)",
-                        source_display,
-                        source_internal,
-                        target_display,
-                        target_internal,
+                    logger.debug(
+                        "[MOD] Zone candidates: source=%s, target=%s",
+                        [c[1] for c in source_candidates],
+                        [c[1] for c in target_candidates],
                     )
 
-                    if not source_display or not target_display:
+                    if not source_candidates or not target_candidates:
                         logger.warning(
-                            "[MOD] Could not resolve zone names for %s → %s",
+                            "[MOD] No zone candidates for %s → %s",
                             source_map_id,
                             target_map_id,
                         )
+                        await websocket.send_json(
+                            {
+                                "type": "discovery_v2_ack",
+                                "propagated": [],
+                                "resolved_source": None,
+                                "resolved_target": None,
+                                "error": "No zone candidates found",
+                            }
+                        )
+                        continue
+
+                    # Get game's zone_pairs to find matching combination
+                    result = await db.execute(select(Game).where(Game.id == game_id))
+                    game_for_zones = result.scalar_one_or_none()
+
+                    source_display = None
+                    target_display = None
+
+                    if game_for_zones and game_for_zones.zone_pairs:
+                        # Find which combination of candidates matches the spoiler log
+                        match = find_matching_zone_pair(
+                            game_for_zones.zone_pairs,
+                            source_candidates,
+                            target_candidates,
+                        )
+                        if match:
+                            source_display, target_display, _ = match
+                            logger.info(
+                                "[MOD] Matched zones from spoiler log: '%s' → '%s'",
+                                source_display,
+                                target_display,
+                            )
+                        else:
+                            # No match found - use best guesses for logging
+                            source_display = source_candidates[0][1] if source_candidates else None
+                            target_display = target_candidates[0][1] if target_candidates else None
+                            logger.warning(
+                                "[MOD] No spoiler log match for %s → %s (tried %d × %d combinations)",
+                                source_display,
+                                target_display,
+                                len(source_candidates),
+                                len(target_candidates),
+                            )
+                    else:
+                        # No zone_pairs - fall back to best guess
+                        source_display = source_candidates[0][1] if source_candidates else None
+                        target_display = target_candidates[0][1] if target_candidates else None
+                        logger.warning("[MOD] Game has no zone_pairs, using best guess")
+
+                    logger.info(
+                        "[MOD] Resolved zones: '%s' → '%s'",
+                        source_display,
+                        target_display,
+                    )
+
+                    if not source_display or not target_display:
                         await websocket.send_json(
                             {
                                 "type": "discovery_v2_ack",

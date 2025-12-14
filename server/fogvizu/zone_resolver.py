@@ -293,6 +293,67 @@ class ZoneResolver:
 
         return results
 
+    def resolve_all_candidates(
+        self, map_id: str, x: float, y: float, z: float
+    ) -> list[tuple[str, str]]:
+        """
+        Get all possible zones for a map_id, ordered by likelihood.
+
+        Position-based rules are used to order candidates (best match first),
+        but ALL candidates are returned so the caller can try alternatives.
+
+        Returns:
+            List of (internal_name, display_name) tuples, best match first.
+        """
+        candidates: list[tuple[str, str, int]] = []  # (internal, display, priority)
+
+        # Check position-based rules from submaps.txt
+        if map_id in self.map_rules:
+            rules = self.map_rules[map_id]
+
+            # Check conditional rules
+            for rule in rules.rules:
+                display_name = self.zone_display_names.get(
+                    rule.area, rule.area.replace("_", " ").title()
+                )
+                if rule.matches(x, y, z):
+                    # Position match - highest priority
+                    candidates.append((rule.area, display_name, 0))
+                else:
+                    # Rule exists but position doesn't match - lower priority
+                    candidates.append((rule.area, display_name, 2))
+
+            # Add default area
+            if rules.default_area:
+                display_name = self.zone_display_names.get(
+                    rules.default_area, rules.default_area.replace("_", " ").title()
+                )
+                candidates.append((rules.default_area, display_name, 1))
+
+        # Add zones from foglocations2.txt
+        if map_id in self.map_zones:
+            for internal_name in self.map_zones[map_id]:
+                # Skip if already added from submaps
+                if any(c[0] == internal_name for c in candidates):
+                    continue
+                display_name = self.zone_display_names.get(
+                    internal_name, internal_name.replace("_", " ").title()
+                )
+                # Lower priority for foglocations (no position info)
+                priority = 3 if internal_name.endswith("_boss") else 2
+                candidates.append((internal_name, display_name, priority))
+
+        # Sort by priority and remove duplicates
+        candidates.sort(key=lambda c: c[2])
+        seen = set()
+        results = []
+        for internal, display, _ in candidates:
+            if internal not in seen:
+                seen.add(internal)
+                results.append((internal, display))
+
+        return results
+
 
 # Global instance
 _resolver: ZoneResolver | None = None
