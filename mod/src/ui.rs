@@ -39,7 +39,10 @@ impl ImguiRenderLoop for FogRandoTracker {
 
         ui.window("FogRandoTracker")
             .position([dw - 320.0 * font_scale, 20.0], Condition::FirstUseEver)
-            .size([300.0 * font_scale, 200.0 * font_scale], Condition::FirstUseEver)
+            .size(
+                [300.0 * font_scale, 200.0 * font_scale],
+                Condition::FirstUseEver,
+            )
             .flags(WindowFlags::ALWAYS_AUTO_RESIZE)
             .build(|| {
                 ui.set_window_font_scale(font_scale);

@@ -146,7 +146,9 @@ pub struct DiscoveryStats {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ServerMessage {
-    Auth { token: String },
+    Auth {
+        token: String,
+    },
     #[allow(dead_code)]
     Discovery {
         source: String,
@@ -172,8 +174,12 @@ enum ServerMessage {
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ServerResponse {
     AuthOk,
-    AuthError { message: String },
-    DiscoveryAck { propagated: Vec<PropagatedLink> },
+    AuthError {
+        message: String,
+    },
+    DiscoveryAck {
+        propagated: Vec<PropagatedLink>,
+    },
     DiscoveryV2Ack {
         propagated: Vec<PropagatedLink>,
         current_zone: Option<String>,
@@ -183,7 +189,9 @@ enum ServerResponse {
         stats: DiscoveryStats,
     },
     Ping,
-    Error { message: String },
+    Error {
+        message: String,
+    },
 }
 
 // =============================================================================
@@ -286,7 +294,13 @@ impl WebSocketClient {
 
     /// Send a discovery event to the server (legacy, with zone names)
     #[allow(dead_code)]
-    pub fn send_discovery(&self, source: &str, source_map_id: u32, target: &str, target_map_id: u32) {
+    pub fn send_discovery(
+        &self,
+        source: &str,
+        source_map_id: u32,
+        target: &str,
+        target_map_id: u32,
+    ) {
         if let Some(tx) = &self.tx {
             let _ = tx.try_send(OutgoingMessage::Discovery {
                 source: source.to_string(),
@@ -469,8 +483,7 @@ fn connect_and_authenticate(
 ) -> Result<WebSocket<MaybeTlsStream<TcpStream>>, String> {
     // tungstenite handles TLS automatically for wss:// URLs
     println!("[WS] Opening socket to {}", url);
-    let (mut socket, _response) =
-        connect(url).map_err(|e| format!("Connection failed: {}", e))?;
+    let (mut socket, _response) = connect(url).map_err(|e| format!("Connection failed: {}", e))?;
 
     // Send auth message
     println!("[WS] Socket opened, sending auth...");
@@ -611,10 +624,7 @@ fn message_loop(
                             let _ = incoming_tx.send(IncomingMessage::Ping);
                         }
                         ServerResponse::DiscoveryAck { ref propagated } => {
-                            println!(
-                                "[WS RX] DiscoveryAck (propagated: {})",
-                                propagated.len()
-                            );
+                            println!("[WS RX] DiscoveryAck (propagated: {})", propagated.len());
                             let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
                                 propagated: propagated.clone(),
                                 current_zone: None,

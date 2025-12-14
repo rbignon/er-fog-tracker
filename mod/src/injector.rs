@@ -101,7 +101,10 @@ fn main() {
                     proc
                 }
                 None => {
-                    eprintln!("[!] Timeout: {} did not start within 60 seconds.", PROCESS_NAME);
+                    eprintln!(
+                        "[!] Timeout: {} did not start within 60 seconds.",
+                        PROCESS_NAME
+                    );
                     eprintln!();
                     eprintln!("[*] Press Enter to exit...");
                     let _ = std::io::stdin().read_line(&mut String::new());

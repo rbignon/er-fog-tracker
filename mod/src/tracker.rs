@@ -6,7 +6,9 @@ use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
 use crate::game_state::{GameState, PlayerPosition};
-use crate::websocket::{ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient};
+use crate::websocket::{
+    ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient,
+};
 
 // =============================================================================
 // FOG EVENTS
@@ -138,7 +140,11 @@ impl FogRandoTracker {
 
                 println!(
                     "[FOG] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
-                    exit_pos.map_id_str, exit_pos.x, exit_pos.y, exit_pos.z, exit_pos.play_region_id
+                    exit_pos.map_id_str,
+                    exit_pos.x,
+                    exit_pos.y,
+                    exit_pos.z,
+                    exit_pos.play_region_id
                 );
                 println!(
                     "[FOG] Traversal complete: {} → {}",

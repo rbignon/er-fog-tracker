@@ -39,9 +39,9 @@ use hudhook::hooks::dx12::ImguiDx12Hooks;
 use hudhook::{eject, Hudhook};
 #[allow(unused_imports)]
 use windows::Win32::Foundation::HINSTANCE;
+use windows::Win32::System::Console::{AllocConsole, SetConsoleTitleW};
 #[allow(unused_imports)]
 use windows::Win32::System::SystemServices::DLL_PROCESS_ATTACH;
-use windows::Win32::System::Console::{AllocConsole, SetConsoleTitleW};
 
 use crate::config::Config;
 use crate::tracker::FogRandoTracker;
@@ -54,9 +54,7 @@ use crate::tracker::FogRandoTracker;
 fn setup_debug_console() {
     unsafe {
         let _ = AllocConsole();
-        let title: Vec<u16> = "FogRandoTracker Debug Console\0"
-            .encode_utf16()
-            .collect();
+        let title: Vec<u16> = "FogRandoTracker Debug Console\0".encode_utf16().collect();
         let _ = SetConsoleTitleW(windows::core::PCWSTR(title.as_ptr()));
     }
 }
@@ -97,11 +95,11 @@ pub unsafe extern "system" fn DllMain(hmodule: HINSTANCE, reason: u32, _: *mut c
         if libeldenring::version::check_version().is_err() {
             return false;
         }
-        
+
         std::thread::spawn(move || {
             start_mod(hmodule);
         });
     }
-    
+
     true
 }
