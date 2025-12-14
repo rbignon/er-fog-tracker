@@ -96,7 +96,11 @@ pub enum IncomingMessage {
     /// Connection status changed
     StatusChanged(ConnectionStatus),
     /// Discovery acknowledged by server
-    DiscoveryAck { propagated: Vec<PropagatedLink> },
+    DiscoveryAck {
+        propagated: Vec<PropagatedLink>,
+        current_zone: Option<String>,
+        exits: Vec<FogExit>,
+    },
     /// Error message
     Error(String),
     /// Server sent a ping
@@ -108,6 +112,18 @@ pub enum IncomingMessage {
 pub struct PropagatedLink {
     pub source: String,
     pub target: String,
+}
+
+/// A fog gate exit from the current zone
+#[derive(Debug, Clone, Deserialize)]
+pub struct FogExit {
+    /// Destination zone name, or "???" if not discovered
+    pub destination: String,
+    /// How to get there (direction/description)
+    #[serde(default)]
+    pub description: String,
+    /// If exit is from a different zone in the preexisting group
+    pub from_zone: Option<String>,
 }
 
 // =============================================================================
@@ -148,8 +164,9 @@ enum ServerResponse {
     DiscoveryAck { propagated: Vec<PropagatedLink> },
     DiscoveryV2Ack {
         propagated: Vec<PropagatedLink>,
-        resolved_source: Option<String>,
-        resolved_target: Option<String>,
+        current_zone: Option<String>,
+        #[serde(default)]
+        exits: Vec<FogExit>,
     },
     Ping,
     Error { message: String },
@@ -584,22 +601,28 @@ fn message_loop(
                                 "[WS RX] DiscoveryAck (propagated: {})",
                                 propagated.len()
                             );
-                            let _ = incoming_tx
-                                .send(IncomingMessage::DiscoveryAck { propagated: propagated.clone() });
+                            let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
+                                propagated: propagated.clone(),
+                                current_zone: None,
+                                exits: Vec::new(),
+                            });
                         }
                         ServerResponse::DiscoveryV2Ack {
                             ref propagated,
-                            ref resolved_source,
-                            ref resolved_target,
+                            ref current_zone,
+                            ref exits,
                         } => {
                             println!(
-                                "[WS RX] DiscoveryV2Ack: {} → {} (propagated: {})",
-                                resolved_source.as_deref().unwrap_or("?"),
-                                resolved_target.as_deref().unwrap_or("?"),
-                                propagated.len()
+                                "[WS RX] DiscoveryV2Ack: zone={} (propagated: {}, exits: {})",
+                                current_zone.as_deref().unwrap_or("?"),
+                                propagated.len(),
+                                exits.len()
                             );
-                            let _ = incoming_tx
-                                .send(IncomingMessage::DiscoveryAck { propagated: propagated.clone() });
+                            let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
+                                propagated: propagated.clone(),
+                                current_zone: current_zone.clone(),
+                                exits: exits.clone(),
+                            });
                         }
                         ServerResponse::Error { ref message } => {
                             println!("[WS RX] Error: {}", message);

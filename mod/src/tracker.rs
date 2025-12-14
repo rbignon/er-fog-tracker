@@ -6,7 +6,7 @@ use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
 use crate::game_state::{GameState, PlayerPosition};
-use crate::websocket::{ConnectionStatus, IncomingMessage, WebSocketClient};
+use crate::websocket::{ConnectionStatus, FogExit, IncomingMessage, WebSocketClient};
 
 // =============================================================================
 // FOG EVENTS
@@ -32,6 +32,12 @@ pub struct FogRandoTracker {
     pub(crate) config: Config,
     pub(crate) status_message: Option<(String, Instant)>,
     pub(crate) ws_client: WebSocketClient,
+    /// Current zone name (resolved by server after fog traversal)
+    pub(crate) current_zone: Option<String>,
+    /// Fog exits from current zone (received from server)
+    pub(crate) current_exits: Vec<FogExit>,
+    /// Last known map_id (to detect teleportation)
+    last_map_id: Option<u32>,
 }
 
 impl FogRandoTracker {
@@ -86,11 +92,31 @@ impl FogRandoTracker {
             config,
             status_message: None,
             ws_client,
+            current_zone: None,
+            current_exits: Vec::new(),
+            last_map_id: None,
         })
     }
 
     /// Check for fog wall traversals each frame
     pub fn check_fog_traversal(&mut self) {
+        // Detect map change (teleportation) - clear exits since we don't know exact zone
+        if let Some(pos) = self.game_state.read_position() {
+            if let Some(last_map) = self.last_map_id {
+                if last_map != pos.map_id && !self.was_in_fog {
+                    // Map changed without fog traversal = teleport
+                    println!(
+                        "[FOG] Map change detected (TP?): {} → {}, clearing exits",
+                        crate::game_state::format_map_id(last_map),
+                        pos.map_id_str
+                    );
+                    self.current_zone = None;
+                    self.current_exits.clear();
+                }
+            }
+            self.last_map_id = Some(pos.map_id);
+        }
+
         let is_fog = self.game_state.is_in_fog_animation();
 
         // Detect fog entry: animation just started
@@ -191,11 +217,22 @@ impl FogRandoTracker {
                         _ => {}
                     }
                 }
-                IncomingMessage::DiscoveryAck { propagated } => {
+                IncomingMessage::DiscoveryAck {
+                    propagated,
+                    current_zone,
+                    exits,
+                } => {
                     println!(
-                        "Discovery acknowledged by server ({} propagated)",
-                        propagated.len()
+                        "Discovery acknowledged by server ({} propagated, zone={:?}, {} exits)",
+                        propagated.len(),
+                        current_zone,
+                        exits.len()
                     );
+                    // Update current zone and exits
+                    if current_zone.is_some() {
+                        self.current_zone = current_zone;
+                        self.current_exits = exits;
+                    }
                 }
                 IncomingMessage::Error(err) => {
                     eprintln!("WebSocket error: {}", err);

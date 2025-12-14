@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fogvizu.config import settings
 from fogvizu.database import Game, User, async_session
 from fogvizu.game_logic import find_all_matching_zone_pairs, propagate_discovery
+from fogvizu.zone_matching import compute_zone_exits
 from fogvizu.zone_resolver import get_resolver
 
 logger = logging.getLogger(__name__)
@@ -412,19 +413,46 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
 
                     await db.commit()
 
-                    # Send ack to mod with all resolved links
+                    # Compute exits from the destination zone
+                    exits = []
+                    if resolved_links and game_for_zones:
+                        # Use the first resolved link's target as the current zone
+                        # (they should all lead to the same zone group via preexisting)
+                        destination_zone = resolved_links[0]["target"]
+
+                        # Refetch game to get updated discovered_links
+                        result = await db.execute(select(Game).where(Game.id == game_id))
+                        game_for_exits = result.scalar_one_or_none()
+
+                        if game_for_exits:
+                            exits = compute_zone_exits(
+                                game_for_exits.zone_pairs or [],
+                                game_for_exits.discovered_links or [],
+                                destination_zone,
+                            )
+                            logger.info(
+                                "[MOD] Computed %d exits from zone '%s'",
+                                len(exits),
+                                destination_zone,
+                            )
+
+                    # Send ack to mod with all resolved links and exits
+                    destination_zone = resolved_links[0]["target"] if resolved_links else None
                     ack_msg = {
                         "type": "discovery_v2_ack",
                         "propagated": all_propagated,
                         "resolved": resolved_links,
+                        "current_zone": destination_zone,
+                        "exits": exits,
                     }
                     if not resolved_links:
                         ack_msg["error"] = "No matching link found in spoiler log"
 
                     logger.info(
-                        "[MOD TX] Ack with %d resolved link(s), %d propagated",
+                        "[MOD TX] Ack with %d resolved link(s), %d propagated, %d exits",
                         len(resolved_links),
                         len(all_propagated),
+                        len(exits),
                     )
                     logger.debug("[MOD TX] %s", ack_msg)
                     await websocket.send_json(ack_msg)

@@ -69,7 +69,7 @@ impl FogRandoTracker {
     /// Render current position section
     fn render_position_section(&self, ui: &hudhook::imgui::Ui) {
         ui.text("=== Current Zone ===");
-        if let Some((map_id, zone_name)) = self.get_current_position() {
+        if let Some((map_id, _map_str)) = self.get_current_position() {
             let (ww, xx, yy, dd) = (
                 (map_id >> 24) & 0xff,
                 (map_id >> 16) & 0xff,
@@ -77,9 +77,39 @@ impl FogRandoTracker {
                 map_id & 0xff,
             );
             ui.text(format!("Map: m{:02}_{:02}_{:02}_{:02}", ww, xx, yy, dd));
-            ui.text(format!("Zone: {}", zone_name));
+
+            // Show resolved zone name if available (from server after fog traversal)
+            if let Some(ref zone) = self.current_zone {
+                ui.text(format!("Zone: {}", zone));
+            } else {
+                ui.text_disabled("Zone: (traverse a fog to identify)");
+            }
         } else {
             ui.text("Zone not available");
+        }
+
+        // Display fog exits if available
+        if !self.current_exits.is_empty() {
+            ui.spacing();
+            ui.text("=== Fog Exits ===");
+            for exit in &self.current_exits {
+                let dest_color = if exit.destination == "???" {
+                    [0.7, 0.7, 0.7, 1.0] // Gray for undiscovered
+                } else {
+                    [0.5, 1.0, 0.5, 1.0] // Green for discovered
+                };
+
+                // Format: "→ Destination (description)" or "→ Destination [from Zone]"
+                let mut line = format!("→ {}", exit.destination);
+                if !exit.description.is_empty() {
+                    line.push_str(&format!(" ({})", exit.description));
+                }
+                if let Some(ref from) = exit.from_zone {
+                    line.push_str(&format!(" [from {}]", from));
+                }
+
+                ui.text_colored(dest_color, &line);
+            }
         }
     }
 

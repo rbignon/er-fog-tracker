@@ -215,3 +215,116 @@ def compute_total_zones(zone_pairs: list[dict]) -> int:
         zones.add(pair["source"])
         zones.add(pair["destination"])
     return len(zones)
+
+
+def get_zones_via_preexisting(zone_pairs: list[dict], start_zone: str) -> set[str]:
+    """
+    Get all zones reachable from start_zone via preexisting paths.
+
+    Traverses the preexisting link tree and returns all connected zones,
+    including the start zone itself.
+    """
+    preexisting_adj = build_preexisting_adjacency(zone_pairs)
+
+    visited = {start_zone}
+    queue = [start_zone]
+
+    while queue:
+        current = queue.pop(0)
+        for neighbor, _is_bidir in preexisting_adj.get(current, []):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+
+    return visited
+
+
+def is_link_discovered(discovered_links: list[dict], source: str, target: str) -> bool:
+    """Check if a link (in either direction) has been discovered."""
+    for dl in discovered_links:
+        dl_src = dl.get("source", "")
+        dl_tgt = dl.get("target", "")
+        # Check both directions (random links are bidirectional)
+        if (names_match(dl_src, source) and names_match(dl_tgt, target)) or (
+            names_match(dl_src, target) and names_match(dl_tgt, source)
+        ):
+            return True
+    return False
+
+
+def compute_zone_exits(
+    zone_pairs: list[dict],
+    discovered_links: list[dict],
+    current_zone: str,
+) -> list[dict]:
+    """
+    Compute all fog gate exits accessible from a zone.
+
+    Traverses preexisting paths to find all "merged" zones, then lists
+    all random links exiting from those zones.
+
+    Args:
+        zone_pairs: The spoiler log zone pairs
+        discovered_links: Currently discovered links
+        current_zone: The zone the player is currently in
+
+    Returns:
+        List of exits, each with:
+        - destination: zone name if discovered, "???" otherwise
+        - description: how to get there (from source_details or target_details)
+        - from_zone: which zone (in the preexisting group) this exit is from
+    """
+    # Get all zones reachable via preexisting paths
+    merged_zones = get_zones_via_preexisting(zone_pairs, current_zone)
+
+    exits = []
+    seen_links = set()  # Deduplicate bidirectional links
+
+    for pair in zone_pairs:
+        if pair["type"] != "random":
+            continue
+
+        pair_source = pair["source"]
+        pair_target = pair["destination"]
+
+        # Check if this link exits from one of our merged zones
+        from_zone = None
+        to_zone = None
+        description = None
+
+        if pair_source in merged_zones:
+            from_zone = pair_source
+            to_zone = pair_target
+            # When exiting from source, use source_details as description
+            description = pair.get("source_details") or ""
+        elif pair_target in merged_zones:
+            # Random links are bidirectional, so target can also be an exit point
+            from_zone = pair_target
+            to_zone = pair_source
+            # When exiting from target side, use target_details as description
+            description = pair.get("target_details") or ""
+        else:
+            continue
+
+        # Deduplicate (A↔B is one link)
+        link_key = frozenset([pair_source, pair_target])
+        if link_key in seen_links:
+            continue
+        seen_links.add(link_key)
+
+        # Check if destination is in the same merged group (skip internal links)
+        if to_zone in merged_zones:
+            continue
+
+        # Check if this link has been discovered
+        discovered = is_link_discovered(discovered_links, pair_source, pair_target)
+
+        exits.append(
+            {
+                "destination": to_zone if discovered else "???",
+                "description": description,
+                "from_zone": from_zone if from_zone != current_zone else None,
+            }
+        )
+
+    return exits
