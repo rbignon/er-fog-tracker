@@ -3,6 +3,7 @@ WebSocket connection manager and handlers.
 """
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -13,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fogvizu.config import settings
 from fogvizu.database import Game, User, async_session
 from fogvizu.game_logic import propagate_discovery
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -94,14 +97,18 @@ async def authenticate_ws(websocket: WebSocket, db: AsyncSession) -> User | None
     """
     try:
         # Wait for auth message (5 second timeout)
+        logger.debug("[AUTH] Waiting for auth message...")
         data = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
+        logger.debug("[AUTH] Received: %s", {**data, "token": "***" if data.get("token") else None})
 
         if data.get("type") != "auth":
+            logger.warning("[AUTH] Expected auth message, got: %s", data.get("type"))
             await websocket.send_json({"type": "auth_error", "message": "Expected auth message"})
             return None
 
         token = data.get("token")
         if not token:
+            logger.warning("[AUTH] Missing token")
             await websocket.send_json({"type": "auth_error", "message": "Missing token"})
             return None
 
@@ -114,16 +121,20 @@ async def authenticate_ws(websocket: WebSocket, db: AsyncSession) -> User | None
         user = result.scalar_one_or_none()
 
         if not user:
+            logger.warning("[AUTH] Invalid token (not found in database)")
             await websocket.send_json({"type": "auth_error", "message": "Invalid token"})
             return None
 
+        logger.info("[AUTH] Success for user %s", user.twitch_username)
         await websocket.send_json({"type": "auth_ok"})
         return user
 
     except TimeoutError:
+        logger.warning("[AUTH] Timeout waiting for auth message")
         await websocket.send_json({"type": "auth_error", "message": "Auth timeout"})
         return None
-    except Exception:
+    except Exception as e:
+        logger.exception("[AUTH] Error during authentication: %s", e)
         return None
 
 
@@ -164,29 +175,38 @@ async def heartbeat_loop(websocket: WebSocket, interval: int = None):
 async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
     """Handle mod WebSocket connection."""
     await websocket.accept()
+    logger.info("[MOD] Connection attempt for game %s", game_id)
 
     async with async_session() as db:
         # Authenticate
         user = await authenticate_ws(websocket, db)
         if not user:
+            logger.warning("[MOD] Authentication failed for game %s", game_id)
             await websocket.close()
             return
+
+        logger.info("[MOD] Authenticated as user %s (id=%s)", user.twitch_username, user.id)
 
         # Verify game access
         game = await verify_game_access(db, game_id, user, require_owner=True)
         if not game:
+            logger.warning("[MOD] Game %s not found or not owned by user", game_id)
             await websocket.send_json({"type": "error", "message": "Game not found"})
             await websocket.close()
             return
 
+        logger.info("[MOD] Game access verified: %s (seed=%s)", game.name, game.seed)
+
         # Register in room
         room = manager.get_or_create_room(game_id)
         if room.mod:
+            logger.warning("[MOD] Mod already connected for game %s", game_id)
             await websocket.send_json({"type": "error", "message": "Mod already connected"})
             await websocket.close()
             return
 
         room.mod = websocket
+        logger.info("[MOD] Connected successfully for game %s", game_id)
 
         # Start heartbeat
         heartbeat_task = asyncio.create_task(heartbeat_loop(websocket))
@@ -195,15 +215,19 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
             while True:
                 data = await websocket.receive_json()
                 msg_type = data.get("type")
+                logger.debug("[MOD RX] %s", data)
 
                 if msg_type == "pong":
+                    logger.debug("[MOD] Pong received")
                     continue
 
                 elif msg_type == "discovery":
                     source = data.get("source")
                     target = data.get("target")
+                    logger.info("[MOD] Discovery request: '%s' → '%s'", source, target)
 
                     if not source or not target:
+                        logger.warning("[MOD] Missing source or target in discovery")
                         await websocket.send_json(
                             {"type": "error", "message": "Missing source or target"}
                         )
@@ -216,21 +240,31 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                     await db.commit()
 
                     # Send ack to mod
-                    await websocket.send_json({"type": "discovery_ack", "propagated": propagated})
+                    ack_msg = {"type": "discovery_ack", "propagated": propagated}
+                    logger.info("[MOD TX] Ack with %d propagated links", len(propagated))
+                    logger.debug("[MOD TX] %s", ack_msg)
+                    await websocket.send_json(ack_msg)
 
                     # Broadcast to host and viewers
-                    await manager.broadcast_to_all(
-                        game_id, {"type": "discovery", "propagated": propagated}, exclude=websocket
-                    )
+                    if propagated:
+                        await manager.broadcast_to_all(
+                            game_id,
+                            {"type": "discovery", "propagated": propagated},
+                            exclude=websocket,
+                        )
+
+                else:
+                    logger.warning("[MOD] Unknown message type: %s", msg_type)
 
         except WebSocketDisconnect:
-            pass
+            logger.info("[MOD] Disconnected for game %s", game_id)
         except Exception as e:
-            print(f"Mod connection error: {e}")
+            logger.exception("[MOD] Connection error for game %s: %s", game_id, e)
         finally:
             heartbeat_task.cancel()
             room.mod = None
             manager.cleanup_room(game_id)
+            logger.info("[MOD] Cleaned up for game %s", game_id)
 
 
 # =============================================================================
