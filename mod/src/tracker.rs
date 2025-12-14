@@ -2,13 +2,11 @@
 
 use std::time::{Duration, Instant};
 
-use libeldenring::memedit::PointerChain;
-use libeldenring::pointers::Pointers;
 use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
+use crate::game_state::{GameState, PlayerPosition};
 use crate::websocket::{ConnectionStatus, IncomingMessage, WebSocketClient};
-use crate::zone_names::{format_map_id, get_zone_name};
 
 // =============================================================================
 // FOG EVENTS
@@ -17,17 +15,8 @@ use crate::zone_names::{format_map_id, get_zone_name};
 /// Pending fog event (entry recorded, waiting for exit)
 #[derive(Clone, Debug)]
 pub(crate) struct PendingFogEvent {
-    entry_zone_name: String,
-    entry_map_id: u32,
-    entry_pos: (f32, f32, f32),
-    entry_play_region_id: Option<u32>,
+    entry: PlayerPosition,
 }
-
-/// Offset of PlayRegionId within CS::FieldArea structure
-const FIELD_AREA_PLAY_REGION_ID_OFFSET: usize = 0xE4;
-
-/// Animation ID for fog wall traversal
-const FOG_WALL_ANIM_ID: u32 = 60060;
 
 // =============================================================================
 // FOG RANDO TRACKER
@@ -35,16 +24,14 @@ const FOG_WALL_ANIM_ID: u32 = 60060;
 
 /// Fog gate traversal tracking state
 pub struct FogRandoTracker {
-    pub(crate) pointers: Pointers,
+    game_state: GameState,
     pub(crate) fog_traversal_count: u32,
-    pub(crate) last_anim: Option<u32>,
+    pub(crate) was_in_fog: bool,
     pub(crate) pending_fog: Option<PendingFogEvent>,
     pub(crate) show_ui: bool,
     pub(crate) config: Config,
     pub(crate) status_message: Option<(String, Instant)>,
     pub(crate) ws_client: WebSocketClient,
-    /// Pointer chain to read PlayRegionId from FieldArea
-    play_region_id_ptr: PointerChain<u32>,
 }
 
 impl FogRandoTracker {
@@ -70,24 +57,11 @@ impl FogRandoTracker {
             config.keybindings.toggle_ui.name()
         );
 
-        let pointers = Pointers::new();
-
-        // Create pointer chain for PlayRegionId (FieldArea + 0xE4)
-        let play_region_id_ptr = PointerChain::<u32>::new(&[
-            pointers.base_addresses.field_area,
-            FIELD_AREA_PLAY_REGION_ID_OFFSET,
-        ]);
+        // Initialize game state reader
+        let game_state = GameState::new();
 
         // Wait for the game to be loaded
-        let poll_interval = Duration::from_millis(100);
-        loop {
-            if let Some(menu_timer) = pointers.menu_timer.read() {
-                if menu_timer > 0. {
-                    break;
-                }
-            }
-            std::thread::sleep(poll_interval);
-        }
+        game_state.wait_for_game_loaded();
 
         println!("FogRandoTracker initialized!");
 
@@ -104,98 +78,74 @@ impl FogRandoTracker {
         }
 
         Some(Self {
-            pointers,
+            game_state,
             fog_traversal_count: 0,
-            last_anim: None,
+            was_in_fog: false,
             pending_fog: None,
             show_ui: true,
             config,
             status_message: None,
             ws_client,
-            play_region_id_ptr,
         })
     }
 
     /// Check for fog wall traversals each frame
     pub fn check_fog_traversal(&mut self) {
-        if let (Some([x, y, z, _, _]), Some(map_id)) = (
-            self.pointers.global_position.read(),
-            self.pointers.global_position.read_map_id(),
-        ) {
-            // Detect fog wall traversal
-            let current_anim = self.pointers.cur_anim.read();
-            let is_fog = current_anim.map(|a| a == FOG_WALL_ANIM_ID).unwrap_or(false);
-            let was_fog = self
-                .last_anim
-                .map(|a| a == FOG_WALL_ANIM_ID)
-                .unwrap_or(false);
+        let is_fog = self.game_state.is_in_fog_animation();
 
-            // Check if position data is valid (not during loading screen)
-            let is_valid_position = map_id != 0xFFFFFFFF && (x != 0.0 || y != 0.0 || z != 0.0);
-
-            if is_fog && !was_fog && is_valid_position {
-                // Animation just started - record entry zone, position, and play region
-                let entry_zone = get_zone_name(map_id);
-                let map_id_str = format_map_id(map_id);
-                let entry_play_region_id = self.play_region_id_ptr.read();
+        // Detect fog entry: animation just started
+        if is_fog && !self.was_in_fog {
+            if let Some(pos) = self.game_state.read_position() {
                 println!(
-                    "[FOG] Entry detected [{}] zone={} pos=({:.1}, {:.1}, {:.1}) region={:?}",
-                    map_id_str, entry_zone, x, y, z, entry_play_region_id
+                    "[FOG] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
+                    pos.map_id_str, pos.x, pos.y, pos.z, pos.play_region_id
                 );
-                self.pending_fog = Some(PendingFogEvent {
-                    entry_zone_name: entry_zone,
-                    entry_map_id: map_id,
-                    entry_pos: (x, y, z),
-                    entry_play_region_id,
-                });
-            } else if self.pending_fog.is_some() && !is_fog && is_valid_position {
-                // We had a pending fog entry AND animation is no longer fog AND position is valid
-                if let Some(pending) = self.pending_fog.take() {
-                    let exit_zone = get_zone_name(map_id);
-                    let map_id_str = format_map_id(map_id);
-                    let entry_map_id_str = format_map_id(pending.entry_map_id);
-                    let exit_play_region_id = self.play_region_id_ptr.read();
-                    println!(
-                        "[FOG] Exit detected [{}] zone={} pos=({:.1}, {:.1}, {:.1}) region={:?}",
-                        map_id_str, exit_zone, x, y, z, exit_play_region_id
-                    );
-                    println!(
-                        "[FOG] Traversal complete: {} [{}] → {} [{}]",
-                        pending.entry_zone_name, entry_map_id_str, exit_zone, map_id_str
-                    );
-
-                    // Send discovery to server if connected
-                    if self.ws_client.is_connected() {
-                        println!(
-                            "[FOG] Sending to server: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?}",
-                            entry_map_id_str,
-                            pending.entry_pos.0,
-                            pending.entry_pos.1,
-                            pending.entry_pos.2,
-                            pending.entry_play_region_id,
-                            map_id_str,
-                            x,
-                            y,
-                            z,
-                            exit_play_region_id
-                        );
-                        self.ws_client.send_discovery_v2(
-                            pending.entry_map_id,
-                            pending.entry_pos,
-                            pending.entry_play_region_id,
-                            map_id,
-                            (x, y, z),
-                            exit_play_region_id,
-                        );
-                    } else {
-                        println!("[FOG] Not connected to server, discovery not sent");
-                    }
-
-                    self.fog_traversal_count += 1;
-                }
+                self.pending_fog = Some(PendingFogEvent { entry: pos });
             }
-            self.last_anim = current_anim;
         }
+        // Detect fog exit: we had a pending entry AND animation ended AND position is valid
+        else if self.pending_fog.is_some() && !is_fog {
+            if let Some(exit_pos) = self.game_state.read_position() {
+                let pending = self.pending_fog.take().unwrap();
+                let entry = &pending.entry;
+
+                println!(
+                    "[FOG] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
+                    exit_pos.map_id_str, exit_pos.x, exit_pos.y, exit_pos.z, exit_pos.play_region_id
+                );
+                println!(
+                    "[FOG] Traversal complete: {} → {}",
+                    entry.map_id_str, exit_pos.map_id_str
+                );
+
+                // Send discovery to server if connected
+                if self.ws_client.is_connected() {
+                    println!(
+                        "[FOG] Sending to server: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?}",
+                        entry.map_id_str,
+                        entry.x, entry.y, entry.z,
+                        entry.play_region_id,
+                        exit_pos.map_id_str,
+                        exit_pos.x, exit_pos.y, exit_pos.z,
+                        exit_pos.play_region_id
+                    );
+                    self.ws_client.send_discovery_v2(
+                        entry.map_id,
+                        entry.pos(),
+                        entry.play_region_id,
+                        exit_pos.map_id,
+                        exit_pos.pos(),
+                        exit_pos.play_region_id,
+                    );
+                } else {
+                    println!("[FOG] Not connected to server, discovery not sent");
+                }
+
+                self.fog_traversal_count += 1;
+            }
+        }
+
+        self.was_in_fog = is_fog;
     }
 
     /// Set a status message that will be displayed temporarily
@@ -214,14 +164,10 @@ impl FogRandoTracker {
         })
     }
 
-    /// Returns the player's current map_id and zone name
+    /// Returns the player's current map_id and its string representation
     pub fn get_current_position(&self) -> Option<(u32, String)> {
-        if let Some(map_id) = self.pointers.global_position.read_map_id() {
-            if map_id != 0xFFFFFFFF {
-                return Some((map_id, get_zone_name(map_id)));
-            }
-        }
-        None
+        let pos = self.game_state.read_position()?;
+        Some((pos.map_id, pos.map_id_str))
     }
 
     /// Poll the WebSocket client for incoming messages

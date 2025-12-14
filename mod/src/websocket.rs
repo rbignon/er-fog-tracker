@@ -14,7 +14,7 @@ use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{connect, Message, WebSocket};
 
 use crate::config::ServerSettings;
-use crate::zone_names::format_map_id;
+use crate::game_state::format_map_id;
 
 // =============================================================================
 // TYPES
