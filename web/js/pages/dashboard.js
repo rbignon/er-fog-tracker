@@ -146,6 +146,13 @@ async function createGame() {
     target_details: link.targetDetails || null,
   }));
 
+  // Convert graph data to zones format (node metadata)
+  const zones = parsedData.graphData.nodes.map((node) => ({
+    id: node.id,
+    is_boss: node.isBoss || false,
+    scaling: node.scaling || null,
+  }));
+
   createBtn.disabled = true;
   createBtn.textContent = 'Creating...';
 
@@ -155,6 +162,7 @@ async function createGame() {
       runId: `web_${Date.now()}`,
       label: label || null,
       zonePairs,
+      zones,
     });
 
     if (response.created) {
@@ -168,6 +176,7 @@ async function createGame() {
   } catch (e) {
     errorEl.textContent = e.detail || e.message || 'Failed to create game';
     errorEl.classList.remove('hidden');
+  } finally {
     createBtn.disabled = false;
     createBtn.textContent = 'Create Game';
   }

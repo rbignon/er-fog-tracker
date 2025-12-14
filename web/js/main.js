@@ -245,16 +245,37 @@ async function initViewerMode(gameId) {
 async function convertServerDataToGraph(game) {
   const { extractRequiredItemFromDescription } = await import('./parser.js');
 
+  // Build zone metadata map if available
+  const zoneMetadata = new Map();
+  if (game.zones) {
+    for (const zone of game.zones) {
+      zoneMetadata.set(zone.id, {
+        isBoss: zone.is_boss || false,
+        scaling: zone.scaling || null,
+      });
+    }
+  }
+
   const nodes = new Map();
   const links = [];
 
   for (const pair of game.zone_pairs) {
-    // Add nodes
+    // Add nodes with metadata if available
     if (!nodes.has(pair.source)) {
-      nodes.set(pair.source, { id: pair.source });
+      const meta = zoneMetadata.get(pair.source) || {};
+      nodes.set(pair.source, {
+        id: pair.source,
+        isBoss: meta.isBoss || false,
+        scaling: meta.scaling || null,
+      });
     }
     if (!nodes.has(pair.destination)) {
-      nodes.set(pair.destination, { id: pair.destination });
+      const meta = zoneMetadata.get(pair.destination) || {};
+      nodes.set(pair.destination, {
+        id: pair.destination,
+        isBoss: meta.isBoss || false,
+        scaling: meta.scaling || null,
+      });
     }
 
     // Check for required key items

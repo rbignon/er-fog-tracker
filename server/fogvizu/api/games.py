@@ -25,6 +25,7 @@ from fogvizu.models import (
     GameUpdate,
     NodePositionResponse,
     PropagatedLink,
+    Zone,
 )
 
 router = APIRouter()
@@ -74,6 +75,7 @@ async def create_game(
         run_id=data.run_id,
         label=data.label,
         zone_pairs=[zp.model_dump() for zp in data.zone_pairs],
+        zones=[z.model_dump() for z in data.zones] if data.zones else None,
         discovered_links=[],
         node_positions={},
         tags={},
@@ -111,12 +113,16 @@ async def get_game(
         for node_id, pos in (game.node_positions or {}).items()
     }
 
+    # Parse zones metadata
+    zones = [Zone(**z) for z in game.zones] if game.zones else None
+
     return GameFull(
         id=game.id,
         seed=game.seed,
         run_id=game.run_id,
         label=game.label,
         zone_pairs=game.zone_pairs,
+        zones=zones,
         discovered_links=[
             DiscoveredLinkResponse(
                 source=dl["source"],

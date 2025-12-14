@@ -20,6 +20,14 @@ class ZonePair(BaseModel):
     target_details: str | None = None
 
 
+class Zone(BaseModel):
+    """Zone metadata (node info from spoiler log)."""
+
+    id: str
+    is_boss: bool = False
+    scaling: str | None = None
+
+
 # =============================================================================
 # User
 # =============================================================================
@@ -55,6 +63,7 @@ class GameCreate(BaseModel):
     run_id: str = Field(max_length=100)
     label: str | None = Field(default=None, max_length=200)
     zone_pairs: list[ZonePair]
+    zones: list[Zone] | None = None
 
 
 class GameCreateResponse(BaseModel):
@@ -101,6 +110,7 @@ class GameFull(BaseModel):
     run_id: str
     label: str | None
     zone_pairs: list[ZonePair]
+    zones: list[Zone] | None = None
     discovered_links: list[DiscoveredLinkResponse]
     discovered_nodes: list[str]
     node_positions: dict[str, NodePositionResponse]

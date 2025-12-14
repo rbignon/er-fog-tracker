@@ -55,6 +55,7 @@ class Game(Base):
     run_id: Mapped[str] = mapped_column(String(100), nullable=False)
     label: Mapped[str | None] = mapped_column(String(200))
     zone_pairs: Mapped[list] = mapped_column(JSONB, nullable=False)
+    zones: Mapped[list | None] = mapped_column(JSONB)  # Zone metadata (isBoss, scaling)
 
     # JSONB state columns
     discovered_links: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
