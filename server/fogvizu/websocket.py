@@ -415,10 +415,23 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
 
                     # Compute exits from the destination zone
                     exits = []
+                    destination_zone = None
                     if resolved_links and game_for_zones:
-                        # Use the first resolved link's target as the current zone
-                        # (they should all lead to the same zone group via preexisting)
-                        destination_zone = resolved_links[0]["target"]
+                        # Determine which zone the player actually arrived at
+                        # The resolved link has source/target from spoiler log, but we need
+                        # to find which one matches the player's exit position (target_candidates)
+                        link = resolved_links[0]
+                        target_display_names = {c[1] for c in target_candidates}
+
+                        if link["target"] in target_display_names:
+                            destination_zone = link["target"]
+                        elif link["source"] in target_display_names:
+                            destination_zone = link["source"]
+                        else:
+                            # Fallback: use target (shouldn't happen normally)
+                            destination_zone = link["target"]
+
+                        logger.info("[MOD] Player arrived at zone: %s", destination_zone)
 
                         # Refetch game to get updated discovered_links
                         result = await db.execute(select(Game).where(Game.id == game_id))
@@ -437,7 +450,6 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                             )
 
                     # Send ack to mod with all resolved links and exits
-                    destination_zone = resolved_links[0]["target"] if resolved_links else None
                     ack_msg = {
                         "type": "discovery_v2_ack",
                         "propagated": all_propagated,

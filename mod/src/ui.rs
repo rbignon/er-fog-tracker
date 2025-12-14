@@ -99,16 +99,17 @@ impl FogRandoTracker {
                     [0.5, 1.0, 0.5, 1.0] // Green for discovered
                 };
 
-                // Format: "→ Destination (description)" or "→ Destination [from Zone]"
-                let mut line = format!("→ {}", exit.destination);
-                if !exit.description.is_empty() {
-                    line.push_str(&format!(" ({})", exit.description));
-                }
+                // Line 1: destination zone (or "???")
+                let mut dest_line = format!("→ {}", exit.destination);
                 if let Some(ref from) = exit.from_zone {
-                    line.push_str(&format!(" [from {}]", from));
+                    dest_line.push_str(&format!(" [from {}]", from));
                 }
+                ui.text_colored(dest_color, &dest_line);
 
-                ui.text_colored(dest_color, &line);
+                // Line 2: description (how to get there), indented
+                if !exit.description.is_empty() {
+                    ui.text_disabled(format!("    {}", exit.description));
+                }
             }
         }
     }
