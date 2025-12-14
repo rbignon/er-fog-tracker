@@ -7,3 +7,12 @@ repos:
         files: server/
       - id: ruff-format
         files: server/
+
+  - repo: local
+    hooks:
+      - id: rustfmt
+        name: rustfmt
+        entry: rustfmt
+        language: system
+        types: [rust]
+        files: ^mod/
