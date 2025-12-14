@@ -69,6 +69,14 @@ export function init() {
   document.getElementById('toggle-mod-token-btn').addEventListener('click', toggleModTokenVisibility);
   document.getElementById('copy-mod-token-btn').addEventListener('click', copyModToken);
   document.getElementById('regenerate-mod-token-btn').addEventListener('click', regenerateModToken);
+
+  // Mod config modal
+  document.getElementById('close-mod-config-modal').addEventListener('click', closeModConfigModal);
+  document.getElementById('close-mod-config-modal-btn').addEventListener('click', closeModConfigModal);
+  document.getElementById('copy-mod-config-btn').addEventListener('click', copyModConfig);
+  document.getElementById('mod-config-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'mod-config-modal') closeModConfigModal();
+  });
 }
 
 /**
@@ -225,9 +233,17 @@ function createGameCard(game) {
       <div class="game-updated">Updated: ${updatedDate}</div>
     </div>
     <div class="game-card-footer">
+      <button class="btn-secondary btn-small game-config-btn">Mod Config</button>
       <a href="/play/${game.id}" class="btn-primary btn-small">Play</a>
     </div>
   `;
+
+  // Mod config button handler
+  card.querySelector('.game-config-btn').addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showModConfigModal(game.id);
+  });
 
   // Delete button handler
   card.querySelector('.game-delete-btn').addEventListener('click', async (e) => {
@@ -260,6 +276,65 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// =============================================================================
+// MOD CONFIG MODAL
+// =============================================================================
+
+/**
+ * Generate the mod config TOML content for a game.
+ */
+function generateModConfig(gameId) {
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const serverUrl = `${wsProtocol}//${window.location.host}`;
+  const modToken = currentUser?.modToken || '<your_mod_token>';
+
+  return `[server]
+enabled = true
+url = "${serverUrl}"
+mod_token = "${modToken}"
+game_id = "${gameId}"
+auto_reconnect = true`;
+}
+
+/**
+ * Show the mod config modal for a specific game.
+ */
+function showModConfigModal(gameId) {
+  const modal = document.getElementById('mod-config-modal');
+  const content = document.getElementById('mod-config-content');
+
+  content.textContent = generateModConfig(gameId);
+  modal.classList.remove('hidden');
+}
+
+/**
+ * Close the mod config modal.
+ */
+function closeModConfigModal() {
+  document.getElementById('mod-config-modal').classList.add('hidden');
+}
+
+/**
+ * Copy the mod config to clipboard.
+ */
+async function copyModConfig() {
+  const content = document.getElementById('mod-config-content').textContent;
+
+  try {
+    await navigator.clipboard.writeText(content);
+    Toast.show('Config copied to clipboard');
+  } catch (e) {
+    // Fallback
+    const textarea = document.createElement('textarea');
+    textarea.value = content;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    Toast.show('Config copied to clipboard');
+  }
 }
 
 /**

@@ -480,6 +480,34 @@ body::before {
     transition: all 0.2s;
 }
 
+/* Mod config modal */
+.mod-config-section {
+    margin-bottom: 16px;
+}
+
+.mod-config-section pre {
+    background: #0a0908;
+    border: 1px solid #3a3530;
+    border-radius: 6px;
+    padding: 16px;
+    margin: 0 0 12px 0;
+    color: #c4b998;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.stream-modal-content code {
+    background: #0a0908;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+    color: #c9a227;
+}
+
 .btn-primary {
     background: linear-gradient(135deg, #c9a227 0%, #8b7355 100%);
     border: none;
@@ -2320,7 +2348,9 @@ marker path {
 .game-card-footer {
     padding: 12px 16px;
     border-top: 1px solid #2a2520;
-    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 .game-card-footer a {

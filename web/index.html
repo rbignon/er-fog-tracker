@@ -308,6 +308,22 @@
     </div>
 
     <!-- =========================================================================
+         Mod Config Modal
+         ========================================================================= -->
+    <div id="mod-config-modal" class="modal hidden">
+        <div class="stream-modal-content">
+            <button id="close-mod-config-modal" class="modal-close-btn">&times;</button>
+            <h3>Mod Configuration</h3>
+            <p>Copy this configuration to your <code>fog_rando_tracker.toml</code> file:</p>
+            <div class="mod-config-section">
+                <pre id="mod-config-content"></pre>
+                <button id="copy-mod-config-btn" class="btn-secondary btn-copy">Copy Config</button>
+            </div>
+            <button id="close-mod-config-modal-btn" class="btn-secondary" style="width: 100%; margin-top: 16px;">Close</button>
+        </div>
+    </div>
+
+    <!-- =========================================================================
          Stream to OBS Modal
          ========================================================================= -->
     <div id="stream-modal" class="modal hidden">
