@@ -33,9 +33,28 @@
 # Key names are case-insensitive: "F9", "f9", "F9" all work the same.
 # =============================================================================
 
+# =============================================================================
+# DEBUG OPTIONS
+# =============================================================================
+
+# Open a debug console window for real-time logging (true/false)
+# Useful for troubleshooting issues with the mod.
+debug_console = false
+
 [keybindings]
 # Key to toggle UI visibility
 toggle_ui = "f9"
+
+# =============================================================================
+# OVERLAY SETTINGS
+# =============================================================================
+#
+# Customize the in-game overlay appearance.
+#
+[overlay]
+# Font scale factor (1.0 = default size, 1.5 = 150%, 2.0 = 200%, etc.)
+# Increase this value if the overlay is too small on high-resolution displays.
+font_scale = 1.0
 
 # =============================================================================
 # SERVER INTEGRATION (fog-vizu)
