@@ -14,6 +14,7 @@ use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{connect, Message, WebSocket};
 
 use crate::config::ServerSettings;
+use crate::zone_names::format_map_id;
 
 // =============================================================================
 // TYPES
@@ -59,7 +60,12 @@ impl ConnectionStatus {
 #[derive(Debug)]
 pub enum OutgoingMessage {
     /// Send a discovery event
-    Discovery { source: String, target: String },
+    Discovery {
+        source: String,
+        source_map_id: u32,
+        target: String,
+        target_map_id: u32,
+    },
     /// Respond to server ping
     Pong,
     /// Shutdown the connection
@@ -95,7 +101,12 @@ pub struct PropagatedLink {
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ServerMessage {
     Auth { token: String },
-    Discovery { source: String, target: String },
+    Discovery {
+        source: String,
+        source_map_id: String,
+        target: String,
+        target_map_id: String,
+    },
     Pong,
 }
 
@@ -209,11 +220,13 @@ impl WebSocketClient {
     }
 
     /// Send a discovery event to the server
-    pub fn send_discovery(&self, source: &str, target: &str) {
+    pub fn send_discovery(&self, source: &str, source_map_id: u32, target: &str, target_map_id: u32) {
         if let Some(tx) = &self.tx {
             let _ = tx.try_send(OutgoingMessage::Discovery {
                 source: source.to_string(),
+                source_map_id,
                 target: target.to_string(),
+                target_map_id,
             });
         }
     }
@@ -423,12 +436,21 @@ fn message_loop(
         match outgoing_rx.try_recv() {
             Ok(OutgoingMessage::Discovery {
                 ref source,
+                source_map_id,
                 ref target,
+                target_map_id,
             }) => {
-                println!("[WS TX] Discovery: {} → {}", source, target);
+                let source_map_str = format_map_id(source_map_id);
+                let target_map_str = format_map_id(target_map_id);
+                println!(
+                    "[WS TX] Discovery: {} [{}] → {} [{}]",
+                    source, source_map_str, target, target_map_str
+                );
                 let msg = ServerMessage::Discovery {
                     source: source.clone(),
+                    source_map_id: source_map_str,
                     target: target.clone(),
+                    target_map_id: target_map_str,
                 };
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket

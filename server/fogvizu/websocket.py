@@ -224,7 +224,15 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                 elif msg_type == "discovery":
                     source = data.get("source")
                     target = data.get("target")
-                    logger.info("[MOD] Discovery request: '%s' → '%s'", source, target)
+                    source_map_id = data.get("source_map_id", "?")
+                    target_map_id = data.get("target_map_id", "?")
+                    logger.info(
+                        "[MOD] Discovery request: '%s' [%s] → '%s' [%s]",
+                        source,
+                        source_map_id,
+                        target,
+                        target_map_id,
+                    )
 
                     if not source or not target:
                         logger.warning("[MOD] Missing source or target in discovery")
