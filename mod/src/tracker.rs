@@ -7,9 +7,28 @@ use libeldenring::pointers::Pointers;
 use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
-use crate::route::{FogEvent, PendingFogEvent};
 use crate::websocket::{ConnectionStatus, IncomingMessage, WebSocketClient};
 use crate::zone_names::{format_map_id, get_zone_name};
+
+// =============================================================================
+// FOG EVENTS
+// =============================================================================
+
+/// Completed fog wall traversal
+#[derive(Clone, Debug)]
+pub struct FogEvent {
+    pub entry_zone_name: String,
+    pub exit_zone_name: String,
+    pub entry_timestamp_ms: u64,
+    pub exit_timestamp_ms: u64,
+}
+
+/// Pending fog event (entry recorded, waiting for exit)
+#[derive(Clone, Debug)]
+struct PendingFogEvent {
+    entry_zone_name: String,
+    entry_timestamp_ms: u64,
+}
 
 /// Animation ID for fog wall traversal
 const FOG_WALL_ANIM_ID: u32 = 60060;

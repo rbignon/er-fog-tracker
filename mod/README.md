@@ -33,10 +33,10 @@ Edit `fog_rando_tracker.toml` to configure:
 | File | Purpose |
 |------|---------|
 | `lib.rs` | DLL entry point, hudhook/ImGui initialization |
-| `tracker.rs` | Core tracking: fog traversals |
+| `tracker.rs` | Core logic: fog traversal detection |
 | `ui.rs` | ImGui overlay rendering |
-| `config.rs` | TOML config parsing, hotkey handling |
-| `route.rs` | Fog event data structures |
+| `config.rs` | TOML config parsing |
+| `hotkey.rs` | Keyboard shortcut handling |
 | `websocket.rs` | WebSocket client for server integration |
 | `zone_names.rs` | map_id → zone name mapping |
 | `injector.rs` | Standalone DLL injector |

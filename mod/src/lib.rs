@@ -23,7 +23,7 @@
 // =============================================================================
 
 mod config;
-mod route;
+mod hotkey;
 mod tracker;
 mod ui;
 mod websocket;
