@@ -1,6 +1,5 @@
 // FogRandoTracker - Fog gate traversal tracking for Fog Gate Randomizer
 
-use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use hudhook::tracing::{info, warn};
@@ -8,10 +7,9 @@ use libeldenring::pointers::Pointers;
 use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
-use crate::coordinate_transformer::WorldPositionTransformer;
 use crate::route::{FogEvent, PendingFogEvent};
 use crate::websocket::{ConnectionStatus, IncomingMessage, WebSocketClient};
-use crate::zone_names::get_zone_name;
+use crate::zone_names::{format_map_id, get_zone_name};
 
 /// Animation ID for fog wall traversal
 const FOG_WALL_ANIM_ID: u32 = 60060;
@@ -28,9 +26,7 @@ pub struct FogRandoTracker {
     pub(crate) pending_fog: Option<PendingFogEvent>,
     pub(crate) show_ui: bool,
     pub(crate) config: Config,
-    pub(crate) base_dir: PathBuf,
     pub(crate) status_message: Option<(String, Instant)>,
-    pub(crate) transformer: WorldPositionTransformer,
     pub(crate) ws_client: WebSocketClient,
     pub(crate) start_time: Instant,
 }
@@ -57,30 +53,6 @@ impl FogRandoTracker {
             "Keybindings: Toggle UI={}",
             config.keybindings.toggle_ui.name()
         );
-
-        // Get the DLL's directory
-        let base_dir = Config::get_dll_directory(hmodule).unwrap_or_else(|| PathBuf::from("."));
-
-        // Load coordinate transformer CSV
-        let csv_path = base_dir.join("WorldMapLegacyConvParam.csv");
-        let transformer = match WorldPositionTransformer::from_csv(&csv_path) {
-            Ok(t) => {
-                info!(
-                    "Loaded coordinate transformer: {} maps, {} anchors",
-                    t.map_count(),
-                    t.anchor_count()
-                );
-                t
-            }
-            Err(e) => {
-                warn!(
-                    "Failed to load coordinate transformer from {:?}: {}. \
-                       Using overworld-only mode.",
-                    csv_path, e
-                );
-                WorldPositionTransformer::empty()
-            }
-        };
 
         let pointers = Pointers::new();
 
@@ -116,9 +88,7 @@ impl FogRandoTracker {
             pending_fog: None,
             show_ui: true,
             config,
-            base_dir,
             status_message: None,
-            transformer,
             ws_client,
             start_time: Instant::now(),
         })
@@ -132,14 +102,6 @@ impl FogRandoTracker {
         ) {
             let timestamp_ms = self.start_time.elapsed().as_millis() as u64;
 
-            // Convert to global coordinates
-            let (global_x, global_y, global_z) = self
-                .transformer
-                .local_to_world_first(map_id, x, y, z)
-                .unwrap_or((x, y, z));
-
-            let map_id_str = WorldPositionTransformer::format_map_id(map_id);
-
             // Detect fog wall traversal
             let current_anim = self.pointers.cur_anim.read();
             let is_fog = current_anim.map(|a| a == FOG_WALL_ANIM_ID).unwrap_or(false);
@@ -152,17 +114,11 @@ impl FogRandoTracker {
             let is_valid_position = map_id != 0xFFFFFFFF && (x != 0.0 || y != 0.0 || z != 0.0);
 
             if is_fog && !was_fog && is_valid_position {
-                // Animation just started - record entry position
+                // Animation just started - record entry zone
                 let entry_zone = get_zone_name(map_id);
-                info!(
-                    "Fog wall entry at ({}, {}, {}) [{}] - {}",
-                    global_x, global_y, global_z, map_id_str, entry_zone
-                );
+                let map_id_str = format_map_id(map_id);
+                info!("Fog wall entry [{}] - {}", map_id_str, entry_zone);
                 self.pending_fog = Some(PendingFogEvent {
-                    entry_x: global_x,
-                    entry_y: global_y,
-                    entry_z: global_z,
-                    entry_map_id_str: map_id_str.clone(),
                     entry_zone_name: entry_zone,
                     entry_timestamp_ms: timestamp_ms,
                 });
@@ -170,14 +126,10 @@ impl FogRandoTracker {
                 // We had a pending fog entry AND animation is no longer fog AND position is valid
                 if let Some(pending) = self.pending_fog.take() {
                     let exit_zone = get_zone_name(map_id);
+                    let map_id_str = format_map_id(map_id);
                     info!(
-                        "Fog wall exit at ({}, {}, {}) [{}] - {} → {}",
-                        global_x,
-                        global_y,
-                        global_z,
-                        map_id_str,
-                        pending.entry_zone_name,
-                        exit_zone
+                        "Fog wall exit [{}] - {} → {}",
+                        map_id_str, pending.entry_zone_name, exit_zone
                     );
 
                     // Send discovery to server if connected
@@ -191,15 +143,7 @@ impl FogRandoTracker {
                     }
 
                     self.fog_traversals.push(FogEvent {
-                        entry_x: pending.entry_x,
-                        entry_y: pending.entry_y,
-                        entry_z: pending.entry_z,
-                        entry_map_id_str: pending.entry_map_id_str,
                         entry_zone_name: pending.entry_zone_name,
-                        exit_x: global_x,
-                        exit_y: global_y,
-                        exit_z: global_z,
-                        exit_map_id_str: map_id_str,
                         exit_zone_name: exit_zone,
                         entry_timestamp_ms: pending.entry_timestamp_ms,
                         exit_timestamp_ms: timestamp_ms,
@@ -226,22 +170,14 @@ impl FogRandoTracker {
         })
     }
 
-    /// Returns the player's current position (local and global)
-    /// Returns: (local_x, local_y, local_z, global_x, global_y, global_z, map_id)
-    pub fn get_current_position(&self) -> Option<(f32, f32, f32, f32, f32, f32, u32)> {
-        if let (Some([x, y, z, _, _]), Some(map_id)) = (
-            self.pointers.global_position.read(),
-            self.pointers.global_position.read_map_id(),
-        ) {
-            let (gx, gy, gz) = self
-                .transformer
-                .local_to_world_first(map_id, x, y, z)
-                .unwrap_or((x, y, z));
-
-            Some((x, y, z, gx, gy, gz, map_id))
-        } else {
-            None
+    /// Returns the player's current map_id and zone name
+    pub fn get_current_position(&self) -> Option<(u32, String)> {
+        if let Some(map_id) = self.pointers.global_position.read_map_id() {
+            if map_id != 0xFFFFFFFF {
+                return Some((map_id, get_zone_name(map_id)));
+            }
         }
+        None
     }
 
     /// Poll the WebSocket client for incoming messages

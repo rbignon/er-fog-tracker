@@ -19,10 +19,7 @@ cargo build --release
 
 ## Installation
 
-1. Copy these files next to the DLL:
-   - `fog_rando_tracker.toml` (required - configuration file)
-   - `WorldMapLegacyConvParam.csv` (required - coordinate conversion data)
-
+1. Copy `fog_rando_tracker.toml` next to the DLL (required - configuration file)
 2. Inject the DLL into Elden Ring using the injector or a mod loader.
 
 ## Configuration
@@ -36,14 +33,12 @@ Edit `fog_rando_tracker.toml` to configure:
 | File | Purpose |
 |------|---------|
 | `lib.rs` | DLL entry point, hudhook/ImGui initialization |
-| `tracker.rs` | Core tracking: position, fog traversals |
+| `tracker.rs` | Core tracking: fog traversals |
 | `ui.rs` | ImGui overlay rendering |
 | `config.rs` | TOML config parsing, hotkey handling |
 | `route.rs` | Fog event data structures |
 | `websocket.rs` | WebSocket client for server integration |
-| `coordinate_transformer.rs` | Local tile → global world coordinates |
 | `zone_names.rs` | map_id → zone name mapping |
-| `custom_pointers.rs` | Memory pointers for game state |
 | `injector.rs` | Standalone DLL injector |
 
 ## Fog Detection

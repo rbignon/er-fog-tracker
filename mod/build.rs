@@ -1,14 +1,13 @@
 // Build script for FogRandoTracker
-// Copies the config and CSV files to the output directory after build
+// Copies the config file to the output directory after build
 
 use std::env;
 use std::fs;
 use std::path::Path;
 
 fn main() {
-    // Tell Cargo to rerun this script if these files change
+    // Tell Cargo to rerun this script if the config file changes
     println!("cargo:rerun-if-changed=fog_rando_tracker.toml");
-    println!("cargo:rerun-if-changed=src/WorldMapLegacyConvParam.csv");
 
     // Get the output directory from Cargo
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -36,16 +35,5 @@ fn main() {
         );
     } else {
         println!("cargo:warning=Config file not found: fog_rando_tracker.toml");
-    }
-
-    // Copy coordinate transformer CSV
-    let csv_src = Path::new("src/WorldMapLegacyConvParam.csv");
-    let csv_dst = target_dir.join("WorldMapLegacyConvParam.csv");
-
-    if csv_src.exists() {
-        fs::copy(csv_src, &csv_dst).expect("Failed to copy CSV file");
-        println!("cargo:warning=Copied CSV file to {}", csv_dst.display());
-    } else {
-        println!("cargo:warning=CSV file not found: src/WorldMapLegacyConvParam.csv");
     }
 }

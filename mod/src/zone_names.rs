@@ -7,7 +7,30 @@
 // DLC zone boundaries intentionally overlap at edges (e.g., Gravesite Plain / Charo's Hidden Grave)
 #![allow(overlapping_range_endpoints)]
 
-use crate::coordinate_transformer::WorldPositionTransformer;
+// =============================================================================
+// MAP ID UTILITIES
+// =============================================================================
+
+/// Parse a u32 map_id into its components (area_no, grid_x, grid_z, dd)
+///
+/// The map_id is packed as: 0xWWXXYYDD
+/// - WW = area number (60 for overworld)
+/// - XX = grid X index
+/// - YY = grid Z index
+/// - DD = always 00
+pub fn parse_map_id(map_id: u32) -> (u8, u8, u8, u8) {
+    let ww = ((map_id >> 24) & 0xFF) as u8;
+    let xx = ((map_id >> 16) & 0xFF) as u8;
+    let yy = ((map_id >> 8) & 0xFF) as u8;
+    let dd = (map_id & 0xFF) as u8;
+    (ww, xx, yy, dd)
+}
+
+/// Format a map_id as a string "mWW_XX_YY_DD"
+pub fn format_map_id(map_id: u32) -> String {
+    let (ww, xx, yy, dd) = parse_map_id(map_id);
+    format!("m{:02}_{:02}_{:02}_{:02}", ww, xx, yy, dd)
+}
 
 // =============================================================================
 // LEGACY DUNGEON / UNDERGROUND AREA NAMES (by area number)
@@ -479,7 +502,7 @@ fn get_fallback_overworld_region(area_no: u8, grid_x: u8, grid_z: u8) -> &'stati
 /// For legacy dungeons, uses the area number.
 /// For overworld maps, uses precise tile mapping with fallback to region bounds.
 pub fn get_zone_name(map_id: u32) -> String {
-    let (area_no, grid_x, grid_z, _) = WorldPositionTransformer::parse_map_id(map_id);
+    let (area_no, grid_x, grid_z, _) = parse_map_id(map_id);
 
     // Handle invalid map_id
     if map_id == 0xFFFFFFFF {

@@ -66,9 +66,8 @@ impl FogRandoTracker {
 
     /// Render current position section
     fn render_position_section(&self, ui: &hudhook::imgui::Ui) {
-        ui.text("=== Current Position ===");
-        if let Some((x, y, z, gx, gy, gz, map_id)) = self.get_current_position() {
-            // Map ID in decimal format (matches CSV)
+        ui.text("=== Current Zone ===");
+        if let Some((map_id, zone_name)) = self.get_current_position() {
             let (ww, xx, yy, dd) = (
                 (map_id >> 24) & 0xff,
                 (map_id >> 16) & 0xff,
@@ -76,16 +75,9 @@ impl FogRandoTracker {
                 map_id & 0xff,
             );
             ui.text(format!("Map: m{:02}_{:02}_{:02}_{:02}", ww, xx, yy, dd));
-
-            ui.separator();
-            ui.text("Local (Tile):");
-            ui.text(format!("  X: {:.2}  Y: {:.2}  Z: {:.2}", x, y, z));
-
-            ui.separator();
-            ui.text("Global (World):");
-            ui.text(format!("  X: {:.2}  Y: {:.2}  Z: {:.2}", gx, gy, gz));
+            ui.text(format!("Zone: {}", zone_name));
         } else {
-            ui.text("Position not available");
+            ui.text("Zone not available");
         }
     }
 
