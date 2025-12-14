@@ -40,6 +40,7 @@ class UserMe(BaseModel):
     twitch_display_name: str | None
     twitch_avatar_url: str | None
     api_token: str
+    mod_token: str
 
 
 # =============================================================================

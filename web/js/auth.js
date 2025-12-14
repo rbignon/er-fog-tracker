@@ -95,6 +95,7 @@ export async function fetchUser() {
         displayName: user.twitch_display_name || user.twitch_username,
         avatarUrl: user.twitch_avatar_url,
         apiToken: user.api_token,
+        modToken: user.mod_token,
       };
 
       localStorage.setItem(USER_KEY, JSON.stringify(cachedUser));
@@ -134,6 +135,16 @@ function clearAuth() {
   localStorage.removeItem(USER_KEY);
   cachedUser = null;
   lastFetchError = null;
+}
+
+/**
+ * Update cached user data (e.g., after regenerating mod token).
+ * @param {Object} updates - Fields to update
+ */
+export function updateCachedUser(updates) {
+  if (!cachedUser) return;
+  Object.assign(cachedUser, updates);
+  localStorage.setItem(USER_KEY, JSON.stringify(cachedUser));
 }
 
 /**
@@ -198,6 +209,7 @@ export default {
   getAuthHeaders,
   getUser,
   fetchUser,
+  updateCachedUser,
   getLastFetchError,
   clearLastFetchError,
   login,

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fogvizu.auth import (
     exchange_code_for_token,
+    generate_api_token,
     get_current_user,
     get_or_create_user,
     get_twitch_oauth_url,
@@ -104,6 +105,26 @@ async def get_me(user: User = Depends(get_current_user)):
         twitch_display_name=user.twitch_display_name,
         twitch_avatar_url=user.twitch_avatar_url,
         api_token=user.api_token,
+        mod_token=user.mod_token,
+    )
+
+
+@router.post("/regenerate-mod-token", response_model=UserMe)
+async def regenerate_mod_token(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Regenerate the mod token for current user."""
+    user.mod_token = generate_api_token()
+    await db.flush()
+
+    return UserMe(
+        id=user.id,
+        twitch_username=user.twitch_username,
+        twitch_display_name=user.twitch_display_name,
+        twitch_avatar_url=user.twitch_avatar_url,
+        api_token=user.api_token,
+        mod_token=user.mod_token,
     )
 
 

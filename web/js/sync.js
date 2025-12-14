@@ -98,6 +98,9 @@ function syncState() {
     syncThrottle = setTimeout(() => {
         syncThrottle = null;
 
+        // Re-check connection state (may have changed during throttle delay)
+        if (!gameWs || gameWs.readyState !== WebSocket.OPEN) return;
+
         isSyncing = true;
         try {
             const state = getFullSyncState();

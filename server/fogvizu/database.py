@@ -32,6 +32,7 @@ class User(Base):
     twitch_display_name: Mapped[str | None] = mapped_column(String(100))
     twitch_avatar_url: Mapped[str | None] = mapped_column(String(500))
     api_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    mod_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -41,6 +42,7 @@ class User(Base):
     __table_args__ = (
         Index("idx_users_twitch_username", "twitch_username"),
         Index("idx_users_api_token", "api_token"),
+        Index("idx_users_mod_token", "mod_token"),
     )
 
 

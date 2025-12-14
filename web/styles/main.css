@@ -2405,6 +2405,95 @@ marker path {
     margin-top: 12px;
 }
 
+/* Mod settings section */
+.mod-settings-section {
+    background: linear-gradient(145deg, #1a1815 0%, #12100d 100%);
+    border: 1px solid #3a3530;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 500px;
+    margin: 30px auto 0;
+}
+
+.mod-settings-section h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.2rem;
+    color: #c9a227;
+    margin-bottom: 12px;
+}
+
+.mod-settings-section .section-description {
+    font-size: 0.9rem;
+    color: #7a6d55;
+    margin-bottom: 20px;
+}
+
+.mod-token-container {
+    margin-bottom: 12px;
+}
+
+.mod-token-container label {
+    display: block;
+    font-size: 0.9rem;
+    color: #9a8d75;
+    margin-bottom: 8px;
+}
+
+.mod-token-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.mod-token-row input[type="text"] {
+    flex: 1;
+    padding: 10px 12px;
+    background: #0a0908;
+    border: 1px solid #3a3530;
+    border-radius: 4px;
+    color: #c4b998;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.mod-token-row input[type="text"]:focus,
+.mod-token-row input[type="password"]:focus {
+    outline: none;
+    border-color: #6a5d45;
+}
+
+.mod-token-row input[type="password"] {
+    flex: 1;
+    padding: 10px 12px;
+    background: #0a0908;
+    border: 1px solid #3a3530;
+    border-radius: 4px;
+    color: #c4b998;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.btn-icon {
+    padding: 8px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.eye-icon {
+    display: block;
+}
+
+.eye-icon.hidden {
+    display: none;
+}
+
+.mod-token-hint {
+    font-size: 0.8rem;
+    color: #5a5040;
+    font-style: italic;
+}
+
 /* Drop zone in dashboard */
 .drop-zone {
     width: 100%;

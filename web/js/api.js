@@ -124,6 +124,20 @@ export async function getUserGames(username) {
 }
 
 // =============================================================================
+// Auth API
+// =============================================================================
+
+/**
+ * Regenerate mod token for current user.
+ * @returns {Promise<{ mod_token: string }>}
+ */
+export async function regenerateModToken() {
+  return apiFetch('/auth/regenerate-mod-token', {
+    method: 'POST',
+  });
+}
+
+// =============================================================================
 // Discovery API (REST fallback, prefer WebSocket)
 // =============================================================================
 
@@ -148,5 +162,6 @@ export default {
   updateGame,
   getUser,
   getUserGames,
+  regenerateModToken,
   createDiscovery,
 };

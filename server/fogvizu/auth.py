@@ -110,6 +110,7 @@ async def get_or_create_user(db: AsyncSession, twitch_user: TwitchUser) -> User:
         twitch_display_name=twitch_user.display_name,
         twitch_avatar_url=twitch_user.profile_image_url,
         api_token=generate_api_token(),
+        mod_token=generate_api_token(),
     )
     db.add(user)
     await db.flush()
@@ -119,6 +120,12 @@ async def get_or_create_user(db: AsyncSession, twitch_user: TwitchUser) -> User:
 async def get_user_by_token(db: AsyncSession, token: str) -> User | None:
     """Get user by API token."""
     result = await db.execute(select(User).where(User.api_token == token))
+    return result.scalar_one_or_none()
+
+
+async def get_user_by_mod_token(db: AsyncSession, token: str) -> User | None:
+    """Get user by mod token (used by the game mod for WebSocket auth)."""
+    result = await db.execute(select(User).where(User.mod_token == token))
     return result.scalar_one_or_none()
 
 

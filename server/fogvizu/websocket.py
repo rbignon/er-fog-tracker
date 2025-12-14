@@ -88,7 +88,10 @@ manager = ConnectionManager()
 
 
 async def authenticate_ws(websocket: WebSocket, db: AsyncSession) -> User | None:
-    """Wait for auth message and validate token."""
+    """Wait for auth message and validate token.
+
+    Accepts either api_token (from browser) or mod_token (from game mod).
+    """
     try:
         # Wait for auth message (5 second timeout)
         data = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
@@ -102,8 +105,12 @@ async def authenticate_ws(websocket: WebSocket, db: AsyncSession) -> User | None
             await websocket.send_json({"type": "auth_error", "message": "Missing token"})
             return None
 
-        # Validate token
-        result = await db.execute(select(User).where(User.api_token == token))
+        # Validate token - check both api_token and mod_token
+        from sqlalchemy import or_
+
+        result = await db.execute(
+            select(User).where(or_(User.api_token == token, User.mod_token == token))
+        )
         user = result.scalar_one_or_none()
 
         if not user:

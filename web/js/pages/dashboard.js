@@ -8,6 +8,9 @@ import { navigate } from '../router.js';
 import { SpoilerLogParser } from '../parser.js';
 import * as Toast from '../toast.js';
 
+// Module state
+let currentUser = null;
+
 let parsedData = null;
 
 /**
@@ -61,6 +64,11 @@ export function init() {
   document.getElementById('cancel-new-game-btn').addEventListener('click', () => {
     resetNewGameForm();
   });
+
+  // Mod token buttons
+  document.getElementById('toggle-mod-token-btn').addEventListener('click', toggleModTokenVisibility);
+  document.getElementById('copy-mod-token-btn').addEventListener('click', copyModToken);
+  document.getElementById('regenerate-mod-token-btn').addEventListener('click', regenerateModToken);
 }
 
 /**
@@ -255,6 +263,89 @@ function escapeHtml(str) {
 }
 
 /**
+ * Update the mod token display.
+ */
+function updateModTokenDisplay() {
+  const input = document.getElementById('mod-token-input');
+  if (currentUser?.modToken) {
+    input.value = currentUser.modToken;
+  } else {
+    input.value = '';
+  }
+}
+
+/**
+ * Toggle mod token visibility.
+ */
+function toggleModTokenVisibility() {
+  const input = document.getElementById('mod-token-input');
+  const showIcon = document.getElementById('eye-icon-show');
+  const hideIcon = document.getElementById('eye-icon-hide');
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    showIcon.classList.add('hidden');
+    hideIcon.classList.remove('hidden');
+  } else {
+    input.type = 'password';
+    showIcon.classList.remove('hidden');
+    hideIcon.classList.add('hidden');
+  }
+}
+
+/**
+ * Copy mod token to clipboard.
+ */
+async function copyModToken() {
+  const input = document.getElementById('mod-token-input');
+  if (!input.value) return;
+
+  try {
+    await navigator.clipboard.writeText(input.value);
+    Toast.show('Token copied to clipboard');
+  } catch (e) {
+    // Fallback for older browsers
+    input.select();
+    document.execCommand('copy');
+    Toast.show('Token copied to clipboard');
+  }
+}
+
+/**
+ * Regenerate mod token.
+ */
+async function regenerateModToken() {
+  const btn = document.getElementById('regenerate-mod-token-btn');
+  const originalText = btn.textContent;
+
+  if (!confirm('Are you sure? Any existing mod configuration will need to be updated.')) {
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    const response = await Api.regenerateModToken();
+    const newToken = response.mod_token;
+
+    // Update cached user
+    currentUser.modToken = newToken;
+    Auth.updateCachedUser({ modToken: newToken });
+
+    // Update display
+    updateModTokenDisplay();
+
+    Toast.show('Token regenerated');
+  } catch (e) {
+    Toast.error(`Failed to regenerate token: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+/**
  * Route handler for dashboard page.
  */
 export async function handleRoute() {
@@ -285,6 +376,9 @@ export async function handleRoute() {
     return;
   }
 
+  // Store user for module use
+  currentUser = user;
+
   // Update UI with user info
   document.getElementById('dashboard-username').textContent = user.displayName;
 
@@ -302,6 +396,9 @@ export async function handleRoute() {
 
   // Reset new game form
   resetNewGameForm();
+
+  // Display mod token
+  updateModTokenDisplay();
 
   show();
   await loadGames();

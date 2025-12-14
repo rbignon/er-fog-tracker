@@ -740,7 +740,6 @@ dependencies = [
  "crossbeam-channel",
  "hudhook",
  "libeldenring",
- "native-tls",
  "once_cell",
  "parking_lot",
  "serde",
@@ -749,7 +748,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tungstenite",
- "url",
  "windows",
 ]
 
