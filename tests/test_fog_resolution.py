@@ -86,7 +86,11 @@ def test_fog_resolution(json_path: Path, data_dir: Path, use_spoiler_log: bool =
 
     mismatches = []
 
-    for pair in zone_pairs:
+    # Only test random links (actual fog gates), not preexisting (auto-propagated)
+    random_pairs = [p for p in zone_pairs if p["type"] == "random"]
+    stats["total"] = len(random_pairs)
+
+    for pair in random_pairs:
         source_name = pair["source"]
         target_name = pair["destination"]
         source_details = pair.get("source_details")
