@@ -32,10 +32,15 @@ class ZoneInfo:
     display_name: str
     map_ids: list[str] = field(default_factory=list)
     fog_gates: list[FogGate] = field(default_factory=list)
+    cols: list[str] = field(default_factory=list)  # Col IDs from foglocations2.txt
+    position_bounds: dict = field(default_factory=dict)  # From submaps.txt
 
 
 class FogDataIndex:
     """Index for reverse-looking up zone info from display names and descriptions."""
+
+    # Tile size for overworld maps (m60/m61)
+    TILE_SIZE = 256.0
 
     def __init__(self, data_dir: Path):
         self.data_dir = data_dir
@@ -48,6 +53,7 @@ class FogDataIndex:
 
         self._load_fog_txt()
         self._load_foglocations()
+        self._load_submaps()
 
     def _normalize_desc(self, text: str) -> str:
         """Normalize description for matching."""
@@ -160,11 +166,11 @@ class FogDataIndex:
 
             elif line_stripped.startswith("Cols: ") and current_name:
                 cols = line_stripped.replace("Cols: ", "").strip().split()
-                # Extract map_ids from cols (format: m10_01_00_00_h001000)
                 zone = self.by_internal_name.get(current_name)
                 if zone:
+                    zone.cols.extend(cols)
+                    # Extract map_ids from cols (format: m10_01_00_00_h001000)
                     for col in cols:
-                        # Extract map_id part (before _h)
                         match = re.match(r"(m\d+_\d+_\d+_\d+)_h\d+", col)
                         if match:
                             map_id = match.group(1)
@@ -178,6 +184,124 @@ class FogDataIndex:
                     for map_id in main_maps:
                         if map_id not in zone.map_ids:
                             zone.map_ids.append(map_id)
+
+    def _load_submaps(self):
+        """Parse submaps.txt to add position bounds."""
+        submaps_path = self.data_dir / "submaps.txt"
+        if not submaps_path.exists():
+            print(f"Warning: {submaps_path} not found")
+            return
+
+        content = submaps_path.read_text()
+        current_map = None
+        current_area = None
+        current_bounds = {}
+
+        for line in content.split("\n"):
+            line_stripped = line.strip()
+
+            if line.startswith("- Map: "):
+                current_map = line_stripped.replace("- Map: ", "").strip()
+
+            elif line_stripped.startswith("- Name: "):
+                # Save previous area's bounds
+                if current_area and current_bounds:
+                    zone = self.by_internal_name.get(current_area)
+                    if zone:
+                        zone.position_bounds = current_bounds.copy()
+
+                current_bounds = {}
+
+            elif line_stripped.startswith("Area: "):
+                current_area = line_stripped.replace("Area: ", "").strip()
+
+            elif current_area:
+                for bound_type in ["XAbove", "XBelow", "YAbove", "YBelow", "ZAbove", "ZBelow"]:
+                    if line_stripped.startswith(f"{bound_type}: "):
+                        value = float(line_stripped.replace(f"{bound_type}: ", "").strip())
+                        current_bounds[bound_type] = value
+
+        # Save last area
+        if current_area and current_bounds:
+            zone = self.by_internal_name.get(current_area)
+            if zone:
+                zone.position_bounds = current_bounds.copy()
+
+    def estimate_position(
+        self, map_id: str, zone: ZoneInfo | None = None
+    ) -> tuple[float, float, float] | None:
+        """
+        Estimate approximate x, y, z coordinates for a zone.
+
+        For overworld (m60/m61): calculate from map_id grid position
+        For dungeons: use position bounds from submaps.txt if available
+
+        Returns (x, y, z) or None if cannot estimate.
+        """
+        if not map_id:
+            return None
+
+        # Parse map_id: mAA_XX_YY_DD
+        match = re.match(r"m(\d+)_(\d+)_(\d+)_(\d+)", map_id)
+        if not match:
+            return None
+
+        area_no = int(match.group(1))
+        grid_x = int(match.group(2))
+        grid_z = int(match.group(3))
+
+        # Overworld maps (m60, m61) - calculate from grid position
+        if area_no in (60, 61):
+            # Grid position to world coordinates
+            # Each tile is TILE_SIZE units, centered at grid intersection
+            x = (grid_x - 50) * self.TILE_SIZE  # Approximate center reference
+            z = (grid_z - 50) * self.TILE_SIZE
+            y = 100.0  # Default elevation (varies greatly in practice)
+
+            # If we have a Col, use it for more precision
+            if zone and zone.cols:
+                for col in zone.cols:
+                    if col.startswith(map_id):
+                        # Extract h-code: m60_42_36_00_h423600 -> 423600
+                        col_match = re.match(r"m\d+_\d+_\d+_\d+_h(\d{6})", col)
+                        if col_match:
+                            # Col format for overworld: hXXYY00 where XX=grid_x, YY=grid_z
+                            # This gives us confirmation but not more precision
+                            pass
+
+            return (x, y, z)
+
+        # Dungeon maps - use position bounds if available
+        if zone and zone.position_bounds:
+            bounds = zone.position_bounds
+            x = y = z = 0.0
+
+            # Calculate center from bounds
+            if "XAbove" in bounds and "XBelow" in bounds:
+                x = (bounds["XAbove"] + bounds["XBelow"]) / 2
+            elif "XAbove" in bounds:
+                x = bounds["XAbove"] + 50  # Offset above the threshold
+            elif "XBelow" in bounds:
+                x = bounds["XBelow"] - 50
+
+            if "YAbove" in bounds and "YBelow" in bounds:
+                y = (bounds["YAbove"] + bounds["YBelow"]) / 2
+            elif "YAbove" in bounds:
+                y = bounds["YAbove"] + 50
+            elif "YBelow" in bounds:
+                y = bounds["YBelow"] - 50
+
+            if "ZAbove" in bounds and "ZBelow" in bounds:
+                z = (bounds["ZAbove"] + bounds["ZBelow"]) / 2
+            elif "ZAbove" in bounds:
+                z = bounds["ZAbove"] + 50
+            elif "ZBelow" in bounds:
+                z = bounds["ZBelow"] - 50
+
+            return (x, y, z)
+
+        # No position info available for dungeon
+        return None
 
     def find_zone_by_display_name(self, display_name: str) -> list[ZoneInfo]:
         """Find zones by display name."""
@@ -198,12 +322,12 @@ class FogDataIndex:
 
     def find_map_ids(
         self, display_name: str, details: str | None = None
-    ) -> tuple[list[str], str | None]:
+    ) -> tuple[list[str], str | None, tuple[float, float, float] | None]:
         """
         Find map_ids for a zone given its display name and optional details.
 
         Returns:
-            Tuple of (map_ids, matched_internal_name)
+            Tuple of (map_ids, matched_internal_name, estimated_position)
         """
         # First try exact match
         zones = self.find_zone_by_display_name(display_name)
@@ -218,11 +342,14 @@ class FogDataIndex:
                     details = extra_context
 
         if not zones:
-            return [], None
+            return [], None, None
 
         # If only one zone matches, return it
         if len(zones) == 1:
-            return zones[0].map_ids, zones[0].internal_name
+            zone = zones[0]
+            map_id = zone.map_ids[0] if zone.map_ids else None
+            pos = self.estimate_position(map_id, zone)
+            return zone.map_ids, zone.internal_name, pos
 
         # Multiple zones match - try to disambiguate using details
         if details:
@@ -234,22 +361,28 @@ class FogDataIndex:
                     norm_fg_desc = self._normalize_desc(fg.description)
                     # Check if details match (partial match)
                     if norm_details in norm_fg_desc or norm_fg_desc in norm_details:
-                        return zone.map_ids, zone.internal_name
+                        map_id = zone.map_ids[0] if zone.map_ids else None
+                        pos = self.estimate_position(map_id, zone)
+                        return zone.map_ids, zone.internal_name, pos
 
             # Try matching on keywords in details
             details_lower = details.lower()
             for zone in zones:
                 # Check zone internal name patterns
                 if "boss" in zone.internal_name and "arena" in details_lower:
-                    return zone.map_ids, zone.internal_name
+                    map_id = zone.map_ids[0] if zone.map_ids else None
+                    pos = self.estimate_position(map_id, zone)
+                    return zone.map_ids, zone.internal_name, pos
                 if "postboss" in zone.internal_name and "after" in details_lower:
-                    return zone.map_ids, zone.internal_name
+                    map_id = zone.map_ids[0] if zone.map_ids else None
+                    pos = self.estimate_position(map_id, zone)
+                    return zone.map_ids, zone.internal_name, pos
 
         # Could not disambiguate - return all map_ids from all matching zones
         all_map_ids = []
         for zone in zones:
             all_map_ids.extend(zone.map_ids)
-        return list(set(all_map_ids)), None
+        return list(set(all_map_ids)), None, None
 
 
 def test_zone_mapping(json_path: Path, data_dir: Path):
@@ -270,7 +403,7 @@ def test_zone_mapping(json_path: Path, data_dir: Path):
     print()
 
     # Test each zone_pair
-    stats = {"found": 0, "partial": 0, "not_found": 0, "ambiguous": 0}
+    stats = {"found": 0, "partial": 0, "not_found": 0, "ambiguous": 0, "with_pos": 0}
 
     for pair in zone_pairs:
         source = pair["source"]
@@ -279,11 +412,15 @@ def test_zone_mapping(json_path: Path, data_dir: Path):
         target_details = pair.get("target_details")
         pair_type = pair["type"]
 
-        # Find source map_ids
-        source_map_ids, source_internal = index.find_map_ids(source, source_details)
+        # Find source map_ids and position
+        source_map_ids, source_internal, source_pos = index.find_map_ids(source, source_details)
 
-        # Find target map_ids
-        target_map_ids, target_internal = index.find_map_ids(target, target_details)
+        # Find target map_ids and position
+        target_map_ids, target_internal, target_pos = index.find_map_ids(target, target_details)
+
+        # Count positions found
+        if source_pos and target_pos:
+            stats["with_pos"] += 1
 
         # Determine status
         if source_map_ids and target_map_ids:
@@ -306,13 +443,18 @@ def test_zone_mapping(json_path: Path, data_dir: Path):
 
         verbose = "--verbose" in sys.argv or "-v" in sys.argv
         show_all = "--all" in sys.argv or "-a" in sys.argv
+        show_pos = "--pos" in sys.argv or "-p" in sys.argv
 
         if status != "✓" or verbose or show_all:
             print(f"[{status}] {pair_type}: {source} → {target}")
             print(f"    Source: {source_map_str} ({source_internal or '?'})")
+            if source_pos and show_pos:
+                print(f"            pos: ({source_pos[0]:.1f}, {source_pos[1]:.1f}, {source_pos[2]:.1f})")
             if source_details:
                 print(f"            details: \"{source_details}\"")
             print(f"    Target: {target_map_str} ({target_internal or '?'})")
+            if target_pos and show_pos:
+                print(f"            pos: ({target_pos[0]:.1f}, {target_pos[1]:.1f}, {target_pos[2]:.1f})")
             if target_details:
                 print(f"            details: \"{target_details}\"")
             print()
@@ -329,6 +471,9 @@ def test_zone_mapping(json_path: Path, data_dir: Path):
     success_rate = (stats["found"] + stats["ambiguous"]) / len(zone_pairs) * 100
     print(f"  Success rate:     {success_rate:.1f}%")
 
+    pos_rate = stats["with_pos"] / len(zone_pairs) * 100
+    print(f"  With positions:   {stats['with_pos']} ({pos_rate:.1f}%)")
+
 
 def main():
     # Help message
@@ -338,9 +483,14 @@ def main():
         print("Options:")
         print("  -v, --verbose    Show all results (not just errors)")
         print("  -a, --all        Same as --verbose")
+        print("  -p, --pos        Show estimated positions")
         print("  -h, --help       Show this help")
         print()
         print("Tests reverse lookup: zone display names → map_ids")
+        print()
+        print("Position estimation:")
+        print("  - Overworld (m60/m61): Calculated from grid coordinates")
+        print("  - Dungeons: Estimated from submaps.txt bounds (if available)")
         sys.exit(0)
 
     # Default paths
