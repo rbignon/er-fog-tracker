@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fogvizu.config import settings
 from fogvizu.database import Game, User, async_session
 from fogvizu.game_logic import propagate_discovery
+from fogvizu.zone_resolver import get_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -222,12 +223,13 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                     continue
 
                 elif msg_type == "discovery":
+                    # Legacy discovery with zone names from mod
                     source = data.get("source")
                     target = data.get("target")
                     source_map_id = data.get("source_map_id", "?")
                     target_map_id = data.get("target_map_id", "?")
                     logger.info(
-                        "[MOD] Discovery request: '%s' [%s] → '%s' [%s]",
+                        "[MOD] Discovery (legacy): '%s' [%s] → '%s' [%s]",
                         source,
                         source_map_id,
                         target,
@@ -249,6 +251,97 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
 
                     # Send ack to mod
                     ack_msg = {"type": "discovery_ack", "propagated": propagated}
+                    logger.info("[MOD TX] Ack with %d propagated links", len(propagated))
+                    logger.debug("[MOD TX] %s", ack_msg)
+                    await websocket.send_json(ack_msg)
+
+                    # Broadcast to host and viewers
+                    if propagated:
+                        await manager.broadcast_to_all(
+                            game_id,
+                            {"type": "discovery", "propagated": propagated},
+                            exclude=websocket,
+                        )
+
+                elif msg_type == "discovery_v2":
+                    # New discovery with map_id + position (server resolves zone names)
+                    source_map_id = data.get("source_map_id")
+                    source_pos = data.get("source_pos", {})
+                    target_map_id = data.get("target_map_id")
+                    target_pos = data.get("target_pos", {})
+
+                    logger.info(
+                        "[MOD] Discovery v2: %s (%.1f, %.1f, %.1f) → %s (%.1f, %.1f, %.1f)",
+                        source_map_id,
+                        source_pos.get("x", 0),
+                        source_pos.get("y", 0),
+                        source_pos.get("z", 0),
+                        target_map_id,
+                        target_pos.get("x", 0),
+                        target_pos.get("y", 0),
+                        target_pos.get("z", 0),
+                    )
+
+                    if not source_map_id or not target_map_id:
+                        logger.warning("[MOD] Missing map_id in discovery_v2")
+                        await websocket.send_json(
+                            {"type": "error", "message": "Missing source_map_id or target_map_id"}
+                        )
+                        continue
+
+                    # Resolve zone names using position
+                    resolver = get_resolver()
+                    source_internal, source_display = resolver.resolve(
+                        source_map_id,
+                        source_pos.get("x", 0),
+                        source_pos.get("y", 0),
+                        source_pos.get("z", 0),
+                    )
+                    target_internal, target_display = resolver.resolve(
+                        target_map_id,
+                        target_pos.get("x", 0),
+                        target_pos.get("y", 0),
+                        target_pos.get("z", 0),
+                    )
+
+                    logger.info(
+                        "[MOD] Resolved zones: '%s' (%s) → '%s' (%s)",
+                        source_display,
+                        source_internal,
+                        target_display,
+                        target_internal,
+                    )
+
+                    if not source_display or not target_display:
+                        logger.warning(
+                            "[MOD] Could not resolve zone names for %s → %s",
+                            source_map_id,
+                            target_map_id,
+                        )
+                        await websocket.send_json(
+                            {
+                                "type": "discovery_v2_ack",
+                                "propagated": [],
+                                "resolved_source": source_display,
+                                "resolved_target": target_display,
+                                "error": "Could not resolve zone names",
+                            }
+                        )
+                        continue
+
+                    # Propagate discovery using display names
+                    propagated = await propagate_discovery(
+                        db, game_id, source_display, target_display, discovered_by="mod"
+                    )
+                    await db.commit()
+
+                    # Send ack to mod
+                    ack_msg = {
+                        "type": "discovery_v2_ack",
+                        "propagated": propagated,
+                        "resolved_source": source_display,
+                        "resolved_target": target_display,
+                    }
                     logger.info("[MOD TX] Ack with %d propagated links", len(propagated))
                     logger.debug("[MOD TX] %s", ack_msg)
                     await websocket.send_json(ack_msg)

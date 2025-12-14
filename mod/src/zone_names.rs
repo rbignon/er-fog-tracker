@@ -40,7 +40,11 @@ pub fn format_map_id(map_id: u32) -> String {
 fn get_legacy_zone_name(area_no: u8, grid_x: u8) -> Option<&'static str> {
     match area_no {
         // Major legacy dungeons
-        10 => Some("Stormveil Castle"),
+        10 => match grid_x {
+            0 => Some("Stormveil Castle"),
+            1 => Some("Chapel of Anticipation"),
+            _ => Some("Stormveil Castle"),
+        },
         11 => match grid_x {
             0 => Some("Leyndell, Royal Capital"),
             5 => Some("Leyndell, Ashen Capital"),
@@ -343,12 +347,17 @@ fn get_overworld_tile_name(area_no: u8, grid_x: u8, grid_z: u8) -> Option<&'stat
         // DLC - Shadow of the Erdtree (area 61)
         // =========================================================================
 
+        // Castle Ensis (must be before Gravesite Plain to match first)
+        (61, 47, 44) => Some("Castle Ensis"),
+        (61, 48, 44) => Some("Castle Ensis"),
+
         // Gravesite Plain
         (61, 44, 41) => Some("Gravesite Plain"),
         (61, 44, 43) => Some("Gravesite Plain"),
         (61, 45, 40..=44) => Some("Gravesite Plain"),
         (61, 46, 40..=44) => Some("Gravesite Plain"),
-        (61, 47, 40..=45) => Some("Gravesite Plain"),
+        (61, 47, 40..=43) => Some("Gravesite Plain"),
+        (61, 47, 45) => Some("Gravesite Plain"),
         (61, 48, 40..=43) => Some("Gravesite Plain"),
         (61, 49, 42..=43) => Some("Gravesite Plain"),
 
@@ -371,10 +380,6 @@ fn get_overworld_tile_name(area_no: u8, grid_x: u8, grid_z: u8) -> Option<&'stat
         (61, 46, 43..=45) => Some("Ellac River"),
         (61, 47, 41..=43) => Some("Ellac River"),
         (61, 48, 40..=41) => Some("Ellac River"),
-
-        // Castle Ensis
-        (61, 47, 44) => Some("Castle Ensis"),
-        (61, 48, 44) => Some("Castle Ensis"),
 
         // Rauh Base
         (61, 44, 46..=48) => Some("Rauh Base"),
@@ -668,5 +673,19 @@ mod tests {
     #[test]
     fn test_invalid_map_id() {
         assert_eq!(get_zone_name(0xFFFFFFFF), "Unknown");
+    }
+
+    #[test]
+    fn test_chapel_of_anticipation() {
+        // Chapel of Anticipation (m10_01_00_00) - starting area
+        let map_id = 0x0A010000u32; // 10, 1, 0, 0
+        assert_eq!(get_zone_name(map_id), "Chapel of Anticipation");
+    }
+
+    #[test]
+    fn test_castle_ensis() {
+        // Castle Ensis (m61_47_44_00) - DLC dungeon
+        let map_id = 0x3D2F2C00u32; // 61, 47, 44, 0
+        assert_eq!(get_zone_name(map_id), "Castle Ensis");
     }
 }

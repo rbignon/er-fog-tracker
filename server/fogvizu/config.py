@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # Data files (fog randomizer data)
+    data_dir: str = "data"
+
     # WebSocket
     heartbeat_interval: int = 15
     heartbeat_timeout: int = 10

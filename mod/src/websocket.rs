@@ -56,15 +56,31 @@ impl ConnectionStatus {
     }
 }
 
+/// Position data for discovery messages
+#[derive(Debug, Clone, Serialize)]
+pub struct Position {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
 /// Messages sent to the WebSocket thread
 #[derive(Debug)]
 pub enum OutgoingMessage {
-    /// Send a discovery event
+    /// Send a discovery event (legacy, with zone names)
+    #[allow(dead_code)]
     Discovery {
         source: String,
         source_map_id: u32,
         target: String,
         target_map_id: u32,
+    },
+    /// Send a discovery event v2 (with positions, server resolves zone names)
+    DiscoveryV2 {
+        source_map_id: u32,
+        source_pos: Position,
+        target_map_id: u32,
+        target_pos: Position,
     },
     /// Respond to server ping
     Pong,
@@ -101,11 +117,18 @@ pub struct PropagatedLink {
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ServerMessage {
     Auth { token: String },
+    #[allow(dead_code)]
     Discovery {
         source: String,
         source_map_id: String,
         target: String,
         target_map_id: String,
+    },
+    DiscoveryV2 {
+        source_map_id: String,
+        source_pos: Position,
+        target_map_id: String,
+        target_pos: Position,
     },
     Pong,
 }
@@ -117,6 +140,11 @@ enum ServerResponse {
     AuthOk,
     AuthError { message: String },
     DiscoveryAck { propagated: Vec<PropagatedLink> },
+    DiscoveryV2Ack {
+        propagated: Vec<PropagatedLink>,
+        resolved_source: Option<String>,
+        resolved_target: Option<String>,
+    },
     Ping,
     Error { message: String },
 }
@@ -219,7 +247,8 @@ impl WebSocketClient {
         self.current_status = ConnectionStatus::Disconnected;
     }
 
-    /// Send a discovery event to the server
+    /// Send a discovery event to the server (legacy, with zone names)
+    #[allow(dead_code)]
     pub fn send_discovery(&self, source: &str, source_map_id: u32, target: &str, target_map_id: u32) {
         if let Some(tx) = &self.tx {
             let _ = tx.try_send(OutgoingMessage::Discovery {
@@ -227,6 +256,32 @@ impl WebSocketClient {
                 source_map_id,
                 target: target.to_string(),
                 target_map_id,
+            });
+        }
+    }
+
+    /// Send a discovery event v2 to the server (with positions, server resolves zone names)
+    pub fn send_discovery_v2(
+        &self,
+        source_map_id: u32,
+        source_pos: (f32, f32, f32),
+        target_map_id: u32,
+        target_pos: (f32, f32, f32),
+    ) {
+        if let Some(tx) = &self.tx {
+            let _ = tx.try_send(OutgoingMessage::DiscoveryV2 {
+                source_map_id,
+                source_pos: Position {
+                    x: source_pos.0,
+                    y: source_pos.1,
+                    z: source_pos.2,
+                },
+                target_map_id,
+                target_pos: Position {
+                    x: target_pos.0,
+                    y: target_pos.1,
+                    z: target_pos.2,
+                },
             });
         }
     }
@@ -443,7 +498,7 @@ fn message_loop(
                 let source_map_str = format_map_id(source_map_id);
                 let target_map_str = format_map_id(target_map_id);
                 println!(
-                    "[WS TX] Discovery: {} [{}] → {} [{}]",
+                    "[WS TX] Discovery (legacy): {} [{}] → {} [{}]",
                     source, source_map_str, target, target_map_str
                 );
                 let msg = ServerMessage::Discovery {
@@ -451,6 +506,30 @@ fn message_loop(
                     source_map_id: source_map_str,
                     target: target.clone(),
                     target_map_id: target_map_str,
+                };
+                let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
+                socket
+                    .send(Message::Text(json))
+                    .map_err(|e| e.to_string())?;
+            }
+            Ok(OutgoingMessage::DiscoveryV2 {
+                source_map_id,
+                ref source_pos,
+                target_map_id,
+                ref target_pos,
+            }) => {
+                let source_map_str = format_map_id(source_map_id);
+                let target_map_str = format_map_id(target_map_id);
+                println!(
+                    "[WS TX] Discovery v2: {} ({:.1}, {:.1}, {:.1}) → {} ({:.1}, {:.1}, {:.1})",
+                    source_map_str, source_pos.x, source_pos.y, source_pos.z,
+                    target_map_str, target_pos.x, target_pos.y, target_pos.z
+                );
+                let msg = ServerMessage::DiscoveryV2 {
+                    source_map_id: source_map_str,
+                    source_pos: source_pos.clone(),
+                    target_map_id: target_map_str,
+                    target_pos: target_pos.clone(),
                 };
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket
@@ -489,6 +568,20 @@ fn message_loop(
                         ServerResponse::DiscoveryAck { ref propagated } => {
                             println!(
                                 "[WS RX] DiscoveryAck (propagated: {})",
+                                propagated.len()
+                            );
+                            let _ = incoming_tx
+                                .send(IncomingMessage::DiscoveryAck { propagated: propagated.clone() });
+                        }
+                        ServerResponse::DiscoveryV2Ack {
+                            ref propagated,
+                            ref resolved_source,
+                            ref resolved_target,
+                        } => {
+                            println!(
+                                "[WS RX] DiscoveryV2Ack: {} → {} (propagated: {})",
+                                resolved_source.as_deref().unwrap_or("?"),
+                                resolved_target.as_deref().unwrap_or("?"),
                                 propagated.len()
                             );
                             let _ = incoming_tx

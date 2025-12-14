@@ -18,6 +18,7 @@ use crate::zone_names::{format_map_id, get_zone_name};
 pub(crate) struct PendingFogEvent {
     entry_zone_name: String,
     entry_map_id: u32,
+    entry_pos: (f32, f32, f32),
 }
 
 /// Animation ID for fog wall traversal
@@ -119,7 +120,7 @@ impl FogRandoTracker {
             let is_valid_position = map_id != 0xFFFFFFFF && (x != 0.0 || y != 0.0 || z != 0.0);
 
             if is_fog && !was_fog && is_valid_position {
-                // Animation just started - record entry zone
+                // Animation just started - record entry zone and position
                 let entry_zone = get_zone_name(map_id);
                 let map_id_str = format_map_id(map_id);
                 println!(
@@ -129,6 +130,7 @@ impl FogRandoTracker {
                 self.pending_fog = Some(PendingFogEvent {
                     entry_zone_name: entry_zone,
                     entry_map_id: map_id,
+                    entry_pos: (x, y, z),
                 });
             } else if self.pending_fog.is_some() && !is_fog && is_valid_position {
                 // We had a pending fog entry AND animation is no longer fog AND position is valid
@@ -148,14 +150,21 @@ impl FogRandoTracker {
                     // Send discovery to server if connected
                     if self.ws_client.is_connected() {
                         println!(
-                            "[FOG] Sending to server: {} [{}] → {} [{}]",
-                            pending.entry_zone_name, entry_map_id_str, exit_zone, map_id_str
+                            "[FOG] Sending to server: {} ({:.1}, {:.1}, {:.1}) → {} ({:.1}, {:.1}, {:.1})",
+                            entry_map_id_str,
+                            pending.entry_pos.0,
+                            pending.entry_pos.1,
+                            pending.entry_pos.2,
+                            map_id_str,
+                            x,
+                            y,
+                            z
                         );
-                        self.ws_client.send_discovery(
-                            &pending.entry_zone_name,
+                        self.ws_client.send_discovery_v2(
                             pending.entry_map_id,
-                            &exit_zone,
+                            pending.entry_pos,
                             map_id,
+                            (x, y, z),
                         );
                     } else {
                         println!("[FOG] Not connected to server, discovery not sent");

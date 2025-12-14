@@ -23,6 +23,7 @@ from fogvizu.websocket import (
     handle_mod_connection,
     handle_viewer_connection,
 )
+from fogvizu.zone_resolver import init_resolver
 
 # Configure logging
 logging.basicConfig(
@@ -38,6 +39,16 @@ async def lifespan(app: FastAPI):
     # Startup: initialize database tables (dev only)
     # In production, use Alembic migrations
     await init_db()
+
+    # Initialize zone resolver with fog randomizer data
+    data_dir = Path(__file__).parent.parent / settings.data_dir
+    resolver = init_resolver(data_dir)
+    logging.getLogger(__name__).info(
+        "Zone resolver initialized with %d map rules, %d zone names",
+        len(resolver.map_rules),
+        len(resolver.zone_display_names),
+    )
+
     yield
     # Shutdown: nothing to do
 
