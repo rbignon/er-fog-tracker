@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fogvizu.config import settings
 from fogvizu.database import Game, User, async_session
 from fogvizu.game_logic import find_all_matching_zone_pairs, propagate_discovery
-from fogvizu.zone_matching import compute_zone_exits
+from fogvizu.zone_matching import compute_discovery_stats, compute_zone_exits
 from fogvizu.zone_resolver import get_resolver
 
 logger = logging.getLogger(__name__)
@@ -449,22 +449,34 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                                 destination_zone,
                             )
 
-                    # Send ack to mod with all resolved links and exits
+                    # Compute discovery stats
+                    stats = {"discovered": 0, "total": 0, "percent": 0}
+                    if game_for_exits:
+                        stats = compute_discovery_stats(
+                            game_for_exits.zone_pairs or [],
+                            game_for_exits.discovered_links or [],
+                        )
+
+                    # Send ack to mod with all resolved links, exits, and stats
                     ack_msg = {
                         "type": "discovery_v2_ack",
                         "propagated": all_propagated,
                         "resolved": resolved_links,
                         "current_zone": destination_zone,
                         "exits": exits,
+                        "stats": stats,
                     }
                     if not resolved_links:
                         ack_msg["error"] = "No matching link found in spoiler log"
 
                     logger.info(
-                        "[MOD TX] Ack with %d resolved link(s), %d propagated, %d exits",
+                        "[MOD TX] Ack: %d resolved, %d propagated, %d exits, discovered %d/%d (%.1f%%)",
                         len(resolved_links),
                         len(all_propagated),
                         len(exits),
+                        stats["discovered"],
+                        stats["total"],
+                        stats["percent"],
                     )
                     logger.debug("[MOD TX] %s", ack_msg)
                     await websocket.send_json(ack_msg)

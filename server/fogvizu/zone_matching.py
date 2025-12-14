@@ -217,6 +217,40 @@ def compute_total_zones(zone_pairs: list[dict]) -> int:
     return len(zones)
 
 
+def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]) -> dict:
+    """
+    Compute discovery statistics.
+
+    Returns:
+        dict with:
+        - discovered: number of discovered random links
+        - total: total number of random links
+        - percent: percentage discovered (0-100)
+    """
+    # Count total random links (deduplicated, since they're bidirectional)
+    random_links = set()
+    for pair in zone_pairs:
+        if pair["type"] == "random":
+            link_key = frozenset([pair["source"], pair["destination"]])
+            random_links.add(link_key)
+    total = len(random_links)
+
+    # Count discovered random links
+    discovered_count = 0
+    for link_key in random_links:
+        src, tgt = tuple(link_key)
+        if is_link_discovered(discovered_links, src, tgt):
+            discovered_count += 1
+
+    percent = (discovered_count / total * 100) if total > 0 else 0
+
+    return {
+        "discovered": discovered_count,
+        "total": total,
+        "percent": round(percent, 1),
+    }
+
+
 def get_zones_via_preexisting(zone_pairs: list[dict], start_zone: str) -> set[str]:
     """
     Get all zones reachable from start_zone via preexisting paths.

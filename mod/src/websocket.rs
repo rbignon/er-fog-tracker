@@ -100,6 +100,7 @@ pub enum IncomingMessage {
         propagated: Vec<PropagatedLink>,
         current_zone: Option<String>,
         exits: Vec<FogExit>,
+        stats: DiscoveryStats,
     },
     /// Error message
     Error(String),
@@ -124,6 +125,17 @@ pub struct FogExit {
     pub description: String,
     /// If exit is from a different zone in the preexisting group
     pub from_zone: Option<String>,
+}
+
+/// Discovery statistics from the server
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct DiscoveryStats {
+    /// Number of discovered random links
+    pub discovered: u32,
+    /// Total number of random links
+    pub total: u32,
+    /// Percentage discovered (0-100)
+    pub percent: f32,
 }
 
 // =============================================================================
@@ -167,6 +179,8 @@ enum ServerResponse {
         current_zone: Option<String>,
         #[serde(default)]
         exits: Vec<FogExit>,
+        #[serde(default)]
+        stats: DiscoveryStats,
     },
     Ping,
     Error { message: String },
@@ -605,23 +619,28 @@ fn message_loop(
                                 propagated: propagated.clone(),
                                 current_zone: None,
                                 exits: Vec::new(),
+                                stats: DiscoveryStats::default(),
                             });
                         }
                         ServerResponse::DiscoveryV2Ack {
                             ref propagated,
                             ref current_zone,
                             ref exits,
+                            ref stats,
                         } => {
                             println!(
-                                "[WS RX] DiscoveryV2Ack: zone={} (propagated: {}, exits: {})",
+                                "[WS RX] DiscoveryV2Ack: zone={} (propagated: {}, exits: {}, discovered: {}/{})",
                                 current_zone.as_deref().unwrap_or("?"),
                                 propagated.len(),
-                                exits.len()
+                                exits.len(),
+                                stats.discovered,
+                                stats.total
                             );
                             let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
                                 propagated: propagated.clone(),
                                 current_zone: current_zone.clone(),
                                 exits: exits.clone(),
+                                stats: stats.clone(),
                             });
                         }
                         ServerResponse::Error { ref message } => {

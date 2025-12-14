@@ -137,8 +137,15 @@ impl FogRandoTracker {
 
         ui.text_colored(color, format!("● {}", text));
 
-        // Show fog traversal count
-        ui.text(format!("Fog traversals: {}", self.fog_traversal_count));
+        // Show discovery stats from server
+        if let Some(ref stats) = self.discovery_stats {
+            ui.text(format!(
+                "Discovered: {}/{} ({:.0}%)",
+                stats.discovered, stats.total, stats.percent
+            ));
+        } else {
+            ui.text_disabled("Discovered: -/-");
+        }
     }
 
     /// Render keybindings help section

@@ -6,7 +6,7 @@ use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
 use crate::game_state::{GameState, PlayerPosition};
-use crate::websocket::{ConnectionStatus, FogExit, IncomingMessage, WebSocketClient};
+use crate::websocket::{ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient};
 
 // =============================================================================
 // FOG EVENTS
@@ -25,7 +25,6 @@ pub(crate) struct PendingFogEvent {
 /// Fog gate traversal tracking state
 pub struct FogRandoTracker {
     game_state: GameState,
-    pub(crate) fog_traversal_count: u32,
     pub(crate) was_in_fog: bool,
     pub(crate) pending_fog: Option<PendingFogEvent>,
     pub(crate) show_ui: bool,
@@ -36,6 +35,8 @@ pub struct FogRandoTracker {
     pub(crate) current_zone: Option<String>,
     /// Fog exits from current zone (received from server)
     pub(crate) current_exits: Vec<FogExit>,
+    /// Discovery statistics from server
+    pub(crate) discovery_stats: Option<DiscoveryStats>,
     /// Last known map_id (to detect teleportation)
     last_map_id: Option<u32>,
 }
@@ -85,7 +86,6 @@ impl FogRandoTracker {
 
         Some(Self {
             game_state,
-            fog_traversal_count: 0,
             was_in_fog: false,
             pending_fog: None,
             show_ui: true,
@@ -94,6 +94,7 @@ impl FogRandoTracker {
             ws_client,
             current_zone: None,
             current_exits: Vec::new(),
+            discovery_stats: None,
             last_map_id: None,
         })
     }
@@ -166,8 +167,6 @@ impl FogRandoTracker {
                 } else {
                     println!("[FOG] Not connected to server, discovery not sent");
                 }
-
-                self.fog_traversal_count += 1;
             }
         }
 
@@ -221,17 +220,24 @@ impl FogRandoTracker {
                     propagated,
                     current_zone,
                     exits,
+                    stats,
                 } => {
                     println!(
-                        "Discovery acknowledged by server ({} propagated, zone={:?}, {} exits)",
+                        "Discovery acknowledged by server ({} propagated, zone={:?}, {} exits, {}/{} discovered)",
                         propagated.len(),
                         current_zone,
-                        exits.len()
+                        exits.len(),
+                        stats.discovered,
+                        stats.total
                     );
-                    // Update current zone and exits
+                    // Update current zone, exits, and stats
                     if current_zone.is_some() {
                         self.current_zone = current_zone;
                         self.current_exits = exits;
+                    }
+                    // Always update stats (even if zone resolution failed)
+                    if stats.total > 0 {
+                        self.discovery_stats = Some(stats);
                     }
                 }
                 IncomingMessage::Error(err) => {
