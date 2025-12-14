@@ -150,7 +150,7 @@ impl WebSocketClient {
     pub fn is_enabled(&self) -> bool {
         self.settings.enabled
             && !self.settings.url.is_empty()
-            && !self.settings.api_token.is_empty()
+            && !self.settings.mod_token.is_empty()
             && !self.settings.game_id.is_empty()
     }
 
@@ -297,7 +297,7 @@ fn websocket_thread(
 
         let _ = incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Connecting));
 
-        match connect_and_authenticate(&ws_url, &settings.api_token) {
+        match connect_and_authenticate(&ws_url, &settings.mod_token) {
             Ok(mut socket) => {
                 let _ =
                     incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Connected));

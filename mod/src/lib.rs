@@ -1,5 +1,5 @@
-// Route Tracking Mod for Elden Ring
-// Copyright (C) 2024 [Your Name]
+// FogRandoTracker - Fog Gate Randomizer Tracker for Elden Ring
+// Copyright (C) 2024 wospins
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published
@@ -24,8 +24,6 @@
 
 mod config;
 mod coordinate_transformer;
-mod custom_pointers;
-mod goods_events;
 mod route;
 mod tracker;
 mod ui;
@@ -43,14 +41,14 @@ use hudhook::{eject, Hudhook};
 use windows::Win32::Foundation::HINSTANCE;
 use windows::Win32::System::SystemServices::DLL_PROCESS_ATTACH;
 
-use tracker::RouteTracker;
+use tracker::FogRandoTracker;
 
 // =============================================================================
 // DLL ENTRY POINT
 // =============================================================================
 
 fn start_mod(hmodule: HINSTANCE) {
-    let tracker = match RouteTracker::new(hmodule) {
+    let tracker = match FogRandoTracker::new(hmodule) {
         Some(t) => t,
         None => {
             eject();

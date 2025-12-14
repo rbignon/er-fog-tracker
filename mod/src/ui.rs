@@ -4,19 +4,19 @@ use hudhook::imgui::{Condition, WindowFlags};
 use hudhook::tracing::info;
 use hudhook::ImguiRenderLoop;
 
-use crate::tracker::RouteTracker;
+use crate::tracker::FogRandoTracker;
 
 // =============================================================================
 // HUDHOOK IMPLEMENTATION
 // =============================================================================
 
-impl ImguiRenderLoop for RouteTracker {
+impl ImguiRenderLoop for FogRandoTracker {
     fn render(&mut self, ui: &mut hudhook::imgui::Ui) {
         // Handle keyboard shortcuts
         self.handle_hotkeys();
 
-        // Record position each frame if recording is active
-        self.record_position();
+        // Check for fog traversals each frame
+        self.check_fog_traversal();
 
         // Poll WebSocket for status updates
         self.poll_websocket();
@@ -36,17 +36,15 @@ impl ImguiRenderLoop for RouteTracker {
             return;
         }
 
-        ui.window("Route Tracker")
+        ui.window("FogRandoTracker")
             .position([dw - 320.0, 20.0], Condition::FirstUseEver)
-            .size([300.0, 250.0], Condition::FirstUseEver)
+            .size([300.0, 200.0], Condition::FirstUseEver)
             .flags(WindowFlags::ALWAYS_AUTO_RESIZE)
             .build(|| {
                 self.render_position_section(ui);
                 ui.separator();
-                self.render_recording_section(ui);
-                self.render_status_message(ui);
-                ui.separator();
                 self.render_server_section(ui);
+                self.render_status_message(ui);
                 ui.separator();
                 self.render_keybindings_section(ui);
             });
@@ -57,30 +55,12 @@ impl ImguiRenderLoop for RouteTracker {
 // UI SECTIONS
 // =============================================================================
 
-impl RouteTracker {
+impl FogRandoTracker {
     /// Handle keyboard shortcuts
     fn handle_hotkeys(&mut self) {
         if self.config.keybindings.toggle_ui.is_just_pressed() {
             self.show_ui = !self.show_ui;
             info!("UI toggled: show_ui={}", self.show_ui);
-        }
-
-        if self.config.keybindings.toggle_recording.is_just_pressed() {
-            if self.is_recording {
-                self.stop_recording();
-            } else {
-                self.start_recording();
-            }
-        }
-
-        if self.config.keybindings.clear_route.is_just_pressed() {
-            self.route.clear();
-            self.set_status("Route cleared!".to_string());
-            info!("Route cleared!");
-        }
-
-        if self.config.keybindings.save_route.is_just_pressed() {
-            self.do_save_route();
         }
     }
 
@@ -106,53 +86,6 @@ impl RouteTracker {
             ui.text(format!("  X: {:.2}  Y: {:.2}  Z: {:.2}", gx, gy, gz));
         } else {
             ui.text("Position not available");
-        }
-    }
-
-    /// Render recording controls section
-    fn render_recording_section(&mut self, ui: &hudhook::imgui::Ui) {
-        ui.text("=== Recording ===");
-
-        if self.is_recording {
-            ui.text_colored([0.0, 1.0, 0.0, 1.0], "● RECORDING");
-            ui.text(format!("Points: {}", self.route.len()));
-
-            if let Some(start) = self.start_time {
-                let elapsed = start.elapsed();
-                let secs = elapsed.as_secs();
-                let mins = secs / 60;
-                let secs = secs % 60;
-                ui.text(format!("Duration: {:02}:{:02}", mins, secs));
-            }
-
-            if ui.button("Stop Recording") {
-                self.stop_recording();
-            }
-        } else {
-            ui.text("○ Stopped");
-            ui.text(format!("Recorded points: {}", self.route.len()));
-
-            if ui.button("Start Recording") {
-                self.start_recording();
-            }
-
-            ui.same_line();
-
-            if ui.button("Clear") {
-                self.route.clear();
-                self.set_status("Route cleared!".to_string());
-            }
-
-            ui.same_line();
-
-            // Only enable Save if we have points
-            if !self.route.is_empty() {
-                if ui.button("Save") {
-                    self.do_save_route();
-                }
-            } else {
-                ui.text_disabled("Save");
-            }
         }
     }
 
@@ -190,32 +123,5 @@ impl RouteTracker {
             "{}: Toggle UI",
             self.config.keybindings.toggle_ui.name()
         ));
-        ui.text_disabled(format!(
-            "{}: Start/Stop Recording",
-            self.config.keybindings.toggle_recording.name()
-        ));
-        ui.text_disabled(format!(
-            "{}: Clear Route",
-            self.config.keybindings.clear_route.name()
-        ));
-        ui.text_disabled(format!(
-            "{}: Save Route",
-            self.config.keybindings.save_route.name()
-        ));
-    }
-
-    /// Save route and update status
-    fn do_save_route(&mut self) {
-        match self.save_route() {
-            Ok(path) => {
-                self.set_status(format!(
-                    "Saved: {}",
-                    path.file_name().unwrap_or_default().to_string_lossy()
-                ));
-            }
-            Err(e) => {
-                self.set_status(format!("Error: {}", e));
-            }
-        }
     }
 }

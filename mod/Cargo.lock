@@ -178,6 +178,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a3076410a55c90011c298b04d0cfa770b00fa04e1e3c97d3f6c9de105a03844"
 
 [[package]]
+name = "fog-rando-tracker"
+version = "0.1.0"
+dependencies = [
+ "crossbeam-channel",
+ "hudhook",
+ "libeldenring",
+ "once_cell",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+ "tungstenite",
+ "windows",
+]
+
+[[package]]
 name = "foreign-types"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -732,24 +750,6 @@ name = "regex-syntax"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
-
-[[package]]
-name = "route-tracking"
-version = "0.1.0"
-dependencies = [
- "crossbeam-channel",
- "hudhook",
- "libeldenring",
- "once_cell",
- "parking_lot",
- "serde",
- "serde_json",
- "toml",
- "tracing",
- "tracing-subscriber",
- "tungstenite",
- "windows",
-]
 
 [[package]]
 name = "rustix"

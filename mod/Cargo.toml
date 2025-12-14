@@ -1,18 +1,18 @@
 [package]
-name = "route-tracking"
+name = "fog-rando-tracker"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <your@email.com>"]
+authors = ["wospins"]
 license = "AGPL-3.0"
-description = "Route tracking mod for Elden Ring"
-repository = "https://github.com/YOUR_USERNAME/route-tracking"
+description = "Fog Gate Randomizer tracker mod for Elden Ring"
+repository = "https://github.com/rbignon/er-fog-vizu"
 
 [lib]
 crate-type = ["cdylib"]
-name = "route_tracking"
+name = "fog_rando_tracker"
 
 [[bin]]
-name = "route-tracker-injector"
+name = "fog-rando-tracker-injector"
 path = "src/injector.rs"
 
 # =============================================================================

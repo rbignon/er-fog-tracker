@@ -1,5 +1,5 @@
-// Configuration module for Route Tracker
-// Handles loading/saving settings from a TOML file
+// Configuration module for FogRandoTracker
+// Handles loading settings from a TOML file
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fs;
@@ -429,12 +429,6 @@ impl<'de> Deserialize<'de> for Hotkey {
 pub struct KeyBindings {
     /// Key to toggle UI visibility
     pub toggle_ui: Hotkey,
-    /// Key to start/stop recording
-    pub toggle_recording: Hotkey,
-    /// Key to clear recorded route
-    pub clear_route: Hotkey,
-    /// Key to save recorded route to file
-    pub save_route: Hotkey,
 }
 
 impl Default for KeyBindings {
@@ -444,52 +438,6 @@ impl Default for KeyBindings {
                 key: 0x78, // F9
                 modifiers: Modifiers::default(),
             },
-            toggle_recording: Hotkey {
-                key: 0x77, // F8
-                modifiers: Modifiers::default(),
-            },
-            clear_route: Hotkey {
-                key: 0x76, // F7
-                modifiers: Modifiers::default(),
-            },
-            save_route: Hotkey {
-                key: 0x53, // S
-                modifiers: Modifiers {
-                    ctrl: true,
-                    shift: false,
-                    alt: false,
-                },
-            },
-        }
-    }
-}
-
-/// Recording settings
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RecordingSettings {
-    /// Interval between position records in milliseconds
-    pub record_interval_ms: u64,
-}
-
-impl Default for RecordingSettings {
-    fn default() -> Self {
-        Self {
-            record_interval_ms: 100, // 10 points per second
-        }
-    }
-}
-
-/// Output settings for saving routes
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OutputSettings {
-    /// Directory where route files will be saved
-    pub routes_directory: String,
-}
-
-impl Default for OutputSettings {
-    fn default() -> Self {
-        Self {
-            routes_directory: "routes".to_string(),
         }
     }
 }
@@ -503,9 +451,9 @@ pub struct ServerSettings {
     /// Server WebSocket URL (e.g., "wss://fog-vizu.example.com")
     #[serde(default)]
     pub url: String,
-    /// API token for authentication
+    /// Mod token for authentication
     #[serde(default)]
-    pub api_token: String,
+    pub mod_token: String,
     /// Game ID (UUID) to connect to
     #[serde(default)]
     pub game_id: String,
@@ -523,7 +471,7 @@ impl Default for ServerSettings {
         Self {
             enabled: false,
             url: String::new(),
-            api_token: String::new(),
+            mod_token: String::new(),
             game_id: String::new(),
             auto_reconnect: true,
         }
@@ -534,11 +482,8 @@ impl Default for ServerSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     /// Keyboard shortcuts
+    #[serde(default)]
     pub keybindings: KeyBindings,
-    /// Recording settings
-    pub recording: RecordingSettings,
-    /// Output settings
-    pub output: OutputSettings,
     /// Server settings for fog-vizu integration
     #[serde(default)]
     pub server: ServerSettings,
@@ -548,8 +493,6 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             keybindings: KeyBindings::default(),
-            recording: RecordingSettings::default(),
-            output: OutputSettings::default(),
             server: ServerSettings::default(),
         }
     }
@@ -587,7 +530,7 @@ impl std::fmt::Display for ConfigError {
 
 impl Config {
     /// Config file name
-    pub const CONFIG_FILENAME: &'static str = "route_tracker_config.toml";
+    pub const CONFIG_FILENAME: &'static str = "fog_rando_tracker.toml";
 
     /// Get the DLL's directory path using its HMODULE
     pub fn get_dll_directory(hmodule: HINSTANCE) -> Option<PathBuf> {
