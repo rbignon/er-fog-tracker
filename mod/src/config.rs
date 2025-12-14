@@ -32,6 +32,26 @@ impl Default for KeyBindings {
     }
 }
 
+/// Overlay display settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OverlaySettings {
+    /// Font scale factor (1.0 = default, 1.5 = 150%, etc.)
+    #[serde(default = "default_font_scale")]
+    pub font_scale: f32,
+}
+
+fn default_font_scale() -> f32 {
+    1.0
+}
+
+impl Default for OverlaySettings {
+    fn default() -> Self {
+        Self {
+            font_scale: default_font_scale(),
+        }
+    }
+}
+
 /// Server settings for fog-vizu integration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerSettings {
@@ -71,6 +91,8 @@ pub struct Config {
     pub debug_console: bool,
     #[serde(default)]
     pub keybindings: KeyBindings,
+    #[serde(default)]
+    pub overlay: OverlaySettings,
     #[serde(default)]
     pub server: ServerSettings,
 }

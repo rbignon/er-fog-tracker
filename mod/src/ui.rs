@@ -35,11 +35,14 @@ impl ImguiRenderLoop for FogRandoTracker {
             return;
         }
 
+        let font_scale = self.config.overlay.font_scale;
+
         ui.window("FogRandoTracker")
-            .position([dw - 320.0, 20.0], Condition::FirstUseEver)
-            .size([300.0, 200.0], Condition::FirstUseEver)
+            .position([dw - 320.0 * font_scale, 20.0], Condition::FirstUseEver)
+            .size([300.0 * font_scale, 200.0 * font_scale], Condition::FirstUseEver)
             .flags(WindowFlags::ALWAYS_AUTO_RESIZE)
             .build(|| {
+                ui.set_window_font_scale(font_scale);
                 self.render_position_section(ui);
                 ui.separator();
                 self.render_server_section(ui);
