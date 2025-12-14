@@ -25,13 +25,11 @@ er-fog-vizu/
 ├── mod/                    # In-game mod (Rust DLL)
 │   ├── src/
 │   └── README.md
-├── docs/                   # Specifications
-└── server.py               # Legacy simple server (deprecated)
+├── tests/                  # Integration tests
+└── docs/                   # Design specifications
 ```
 
 ## Running the Application
-
-### Backend Server (with database, auth, mod integration)
 
 ```bash
 cd server
@@ -43,15 +41,7 @@ alembic upgrade head        # Run migrations
 uvicorn fogvizu.main:app --reload --port 8001
 ```
 
-See `server/README.md` for detailed instructions.
-
-### Legacy Mode (simple, no database)
-
-```bash
-python server.py            # FastAPI server on port 8001
-```
-
-Open `http://localhost:8001` in browser. No build step required - ES6 modules run directly.
+Open `http://localhost:8001` in browser. See `server/README.md` for detailed instructions.
 
 ## Architecture
 
@@ -74,10 +64,6 @@ Open `http://localhost:8001` in browser. No build step required - ES6 modules ru
 - PostgreSQL database with SQLAlchemy ORM (async)
 - Twitch OAuth authentication
 - Serves static files from `web/`
-
-**Legacy Backend** (`server.py`):
-- Simple FastAPI with in-memory session management
-- No database, no authentication
 
 **Data Flow**: File Upload → Parser → State → Graph Render → UI Events → State Updates → WebSocket Sync
 

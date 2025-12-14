@@ -2,7 +2,7 @@
 
 A web-based tool to visualize and track exploration progress for the [Fog Gate Randomizer](https://www.nexusmods.com/eldenring/mods/3295) mod for Elden Ring. Includes an optional in-game mod for automatic discovery tracking.
 
-![Status](https://img.shields.io/badge/status-active-brightgreen) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Status](https://img.shields.io/badge/status-active-brightgreen) ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
 **Try it online:** [https://fogvizu.malenia.win](https://fogvizu.malenia.win)
 
@@ -39,46 +39,24 @@ A web-based tool to visualize and track exploration progress for the [Fog Gate R
 ```bash
 # Clone the repository
 git clone https://github.com/rbignon/er-fog-vizu.git
-cd er-fog-vizu
+cd er-fog-vizu/server
 
-# Option 1: Simple mode (no database)
-pip install fastapi uvicorn
-python server.py
-
-# Option 2: Full mode (with database, auth, mod support)
-cd server
+# Install and configure
 pip install -e .
 cp .env.example .env  # Configure your environment
 alembic upgrade head
+
+# Run
 uvicorn fogvizu.main:app --reload --port 8001
 ```
 
-See `server/README.md` for detailed backend setup instructions.
+See [server/README.md](server/README.md) for detailed setup instructions (PostgreSQL, Twitch OAuth, etc.).
 
 ## In-Game Mod Integration
 
 The optional FogRandoTracker mod automatically detects when you traverse fog gates and syncs discoveries to the web interface in real-time.
 
-### Setup
-
-1. Build the mod (requires Rust + Windows target):
-   ```bash
-   cd mod
-   cargo build --release
-   ```
-
-2. Copy these files to your game folder:
-   - `fog_rando_tracker.dll`
-   - `fog_rando_tracker.toml`
-
-3. Configure the mod:
-   - Log in to the website and create a game
-   - Click "Mod Config" on your game card
-   - Copy the configuration to your `fog_rando_tracker.toml`
-
-4. Inject the DLL into Elden Ring using the included injector or a mod loader
-
-See `mod/README.md` for detailed mod documentation.
+See [mod/README.md](mod/README.md) for build instructions, installation, and configuration.
 
 ## Stream to OBS
 
@@ -103,8 +81,8 @@ er-fog-vizu/
 ├── web/                    # Frontend (vanilla JS + D3.js)
 ├── server/                 # Backend (Python FastAPI + PostgreSQL)
 ├── mod/                    # In-game mod (Rust DLL)
-├── docs/                   # Specifications
-└── server.py               # Simple server (no database)
+├── docs/                   # Design specifications
+└── tests/                  # Integration tests
 ```
 
 ## Technical Details
@@ -130,7 +108,7 @@ Contributions are welcome! Feel free to open issues or submit pull requests.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+AGPL-3.0 License - see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 

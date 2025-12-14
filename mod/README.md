@@ -34,11 +34,11 @@ Edit `fog_rando_tracker.toml` to configure:
 |------|---------|
 | `lib.rs` | DLL entry point, hudhook/ImGui initialization |
 | `tracker.rs` | Core logic: fog traversal detection |
+| `game_state.rs` | Game state reading (position, map_id, animation) |
 | `ui.rs` | ImGui overlay rendering |
 | `config.rs` | TOML config parsing |
 | `hotkey.rs` | Keyboard shortcut handling |
 | `websocket.rs` | WebSocket client for server integration |
-| `zone_names.rs` | map_id → zone name mapping |
 | `injector.rs` | Standalone DLL injector |
 
 ## Fog Detection
@@ -46,7 +46,8 @@ Edit `fog_rando_tracker.toml` to configure:
 Fog gate traversal is detected via animation ID 60060. The tracker captures:
 1. Entry position + map_id when animation starts
 2. Exit position + map_id when animation ends
-3. Zone names derived from map_ids
+
+The server matches coordinates to zone names using the game's map data.
 
 ## Integration with er-fog-vizu
 
@@ -62,7 +63,7 @@ The mod connects to the er-fog-vizu server via WebSocket to automatically send f
 ```toml
 [server]
 enabled = true
-url = "wss://fog-vizu.example.com"
+url = "wss://fogvizu.malenia.win"
 mod_token = "your-mod-token-here"
 game_id = "your-game-uuid-here"
 auto_reconnect = true

@@ -144,22 +144,24 @@ Once running, visit:
 server/
 ├── fogvizu/
 │   ├── __init__.py
-│   ├── main.py          # FastAPI app entry point
-│   ├── config.py        # Settings (pydantic-settings)
-│   ├── database.py      # SQLAlchemy models
-│   ├── models.py        # Pydantic schemas
-│   ├── auth.py          # Twitch OAuth
-│   ├── game_logic.py    # Discovery propagation
-│   ├── websocket.py     # WebSocket handlers
+│   ├── main.py            # FastAPI app entry point
+│   ├── config.py          # Settings (pydantic-settings)
+│   ├── database.py        # SQLAlchemy models
+│   ├── models.py          # Pydantic schemas
+│   ├── auth.py            # Twitch OAuth
+│   ├── game_logic.py      # Discovery propagation
+│   ├── websocket.py       # WebSocket handlers
+│   ├── zone_matching.py   # Match mod coordinates to zone names
+│   ├── zone_resolver.py   # Resolve zones to graph node IDs
 │   └── api/
 │       ├── __init__.py
-│       ├── auth.py      # /auth/* routes
-│       ├── users.py     # /api/users/* routes
-│       └── games.py     # /api/games/* routes
-├── alembic/             # Database migrations
-├── tests/
+│       ├── auth.py        # /auth/* routes
+│       ├── users.py       # /api/users/* routes
+│       └── games.py       # /api/games/* routes
+├── alembic/               # Database migrations
+├── data/                  # Static data files (zone coordinates)
 ├── pyproject.toml
 ├── .env.example
-├── fog-vizu.service     # Systemd unit
-└── fog-vizu.nginx.conf  # Nginx config
+├── fog-vizu.service       # Systemd unit
+└── fog-vizu.nginx.conf    # Nginx config
 ```
