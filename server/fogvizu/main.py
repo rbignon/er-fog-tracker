@@ -5,6 +5,7 @@ FastAPI server with REST API and WebSocket support for real-time sync.
 """
 
 import argparse
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import UUID
@@ -21,6 +22,13 @@ from fogvizu.websocket import (
     handle_host_connection,
     handle_mod_connection,
     handle_viewer_connection,
+)
+
+# Configure logging
+logging.basicConfig(
+    level=getattr(logging, settings.log_level.upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 

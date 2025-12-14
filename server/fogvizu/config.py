@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     secret_key: str
     cors_origins: list[str] = ["http://localhost:8000"]
 
+    # Logging
+    log_level: str = "INFO"
+
     # WebSocket
     heartbeat_interval: int = 15
     heartbeat_timeout: int = 10
