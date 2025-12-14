@@ -195,7 +195,7 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
             await websocket.close()
             return
 
-        logger.info("[MOD] Game access verified: %s (seed=%s)", game.name, game.seed)
+        logger.info("[MOD] Game access verified: %s (seed=%s)", game.label, game.seed)
 
         # Register in room
         room = manager.get_or_create_room(game_id)
