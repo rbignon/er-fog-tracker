@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Elden Ring Fog Gate Randomizer Visualizer - a web-based tool to visualize spoiler logs from the Fog Gate Randomizer mod. Frontend with Python WebSocket backend for streamer sync.
+Elden Ring Fog Gate Randomizer Tracker - a web-based tool to visualize and track exploration progress for the Fog Gate Randomizer mod. Includes an optional in-game mod for automatic discovery tracking. Frontend with Python WebSocket backend for streamer sync and mod integration.
 
 ## Project Structure
 
@@ -13,7 +13,7 @@ er-fog-vizu/
 ├── web/                    # Frontend (vanilla JS + D3.js)
 │   ├── index.html
 │   ├── js/                 # ES6 modules
-│   └── css/
+│   └── styles/
 ├── server/                 # Backend (Python FastAPI)
 │   ├── pyproject.toml
 │   ├── fogvizu/            # Python module
@@ -22,10 +22,10 @@ er-fog-vizu/
 │   │   └── ...
 │   ├── alembic/            # DB migrations
 │   └── README.md           # Server setup instructions
+├── mod/                    # In-game mod (Rust DLL)
+│   ├── src/
+│   └── README.md
 ├── docs/                   # Specifications
-│   ├── SPEC_BACKEND.md     # Backend architecture & API
-│   └── SPEC_FOG_VIZU_INTEGRATION.md  # Mod integration design
-├── mod/                    # Elden Ring mod (Rust) - future
 └── server.py               # Legacy simple server (deprecated)
 ```
 

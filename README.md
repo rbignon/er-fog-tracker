@@ -1,6 +1,6 @@
-# Elden Ring Fog Gate Randomizer Visualizer
+# Elden Ring Fog Gate Randomizer Tracker
 
-An interactive web-based tool to visualize spoiler logs from the [Fog Gate Randomizer](https://www.nexusmods.com/eldenring/mods/3295) mod for Elden Ring.
+A web-based tool to visualize and track exploration progress for the [Fog Gate Randomizer](https://www.nexusmods.com/eldenring/mods/3295) mod for Elden Ring. Includes an optional in-game mod for automatic discovery tracking.
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen) ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -16,14 +16,23 @@ An interactive web-based tool to visualize spoiler logs from the [Fog Gate Rando
 - **Item Log Integration** - Load Item Randomizer logs to see key item locations on gates
 - **Area Tagging** - Mark areas with custom tags for tracking your progress
 - **Stream to OBS** - Real-time synchronization via WebSocket for OBS browser sources
+- **In-Game Mod** - Automatic discovery tracking when traversing fog gates (optional)
 
 ## Quick Start
 
-### Requirements
+### Online Mode (with account)
 
-- A modern web browser (Chrome, Firefox, Edge, Safari)
-- Python 3.10+ (for local server)
-- A spoiler log file from Fog Gate Randomizer
+1. Go to [fogvizu.malenia.win](https://fogvizu.malenia.win)
+2. Log in with your Twitch account
+3. Upload your spoiler log to create a game
+4. Start exploring!
+
+### Offline Mode (no account required)
+
+1. Go to [fogvizu.malenia.win](https://fogvizu.malenia.win)
+2. Click "Use Offline" on the landing page
+3. Drag and drop your spoiler log file
+4. Your progress is saved locally in your browser
 
 ### Running Locally
 
@@ -32,30 +41,44 @@ An interactive web-based tool to visualize spoiler logs from the [Fog Gate Rando
 git clone https://github.com/rbignon/er-fog-vizu.git
 cd er-fog-vizu
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Start the server
+# Option 1: Simple mode (no database)
+pip install fastapi uvicorn
 python server.py
 
-# Or specify a custom port
-python server.py --port 8080
+# Option 2: Full mode (with database, auth, mod support)
+cd server
+pip install -e .
+cp .env.example .env  # Configure your environment
+alembic upgrade head
+uvicorn fogvizu.main:app --reload --port 8001
 ```
 
-Open `http://localhost:8001` in your browser.
+See `server/README.md` for detailed backend setup instructions.
 
-### Using the Visualizer
+## In-Game Mod Integration
 
-1. **Load a spoiler log** - Drag and drop your `spoiler_log.txt` file, or click to browse
-2. **Choose your mode**:
-   - **Explorer Mode**: Start with only Chapel of Anticipation visible. Click nodes to discover connected areas as you play
-   - **Full Spoiler Mode**: See the entire map immediately
-3. **Navigate the graph**:
-   - Scroll to zoom
-   - Drag to pan
-   - Click a node to see details and connections
-   - Hover over connections to see travel info
-4. **Try the demo** - Click "Try Demo" to explore with a sample seed
+The optional FogRandoTracker mod automatically detects when you traverse fog gates and syncs discoveries to the web interface in real-time.
+
+### Setup
+
+1. Build the mod (requires Rust + Windows target):
+   ```bash
+   cd mod
+   cargo build --release
+   ```
+
+2. Copy these files to your game folder:
+   - `fog_rando_tracker.dll`
+   - `fog_rando_tracker.toml`
+
+3. Configure the mod:
+   - Log in to the website and create a game
+   - Click "Mod Config" on your game card
+   - Copy the configuration to your `fog_rando_tracker.toml`
+
+4. Inject the DLL into Elden Ring using the included injector or a mod loader
+
+See `mod/README.md` for detailed mod documentation.
 
 ## Stream to OBS
 
@@ -64,9 +87,8 @@ Display the graph on your stream with real-time synchronization.
 ### Setup
 
 1. Click the **Stream** button in the main UI
-2. Click **Start Session** to create a streaming session
-3. Copy the generated URL
-4. In OBS:
+2. Copy the generated URL
+3. In OBS:
    - Click **+** under Sources
    - Select **Browser**
    - Paste the URL
@@ -74,26 +96,25 @@ Display the graph on your stream with real-time synchronization.
 
 The browser source will mirror your interactions in real-time: navigation, zoom, node selection, and exploration progress.
 
-## Deployment
+## Project Structure
 
-### Systemd service
-
-```bash
-sudo cp fog-vizu.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now fog-vizu
 ```
-
-### Nginx reverse proxy
-
-Include `fog-vizu.nginx.conf` in your nginx server block. WebSocket support is configured.
+er-fog-vizu/
+├── web/                    # Frontend (vanilla JS + D3.js)
+├── server/                 # Backend (Python FastAPI + PostgreSQL)
+├── mod/                    # In-game mod (Rust DLL)
+├── docs/                   # Specifications
+└── server.py               # Simple server (no database)
+```
 
 ## Technical Details
 
 - **Pure Frontend** - No build step required, ES6 modules run directly in browser
-- **FastAPI + WebSocket** - Python backend for real-time streamer sync
+- **FastAPI + WebSocket** - Python backend for real-time sync and mod integration
+- **PostgreSQL** - Database for user accounts, games, and discoveries
+- **Twitch OAuth** - Authentication via Twitch
 - **D3.js** - Force-directed graph simulation for automatic layout
-- **LocalStorage** - Persists exploration progress per seed
+- **Rust + hudhook** - In-game overlay mod using ImGui
 
 ## Browser Support
 
@@ -115,3 +136,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - [thefifthmatt](https://www.nexusmods.com/eldenring/users/58426171) for creating the Fog Gate Randomizer mod
 - [D3.js](https://d3js.org/) for the visualization library
+- [veeenu](https://github.com/veeenu) for hudhook and libeldenring
