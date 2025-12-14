@@ -168,24 +168,38 @@ class ZoneResolver:
         self.map_rules[map_id] = rules
 
     def _load_fog(self, path: Path):
-        """Parse fog.txt for internal name -> display name mapping."""
+        """Parse fog.txt for internal name -> display name mapping and Maps."""
         content = path.read_text()
         current_name = None
+        in_to_section = False
 
         for line in content.split("\n"):
             line_stripped = line.strip()
+            # Track indentation to know if we're in a zone-level or To-level
+            indent = len(line) - len(line.lstrip())
 
             if line_stripped.startswith("- Name:"):
                 current_name = line_stripped.replace("- Name:", "").strip()
-            elif line_stripped.startswith("Text:") and current_name:
+                in_to_section = False
+            elif line_stripped.startswith("To:"):
+                in_to_section = True
+            elif line_stripped.startswith("Text:") and current_name and not in_to_section:
+                # Only read Text: at zone level (2-space indent), not inside To: section
                 display_name = line_stripped.replace("Text:", "").strip()
                 self.zone_display_names[current_name] = display_name
-                current_name = None
+            elif line_stripped.startswith("Maps:") and current_name and indent <= 2:
+                # Also build zone-to-map mappings from fog.txt
+                map_ids = line_stripped.replace("Maps:", "").strip().split()
+                for map_id in map_ids:
+                    if map_id not in self.map_zones:
+                        self.map_zones[map_id] = set()
+                    self.map_zones[map_id].add(current_name)
 
     def _load_foglocations(self, path: Path):
-        """Parse foglocations2.txt for Col -> zone mappings."""
+        """Parse foglocations2.txt for Col -> zone mappings and fog gate AArea."""
         content = path.read_text()
         current_zone = None
+        current_fog_map = None
 
         # Pattern to extract map_id from Col: m10_01_00_00_h001000
         col_pattern = re.compile(r"(m\d+_\d+_\d+_\d+)_h\d+")
@@ -193,8 +207,10 @@ class ZoneResolver:
         for line in content.split("\n"):
             line_stripped = line.strip()
 
+            # Zone definitions (top-level)
             if line_stripped.startswith("- Name:"):
                 current_zone = line_stripped.replace("- Name:", "").strip()
+                current_fog_map = None  # Reset fog gate context
             elif line_stripped.startswith("Cols:") and current_zone:
                 cols = line_stripped.replace("Cols:", "").strip().split()
                 for col in cols:
@@ -204,6 +220,16 @@ class ZoneResolver:
                         if map_id not in self.map_zones:
                             self.map_zones[map_id] = set()
                         self.map_zones[map_id].add(current_zone)
+            # Fog gate definitions (nested under zones)
+            elif line_stripped.startswith("- Map:"):
+                current_fog_map = line_stripped.replace("- Map:", "").strip()
+            elif line_stripped.startswith("AArea:") and current_fog_map:
+                # AArea can have multiple zones separated by spaces
+                areas = line_stripped.replace("AArea:", "").strip().split()
+                if current_fog_map not in self.map_zones:
+                    self.map_zones[current_fog_map] = set()
+                for area in areas:
+                    self.map_zones[current_fog_map].add(area)
 
     def resolve(self, map_id: str, x: float, y: float, z: float) -> tuple[str | None, str | None]:
         """
