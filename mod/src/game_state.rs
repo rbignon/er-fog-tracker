@@ -129,14 +129,4 @@ impl GameState {
             .map(|a| a == FOG_WALL_ANIM_ID)
             .unwrap_or(false)
     }
-
-    /// Read current map_id only (lighter than full position)
-    pub fn read_map_id(&self) -> Option<u32> {
-        let map_id = self.pointers.global_position.read_map_id()?;
-        if map_id == INVALID_MAP_ID {
-            None
-        } else {
-            Some(map_id)
-        }
-    }
 }
