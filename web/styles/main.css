@@ -499,6 +499,34 @@ body::before {
     white-space: pre;
 }
 
+.mod-config-section .btn-copy {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#mod-config-modal .btn-secondary {
+    background: transparent;
+    border: 1px solid #5a5040;
+    color: #9a8d75;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#mod-config-modal .btn-secondary:hover {
+    border-color: #7a6d55;
+    color: #c4b998;
+    background: rgba(90, 80, 64, 0.2);
+}
+
 .stream-modal-content code {
     background: #0a0908;
     padding: 2px 6px;
