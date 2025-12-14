@@ -122,7 +122,10 @@ impl FogRandoTracker {
                 // Animation just started - record entry zone
                 let entry_zone = get_zone_name(map_id);
                 let map_id_str = format_map_id(map_id);
-                info!("Fog wall entry [{}] - {}", map_id_str, entry_zone);
+                info!(
+                    "[FOG] Entry detected [{}] zone={} pos=({:.1}, {:.1}, {:.1})",
+                    map_id_str, entry_zone, x, y, z
+                );
                 self.pending_fog = Some(PendingFogEvent {
                     entry_zone_name: entry_zone,
                 });
@@ -132,18 +135,24 @@ impl FogRandoTracker {
                     let exit_zone = get_zone_name(map_id);
                     let map_id_str = format_map_id(map_id);
                     info!(
-                        "Fog wall exit [{}] - {} → {}",
-                        map_id_str, pending.entry_zone_name, exit_zone
+                        "[FOG] Exit detected [{}] zone={} pos=({:.1}, {:.1}, {:.1})",
+                        map_id_str, exit_zone, x, y, z
+                    );
+                    info!(
+                        "[FOG] Traversal complete: {} → {}",
+                        pending.entry_zone_name, exit_zone
                     );
 
                     // Send discovery to server if connected
                     if self.ws_client.is_connected() {
-                        self.ws_client
-                            .send_discovery(&pending.entry_zone_name, &exit_zone);
                         info!(
-                            "Sent discovery to server: {} → {}",
+                            "[FOG] Sending to server: {} → {}",
                             pending.entry_zone_name, exit_zone
                         );
+                        self.ws_client
+                            .send_discovery(&pending.entry_zone_name, &exit_zone);
+                    } else {
+                        info!("[FOG] Not connected to server, discovery not sent");
                     }
 
                     self.fog_traversal_count += 1;

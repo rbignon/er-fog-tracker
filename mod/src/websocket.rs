@@ -295,16 +295,22 @@ fn websocket_thread(
             settings.game_id
         );
 
+        tracing::debug!("[WS] Connecting to {}...", ws_url);
         let _ = incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Connecting));
 
         match connect_and_authenticate(&ws_url, &settings.mod_token) {
             Ok(mut socket) => {
+                tracing::info!("[WS] Connected and authenticated");
                 let _ =
                     incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Connected));
                 reconnect_delay = Duration::from_secs(1); // Reset on successful connect
 
                 // Main message loop
                 let result = message_loop(&mut socket, &outgoing_rx, &incoming_tx, &shutdown_flag);
+
+                if let Err(ref e) = result {
+                    tracing::debug!("[WS] Message loop ended: {}", e);
+                }
 
                 // Close socket gracefully
                 let _ = socket.close(None);
@@ -353,10 +359,12 @@ fn connect_and_authenticate(
     api_token: &str,
 ) -> Result<WebSocket<MaybeTlsStream<TcpStream>>, String> {
     // tungstenite handles TLS automatically for wss:// URLs
+    tracing::debug!("[WS] Opening socket to {}", url);
     let (mut socket, _response) =
         connect(url).map_err(|e| format!("Connection failed: {}", e))?;
 
     // Send auth message
+    tracing::debug!("[WS] Socket opened, sending auth...");
     let auth_msg = ServerMessage::Auth {
         token: api_token.to_string(),
     };
@@ -366,16 +374,24 @@ fn connect_and_authenticate(
         .map_err(|e| format!("Send error: {}", e))?;
 
     // Wait for auth response (with timeout via socket read timeout)
+    tracing::debug!("[WS] Waiting for auth response...");
     let response = socket.read().map_err(|e| format!("Read error: {}", e))?;
 
     match response {
         Message::Text(text) => {
+            tracing::debug!("[WS] Auth response: {}", text);
             let resp: ServerResponse =
                 serde_json::from_str(&text).map_err(|e| format!("JSON parse error: {}", e))?;
 
             match resp {
-                ServerResponse::AuthOk => Ok(socket),
-                ServerResponse::AuthError { message } => Err(format!("Auth failed: {}", message)),
+                ServerResponse::AuthOk => {
+                    tracing::debug!("[WS] Auth successful");
+                    Ok(socket)
+                }
+                ServerResponse::AuthError { message } => {
+                    tracing::debug!("[WS] Auth failed: {}", message);
+                    Err(format!("Auth failed: {}", message))
+                }
                 _ => Err("Unexpected response during auth".to_string()),
             }
         }
@@ -405,14 +421,22 @@ fn message_loop(
 
         // Check for outgoing messages
         match outgoing_rx.try_recv() {
-            Ok(OutgoingMessage::Discovery { source, target }) => {
-                let msg = ServerMessage::Discovery { source, target };
+            Ok(OutgoingMessage::Discovery {
+                ref source,
+                ref target,
+            }) => {
+                tracing::debug!("[WS TX] Discovery: {} → {}", source, target);
+                let msg = ServerMessage::Discovery {
+                    source: source.clone(),
+                    target: target.clone(),
+                };
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket
                     .send(Message::Text(json))
                     .map_err(|e| e.to_string())?;
             }
             Ok(OutgoingMessage::Pong) => {
+                tracing::debug!("[WS TX] Pong");
                 let msg = ServerMessage::Pong;
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket
@@ -421,6 +445,7 @@ fn message_loop(
                 last_ping_response = Instant::now();
             }
             Ok(OutgoingMessage::Shutdown) => {
+                tracing::debug!("[WS TX] Shutdown");
                 return Ok(());
             }
             Err(TryRecvError::Empty) => {}
@@ -432,18 +457,28 @@ fn message_loop(
         // Check for incoming messages (non-blocking)
         match socket.read() {
             Ok(Message::Text(text)) => {
+                tracing::debug!("[WS RX] Raw: {}", text);
                 if let Ok(resp) = serde_json::from_str::<ServerResponse>(&text) {
                     match resp {
                         ServerResponse::Ping => {
+                            tracing::debug!("[WS RX] Ping");
                             let _ = incoming_tx.send(IncomingMessage::Ping);
                         }
-                        ServerResponse::DiscoveryAck { propagated } => {
-                            let _ = incoming_tx.send(IncomingMessage::DiscoveryAck { propagated });
+                        ServerResponse::DiscoveryAck { ref propagated } => {
+                            tracing::debug!(
+                                "[WS RX] DiscoveryAck (propagated: {})",
+                                propagated.len()
+                            );
+                            let _ = incoming_tx
+                                .send(IncomingMessage::DiscoveryAck { propagated: propagated.clone() });
                         }
-                        ServerResponse::Error { message } => {
-                            let _ = incoming_tx.send(IncomingMessage::Error(message));
+                        ServerResponse::Error { ref message } => {
+                            tracing::debug!("[WS RX] Error: {}", message);
+                            let _ = incoming_tx.send(IncomingMessage::Error(message.clone()));
                         }
-                        _ => {}
+                        _ => {
+                            tracing::debug!("[WS RX] Other: {:?}", resp);
+                        }
                     }
                 }
             }
