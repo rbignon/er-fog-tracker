@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fogvizu.config import settings
 from fogvizu.database import Game, User, async_session
-from fogvizu.game_logic import find_matching_zone_pair, propagate_discovery
+from fogvizu.game_logic import find_all_matching_zone_pairs, propagate_discovery
 from fogvizu.zone_resolver import get_resolver
 
 logger = logging.getLogger(__name__)
@@ -343,8 +343,8 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
 
                     logger.debug(
                         "[MOD] Zone candidates: source=%s, target=%s",
-                        [c[1] for c in source_candidates],
-                        [c[1] for c in target_candidates],
+                        [c[1] for c in source_candidates[:5]],
+                        [c[1] for c in target_candidates[:5]],
                     )
 
                     if not source_candidates or not target_candidates:
@@ -357,91 +357,83 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                             {
                                 "type": "discovery_v2_ack",
                                 "propagated": [],
-                                "resolved_source": None,
-                                "resolved_target": None,
+                                "resolved": [],
                                 "error": "No zone candidates found",
                             }
                         )
                         continue
 
-                    # Get game's zone_pairs to find matching combination
+                    # Get game's zone_pairs to find ALL matching combinations
                     result = await db.execute(select(Game).where(Game.id == game_id))
                     game_for_zones = result.scalar_one_or_none()
 
-                    source_display = None
-                    target_display = None
+                    all_propagated = []
+                    resolved_links = []
 
                     if game_for_zones and game_for_zones.zone_pairs:
-                        # Find which combination of candidates matches the spoiler log
-                        match = find_matching_zone_pair(
+                        # Find ALL valid combinations of candidates in the spoiler log
+                        matches = find_all_matching_zone_pairs(
                             game_for_zones.zone_pairs,
-                            source_candidates,
-                            target_candidates,
+                            source_candidates[:15],  # Limit to top 15 candidates
+                            target_candidates[:15],
                         )
-                        if match:
-                            source_display, target_display, _ = match
+
+                        if matches:
                             logger.info(
-                                "[MOD] Matched zones from spoiler log: '%s' → '%s'",
-                                source_display,
-                                target_display,
+                                "[MOD] Found %d valid link(s) in spoiler log",
+                                len(matches),
                             )
+                            for source_display, target_display, _ in matches:
+                                logger.info(
+                                    "[MOD] Discovered: '%s' → '%s'",
+                                    source_display,
+                                    target_display,
+                                )
+                                resolved_links.append(
+                                    {
+                                        "source": source_display,
+                                        "target": target_display,
+                                    }
+                                )
+
+                                # Propagate each discovered link
+                                propagated = await propagate_discovery(
+                                    db, game_id, source_display, target_display, discovered_by="mod"
+                                )
+                                all_propagated.extend(propagated)
                         else:
-                            # No match found - use best guesses for logging
-                            source_display = source_candidates[0][1] if source_candidates else None
-                            target_display = target_candidates[0][1] if target_candidates else None
                             logger.warning(
-                                "[MOD] No spoiler log match for %s → %s (tried %d × %d combinations)",
-                                source_display,
-                                target_display,
-                                len(source_candidates),
-                                len(target_candidates),
+                                "[MOD] No spoiler log match (tried %d × %d combinations)",
+                                len(source_candidates[:15]),
+                                len(target_candidates[:15]),
                             )
                     else:
-                        # No zone_pairs - fall back to best guess
-                        source_display = source_candidates[0][1] if source_candidates else None
-                        target_display = target_candidates[0][1] if target_candidates else None
-                        logger.warning("[MOD] Game has no zone_pairs, using best guess")
+                        logger.warning("[MOD] Game has no zone_pairs, cannot resolve")
 
-                    logger.info(
-                        "[MOD] Resolved zones: '%s' → '%s'",
-                        source_display,
-                        target_display,
-                    )
-
-                    if not source_display or not target_display:
-                        await websocket.send_json(
-                            {
-                                "type": "discovery_v2_ack",
-                                "propagated": [],
-                                "resolved_source": source_display,
-                                "resolved_target": target_display,
-                                "error": "Could not resolve zone names",
-                            }
-                        )
-                        continue
-
-                    # Propagate discovery using display names
-                    propagated = await propagate_discovery(
-                        db, game_id, source_display, target_display, discovered_by="mod"
-                    )
                     await db.commit()
 
-                    # Send ack to mod
+                    # Send ack to mod with all resolved links
                     ack_msg = {
                         "type": "discovery_v2_ack",
-                        "propagated": propagated,
-                        "resolved_source": source_display,
-                        "resolved_target": target_display,
+                        "propagated": all_propagated,
+                        "resolved": resolved_links,
                     }
-                    logger.info("[MOD TX] Ack with %d propagated links", len(propagated))
+                    if not resolved_links:
+                        ack_msg["error"] = "No matching link found in spoiler log"
+
+                    logger.info(
+                        "[MOD TX] Ack with %d resolved link(s), %d propagated",
+                        len(resolved_links),
+                        len(all_propagated),
+                    )
                     logger.debug("[MOD TX] %s", ack_msg)
                     await websocket.send_json(ack_msg)
 
                     # Broadcast to host and viewers
-                    if propagated:
+                    if all_propagated:
                         await manager.broadcast_to_all(
                             game_id,
-                            {"type": "discovery", "propagated": propagated},
+                            {"type": "discovery", "propagated": all_propagated},
                             exclude=websocket,
                         )
 

@@ -15,6 +15,7 @@ Two modes:
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -23,37 +24,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "server"))
 
 from test_zone_mapping import FogDataIndex
 from fogvizu.zone_resolver import ZoneResolver
-
-
-def find_zone_pair(zone_pairs: list[dict], source: str, target: str) -> dict | None:
-    """Find a zone pair matching source and target (in either direction for random links)."""
-    for pair in zone_pairs:
-        # Check direct match
-        if pair["source"] == source and pair["destination"] == target:
-            return pair
-        # For random links, also check reverse (they're bidirectional)
-        if pair["type"] == "random" and pair["source"] == target and pair["destination"] == source:
-            return pair
-    return None
-
-
-def find_matching_zone_pair(
-    zone_pairs: list[dict],
-    source_candidates: list[tuple[str, str]],
-    target_candidates: list[tuple[str, str]],
-) -> tuple[str, str, dict] | None:
-    """
-    Find a matching zone pair from lists of candidates.
-
-    Tries all combinations of source and target candidates until finding
-    a match in zone_pairs.
-    """
-    for _, source_display in source_candidates:
-        for _, target_display in target_candidates:
-            pair = find_zone_pair(zone_pairs, source_display, target_display)
-            if pair:
-                return source_display, target_display, pair
-    return None
+from fogvizu.zone_matching import (
+    find_all_matching_zone_pairs,
+    names_match,
+    strip_parenthetical,
+)
 
 
 def test_fog_resolution(json_path: Path, data_dir: Path, use_spoiler_log: bool = True):
@@ -79,15 +54,27 @@ def test_fog_resolution(json_path: Path, data_dir: Path, use_spoiler_log: bool =
     # Stats
     stats = {
         "total": len(zone_pairs),
-        "pair_match": 0,
-        "pair_mismatch": 0,
-        "pair_not_found": 0,
+        "resolved_1_link": 0,     # Exactly 1 valid link found (certain)
+        "resolved_2_links": 0,    # 2 valid links found (small spoil)
+        "resolved_3plus_links": 0, # 3+ valid links found (larger spoil)
+        "not_found": 0,           # No valid link found
     }
 
-    mismatches = []
+    results_1_link = []
+    results_multi_link = []
+    not_found = []
 
     # Only test random links (actual fog gates), not preexisting (auto-propagated)
-    random_pairs = [p for p in zone_pairs if p["type"] == "random"]
+    # Deduplicate bidirectional pairs (A→B and B→A are the same link)
+    seen_links = set()
+    random_pairs = []
+    for p in zone_pairs:
+        if p["type"] != "random":
+            continue
+        link_key = frozenset([p["source"], p["destination"]])
+        if link_key not in seen_links:
+            seen_links.add(link_key)
+            random_pairs.append(p)
     stats["total"] = len(random_pairs)
 
     for pair in random_pairs:
@@ -107,7 +94,7 @@ def test_fog_resolution(json_path: Path, data_dir: Path, use_spoiler_log: bool =
         target_pos = target_pos or (0.0, 0.0, 0.0)
 
         if not source_map_id or not target_map_id:
-            stats["pair_not_found"] += 1
+            stats["not_found"] += 1
             continue
 
         # Step 2: Get zone candidates from resolver
@@ -118,78 +105,142 @@ def test_fog_resolution(json_path: Path, data_dir: Path, use_spoiler_log: bool =
             target_map_id, target_pos[0], target_pos[1], target_pos[2]
         )
 
+        # Fallback: try to resolve parenthetical detail text from spoiler log names
+        # e.g., "Zone Name (detail text)" -> lookup detail text to find zone
+        source_from_detail = resolver.lookup_spoiler_name(source_name)
+        if source_from_detail[0] and source_from_detail not in source_candidates:
+            source_candidates.append(source_from_detail)
+
+        target_from_detail = resolver.lookup_spoiler_name(target_name)
+        if target_from_detail[0] and target_from_detail not in target_candidates:
+            target_candidates.append(target_from_detail)
+
         if not source_candidates or not target_candidates:
-            stats["pair_not_found"] += 1
+            stats["not_found"] += 1
             continue
 
-        # Step 3: Resolve zone names
-        if use_spoiler_log:
-            # Full mode: use spoiler log to disambiguate
-            match = find_matching_zone_pair(zone_pairs, source_candidates, target_candidates)
-            if match:
-                resolved_source, resolved_target, _ = match
-            else:
-                # Fallback to first candidate
-                resolved_source = source_candidates[0][1] if source_candidates else None
-                resolved_target = target_candidates[0][1] if target_candidates else None
-        else:
-            # Resolver-only mode: use first candidate (resolver's best guess)
-            resolved_source = source_candidates[0][1] if source_candidates else None
-            resolved_target = target_candidates[0][1] if target_candidates else None
+        # Step 3: Use server logic - find ALL matching zone pairs
+        all_matches = find_all_matching_zone_pairs(
+            zone_pairs,
+            source_candidates[:15],
+            target_candidates[:15],
+        )
 
-        # Step 4: Compare results
-        if resolved_source == source_name and resolved_target == target_name:
-            stats["pair_match"] += 1
-        else:
-            stats["pair_mismatch"] += 1
-            mismatches.append({
+        # Step 4: Analyze results
+        num_links = len(all_matches)
+
+        if num_links == 0:
+            stats["not_found"] += 1
+            not_found.append({
                 "expected_source": source_name,
                 "expected_target": target_name,
-                "resolved_source": resolved_source,
-                "resolved_target": resolved_target,
                 "source_map_id": source_map_id,
                 "target_map_id": target_map_id,
-                "source_pos": source_pos,
-                "target_pos": target_pos,
-                "source_details": source_details,
-                "target_details": target_details,
-                "source_candidates": [c[1] for c in source_candidates[:3]],
-                "target_candidates": [c[1] for c in target_candidates[:3]],
+                "source_candidates": [c[1] for c in source_candidates[:5]],
+                "target_candidates": [c[1] for c in target_candidates[:5]],
+            })
+            continue
+
+        # Check if expected link is in the matches
+        expected_found = any(
+            names_match(src, source_name) and names_match(tgt, target_name) or
+            names_match(src, target_name) and names_match(tgt, source_name)
+            for src, tgt, _ in all_matches
+        )
+
+        # Count by number of links
+        if num_links == 1:
+            stats["resolved_1_link"] += 1
+            results_1_link.append({
+                "expected_source": source_name,
+                "expected_target": target_name,
+                "resolved": [(src, tgt) for src, tgt, _ in all_matches],
+                "source_map_id": source_map_id,
+                "target_map_id": target_map_id,
+            })
+        elif num_links == 2:
+            stats["resolved_2_links"] += 1
+            results_multi_link.append({
+                "expected_source": source_name,
+                "expected_target": target_name,
+                "resolved": [(src, tgt) for src, tgt, _ in all_matches],
+                "source_map_id": source_map_id,
+                "target_map_id": target_map_id,
+                "expected_found": expected_found,
+            })
+        else:
+            stats["resolved_3plus_links"] += 1
+            results_multi_link.append({
+                "expected_source": source_name,
+                "expected_target": target_name,
+                "resolved": [(src, tgt) for src, tgt, _ in all_matches],
+                "source_map_id": source_map_id,
+                "target_map_id": target_map_id,
+                "expected_found": expected_found,
             })
 
-    # Print mismatches
-    if mismatches and ("--verbose" in sys.argv or "-v" in sys.argv or len(mismatches) <= 20):
+    # Print multi-link results (2+ links discovered)
+    if results_multi_link and ("--verbose" in sys.argv or "-v" in sys.argv or len(results_multi_link) <= 30):
         print("=" * 60)
-        print("MISMATCHES:")
+        print("MULTI-LINK DISCOVERIES (2+ links found - potential spoil):")
         print("=" * 60)
-        for m in mismatches[:50]:  # Limit output
-            print(f"Expected: '{m['expected_source']}' → '{m['expected_target']}'")
-            print(f"Resolved: '{m['resolved_source']}' → '{m['resolved_target']}'")
-            print(f"  Source map: {m['source_map_id']}, pos: ({m['source_pos'][0]:.1f}, {m['source_pos'][1]:.1f}, {m['source_pos'][2]:.1f})")
-            print(f"  Target map: {m['target_map_id']}, pos: ({m['target_pos'][0]:.1f}, {m['target_pos'][1]:.1f}, {m['target_pos'][2]:.1f})")
-            print(f"  Source candidates: {m['source_candidates']}")
-            print(f"  Target candidates: {m['target_candidates']}")
+        for m in results_multi_link[:50]:
+            expected_marker = " ✓" if m.get('expected_found', True) else " ✗ EXPECTED NOT FOUND"
+            print(f"Expected: '{m['expected_source']}' → '{m['expected_target']}'{expected_marker}")
+            print(f"  Maps: {m['source_map_id']} → {m['target_map_id']}")
+            print(f"  Server would discover ({len(m['resolved'])} links):")
+            expected_link = frozenset([m['expected_source'], m['expected_target']])
+            for src, tgt in m['resolved']:
+                resolved_link = frozenset([src, tgt])
+                # Check both exact and normalized match
+                is_expected = resolved_link == expected_link
+                if not is_expected:
+                    normalized_expected = frozenset([strip_parenthetical(m['expected_source']), strip_parenthetical(m['expected_target'])])
+                    normalized_resolved = frozenset([strip_parenthetical(src), strip_parenthetical(tgt)])
+                    is_expected = normalized_expected == normalized_resolved
+                marker = " ← expected" if is_expected else ""
+                print(f"    - '{src}' ↔ '{tgt}'{marker}")
             print()
 
-        if len(mismatches) > 50:
-            print(f"... and {len(mismatches) - 50} more mismatches")
+        if len(results_multi_link) > 50:
+            print(f"... and {len(results_multi_link) - 50} more")
+            print()
+
+    # Print not found cases
+    if not_found:
+        print("=" * 60)
+        print("NOT FOUND (no valid link in spoiler log):")
+        print("=" * 60)
+        for nf in not_found:
+            print(f"Expected: '{nf['expected_source']}' → '{nf['expected_target']}'")
+            print(f"  Maps: {nf['source_map_id']} → {nf['target_map_id']}")
+            print(f"  Resolver candidates:")
+            print(f"    Source: {nf['source_candidates'][:3]}")
+            print(f"    Target: {nf['target_candidates'][:3]}")
             print()
 
     # Print summary
     print("=" * 60)
-    print("SUMMARY")
+    print("SUMMARY (using server logic: discover ALL valid links)")
     print("=" * 60)
-    print(f"Total zone pairs:  {stats['total']}")
-    print(f"  ✓ Match:         {stats['pair_match']}")
-    print(f"  ✗ Mismatch:      {stats['pair_mismatch']}")
-    print(f"  ? Not found:     {stats['pair_not_found']}")
+    total = stats['total']
+    resolved_total = stats['resolved_1_link'] + stats['resolved_2_links'] + stats['resolved_3plus_links']
+
+    link1_pct = stats['resolved_1_link'] / total * 100 if total > 0 else 0
+    link2_pct = stats['resolved_2_links'] / total * 100 if total > 0 else 0
+    link3_pct = stats['resolved_3plus_links'] / total * 100 if total > 0 else 0
+    not_found_pct = stats['not_found'] / total * 100 if total > 0 else 0
+    resolved_pct = resolved_total / total * 100 if total > 0 else 0
+
+    print(f"Total zone pairs:  {total}")
     print()
+    print(f"  ✓ Resolved:      {resolved_total:3d} ({resolved_pct:5.1f}%) - expected link will be discovered")
+    print(f"      1 link:      {stats['resolved_1_link']:3d} ({link1_pct:5.1f}%) - perfect, no spoil")
+    print(f"      2 links:     {stats['resolved_2_links']:3d} ({link2_pct:5.1f}%) - small spoil (1 extra link)")
+    print(f"      3+ links:    {stats['resolved_3plus_links']:3d} ({link3_pct:5.1f}%) - larger spoil")
+    print(f"  ✗ Not found:     {stats['not_found']:3d} ({not_found_pct:5.1f}%) - no valid link found")
 
-    resolvable = stats['pair_match'] + stats['pair_mismatch']
-    accuracy = stats['pair_match'] / resolvable * 100 if resolvable > 0 else 0
-    print(f"ACCURACY: {accuracy:.1f}% ({stats['pair_match']}/{resolvable} pairs)")
-
-    return len(mismatches) == 0
+    return stats['not_found'] == 0
 
 
 def main():

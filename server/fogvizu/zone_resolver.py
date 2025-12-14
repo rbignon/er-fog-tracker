@@ -64,6 +64,8 @@ class ZoneResolver:
         self.map_zones: dict[str, set[str]] = {}
         # (map_id, col) -> internal zone name (from foglocations2.txt Cols)
         self.col_zones: dict[tuple[str, str], str] = {}
+        # Detail text (from ASide/BSide) -> internal zone name (for fallback matching)
+        self.detail_text_to_zone: dict[str, str] = {}
 
         if data_dir:
             self._load_data()
@@ -85,8 +87,9 @@ class ZoneResolver:
         if fog_path.exists():
             self._load_fog(fog_path)
             logger.info(
-                "Loaded %d zone display names from fog.txt",
+                "Loaded %d zone display names, %d detail texts from fog.txt",
                 len(self.zone_display_names),
+                len(self.detail_text_to_zone),
             )
 
         # Load foglocations2.txt
@@ -170,25 +173,62 @@ class ZoneResolver:
         self.map_rules[map_id] = rules
 
     def _load_fog(self, path: Path):
-        """Parse fog.txt for internal name -> display name mapping and Maps."""
+        """Parse fog.txt for internal name -> display name mapping, Maps, and ASide/BSide texts."""
         content = path.read_text()
         current_name = None
         in_to_section = False
+        in_aside = False
+        in_bside = False
+        aside_area = None
+        bside_area = None
 
         for line in content.split("\n"):
             line_stripped = line.strip()
-            # Track indentation to know if we're in a zone-level or To-level
+            # Track indentation to know if we're in a zone-level or nested section
             indent = len(line) - len(line.lstrip())
 
             if line_stripped.startswith("- Name:"):
                 current_name = line_stripped.replace("- Name:", "").strip()
                 in_to_section = False
+                in_aside = False
+                in_bside = False
+                aside_area = None
+                bside_area = None
             elif line_stripped.startswith("To:"):
                 in_to_section = True
-            elif line_stripped.startswith("Text:") and current_name and not in_to_section:
-                # Only read Text: at zone level (2-space indent), not inside To: section
-                display_name = line_stripped.replace("Text:", "").strip()
-                self.zone_display_names[current_name] = display_name
+                in_aside = False
+                in_bside = False
+            elif line_stripped.startswith("ASide:"):
+                in_aside = True
+                in_bside = False
+                aside_area = None
+            elif line_stripped.startswith("BSide:"):
+                in_bside = True
+                in_aside = False
+                bside_area = None
+            elif line_stripped.startswith("Area:"):
+                area = line_stripped.replace("Area:", "").strip()
+                if in_aside:
+                    aside_area = area
+                elif in_bside:
+                    bside_area = area
+            elif line_stripped.startswith("Text:"):
+                text = line_stripped.replace("Text:", "").strip()
+                if in_aside and aside_area:
+                    # Map this detail text to the zone
+                    self.detail_text_to_zone[text] = aside_area
+                elif in_bside and bside_area:
+                    # Map this detail text to the zone
+                    self.detail_text_to_zone[text] = bside_area
+                elif (
+                    current_name
+                    and not in_to_section
+                    and not in_aside
+                    and not in_bside
+                    and indent <= 2
+                ):
+                    # Zone-level Text: -> display name
+                    self.zone_display_names[current_name] = text
             elif line_stripped.startswith("Maps:") and current_name and indent <= 2:
                 # Also build zone-to-map mappings from fog.txt
                 map_ids = line_stripped.replace("Maps:", "").strip().split()
@@ -196,6 +236,10 @@ class ZoneResolver:
                     if map_id not in self.map_zones:
                         self.map_zones[map_id] = set()
                     self.map_zones[map_id].add(current_name)
+            # Reset ASide/BSide context when we exit their indentation level
+            elif indent <= 2 and (in_aside or in_bside):
+                in_aside = False
+                in_bside = False
 
     def _load_foglocations(self, path: Path):
         """Parse foglocations2.txt for Col -> zone mappings and fog gate AArea."""
@@ -410,6 +454,49 @@ class ZoneResolver:
                 results.append((internal, display))
 
         return results
+
+    def lookup_by_detail_text(self, detail_text: str) -> tuple[str | None, str | None]:
+        """
+        Look up zone by ASide/BSide detail text.
+
+        Args:
+            detail_text: The detail text (e.g., "inside the Fell Twins' arena")
+
+        Returns:
+            Tuple of (internal_name, display_name). Both may be None if not found.
+        """
+        internal_name = self.detail_text_to_zone.get(detail_text)
+        if internal_name:
+            display_name = self.zone_display_names.get(
+                internal_name, internal_name.replace("_", " ").title()
+            )
+            return internal_name, display_name
+        return None, None
+
+    def lookup_spoiler_name(self, spoiler_name: str) -> tuple[str | None, str | None]:
+        """
+        Try to resolve a spoiler log zone name to our internal zone.
+
+        Spoiler log names can have parenthetical details like:
+        "Divine Tower of East Altus (approaching the Divine Tower of East Altus gate, or using the grace menu)"
+
+        This method:
+        1. Extracts the parenthetical text
+        2. Looks it up in detail_text_to_zone
+        3. Returns the matching zone
+
+        Args:
+            spoiler_name: The zone name from the spoiler log
+
+        Returns:
+            Tuple of (internal_name, display_name). Both may be None if not found.
+        """
+        # Extract text between parentheses
+        match = re.search(r"\(([^)]+)\)$", spoiler_name)
+        if match:
+            detail_text = match.group(1)
+            return self.lookup_by_detail_text(detail_text)
+        return None, None
 
 
 # Global instance

@@ -3,7 +3,6 @@ Game logic: discovery propagation through preexisting links.
 """
 
 import logging
-from collections import defaultdict
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -11,135 +10,26 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fogvizu.database import Game
+from fogvizu.zone_matching import (
+    build_preexisting_adjacency,
+    find_candidate_zones,
+    find_similar_zones,
+    find_zone_pair,
+    get_discovered_nodes,
+    link_exists,
+)
 
 logger = logging.getLogger(__name__)
 
-# Starting node (always discovered)
-START_NODE = "Chapel of Anticipation"
 
-
-def is_one_way(link: dict, all_links: list[dict]) -> bool:
-    """A link is one-way if no reverse link exists."""
-    return not any(
-        other["source"] == link["destination"] and other["destination"] == link["source"]
-        for other in all_links
-    )
-
-
-def build_preexisting_adjacency(
-    zone_pairs: list[dict],
-) -> dict[str, list[tuple[str, bool]]]:
-    """
-    Build adjacency list for preexisting links only.
-    Returns dict[source] -> list of (destination, is_bidirectional)
-    """
-    adj: dict[str, list[tuple[str, bool]]] = defaultdict(list)
-
-    for pair in zone_pairs:
-        if pair["type"] == "preexisting":
-            is_bidir = not is_one_way(pair, zone_pairs)
-            adj[pair["source"]].append((pair["destination"], is_bidir))
-            if is_bidir:
-                adj[pair["destination"]].append((pair["source"], True))
-
-    return adj
-
-
-def get_discovered_nodes(discovered_links: list[dict]) -> set[str]:
-    """
-    Get all discovered nodes from discovered links.
-    A node is discovered if it's the source or target of any discovered link,
-    or is START_NODE.
-    """
-    discovered = {START_NODE}
-
-    for link in discovered_links:
-        discovered.add(link["source"])
-        discovered.add(link["target"])
-
-    return discovered
-
-
-def link_exists(discovered_links: list[dict], source: str, target: str) -> bool:
-    """Check if a link already exists in discovered_links."""
-    return any(dl["source"] == source and dl["target"] == target for dl in discovered_links)
-
-
-def find_zone_pair(zone_pairs: list[dict], source: str, target: str) -> dict | None:
-    """Find a zone pair matching source and target (in either direction for random links)."""
-    for pair in zone_pairs:
-        # Check direct match
-        if pair["source"] == source and pair["destination"] == target:
-            return pair
-        # For random links, also check reverse (they're bidirectional)
-        if pair["type"] == "random" and pair["source"] == target and pair["destination"] == source:
-            return pair
-    return None
-
-
-def find_matching_zone_pair(
-    zone_pairs: list[dict],
-    source_candidates: list[tuple[str, str]],
-    target_candidates: list[tuple[str, str]],
-) -> tuple[str, str, dict] | None:
-    """
-    Find a matching zone pair from lists of candidates.
-
-    Tries all combinations of source and target candidates until finding
-    a match in zone_pairs. Candidates are assumed to be ordered by likelihood.
-
-    Args:
-        zone_pairs: List of zone pairs from the spoiler log
-        source_candidates: List of (internal_name, display_name) for source, best first
-        target_candidates: List of (internal_name, display_name) for target, best first
-
-    Returns:
-        Tuple of (source_display, target_display, zone_pair) if found, None otherwise.
-    """
-    for source_internal, source_display in source_candidates:
-        for target_internal, target_display in target_candidates:
-            pair = find_zone_pair(zone_pairs, source_display, target_display)
-            if pair:
-                logger.debug(
-                    "[MATCH] Found pair: '%s' → '%s' (tried %s → %s)",
-                    source_display,
-                    target_display,
-                    source_internal,
-                    target_internal,
-                )
-                return source_display, target_display, pair
-
-    return None
-
-
-def find_candidate_zones(zone_pairs: list[dict], zone_name: str) -> list[dict]:
-    """Find all zone pairs that contain a zone name (for debugging)."""
-    candidates = []
-    for pair in zone_pairs:
-        if pair["source"] == zone_name or pair["destination"] == zone_name:
-            candidates.append(pair)
-    return candidates
-
-
-def find_similar_zones(zone_pairs: list[dict], zone_name: str, limit: int = 5) -> list[str]:
-    """Find zones with similar names (for debugging mismatches)."""
-    all_zones = set()
-    for pair in zone_pairs:
-        all_zones.add(pair["source"])
-        all_zones.add(pair["destination"])
-
-    # Simple substring matching
-    zone_lower = zone_name.lower()
-    similar = []
-    for zone in all_zones:
-        if (
-            zone_lower in zone.lower()
-            or zone.lower() in zone_lower
-            or set(zone_lower.split()) & set(zone.lower().split())
-        ):
-            similar.append(zone)
-
-    return similar[:limit]
+# Re-export commonly used functions for backward compatibility
+from fogvizu.zone_matching import (  # noqa: E402, F401
+    compute_total_zones,
+    find_all_matching_zone_pairs,
+    find_matching_zone_pair,
+    names_match,
+    strip_parenthetical,
+)
 
 
 async def propagate_discovery(
@@ -279,12 +169,3 @@ async def propagate_discovery(
         logger.info("[DISCOVERY] No new links discovered (already known or invalid)")
 
     return newly_discovered
-
-
-def compute_total_zones(zone_pairs: list[dict]) -> int:
-    """Compute total unique zones from zone pairs."""
-    zones = set()
-    for pair in zone_pairs:
-        zones.add(pair["source"])
-        zones.add(pair["destination"])
-    return len(zones)
