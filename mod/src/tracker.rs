@@ -2,7 +2,6 @@
 
 use std::time::{Duration, Instant};
 
-use hudhook::tracing::{info, warn};
 use libeldenring::pointers::Pointers;
 use windows::Win32::Foundation::HINSTANCE;
 
@@ -42,14 +41,14 @@ pub struct FogRandoTracker {
 impl FogRandoTracker {
     /// Create a new FogRandoTracker instance
     pub fn new(hmodule: HINSTANCE) -> Option<Self> {
-        info!("Initializing FogRandoTracker...");
+        println!("Initializing FogRandoTracker...");
 
         // Load configuration - REQUIRED (from DLL directory)
         let config = match Config::load(hmodule) {
             Ok(cfg) => cfg,
             Err(e) => {
-                hudhook::tracing::error!("Failed to load configuration: {}", e);
-                hudhook::tracing::error!(
+                eprintln!("Failed to load configuration: {}", e);
+                eprintln!(
                     "Please ensure '{}' exists next to the DLL.",
                     Config::CONFIG_FILENAME
                 );
@@ -57,7 +56,7 @@ impl FogRandoTracker {
             }
         };
 
-        info!(
+        println!(
             "Keybindings: Toggle UI={}",
             config.keybindings.toggle_ui.name()
         );
@@ -75,18 +74,18 @@ impl FogRandoTracker {
             std::thread::sleep(poll_interval);
         }
 
-        info!("FogRandoTracker initialized!");
+        println!("FogRandoTracker initialized!");
 
         // Initialize WebSocket client for server integration
         let mut ws_client = WebSocketClient::new(config.server.clone());
         if ws_client.is_enabled() {
-            info!(
+            println!(
                 "Server integration enabled, connecting to {}...",
                 config.server.url
             );
             ws_client.connect();
         } else {
-            info!("Server integration disabled (missing url, token, or game_id in config)");
+            println!("Server integration disabled (missing url, token, or game_id in config)");
         }
 
         Some(Self {
@@ -122,7 +121,7 @@ impl FogRandoTracker {
                 // Animation just started - record entry zone
                 let entry_zone = get_zone_name(map_id);
                 let map_id_str = format_map_id(map_id);
-                info!(
+                println!(
                     "[FOG] Entry detected [{}] zone={} pos=({:.1}, {:.1}, {:.1})",
                     map_id_str, entry_zone, x, y, z
                 );
@@ -134,25 +133,25 @@ impl FogRandoTracker {
                 if let Some(pending) = self.pending_fog.take() {
                     let exit_zone = get_zone_name(map_id);
                     let map_id_str = format_map_id(map_id);
-                    info!(
+                    println!(
                         "[FOG] Exit detected [{}] zone={} pos=({:.1}, {:.1}, {:.1})",
                         map_id_str, exit_zone, x, y, z
                     );
-                    info!(
+                    println!(
                         "[FOG] Traversal complete: {} → {}",
                         pending.entry_zone_name, exit_zone
                     );
 
                     // Send discovery to server if connected
                     if self.ws_client.is_connected() {
-                        info!(
+                        println!(
                             "[FOG] Sending to server: {} → {}",
                             pending.entry_zone_name, exit_zone
                         );
                         self.ws_client
                             .send_discovery(&pending.entry_zone_name, &exit_zone);
                     } else {
-                        info!("[FOG] Not connected to server, discovery not sent");
+                        println!("[FOG] Not connected to server, discovery not sent");
                     }
 
                     self.fog_traversal_count += 1;
@@ -193,7 +192,7 @@ impl FogRandoTracker {
         while let Some(msg) = self.ws_client.poll() {
             match msg {
                 IncomingMessage::StatusChanged(status) => {
-                    info!("WebSocket status: {:?}", status);
+                    println!("WebSocket status: {:?}", status);
                     match status {
                         ConnectionStatus::Connected => {
                             self.set_status("Server connected".to_string());
@@ -210,13 +209,13 @@ impl FogRandoTracker {
                     }
                 }
                 IncomingMessage::DiscoveryAck { propagated } => {
-                    info!(
+                    println!(
                         "Discovery acknowledged by server ({} propagated)",
                         propagated.len()
                     );
                 }
                 IncomingMessage::Error(err) => {
-                    warn!("WebSocket error: {}", err);
+                    eprintln!("WebSocket error: {}", err);
                 }
                 IncomingMessage::Ping => {
                     // Auto-handled by poll()

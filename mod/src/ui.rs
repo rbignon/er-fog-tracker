@@ -1,7 +1,6 @@
 // UI Rendering - ImGui overlay implementation
 
 use hudhook::imgui::{Condition, WindowFlags};
-use hudhook::tracing::info;
 use hudhook::ImguiRenderLoop;
 
 use crate::tracker::FogRandoTracker;
@@ -60,7 +59,7 @@ impl FogRandoTracker {
     fn handle_hotkeys(&mut self) {
         if self.config.keybindings.toggle_ui.is_just_pressed() {
             self.show_ui = !self.show_ui;
-            info!("UI toggled: show_ui={}", self.show_ui);
+            println!("UI toggled: show_ui={}", self.show_ui);
         }
     }
 

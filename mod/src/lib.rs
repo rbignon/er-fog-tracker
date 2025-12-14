@@ -41,14 +41,35 @@ use hudhook::{eject, Hudhook};
 use windows::Win32::Foundation::HINSTANCE;
 #[allow(unused_imports)]
 use windows::Win32::System::SystemServices::DLL_PROCESS_ATTACH;
+use windows::Win32::System::Console::{AllocConsole, SetConsoleTitleW};
 
+use crate::config::Config;
 use crate::tracker::FogRandoTracker;
 
 // =============================================================================
 // DLL ENTRY POINT
 // =============================================================================
 
+/// Allocate a console window for debug output
+fn setup_debug_console() {
+    unsafe {
+        let _ = AllocConsole();
+        let title: Vec<u16> = "FogRandoTracker Debug Console\0"
+            .encode_utf16()
+            .collect();
+        let _ = SetConsoleTitleW(windows::core::PCWSTR(title.as_ptr()));
+    }
+}
+
 fn start_mod(hmodule: HINSTANCE) {
+    // Try to load config early to check for debug_console
+    if let Ok(config) = Config::load(hmodule) {
+        if config.debug_console {
+            setup_debug_console();
+            println!("[FogRandoTracker] Debug console enabled");
+        }
+    }
+
     let tracker = match FogRandoTracker::new(hmodule) {
         Some(t) => t,
         None => {
@@ -56,14 +77,14 @@ fn start_mod(hmodule: HINSTANCE) {
             return;
         }
     };
-    
+
     if let Err(e) = Hudhook::builder()
         .with::<ImguiDx12Hooks>(tracker)
         .with_hmodule(hmodule)
         .build()
         .apply()
     {
-        hudhook::tracing::error!("Couldn't apply hooks: {e:?}");
+        eprintln!("Couldn't apply hooks: {e:?}");
         eject();
     }
 }

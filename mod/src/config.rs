@@ -66,6 +66,9 @@ impl Default for ServerSettings {
 /// Main configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
+    /// Enable debug console window for real-time logging
+    #[serde(default)]
+    pub debug_console: bool,
     #[serde(default)]
     pub keybindings: KeyBindings,
     #[serde(default)]
@@ -118,7 +121,7 @@ impl Config {
         let dir = Self::get_dll_directory(hmodule).ok_or(ConfigError::PathError)?;
         let config_path = dir.join(Self::CONFIG_FILENAME);
 
-        hudhook::tracing::info!("Looking for config at: {}", config_path.display());
+        println!("Looking for config at: {}", config_path.display());
 
         if !config_path.exists() {
             return Err(ConfigError::FileNotFound(config_path));
@@ -127,7 +130,7 @@ impl Config {
         let contents = fs::read_to_string(&config_path).map_err(ConfigError::ReadError)?;
         let config: Config = toml::from_str(&contents).map_err(ConfigError::ParseError)?;
 
-        hudhook::tracing::info!("Loaded config from {}", config_path.display());
+        println!("Loaded config from {}", config_path.display());
         Ok(config)
     }
 }
