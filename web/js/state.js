@@ -146,7 +146,46 @@ export function isOverlayMode() {
 // STATE SETTERS (emit events on change)
 // ============================================================
 
+/**
+ * Compute one-way property on links.
+ *
+ * Logic:
+ * - Preexisting links: one-way if no reverse link exists in the data
+ * - Random links: one-way only if marked as isInherentlyOneWay (teleports, warps, etc.)
+ *   Otherwise assumed bidirectional (fog gates can be traversed both ways)
+ */
+function computeOneWayLinks(links) {
+    if (!links || links.length === 0) return;
+
+    // Build set of all link pairs for reverse lookup
+    const linkPairs = new Set();
+    links.forEach(l => {
+        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        linkPairs.add(`${sourceId}|${targetId}`);
+    });
+
+    links.forEach(l => {
+        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        const hasReverse = linkPairs.has(`${targetId}|${sourceId}`);
+
+        if (l.type === 'random') {
+            // Random links are bidirectional unless explicitly marked as one-way
+            // (teleports, sending gates, abductions, etc.)
+            l.oneWay = l.isInherentlyOneWay === true;
+        } else {
+            // Preexisting links: one-way if no reverse exists
+            l.oneWay = !hasReverse;
+        }
+    });
+}
+
 export function setGraphData(data) {
+    // Compute one-way links before storing (ensures consistency across all entry points)
+    if (data && data.links) {
+        computeOneWayLinks(data.links);
+    }
     state.graphData = data;
     emit('graphDataChanged', data);
 }

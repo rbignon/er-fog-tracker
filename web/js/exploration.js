@@ -180,6 +180,38 @@ export function undiscoverArea(areaId) {
     const explorationState = State.getExplorationState();
     if (!graphData || !explorationState) return;
 
+    const isOnline = State.getBackendMode() === 'online';
+    const gameId = State.getGameId();
+
+    // Online mode: delegate to server for source of truth
+    if (isOnline && gameId) {
+        // Optimistic update: perform local undiscovery for responsive UI
+        performLocalUndiscovery(areaId, graphData, explorationState);
+        State.saveExplorationToStorage();
+        State.emit('graphNeedsRender', { preservePositions: true });
+
+        // Send to server - response will contain authoritative state
+        Api.undiscoverZone(gameId, areaId)
+            .then(response => {
+                // Server response contains discovered_links - apply it
+                if (response && response.discovered_links) {
+                    applyServerDiscoveryState(response.discovered_links);
+                }
+            })
+            .catch(err => console.error('Failed to persist undiscovery:', err));
+        return;
+    }
+
+    // Offline mode: compute everything locally
+    performLocalUndiscovery(areaId, graphData, explorationState);
+    State.saveExplorationToStorage();
+    State.emit('graphNeedsRender', { preservePositions: true });
+}
+
+/**
+ * Perform local undiscovery logic (shared between online optimistic update and offline mode)
+ */
+function performLocalUndiscovery(areaId, graphData, explorationState) {
     // First, undiscover the requested node and its links
     State.undiscoverNode(areaId);
     State.undiscoverLinksForNode(areaId);
@@ -199,9 +231,6 @@ export function undiscoverArea(areaId) {
         State.undiscoverNode(nodeId);
         State.undiscoverLinksForNode(nodeId);
     });
-
-    State.saveExplorationToStorage();
-    State.emit('graphNeedsRender', { preservePositions: true });
 }
 
 /**
@@ -710,41 +739,6 @@ export function buildNodeConnectionsMap(graphData) {
     });
 
     return nodeConnections;
-}
-
-/**
- * Compute one-way property on links
- *
- * Logic:
- * - Preexisting links: one-way if no reverse link exists in the data
- * - Random links: one-way only if marked as isInherentlyOneWay (teleports, warps, etc.)
- *   Otherwise assumed bidirectional (fog gates can be traversed both ways)
- */
-export function computeOneWayLinks(links) {
-    if (!links || links.length === 0) return;
-
-    // Build set of all link pairs for reverse lookup
-    const linkPairs = new Set();
-    links.forEach(l => {
-        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
-        linkPairs.add(`${sourceId}|${targetId}`);
-    });
-
-    links.forEach(l => {
-        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
-        const hasReverse = linkPairs.has(`${targetId}|${sourceId}`);
-
-        if (l.type === 'random') {
-            // Random links are bidirectional unless explicitly marked as one-way
-            // (teleports, sending gates, abductions, etc.)
-            l.oneWay = l.isInherentlyOneWay === true;
-        } else {
-            // Preexisting links: one-way if no reverse exists
-            l.oneWay = !hasReverse;
-        }
-    });
 }
 
 /**

@@ -155,6 +155,19 @@ export async function createDiscovery(gameId, { source, target }) {
   });
 }
 
+/**
+ * Undiscover a zone (and cascade to unreachable zones).
+ * @param {string} gameId - Game UUID
+ * @param {string} zone - Zone ID to undiscover
+ * @returns {Promise<{ removed: string[], discovered_links: Array }>}
+ */
+export async function undiscoverZone(gameId, zone) {
+  return apiFetch(`/api/games/${gameId}/undiscoveries`, {
+    method: 'POST',
+    body: JSON.stringify({ zone }),
+  });
+}
+
 export default {
   createGame,
   getGame,
@@ -165,4 +178,5 @@ export default {
   getUserGames,
   regenerateModToken,
   createDiscovery,
+  undiscoverZone,
 };

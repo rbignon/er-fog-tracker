@@ -60,10 +60,7 @@ function processSpoilerLogText(text) {
     
     // Reset search
     searchInput.value = '';
-    
-    // Compute one-way links before storing
-    Exploration.computeOneWayLinks(graphData.links);
-    
+
     // Set seed BEFORE render so exploration state can be loaded
     const newSeed = graphData.metadata?.seed || 'unknown';
     State.setSeed(newSeed);

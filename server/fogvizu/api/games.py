@@ -26,9 +26,12 @@ from fogvizu.models import (
     GameUpdate,
     NodePositionResponse,
     PropagatedLink,
+    UndiscoveryRequest,
+    UndiscoveryResponse,
     Zone,
 )
 from fogvizu.websocket import manager as ws_manager
+from fogvizu.zone_matching import undiscover_zone
 
 router = APIRouter()
 
@@ -292,5 +295,50 @@ async def create_discovery(
                 discovered_by=dl.get("discovered_by"),
             )
             for dl in all_links
+        ],
+    )
+
+
+@router.post("/games/{game_id}/undiscoveries", response_model=UndiscoveryResponse)
+async def create_undiscovery(
+    game_id: UUID,
+    data: UndiscoveryRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Undiscover a zone and cascade to unreachable zones."""
+    # Verify game exists and belongs to user
+    result = await db.execute(
+        select(Game)
+        .where(Game.id == game_id)
+        .where(Game.user_id == user.id)
+        .where(Game.deleted_at.is_(None))
+    )
+    game = result.scalar_one_or_none()
+
+    if not game:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Game not found",
+        )
+
+    # Undiscover the zone and cascade
+    discovered_links = game.discovered_links or []
+    new_links, removed_zones = undiscover_zone(discovered_links, data.zone)
+
+    # Update game
+    game.discovered_links = new_links
+    await db.flush()
+
+    return UndiscoveryResponse(
+        removed=removed_zones,
+        discovered_links=[
+            DiscoveredLink(
+                source=dl["source"],
+                target=dl["target"],
+                discovered_at=dl.get("discovered_at"),
+                discovered_by=dl.get("discovered_by"),
+            )
+            for dl in new_links
         ],
     )

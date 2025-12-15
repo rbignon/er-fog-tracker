@@ -167,6 +167,19 @@ class DiscoveryResponse(BaseModel):
     discovered_links: list[DiscoveredLink]
 
 
+class UndiscoveryRequest(BaseModel):
+    """Request body for undiscovering a zone."""
+
+    zone: str
+
+
+class UndiscoveryResponse(BaseModel):
+    """Response after undiscovering a zone."""
+
+    removed: list[str]  # Zones that were undiscovered
+    discovered_links: list[DiscoveredLink]
+
+
 # =============================================================================
 # Tags
 # =============================================================================

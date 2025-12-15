@@ -420,6 +420,77 @@ def find_path_prioritizing_discovered(
     return []  # No path found
 
 
+def find_reachable_nodes(discovered_links: list[dict]) -> set[str]:
+    """
+    Find all nodes reachable from START_NODE via discovered links.
+    Uses BFS through the discovered link graph.
+    """
+    reachable = {START_NODE}
+    queue = [START_NODE]
+
+    while queue:
+        current = queue.pop(0)
+        for dl in discovered_links:
+            src = dl.get("source", "")
+            tgt = dl.get("target", "")
+            neighbor = None
+
+            # Can traverse in either direction (discovered links are bidirectional)
+            if src == current and tgt not in reachable:
+                neighbor = tgt
+            elif tgt == current and src not in reachable:
+                neighbor = src
+
+            if neighbor:
+                reachable.add(neighbor)
+                queue.append(neighbor)
+
+    return reachable
+
+
+def undiscover_zone(
+    discovered_links: list[dict],
+    zone_to_remove: str,
+) -> tuple[list[dict], list[str]]:
+    """
+    Undiscover a zone and all zones that become unreachable from START.
+
+    Args:
+        discovered_links: Current list of discovered links
+        zone_to_remove: The zone to undiscover
+
+    Returns:
+        Tuple of (new_discovered_links, removed_zones)
+    """
+    if zone_to_remove == START_NODE:
+        return discovered_links, []
+
+    # First, remove all links involving the zone to remove
+    filtered_links = [
+        dl
+        for dl in discovered_links
+        if dl.get("source") != zone_to_remove and dl.get("target") != zone_to_remove
+    ]
+
+    # Find all zones that are still reachable from START
+    reachable = find_reachable_nodes(filtered_links)
+
+    # Get zones that were discovered before
+    previously_discovered = get_discovered_nodes(discovered_links)
+
+    # Find zones that became unreachable (cascade undiscovery)
+    removed_zones = previously_discovered - reachable
+
+    # Remove all links involving unreachable zones
+    final_links = [
+        dl
+        for dl in filtered_links
+        if dl.get("source") in reachable and dl.get("target") in reachable
+    ]
+
+    return final_links, list(removed_zones)
+
+
 def compute_zone_exits(
     zone_pairs: list[dict],
     discovered_links: list[dict],
