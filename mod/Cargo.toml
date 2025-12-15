@@ -43,9 +43,9 @@ tungstenite = { version = "0.21", features = ["native-tls"] }
 crossbeam-channel = "0.5"
 
 # --- Launcher GUI dependencies (not needed for DLL) ---
-eframe = { version = "0.29", default-features = false, features = ["default_fonts", "glow"], optional = true }
+native-windows-gui = { version = "1.0.13", optional = true }
+native-windows-derive = { version = "1.0.5", optional = true }
 ureq = { version = "2.10", features = ["json", "tls"], optional = true }
-rfd = { version = "0.15", optional = true }
 dirs = { version = "5.0", optional = true }
 
 # --- Windows API ---
@@ -70,7 +70,7 @@ features = [
 ]
 
 [features]
-launcher = ["eframe", "ureq", "rfd", "dirs"]
+launcher = ["native-windows-gui", "native-windows-derive", "ureq", "dirs"]
 
 [profile.release]
 strip = "symbols"

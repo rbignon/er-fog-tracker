@@ -14,26 +14,12 @@ mod config;
 mod process_monitor;
 mod spoiler_validator;
 
-use app::LauncherApp;
-
-fn main() -> eframe::Result<()> {
+fn main() {
     // Initialize logging for debug builds
     #[cfg(debug_assertions)]
     {
         tracing_subscriber::fmt::init();
     }
 
-    let options = eframe::NativeOptions {
-        viewport: eframe::egui::ViewportBuilder::default()
-            .with_inner_size([500.0, 450.0])
-            .with_min_inner_size([400.0, 350.0])
-            .with_title("FogRandoTracker Launcher"),
-        ..Default::default()
-    };
-
-    eframe::run_native(
-        "FogRandoTracker Launcher",
-        options,
-        Box::new(|cc| Ok(Box::new(LauncherApp::new(cc)))),
-    )
+    app::run_app();
 }

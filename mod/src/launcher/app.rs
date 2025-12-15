@@ -1,6 +1,11 @@
-// Main launcher application using egui
+// Main launcher application using native-windows-gui
 
-use eframe::egui;
+extern crate native_windows_derive as nwd;
+extern crate native_windows_gui as nwg;
+
+use nwd::NwgUi;
+use nwg::NativeUi;
+use std::cell::RefCell;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
@@ -8,44 +13,19 @@ use std::thread;
 use super::api_client::{ApiClient, ApiError, GameSummary, UserInfo};
 use super::config::LauncherConfig;
 use super::process_monitor::{find_dll_path, ProcessMonitor, ProcessState};
-use super::spoiler_validator::{
-    read_spoiler_file, validate_spoiler_file, SpoilerHeader, ValidationError,
-};
+use super::spoiler_validator::{read_spoiler_file, validate_spoiler_file};
 
 // =============================================================================
 // Application State
 // =============================================================================
 
-#[derive(Debug)]
-pub enum AppState {
-    /// Waiting for user to enter server URL and mod token
-    TokenInput {
-        server_url: String,
-        token: String,
-        error: Option<String>,
-        validating: bool,
-    },
-    /// Game selection screen
-    GameSelection {
-        user: UserInfo,
-        games: Vec<GameSummary>,
-        selected_index: Option<usize>,
-        loading: bool,
-        error: Option<String>,
-    },
-    /// Creating a new game
-    NewGame {
-        user: UserInfo,
-        label: String,
-        spoiler_path: Option<PathBuf>,
-        validation: Option<Result<SpoilerHeader, ValidationError>>,
-        creating: bool,
-        error: Option<String>,
-    },
-    /// Waiting for Elden Ring process
-    WaitingForGame { user: UserInfo, game: GameSummary },
-    /// Mod has been injected
-    Injected { user: UserInfo, game: GameSummary },
+#[derive(Debug, Clone, PartialEq)]
+pub enum AppScreen {
+    TokenInput,
+    GameSelection,
+    NewGame,
+    WaitingForGame,
+    Injected,
 }
 
 // =============================================================================
@@ -59,77 +39,45 @@ enum TaskResult {
 }
 
 // =============================================================================
-// Launcher App
+// Application Data (non-UI state)
 // =============================================================================
 
-pub struct LauncherApp {
-    state: AppState,
+struct AppData {
     config: LauncherConfig,
+    current_screen: AppScreen,
+    user: Option<UserInfo>,
+    games: Vec<GameSummary>,
+    selected_game: Option<GameSummary>,
+    spoiler_path: Option<PathBuf>,
+    spoiler_valid: bool,
     process_monitor: Option<ProcessMonitor>,
     task_sender: Sender<TaskResult>,
     task_receiver: Receiver<TaskResult>,
-    dll_path: Option<PathBuf>,
-    dll_error: Option<String>,
 }
 
-impl LauncherApp {
-    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+impl AppData {
+    fn new() -> Self {
         let (task_sender, task_receiver) = channel();
         let config = LauncherConfig::load();
-
-        // Find DLL path
         let dll_path = find_dll_path();
-        let dll_error = if dll_path.is_none() {
-            Some("fog_rando_tracker.dll not found".to_string())
-        } else {
-            None
-        };
-
-        // Initialize process monitor if DLL found
-        let process_monitor = dll_path.clone().map(ProcessMonitor::new);
-
-        // Determine initial state based on config
-        let state = if config.has_token() {
-            // Start validating the saved token
-            let token = config.mod_token.clone().unwrap();
-            let url = config.server_url.clone();
-            let sender = task_sender.clone();
-
-            thread::spawn(move || {
-                let client = ApiClient::new(&url, &token);
-                let result = client.validate_token();
-                let _ = sender.send(TaskResult::TokenValidated(result));
-            });
-
-            AppState::TokenInput {
-                server_url: config.server_url.clone(),
-                token: config.mod_token.clone().unwrap_or_default(),
-                error: None,
-                validating: true,
-            }
-        } else {
-            AppState::TokenInput {
-                server_url: config.server_url.clone(),
-                token: String::new(),
-                error: None,
-                validating: false,
-            }
-        };
+        let process_monitor = dll_path.map(ProcessMonitor::new);
 
         Self {
-            state,
             config,
+            current_screen: AppScreen::TokenInput,
+            user: None,
+            games: vec![],
+            selected_game: None,
+            spoiler_path: None,
+            spoiler_valid: false,
             process_monitor,
             task_sender,
             task_receiver,
-            dll_path,
-            dll_error,
         }
     }
 
-    fn validate_token(&mut self, url: String, token: String) {
+    fn validate_token(&self, url: String, token: String) {
         let sender = self.task_sender.clone();
-
         thread::spawn(move || {
             let client = ApiClient::new(&url, &token);
             let result = client.validate_token();
@@ -137,11 +85,10 @@ impl LauncherApp {
         });
     }
 
-    fn load_games(&mut self) {
+    fn load_games(&self) {
         let url = self.config.server_url.clone();
         let token = self.config.mod_token.clone().unwrap_or_default();
         let sender = self.task_sender.clone();
-
         thread::spawn(move || {
             let client = ApiClient::new(&url, &token);
             let result = client.list_games();
@@ -149,16 +96,13 @@ impl LauncherApp {
         });
     }
 
-    fn create_game(&mut self, spoiler_content: String, label: Option<String>) {
+    fn create_game(&self, spoiler_content: String, label: Option<String>) {
         let url = self.config.server_url.clone();
         let token = self.config.mod_token.clone().unwrap_or_default();
         let sender = self.task_sender.clone();
-
         thread::spawn(move || {
             let client = ApiClient::new(&url, &token);
             let result = client.create_game(&spoiler_content, label.as_deref());
-
-            // If created, fetch game list to get full game info
             let result = result.and_then(|resp| {
                 let games = client.list_games()?;
                 let game = games
@@ -167,782 +111,581 @@ impl LauncherApp {
                     .ok_or(ApiError::NotFound)?;
                 Ok((game, resp.created))
             });
-
             let _ = sender.send(TaskResult::GameCreated(result));
         });
     }
+}
 
-    fn process_tasks(&mut self) {
-        while let Ok(result) = self.task_receiver.try_recv() {
+// =============================================================================
+// Main Application UI
+// =============================================================================
+
+#[derive(Default, NwgUi)]
+pub struct LauncherApp {
+    #[nwg_control(size: (500, 450), position: (300, 200), title: "FogRandoTracker Launcher")]
+    #[nwg_events(OnWindowClose: [LauncherApp::on_exit])]
+    window: nwg::Window,
+
+    #[nwg_control(parent: window, interval: std::time::Duration::from_millis(200))]
+    #[nwg_events(OnTimerTick: [LauncherApp::on_timer])]
+    timer: nwg::AnimationTimer,
+
+    // =========================================================================
+    // Token Input Screen
+    // =========================================================================
+    #[nwg_control(parent: window, text: "Server URL:", position: (20, 20), size: (460, 20))]
+    token_url_label: nwg::Label,
+
+    #[nwg_control(parent: window, text: "", position: (20, 45), size: (460, 25))]
+    token_url_input: nwg::TextInput,
+
+    #[nwg_control(parent: window, text: "Mod Token:", position: (20, 85), size: (460, 20))]
+    token_label: nwg::Label,
+
+    #[nwg_control(parent: window, text: "", position: (20, 110), size: (460, 25), flags: "VISIBLE|TAB_STOP")]
+    token_input: nwg::TextInput,
+
+    #[nwg_control(parent: window, text: "Find your token in Settings on the fog-vizu website", position: (20, 145), size: (460, 20))]
+    token_hint: nwg::Label,
+
+    #[nwg_control(parent: window, text: "", position: (20, 175), size: (460, 40))]
+    token_error: nwg::Label,
+
+    #[nwg_control(parent: window, text: "Connect", position: (200, 230), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_connect_click])]
+    token_connect_btn: nwg::Button,
+
+    // =========================================================================
+    // Game Selection Screen
+    // =========================================================================
+    #[nwg_control(parent: window, text: "Connected as: ", position: (20, 20), size: (350, 20))]
+    games_user_label: nwg::Label,
+
+    #[nwg_control(parent: window, text: "Change Token", position: (380, 15), size: (100, 30))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_change_token_click])]
+    games_change_token_btn: nwg::Button,
+
+    #[nwg_control(parent: window, text: "Select a game:", position: (20, 55), size: (460, 20))]
+    games_list_label: nwg::Label,
+
+    #[nwg_control(parent: window, position: (20, 80), size: (460, 200), list_style: nwg::ListViewStyle::Detailed, ex_flags: nwg::ListViewExFlags::FULL_ROW_SELECT)]
+    #[nwg_events(OnListViewItemChanged: [LauncherApp::on_game_selected])]
+    games_list: nwg::ListView,
+
+    #[nwg_control(parent: window, text: "New Game", position: (20, 290), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_new_game_click])]
+    games_new_btn: nwg::Button,
+
+    #[nwg_control(parent: window, text: "Inject", position: (200, 350), size: (100, 40))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_inject_click])]
+    games_inject_btn: nwg::Button,
+
+    #[nwg_control(parent: window, text: "", position: (20, 335), size: (170, 25))]
+    games_status: nwg::Label,
+
+    // =========================================================================
+    // New Game Screen
+    // =========================================================================
+    #[nwg_control(parent: window, text: "New Game", position: (20, 20), size: (460, 25))]
+    newgame_title: nwg::Label,
+
+    #[nwg_control(parent: window, text: "Label (optional):", position: (20, 60), size: (460, 20))]
+    newgame_label_label: nwg::Label,
+
+    #[nwg_control(parent: window, text: "", position: (20, 85), size: (460, 25))]
+    newgame_label_input: nwg::TextInput,
+
+    #[nwg_control(parent: window, text: "Spoiler Log:", position: (20, 125), size: (460, 20))]
+    newgame_spoiler_label: nwg::Label,
+
+    #[nwg_control(parent: window, text: "Browse...", position: (20, 150), size: (100, 30))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_browse_spoiler_click])]
+    newgame_browse_btn: nwg::Button,
+
+    #[nwg_control(parent: window, text: "No file selected", position: (130, 157), size: (350, 20))]
+    newgame_file_label: nwg::Label,
+
+    #[nwg_control(parent: window, text: "", position: (20, 190), size: (460, 25))]
+    newgame_validation: nwg::Label,
+
+    #[nwg_control(parent: window, text: "Cancel", position: (130, 250), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_newgame_cancel_click])]
+    newgame_cancel_btn: nwg::Button,
+
+    #[nwg_control(parent: window, text: "Create", position: (270, 250), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_newgame_create_click])]
+    newgame_create_btn: nwg::Button,
+
+    #[nwg_control(parent: window, text: "", position: (20, 300), size: (460, 25))]
+    newgame_error: nwg::Label,
+
+    // =========================================================================
+    // Waiting Screen
+    // =========================================================================
+    #[nwg_control(parent: window, text: "Waiting for Elden Ring...", position: (20, 100), size: (460, 30))]
+    waiting_title: nwg::Label,
+
+    #[nwg_control(parent: window, text: "", position: (20, 140), size: (460, 25))]
+    waiting_game_label: nwg::Label,
+
+    #[nwg_control(parent: window, text: "Please launch the game", position: (20, 180), size: (460, 25))]
+    waiting_status: nwg::Label,
+
+    #[nwg_control(parent: window, text: "Cancel", position: (200, 250), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_waiting_cancel_click])]
+    waiting_cancel_btn: nwg::Button,
+
+    // =========================================================================
+    // Injected Screen
+    // =========================================================================
+    #[nwg_control(parent: window, text: "Mod Active", position: (20, 80), size: (460, 30))]
+    injected_title: nwg::Label,
+
+    #[nwg_control(parent: window, text: "", position: (20, 130), size: (460, 25))]
+    injected_game_label: nwg::Label,
+
+    #[nwg_control(parent: window, text: "Press F9 in-game to toggle the overlay", position: (20, 180), size: (460, 25))]
+    injected_hint: nwg::Label,
+
+    #[nwg_control(parent: window, text: "This window will unlock when the game closes", position: (20, 220), size: (460, 25))]
+    injected_status: nwg::Label,
+
+    // Application data
+    data: RefCell<Option<AppData>>,
+}
+
+impl LauncherApp {
+    fn init(&self) {
+        let mut data = AppData::new();
+
+        // Setup ListView columns
+        self.games_list.insert_column("Name");
+        self.games_list.insert_column("Seed");
+        self.games_list.insert_column("Progress");
+        self.games_list.set_column_width(0, 180);
+        self.games_list.set_column_width(1, 120);
+        self.games_list.set_column_width(2, 120);
+
+        // Load saved config
+        self.token_url_input.set_text(&data.config.server_url);
+        if let Some(ref token) = data.config.mod_token {
+            self.token_input.set_text(token);
+        }
+
+        // Auto-validate if we have a token
+        if data.config.has_token() {
+            let url = data.config.server_url.clone();
+            let token = data.config.mod_token.clone().unwrap();
+            self.token_connect_btn.set_text("Connecting...");
+            self.token_connect_btn.set_enabled(false);
+            data.validate_token(url, token);
+        }
+
+        self.timer.start();
+        *self.data.borrow_mut() = Some(data);
+        self.show_screen(AppScreen::TokenInput);
+    }
+
+    fn on_exit(&self) {
+        self.timer.stop();
+        nwg::stop_thread_dispatch();
+    }
+
+    fn on_timer(&self) {
+        let mut data_ref = self.data.borrow_mut();
+        let data = match data_ref.as_mut() {
+            Some(d) => d,
+            None => return,
+        };
+
+        // Process async task results
+        while let Ok(result) = data.task_receiver.try_recv() {
             match result {
                 TaskResult::TokenValidated(Ok(user)) => {
-                    // Token is valid, save it and load games
-                    if let AppState::TokenInput {
-                        server_url, token, ..
-                    } = &self.state
-                    {
-                        self.config.server_url = server_url.clone();
-                        self.config.mod_token = Some(token.clone());
-                        let _ = self.config.save();
-                    }
+                    data.config.server_url = self.token_url_input.text();
+                    data.config.mod_token = Some(self.token_input.text());
+                    let _ = data.config.save();
+                    data.user = Some(user.clone());
 
-                    self.state = AppState::GameSelection {
-                        user,
-                        games: vec![],
-                        selected_index: None,
-                        loading: true,
-                        error: None,
-                    };
-                    self.load_games();
+                    let display = user.display_name.as_ref().unwrap_or(&user.username);
+                    self.games_user_label
+                        .set_text(&format!("Connected as: {}", display));
+
+                    data.current_screen = AppScreen::GameSelection;
+                    self.show_screen(AppScreen::GameSelection);
+                    data.load_games();
                 }
                 TaskResult::TokenValidated(Err(e)) => {
-                    self.state = AppState::TokenInput {
-                        server_url: self.config.server_url.clone(),
-                        token: self.config.mod_token.clone().unwrap_or_default(),
-                        error: Some(e.to_string()),
-                        validating: false,
-                    };
+                    self.token_error.set_text(&format!("Error: {}", e));
+                    self.token_connect_btn.set_text("Connect");
+                    self.token_connect_btn.set_enabled(true);
                 }
                 TaskResult::GamesLoaded(Ok(games)) => {
-                    if let AppState::GameSelection { user, .. } = &self.state {
-                        // Pre-select last used game if available
-                        let selected_index = self
-                            .config
-                            .last_game_id
-                            .as_ref()
-                            .and_then(|last_id| games.iter().position(|g| g.id == *last_id));
-
-                        self.state = AppState::GameSelection {
-                            user: user.clone(),
-                            games,
-                            selected_index,
-                            loading: false,
-                            error: None,
-                        };
+                    data.games = games.clone();
+                    self.games_list.clear();
+                    for game in &games {
+                        self.games_list.insert_items_row(
+                            None,
+                            &[
+                                game.display_name(),
+                                game.seed.to_string(),
+                                game.progress_text(),
+                            ],
+                        );
+                    }
+                    // Pre-select last game
+                    if let Some(ref last_id) = data.config.last_game_id {
+                        if let Some(idx) = games.iter().position(|g| &g.id == last_id) {
+                            self.games_list.select_item(idx, true);
+                            data.selected_game = games.get(idx).cloned();
+                        }
                     }
                 }
                 TaskResult::GamesLoaded(Err(e)) => {
-                    if let AppState::GameSelection { user, .. } = &self.state {
-                        self.state = AppState::GameSelection {
-                            user: user.clone(),
-                            games: vec![],
-                            selected_index: None,
-                            loading: false,
-                            error: Some(e.to_string()),
-                        };
-                    }
+                    self.games_status.set_text(&format!("Error: {}", e));
                 }
-                TaskResult::GameCreated(Ok((game, _created))) => {
-                    if let AppState::NewGame { user, .. } = &self.state {
-                        // Save as last game and go to waiting state
-                        self.config.last_game_id = Some(game.id.clone());
-                        let _ = self.config.save();
-
-                        self.state = AppState::WaitingForGame {
-                            user: user.clone(),
-                            game,
-                        };
-                    }
+                TaskResult::GameCreated(Ok((game, _))) => {
+                    data.config.last_game_id = Some(game.id.clone());
+                    let _ = data.config.save();
+                    data.selected_game = Some(game.clone());
+                    self.waiting_game_label.set_text(&format!(
+                        "{} (Seed: {})",
+                        game.display_name(),
+                        game.seed
+                    ));
+                    data.current_screen = AppScreen::WaitingForGame;
+                    self.show_screen(AppScreen::WaitingForGame);
                 }
                 TaskResult::GameCreated(Err(e)) => {
-                    if let AppState::NewGame {
-                        user,
-                        label,
-                        spoiler_path,
-                        validation,
-                        ..
-                    } = &self.state
-                    {
-                        self.state = AppState::NewGame {
-                            user: user.clone(),
-                            label: label.clone(),
-                            spoiler_path: spoiler_path.clone(),
-                            validation: validation.clone(),
-                            creating: false,
-                            error: Some(e.to_string()),
-                        };
-                    }
+                    self.newgame_error.set_text(&format!("Error: {}", e));
+                    self.newgame_create_btn.set_text("Create");
+                    self.newgame_create_btn.set_enabled(data.spoiler_valid);
                 }
             }
         }
-    }
-
-    fn poll_process(&mut self) {
-        if let Some(ref mut monitor) = self.process_monitor {
-            let state_changed = monitor.poll();
-
-            match (&self.state, monitor.state()) {
-                // In waiting state and process is ready to inject
-                (AppState::WaitingForGame { .. }, ProcessState::Running)
-                    if monitor.ready_to_inject() =>
-                {
-                    match monitor.inject() {
-                        Ok(()) => {
-                            if let AppState::WaitingForGame { user, game } = &self.state {
-                                self.state = AppState::Injected {
-                                    user: user.clone(),
-                                    game: game.clone(),
-                                };
-                            }
-                        }
-                        Err(e) => {
-                            // TODO: Show injection error
-                            eprintln!("Injection failed: {}", e);
-                        }
-                    }
-                }
-                // In injected state and process exited
-                (AppState::Injected { user, .. }, ProcessState::NotRunning) => {
-                    // Go back to game selection
-                    self.state = AppState::GameSelection {
-                        user: user.clone(),
-                        games: vec![],
-                        selected_index: None,
-                        loading: true,
-                        error: None,
-                    };
-                    self.load_games();
-                }
-                _ => {}
-            }
-
-            // Request repaint if state might change
-            if state_changed || matches!(self.state, AppState::WaitingForGame { .. }) {
-                // Will be handled by continuous repaint in update()
-            }
-        }
-    }
-}
-
-impl eframe::App for LauncherApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Process background tasks
-        self.process_tasks();
 
         // Poll process monitor
-        self.poll_process();
+        if data.current_screen == AppScreen::WaitingForGame
+            || data.current_screen == AppScreen::Injected
+        {
+            if let Some(ref mut monitor) = data.process_monitor {
+                monitor.poll();
 
-        // Request continuous repaint when waiting for process
-        if matches!(
-            self.state,
-            AppState::WaitingForGame { .. } | AppState::Injected { .. }
-        ) {
-            ctx.request_repaint_after(std::time::Duration::from_millis(500));
-        }
-
-        egui::CentralPanel::default().show(ctx, |ui| {
-            // Show DLL error if present
-            if let Some(ref error) = self.dll_error {
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("⚠").color(egui::Color32::YELLOW));
-                    ui.label(error);
-                });
-                ui.separator();
-            }
-
-            match &mut self.state {
-                AppState::TokenInput { .. } => self.render_token_input(ui),
-                AppState::GameSelection { .. } => self.render_game_selection(ui),
-                AppState::NewGame { .. } => self.render_new_game(ui),
-                AppState::WaitingForGame { .. } => self.render_waiting(ui),
-                AppState::Injected { .. } => self.render_injected(ui),
-            }
-        });
-    }
-}
-
-// =============================================================================
-// UI Rendering
-// =============================================================================
-
-impl LauncherApp {
-    fn render_token_input(&mut self, ui: &mut egui::Ui) {
-        // Clone state upfront to avoid borrow issues
-        let (mut server_url, mut token, error, validating) = match &self.state {
-            AppState::TokenInput {
-                server_url,
-                token,
-                error,
-                validating,
-            } => (
-                server_url.clone(),
-                token.clone(),
-                error.clone(),
-                *validating,
-            ),
-            _ => return,
-        };
-
-        // Track changes
-        let mut should_validate = false;
-        let server_url_before = server_url.clone();
-        let token_before = token.clone();
-
-        ui.vertical_centered(|ui| {
-            ui.add_space(20.0);
-            ui.heading("🔗 Server Configuration");
-            ui.add_space(15.0);
-
-            // Server URL field
-            ui.label("Server URL:");
-            ui.add_space(5.0);
-            ui.add(
-                egui::TextEdit::singleline(&mut server_url)
-                    .desired_width(400.0)
-                    .hint_text("https://fog-vizu.example.com"),
-            );
-
-            ui.add_space(20.0);
-            ui.separator();
-            ui.add_space(20.0);
-
-            ui.heading("🔑 Mod Token");
-            ui.add_space(15.0);
-
-            ui.label("Enter your mod token:");
-            ui.add_space(5.0);
-
-            let response = ui.add(
-                egui::TextEdit::singleline(&mut token)
-                    .password(true)
-                    .desired_width(400.0)
-                    .hint_text("Paste your mod token here..."),
-            );
-
-            if let Some(ref err) = error {
-                ui.add_space(5.0);
-                ui.label(egui::RichText::new(err.as_str()).color(egui::Color32::RED));
-            }
-
-            ui.add_space(10.0);
-            ui.label(
-                egui::RichText::new("ℹ Find your token in Settings on the fog-vizu website").weak(),
-            );
-
-            ui.add_space(20.0);
-
-            let button_text = if validating {
-                "Validating..."
-            } else {
-                "Save & Continue"
-            };
-            let can_validate = !validating && !token.is_empty() && !server_url.is_empty();
-            let button = ui.add_enabled(can_validate, egui::Button::new(button_text));
-
-            if button.clicked()
-                || (response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)))
-            {
-                if can_validate {
-                    should_validate = true;
+                match (&data.current_screen, monitor.state()) {
+                    (AppScreen::WaitingForGame, ProcessState::Running)
+                        if monitor.ready_to_inject() =>
+                    {
+                        self.waiting_status.set_text("Injecting...");
+                        match monitor.inject() {
+                            Ok(()) => {
+                                data.current_screen = AppScreen::Injected;
+                                if let Some(ref game) = data.selected_game {
+                                    self.injected_game_label.set_text(&format!(
+                                        "{} (Seed: {})",
+                                        game.display_name(),
+                                        game.seed
+                                    ));
+                                }
+                                self.show_screen(AppScreen::Injected);
+                            }
+                            Err(e) => {
+                                self.waiting_status.set_text(&format!("Failed: {}", e));
+                            }
+                        }
+                    }
+                    (AppScreen::WaitingForGame, ProcessState::Running) => {
+                        if let Some(remaining) = monitor.time_until_ready() {
+                            self.waiting_status.set_text(&format!(
+                                "Game detected! Injecting in {}s...",
+                                remaining.as_secs() + 1
+                            ));
+                        }
+                    }
+                    (AppScreen::WaitingForGame, ProcessState::NotRunning) => {
+                        self.waiting_status.set_text("Please launch the game");
+                    }
+                    (AppScreen::Injected, ProcessState::NotRunning) => {
+                        data.current_screen = AppScreen::GameSelection;
+                        self.show_screen(AppScreen::GameSelection);
+                        data.load_games();
+                    }
+                    _ => {}
                 }
             }
-        });
-
-        // Apply changes after rendering
-
-        // Update server_url if changed
-        if server_url != server_url_before {
-            if let AppState::TokenInput { server_url: u, .. } = &mut self.state {
-                *u = server_url.clone();
-            }
-        }
-
-        // Update token if changed
-        if token != token_before {
-            if let AppState::TokenInput { token: t, .. } = &mut self.state {
-                *t = token.clone();
-            }
-        }
-
-        // Start validation if requested
-        if should_validate {
-            self.state = AppState::TokenInput {
-                server_url: server_url.clone(),
-                token: token.clone(),
-                error: None,
-                validating: true,
-            };
-            self.validate_token(server_url, token);
         }
     }
 
-    fn render_game_selection(&mut self, ui: &mut egui::Ui) {
-        // Extract state - we need to clone to avoid borrow issues
-        let (user, games, selected_index, loading, error) = match &self.state {
-            AppState::GameSelection {
-                user,
-                games,
-                selected_index,
-                loading,
-                error,
-            } => (
-                user.clone(),
-                games.clone(),
-                *selected_index,
-                *loading,
-                error.clone(),
-            ),
-            _ => return,
+    fn show_screen(&self, screen: AppScreen) {
+        // Token screen controls
+        let show_token = screen == AppScreen::TokenInput;
+        self.token_url_label.set_visible(show_token);
+        self.token_url_input.set_visible(show_token);
+        self.token_label.set_visible(show_token);
+        self.token_input.set_visible(show_token);
+        self.token_hint.set_visible(show_token);
+        self.token_error.set_visible(show_token);
+        self.token_connect_btn.set_visible(show_token);
+
+        // Games screen controls
+        let show_games = screen == AppScreen::GameSelection;
+        self.games_user_label.set_visible(show_games);
+        self.games_change_token_btn.set_visible(show_games);
+        self.games_list_label.set_visible(show_games);
+        self.games_list.set_visible(show_games);
+        self.games_new_btn.set_visible(show_games);
+        self.games_inject_btn.set_visible(show_games);
+        self.games_status.set_visible(show_games);
+
+        // New game screen controls
+        let show_new = screen == AppScreen::NewGame;
+        self.newgame_title.set_visible(show_new);
+        self.newgame_label_label.set_visible(show_new);
+        self.newgame_label_input.set_visible(show_new);
+        self.newgame_spoiler_label.set_visible(show_new);
+        self.newgame_browse_btn.set_visible(show_new);
+        self.newgame_file_label.set_visible(show_new);
+        self.newgame_validation.set_visible(show_new);
+        self.newgame_cancel_btn.set_visible(show_new);
+        self.newgame_create_btn.set_visible(show_new);
+        self.newgame_error.set_visible(show_new);
+
+        // Waiting screen controls
+        let show_waiting = screen == AppScreen::WaitingForGame;
+        self.waiting_title.set_visible(show_waiting);
+        self.waiting_game_label.set_visible(show_waiting);
+        self.waiting_status.set_visible(show_waiting);
+        self.waiting_cancel_btn.set_visible(show_waiting);
+
+        // Injected screen controls
+        let show_injected = screen == AppScreen::Injected;
+        self.injected_title.set_visible(show_injected);
+        self.injected_game_label.set_visible(show_injected);
+        self.injected_hint.set_visible(show_injected);
+        self.injected_status.set_visible(show_injected);
+    }
+
+    // =========================================================================
+    // Event Handlers
+    // =========================================================================
+
+    fn on_connect_click(&self) {
+        let data_ref = self.data.borrow();
+        let data = match data_ref.as_ref() {
+            Some(d) => d,
+            None => return,
         };
 
-        // Header
-        ui.horizontal(|ui| {
-            ui.label(format!(
-                "Connected as: {}",
-                user.display_name.as_ref().unwrap_or(&user.username)
-            ));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.small_button("Change Token").clicked() {
-                    self.config.mod_token = None;
-                    let _ = self.config.save();
-                    self.state = AppState::TokenInput {
-                        server_url: self.config.server_url.clone(),
-                        token: String::new(),
-                        error: None,
-                        validating: false,
-                    };
-                }
-            });
-        });
-        ui.separator();
+        let url = self.token_url_input.text();
+        let token = self.token_input.text();
 
-        // Error display
-        if let Some(err) = &error {
-            ui.label(egui::RichText::new(err).color(egui::Color32::RED));
-            ui.add_space(5.0);
-        }
-
-        // Loading indicator
-        if loading {
-            ui.horizontal(|ui| {
-                ui.spinner();
-                ui.label("Loading games...");
-            });
+        if url.is_empty() || token.is_empty() {
+            self.token_error.set_text("Please enter both URL and token");
             return;
         }
 
-        ui.add_space(5.0);
-        ui.label(egui::RichText::new("Select a game:").size(16.0));
-        ui.add_space(10.0);
-
-        // Game list as cards
-        let mut new_selected = selected_index;
-        egui::ScrollArea::vertical()
-            .max_height(350.0)
-            .show(ui, |ui| {
-                for (i, game) in games.iter().enumerate() {
-                    let is_selected = selected_index == Some(i);
-
-                    // Card style based on selection
-                    let bg_color = if is_selected {
-                        egui::Color32::from_rgb(60, 60, 80)
-                    } else {
-                        egui::Color32::from_rgb(40, 40, 45)
-                    };
-                    let stroke = if is_selected {
-                        egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 150, 255))
-                    } else {
-                        egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 60, 65))
-                    };
-
-                    let response = egui::Frame::none()
-                        .fill(bg_color)
-                        .stroke(stroke)
-                        .rounding(egui::Rounding::same(6.0))
-                        .inner_margin(egui::Margin::same(12.0))
-                        .show(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                let _ = ui.radio(is_selected, "");
-                                ui.add_space(8.0);
-                                ui.vertical(|ui| {
-                                    ui.label(
-                                        egui::RichText::new(game.display_name())
-                                            .strong()
-                                            .size(18.0),
-                                    );
-                                    ui.add_space(4.0);
-                                    ui.label(
-                                        egui::RichText::new(format!(
-                                            "Seed: {} • {} • {}",
-                                            game.seed,
-                                            game.progress_text(),
-                                            game.relative_time()
-                                        ))
-                                        .weak()
-                                        .size(13.0),
-                                    );
-                                });
-                            });
-                        })
-                        .response;
-
-                    if response.interact(egui::Sense::click()).clicked() {
-                        new_selected = Some(i);
-                    }
-
-                    ui.add_space(8.0);
-                }
-            });
-
-        // Update selection if changed
-        if new_selected != selected_index {
-            self.state = AppState::GameSelection {
-                user: user.clone(),
-                games: games.clone(),
-                selected_index: new_selected,
-                loading: false,
-                error: None,
-            };
-        }
-
-        ui.add_space(15.0);
-
-        // New game button - larger
-        let new_game_btn = egui::Button::new(egui::RichText::new("+ New Game").size(16.0))
-            .min_size(egui::vec2(120.0, 36.0));
-        if ui.add(new_game_btn).clicked() {
-            self.state = AppState::NewGame {
-                user: user.clone(),
-                label: String::new(),
-                spoiler_path: None,
-                validation: None,
-                creating: false,
-                error: None,
-            };
-        }
-
-        ui.add_space(20.0);
-        ui.separator();
-        ui.add_space(15.0);
-
-        // Inject button - centered and larger
-        ui.vertical_centered(|ui| {
-            let can_inject = selected_index.is_some() && self.dll_path.is_some();
-            let inject_btn = egui::Button::new(egui::RichText::new("▶ Inject").size(20.0))
-                .min_size(egui::vec2(150.0, 45.0));
-
-            if ui.add_enabled(can_inject, inject_btn).clicked() {
-                if let Some(idx) = selected_index {
-                    if let Some(game) = games.get(idx) {
-                        // Save selected game
-                        self.config.last_game_id = Some(game.id.clone());
-                        let _ = self.config.save();
-
-                        // Reset process monitor
-                        if let Some(ref mut monitor) = self.process_monitor {
-                            monitor.reset();
-                        }
-
-                        self.state = AppState::WaitingForGame {
-                            user: user.clone(),
-                            game: game.clone(),
-                        };
-                    }
-                }
-            }
-        });
+        self.token_error.set_text("");
+        self.token_connect_btn.set_text("Connecting...");
+        self.token_connect_btn.set_enabled(false);
+        data.validate_token(url, token);
     }
 
-    fn render_new_game(&mut self, ui: &mut egui::Ui) {
-        // Clone all state upfront to avoid borrow issues
-        let (user, mut label, spoiler_path, validation, creating, error) = match &self.state {
-            AppState::NewGame {
-                user,
-                label,
-                spoiler_path,
-                validation,
-                creating,
-                error,
-            } => (
-                user.clone(),
-                label.clone(),
-                spoiler_path.clone(),
-                validation.clone(),
-                *creating,
-                error.clone(),
-            ),
-            _ => return,
+    fn on_change_token_click(&self) {
+        let mut data_ref = self.data.borrow_mut();
+        let data = match data_ref.as_mut() {
+            Some(d) => d,
+            None => return,
         };
 
-        // Track changes - label can change independently of button actions
-        let mut label_changed = false;
-        let mut new_file: Option<(PathBuf, Result<SpoilerHeader, ValidationError>)> = None;
-        let mut cancel_clicked = false;
-        let mut create_result: Option<Result<(String, Option<String>), String>> = None;
+        data.config.mod_token = None;
+        let _ = data.config.save();
+        data.user = None;
+        data.current_screen = AppScreen::TokenInput;
 
-        ui.heading("New Game");
-        ui.add_space(10.0);
+        self.token_input.set_text("");
+        self.token_error.set_text("");
+        self.token_connect_btn.set_text("Connect");
+        self.token_connect_btn.set_enabled(true);
+        self.show_screen(AppScreen::TokenInput);
+    }
 
-        // API/Creation error display (at top)
-        if let Some(ref err) = error {
-            ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("⚠").color(egui::Color32::RED));
-                ui.label(egui::RichText::new(err.as_str()).color(egui::Color32::RED));
-            });
-            ui.add_space(10.0);
-        }
+    fn on_game_selected(&self) {
+        let mut data_ref = self.data.borrow_mut();
+        let data = match data_ref.as_mut() {
+            Some(d) => d,
+            None => return,
+        };
 
-        // Label input
-        ui.label("Label (optional):");
-        let label_before = label.clone();
-        ui.text_edit_singleline(&mut label);
-        if label != label_before {
-            label_changed = true;
-        }
-        ui.add_space(10.0);
-
-        // Spoiler log selection
-        ui.label("Spoiler Log:");
-        ui.horizontal(|ui| {
-            if ui.button("Browse...").clicked() {
-                if let Some(path) = rfd::FileDialog::new()
-                    .add_filter("Spoiler Log", &["txt"])
-                    .pick_file()
-                {
-                    let validation_result = validate_spoiler_file(&path);
-                    new_file = Some((path, validation_result));
-                }
-            }
-
-            // Show path or placeholder
-            let path_text = spoiler_path
-                .as_ref()
-                .map(|p| {
-                    // Show just filename if path is long
-                    p.file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_else(|| p.display().to_string())
-                })
-                .unwrap_or_else(|| "No file selected".to_string());
-
-            ui.label(egui::RichText::new(&path_text).weak());
-        });
-
-        // Validation status (immediately below file selection)
-        if let Some(ref result) = validation {
-            match result {
-                Ok(header) => {
-                    ui.label(
-                        egui::RichText::new(format!("  ✓ Valid (Seed: {})", header.seed))
-                            .color(egui::Color32::GREEN),
-                    );
-                }
-                Err(e) => {
-                    ui.label(
-                        egui::RichText::new(format!("  ✗ {}", e)).color(egui::Color32::LIGHT_RED),
-                    );
-                }
-            }
-        }
-
-        ui.add_space(20.0);
-
-        // Buttons
-        ui.horizontal(|ui| {
-            if ui.button("Cancel").clicked() {
-                cancel_clicked = true;
-            }
-
-            let can_create = validation.as_ref().map(|v| v.is_ok()).unwrap_or(false) && !creating;
-
-            let create_text = if creating {
-                "Creating..."
-            } else {
-                "Create Game"
-            };
-            let create_btn = ui.add_enabled(can_create, egui::Button::new(create_text));
-
-            if create_btn.clicked() {
-                if let Some(ref path) = spoiler_path {
-                    match read_spoiler_file(path) {
-                        Ok(content) => {
-                            let label_opt = if label.is_empty() {
-                                None
-                            } else {
-                                Some(label.clone())
-                            };
-                            create_result = Some(Ok((content, label_opt)));
-                        }
-                        Err(e) => {
-                            create_result = Some(Err(e.to_string()));
-                        }
-                    }
-                }
-            }
-        });
-
-        // Apply changes after rendering
-
-        // Always update label if changed (even if other actions happen)
-        if label_changed {
-            if let AppState::NewGame { label: l, .. } = &mut self.state {
-                *l = label.clone();
-            }
-        }
-
-        // Apply file selection
-        if let Some((path, validation_result)) = new_file {
-            if let AppState::NewGame {
-                spoiler_path: sp,
-                validation: v,
-                ..
-            } = &mut self.state
-            {
-                *sp = Some(path);
-                *v = Some(validation_result);
-            }
-        }
-
-        // Handle cancel
-        if cancel_clicked {
-            self.state = AppState::GameSelection {
-                user,
-                games: vec![],
-                selected_index: None,
-                loading: true,
-                error: None,
-            };
-            self.load_games();
-            return;
-        }
-
-        // Handle create
-        if let Some(result) = create_result {
-            match result {
-                Ok((content, label_opt)) => {
-                    if let AppState::NewGame { creating: c, .. } = &mut self.state {
-                        *c = true;
-                    }
-                    self.create_game(content, label_opt);
-                }
-                Err(err) => {
-                    if let AppState::NewGame { error: e, .. } = &mut self.state {
-                        *e = Some(err);
-                    }
-                }
-            }
+        if let Some(idx) = self.games_list.selected_item() {
+            data.selected_game = data.games.get(idx).cloned();
         }
     }
 
-    fn render_waiting(&mut self, ui: &mut egui::Ui) {
-        let (user, game) = match &self.state {
-            AppState::WaitingForGame { user, game } => (user.clone(), game.clone()),
-            _ => return,
+    fn on_new_game_click(&self) {
+        let mut data_ref = self.data.borrow_mut();
+        let data = match data_ref.as_mut() {
+            Some(d) => d,
+            None => return,
         };
 
-        ui.horizontal(|ui| {
-            ui.label(format!(
-                "Connected as: {}",
-                user.display_name.as_ref().unwrap_or(&user.username)
-            ));
-        });
-        ui.separator();
+        data.spoiler_path = None;
+        data.spoiler_valid = false;
+        data.current_screen = AppScreen::NewGame;
 
-        ui.vertical_centered(|ui| {
-            ui.add_space(40.0);
+        self.newgame_label_input.set_text("");
+        self.newgame_file_label.set_text("No file selected");
+        self.newgame_validation.set_text("");
+        self.newgame_error.set_text("");
+        self.newgame_create_btn.set_enabled(false);
+        self.show_screen(AppScreen::NewGame);
+    }
 
-            ui.label(format!(
-                "Selected: {} (Seed: {})",
+    fn on_inject_click(&self) {
+        let mut data_ref = self.data.borrow_mut();
+        let data = match data_ref.as_mut() {
+            Some(d) => d,
+            None => return,
+        };
+
+        if let Some(ref game) = data.selected_game {
+            data.config.last_game_id = Some(game.id.clone());
+            let _ = data.config.save();
+
+            if let Some(ref mut monitor) = data.process_monitor {
+                monitor.reset();
+            }
+
+            self.waiting_game_label.set_text(&format!(
+                "{} (Seed: {})",
                 game.display_name(),
                 game.seed
             ));
-            ui.add_space(20.0);
-
-            ui.spinner();
-            ui.add_space(10.0);
-
-            // Show status based on process monitor state
-            if let Some(ref monitor) = self.process_monitor {
-                match monitor.state() {
-                    ProcessState::NotRunning => {
-                        ui.heading("Waiting for Elden Ring...");
-                        ui.label("Please launch the game.");
-                    }
-                    ProcessState::Running => {
-                        if let Some(remaining) = monitor.time_until_ready() {
-                            ui.heading("Game detected!");
-                            ui.label(format!(
-                                "Injecting in {} seconds...",
-                                remaining.as_secs() + 1
-                            ));
-                        } else {
-                            ui.heading("Injecting...");
-                        }
-                    }
-                    ProcessState::Injected => {
-                        ui.heading("Injected!");
-                    }
-                }
-            } else {
-                ui.heading("Waiting for Elden Ring...");
-                ui.label("Please launch the game.");
-            }
-
-            ui.add_space(40.0);
-        });
-
-        ui.separator();
-        ui.horizontal(|ui| {
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("Cancel").clicked() {
-                    if let Some(ref mut monitor) = self.process_monitor {
-                        monitor.reset();
-                    }
-                    self.state = AppState::GameSelection {
-                        user,
-                        games: vec![],
-                        selected_index: None,
-                        loading: true,
-                        error: None,
-                    };
-                    self.load_games();
-                }
-            });
-        });
+            self.waiting_status.set_text("Please launch the game");
+            data.current_screen = AppScreen::WaitingForGame;
+            self.show_screen(AppScreen::WaitingForGame);
+        }
     }
 
-    fn render_injected(&mut self, ui: &mut egui::Ui) {
-        let (user, game) = match &self.state {
-            AppState::Injected { user, game } => (user.clone(), game.clone()),
-            _ => return,
+    fn on_browse_spoiler_click(&self) {
+        let file_dialog = nwg::FileDialog::default();
+
+        if let Err(_) = nwg::FileDialog::builder()
+            .title("Select Spoiler Log")
+            .action(nwg::FileDialogAction::Open)
+            .filters("Text Files (*.txt)")
+            .build(&file_dialog)
+        {
+            return;
+        }
+
+        if file_dialog.run(Some(&self.window)) {
+            if let Ok(path_str) = file_dialog.get_selected_item() {
+                let path = PathBuf::from(path_str);
+                let validation = validate_spoiler_file(&path);
+
+                let mut data_ref = self.data.borrow_mut();
+                let data = match data_ref.as_mut() {
+                    Some(d) => d,
+                    None => return,
+                };
+
+                let filename = path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| path.display().to_string());
+                self.newgame_file_label.set_text(&filename);
+
+                match validation {
+                    Ok(header) => {
+                        self.newgame_validation
+                            .set_text(&format!("Valid (Seed: {})", header.seed));
+                        data.spoiler_path = Some(path);
+                        data.spoiler_valid = true;
+                        self.newgame_create_btn.set_enabled(true);
+                    }
+                    Err(e) => {
+                        self.newgame_validation.set_text(&format!("Error: {}", e));
+                        data.spoiler_path = Some(path);
+                        data.spoiler_valid = false;
+                        self.newgame_create_btn.set_enabled(false);
+                    }
+                }
+            }
+        }
+    }
+
+    fn on_newgame_cancel_click(&self) {
+        let mut data_ref = self.data.borrow_mut();
+        let data = match data_ref.as_mut() {
+            Some(d) => d,
+            None => return,
         };
 
-        ui.horizontal(|ui| {
-            ui.label(format!(
-                "Connected as: {}",
-                user.display_name.as_ref().unwrap_or(&user.username)
-            ));
-        });
-        ui.separator();
-
-        ui.vertical_centered(|ui| {
-            ui.add_space(40.0);
-
-            ui.heading(egui::RichText::new("✓ Mod Active").color(egui::Color32::GREEN));
-            ui.add_space(20.0);
-
-            ui.label(format!("Game: {}", game.display_name()));
-            ui.label(format!("Seed: {}", game.seed));
-
-            ui.add_space(20.0);
-            ui.separator();
-            ui.add_space(20.0);
-
-            ui.label("Press F9 in-game to toggle the overlay.");
-            ui.add_space(10.0);
-            ui.label(egui::RichText::new("This window will unlock when the game closes.").weak());
-        });
-
-        ui.add_space(40.0);
-        ui.separator();
-
-        ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("● Game running").color(egui::Color32::GREEN));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("Minimize").clicked() {
-                    // TODO: Minimize to tray or taskbar
-                }
-            });
-        });
+        data.current_screen = AppScreen::GameSelection;
+        self.show_screen(AppScreen::GameSelection);
     }
+
+    fn on_newgame_create_click(&self) {
+        let data_ref = self.data.borrow();
+        let data = match data_ref.as_ref() {
+            Some(d) => d,
+            None => return,
+        };
+
+        if !data.spoiler_valid {
+            return;
+        }
+
+        if let Some(ref path) = data.spoiler_path {
+            match read_spoiler_file(path) {
+                Ok(content) => {
+                    let label = self.newgame_label_input.text();
+                    let label_opt = if label.is_empty() { None } else { Some(label) };
+
+                    self.newgame_create_btn.set_text("Creating...");
+                    self.newgame_create_btn.set_enabled(false);
+                    self.newgame_error.set_text("");
+                    data.create_game(content, label_opt);
+                }
+                Err(e) => {
+                    self.newgame_error.set_text(&format!("Error: {}", e));
+                }
+            }
+        }
+    }
+
+    fn on_waiting_cancel_click(&self) {
+        let mut data_ref = self.data.borrow_mut();
+        let data = match data_ref.as_mut() {
+            Some(d) => d,
+            None => return,
+        };
+
+        if let Some(ref mut monitor) = data.process_monitor {
+            monitor.reset();
+        }
+
+        data.current_screen = AppScreen::GameSelection;
+        self.show_screen(AppScreen::GameSelection);
+    }
+}
+
+// =============================================================================
+// Public run function
+// =============================================================================
+
+pub fn run_app() {
+    nwg::init().expect("Failed to init Native Windows GUI");
+
+    // Set default font
+    let mut font = nwg::Font::default();
+    nwg::Font::builder()
+        .family("Segoe UI")
+        .size(17)
+        .build(&mut font)
+        .expect("Failed to build font");
+    nwg::Font::set_global_default(Some(font));
+
+    let app = LauncherApp::build_ui(Default::default()).expect("Failed to build UI");
+    app.init();
+    nwg::dispatch_thread_events();
 }
