@@ -1,8 +1,9 @@
 // UI Rendering - ImGui overlay implementation
 
-use hudhook::imgui::{Condition, WindowFlags};
+use hudhook::imgui::{Condition, StyleColor, WindowFlags};
 use hudhook::ImguiRenderLoop;
 
+use crate::config::parse_hex_color;
 use crate::tracker::FogRandoTracker;
 
 // =============================================================================
@@ -35,7 +36,29 @@ impl ImguiRenderLoop for FogRandoTracker {
             return;
         }
 
-        let font_scale = self.config.overlay.font_scale;
+        let s = &self.config.overlay;
+        let font_scale = s.font_scale;
+
+        // Parse colors from config
+        let bg_color = parse_hex_color(&s.background_color, s.background_opacity);
+        let text_color = parse_hex_color(&s.text_color, 1.0);
+        let text_disabled_color = parse_hex_color(&s.text_disabled_color, 1.0);
+        let border_color = if s.show_border {
+            parse_hex_color(&s.border_color, 1.0)
+        } else {
+            [0.0, 0.0, 0.0, 0.0]
+        };
+
+        // Push style colors (tokens are auto-popped when dropped)
+        let _bg_token = ui.push_style_color(StyleColor::WindowBg, bg_color);
+        let _text_token = ui.push_style_color(StyleColor::Text, text_color);
+        let _text_disabled_token =
+            ui.push_style_color(StyleColor::TextDisabled, text_disabled_color);
+        let _border_token = ui.push_style_color(StyleColor::Border, border_color);
+
+        // Window flags: remove title bar for cleaner look
+        let window_flags =
+            WindowFlags::NO_TITLE_BAR | WindowFlags::ALWAYS_AUTO_RESIZE | WindowFlags::NO_SCROLLBAR;
 
         ui.window("FogRandoTracker")
             .position([dw - 320.0 * font_scale, 20.0], Condition::FirstUseEver)
@@ -43,7 +66,7 @@ impl ImguiRenderLoop for FogRandoTracker {
                 [300.0 * font_scale, 200.0 * font_scale],
                 Condition::FirstUseEver,
             )
-            .flags(WindowFlags::ALWAYS_AUTO_RESIZE)
+            .flags(window_flags)
             .build(|| {
                 ui.set_window_font_scale(font_scale);
                 self.render_position_section(ui);
@@ -71,6 +94,10 @@ impl FogRandoTracker {
 
     /// Render current position section
     fn render_position_section(&self, ui: &hudhook::imgui::Ui) {
+        // Get colors from config
+        let discovered_color = parse_hex_color(&self.config.overlay.discovered_color, 1.0);
+        let undiscovered_color = parse_hex_color(&self.config.overlay.undiscovered_color, 1.0);
+
         ui.text("=== Current Zone ===");
         if let Some((map_id, _map_str)) = self.get_current_position() {
             let (ww, xx, yy, dd) = (
@@ -97,9 +124,9 @@ impl FogRandoTracker {
             ui.text("=== Fog Exits ===");
             for exit in &self.current_exits {
                 let dest_color = if exit.destination == "???" {
-                    [0.7, 0.7, 0.7, 1.0] // Gray for undiscovered
+                    undiscovered_color
                 } else {
-                    [0.5, 1.0, 0.5, 1.0] // Green for discovered
+                    discovered_color
                 };
 
                 // Line 1: destination zone (or "???")

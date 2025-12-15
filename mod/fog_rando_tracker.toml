@@ -50,11 +50,28 @@ toggle_ui = "f9"
 # =============================================================================
 #
 # Customize the in-game overlay appearance.
+# Colors use hex format "#RRGGBB".
 #
 [overlay]
 # Font scale factor (1.0 = default size, 1.5 = 150%, 2.0 = 200%, etc.)
 # Increase this value if the overlay is too small on high-resolution displays.
 font_scale = 1.0
+
+# Background color and opacity
+background_color = "#141414"
+background_opacity = 0.7  # 0.0 = fully transparent, 1.0 = fully opaque
+
+# Text colors
+text_color = "#FFFFFF"           # Main text
+text_disabled_color = "#808080"  # Secondary/disabled text
+
+# Exit colors
+discovered_color = "#80FF80"     # Known destinations (green)
+undiscovered_color = "#B3B3B3"   # Unknown destinations "???" (gray)
+
+# Window border
+show_border = false              # Set to true to show a border
+border_color = "#404040"         # Border color (only used if show_border = true)
 
 # =============================================================================
 # SERVER INTEGRATION (fog-vizu)
