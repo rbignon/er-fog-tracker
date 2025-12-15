@@ -105,8 +105,8 @@ impl ImguiRenderLoop for FogRandoTracker {
             .position([dw - 350.0 * scale, 20.0], Condition::FirstUseEver)
             .flags(window_flags)
             .build(|| {
-                // Enable text wrapping at max_width
-                let wrap_token = ui.push_text_wrap_pos_with_pos(max_width);
+                // Enable text wrapping at max_width (token auto-pops when dropped)
+                let _wrap = ui.push_text_wrap_pos_with_pos(max_width);
                 self.render_header(ui, max_width);
                 ui.separator();
                 if self.show_debug {
@@ -115,7 +115,6 @@ impl ImguiRenderLoop for FogRandoTracker {
                 }
                 self.render_exits_section(ui);
                 self.render_status_message(ui);
-                wrap_token.pop();
             });
     }
 }
