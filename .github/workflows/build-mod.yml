@@ -40,14 +40,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-mod-
 
-      - name: Build release
-        run: cargo build --release
+      - name: Build release (DLL + Launcher)
+        run: cargo build --release --features launcher
 
       - name: Prepare distribution package
         run: |
           mkdir dist
           cp target/release/fog_rando_tracker.dll dist/
-          cp target/release/fog-rando-tracker-injector.exe dist/
+          cp target/release/fog-rando-tracker-launcher.exe dist/
           cp fog_rando_tracker.toml dist/
 
       - name: Upload distribution package
