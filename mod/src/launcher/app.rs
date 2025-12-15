@@ -648,10 +648,13 @@ impl LauncherApp {
         ui.heading("New Game");
         ui.add_space(10.0);
 
-        // Error display
+        // API/Creation error display (at top)
         if let Some(ref err) = error {
-            ui.label(egui::RichText::new(err.as_str()).color(egui::Color32::RED));
-            ui.add_space(5.0);
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new("⚠").color(egui::Color32::RED));
+                ui.label(egui::RichText::new(err.as_str()).color(egui::Color32::RED));
+            });
+            ui.add_space(10.0);
         }
 
         // Label input
@@ -666,13 +669,6 @@ impl LauncherApp {
         // Spoiler log selection
         ui.label("Spoiler Log:");
         ui.horizontal(|ui| {
-            let path_text = spoiler_path
-                .as_ref()
-                .map(|p| p.display().to_string())
-                .unwrap_or_else(|| "No file selected".to_string());
-
-            ui.label(&path_text);
-
             if ui.button("Browse...").clicked() {
                 if let Some(path) = rfd::FileDialog::new()
                     .add_filter("Spoiler Log", &["txt"])
@@ -682,20 +678,34 @@ impl LauncherApp {
                     new_file = Some((path, validation_result));
                 }
             }
+
+            // Show path or placeholder
+            let path_text = spoiler_path
+                .as_ref()
+                .map(|p| {
+                    // Show just filename if path is long
+                    p.file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| p.display().to_string())
+                })
+                .unwrap_or_else(|| "No file selected".to_string());
+
+            ui.label(egui::RichText::new(&path_text).weak());
         });
 
-        // Validation status
+        // Validation status (immediately below file selection)
         if let Some(ref result) = validation {
-            ui.add_space(5.0);
             match result {
                 Ok(header) => {
                     ui.label(
-                        egui::RichText::new(format!("✓ Valid spoiler log (Seed: {})", header.seed))
+                        egui::RichText::new(format!("  ✓ Valid (Seed: {})", header.seed))
                             .color(egui::Color32::GREEN),
                     );
                 }
                 Err(e) => {
-                    ui.label(egui::RichText::new(format!("✗ {}", e)).color(egui::Color32::RED));
+                    ui.label(
+                        egui::RichText::new(format!("  ✗ {}", e)).color(egui::Color32::LIGHT_RED),
+                    );
                 }
             }
         }
