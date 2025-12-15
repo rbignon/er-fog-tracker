@@ -47,6 +47,7 @@ pub struct UserInfo {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)] // Fields from API, may be used later
 pub struct GameSummary {
     pub id: String,
     pub seed: i64,

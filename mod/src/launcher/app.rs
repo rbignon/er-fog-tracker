@@ -537,7 +537,7 @@ impl LauncherApp {
                         .inner_margin(egui::Margin::symmetric(4.0, 2.0))
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
-                                ui.radio(is_selected, "");
+                                let _ = ui.radio(is_selected, "");
                                 ui.vertical(|ui| {
                                     ui.label(egui::RichText::new(game.display_name()).strong());
                                     ui.label(

@@ -10,7 +10,6 @@ use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 
 const PROCESS_NAME: &str = "eldenring.exe";
-const POLL_INTERVAL: Duration = Duration::from_millis(500);
 const POST_DETECTION_DELAY: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone, PartialEq)]
@@ -177,11 +176,6 @@ impl ProcessMonitor {
         {
             self.process_id = None;
         }
-    }
-
-    /// Get recommended poll interval
-    pub fn poll_interval() -> Duration {
-        POLL_INTERVAL
     }
 }
 

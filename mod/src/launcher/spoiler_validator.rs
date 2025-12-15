@@ -5,6 +5,7 @@ use std::fs;
 use std::path::Path;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // options_line kept for potential future use
 pub struct SpoilerHeader {
     pub seed: u64,
     pub options_line: String,
