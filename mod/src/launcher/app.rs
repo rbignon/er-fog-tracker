@@ -521,25 +521,46 @@ impl LauncherApp {
             return;
         }
 
-        ui.label("Select a game:");
         ui.add_space(5.0);
+        ui.label(egui::RichText::new("Select a game:").size(16.0));
+        ui.add_space(10.0);
 
-        // Game list
+        // Game list as cards
         let mut new_selected = selected_index;
         egui::ScrollArea::vertical()
-            .max_height(300.0)
+            .max_height(350.0)
             .show(ui, |ui| {
                 for (i, game) in games.iter().enumerate() {
                     let is_selected = selected_index == Some(i);
 
-                    // Game item as a selectable frame
+                    // Card style based on selection
+                    let bg_color = if is_selected {
+                        egui::Color32::from_rgb(60, 60, 80)
+                    } else {
+                        egui::Color32::from_rgb(40, 40, 45)
+                    };
+                    let stroke = if is_selected {
+                        egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 150, 255))
+                    } else {
+                        egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 60, 65))
+                    };
+
                     let response = egui::Frame::none()
-                        .inner_margin(egui::Margin::symmetric(4.0, 2.0))
+                        .fill(bg_color)
+                        .stroke(stroke)
+                        .rounding(egui::Rounding::same(6.0))
+                        .inner_margin(egui::Margin::same(12.0))
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
                                 let _ = ui.radio(is_selected, "");
+                                ui.add_space(8.0);
                                 ui.vertical(|ui| {
-                                    ui.label(egui::RichText::new(game.display_name()).strong());
+                                    ui.label(
+                                        egui::RichText::new(game.display_name())
+                                            .strong()
+                                            .size(18.0),
+                                    );
+                                    ui.add_space(4.0);
                                     ui.label(
                                         egui::RichText::new(format!(
                                             "Seed: {} • {} • {}",
@@ -548,7 +569,7 @@ impl LauncherApp {
                                             game.relative_time()
                                         ))
                                         .weak()
-                                        .small(),
+                                        .size(13.0),
                                     );
                                 });
                             });
@@ -558,6 +579,8 @@ impl LauncherApp {
                     if response.interact(egui::Sense::click()).clicked() {
                         new_selected = Some(i);
                     }
+
+                    ui.add_space(8.0);
                 }
             });
 
@@ -572,10 +595,12 @@ impl LauncherApp {
             };
         }
 
-        ui.add_space(10.0);
+        ui.add_space(15.0);
 
-        // New game button
-        if ui.button("+ New Game").clicked() {
+        // New game button - larger
+        let new_game_btn = egui::Button::new(egui::RichText::new("+ New Game").size(16.0))
+            .min_size(egui::vec2(120.0, 36.0));
+        if ui.add(new_game_btn).clicked() {
             self.state = AppState::NewGame {
                 user: user.clone(),
                 label: String::new(),
@@ -586,35 +611,35 @@ impl LauncherApp {
             };
         }
 
-        ui.add_space(10.0);
+        ui.add_space(20.0);
         ui.separator();
+        ui.add_space(15.0);
 
-        // Inject button
-        ui.horizontal(|ui| {
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let can_inject = selected_index.is_some() && self.dll_path.is_some();
-                let inject_btn = ui.add_enabled(can_inject, egui::Button::new("▶ Inject"));
+        // Inject button - centered and larger
+        ui.vertical_centered(|ui| {
+            let can_inject = selected_index.is_some() && self.dll_path.is_some();
+            let inject_btn = egui::Button::new(egui::RichText::new("▶ Inject").size(20.0))
+                .min_size(egui::vec2(150.0, 45.0));
 
-                if inject_btn.clicked() {
-                    if let Some(idx) = selected_index {
-                        if let Some(game) = games.get(idx) {
-                            // Save selected game
-                            self.config.last_game_id = Some(game.id.clone());
-                            let _ = self.config.save();
+            if ui.add_enabled(can_inject, inject_btn).clicked() {
+                if let Some(idx) = selected_index {
+                    if let Some(game) = games.get(idx) {
+                        // Save selected game
+                        self.config.last_game_id = Some(game.id.clone());
+                        let _ = self.config.save();
 
-                            // Reset process monitor
-                            if let Some(ref mut monitor) = self.process_monitor {
-                                monitor.reset();
-                            }
-
-                            self.state = AppState::WaitingForGame {
-                                user: user.clone(),
-                                game: game.clone(),
-                            };
+                        // Reset process monitor
+                        if let Some(ref mut monitor) = self.process_monitor {
+                            monitor.reset();
                         }
+
+                        self.state = AppState::WaitingForGame {
+                            user: user.clone(),
+                            game: game.clone(),
+                        };
                     }
                 }
-            });
+            }
         });
     }
 
