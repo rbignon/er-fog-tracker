@@ -350,14 +350,19 @@ impl eframe::App for LauncherApp {
 
 impl LauncherApp {
     fn render_token_input(&mut self, ui: &mut egui::Ui) {
-        let (token, error, validating) = match &mut self.state {
+        // Clone state upfront to avoid borrow issues
+        let (mut token, error, validating) = match &self.state {
             AppState::TokenInput {
                 token,
                 error,
                 validating,
-            } => (token, error, *validating),
+            } => (token.clone(), error.clone(), *validating),
             _ => return,
         };
+
+        // Track changes
+        let mut should_validate = false;
+        let token_before = token.clone();
 
         ui.vertical_centered(|ui| {
             ui.add_space(40.0);
@@ -368,15 +373,15 @@ impl LauncherApp {
             ui.add_space(10.0);
 
             let response = ui.add(
-                egui::TextEdit::singleline(token)
+                egui::TextEdit::singleline(&mut token)
                     .password(true)
                     .desired_width(400.0)
                     .hint_text("Paste your mod token here..."),
             );
 
-            if let Some(err) = error {
+            if let Some(ref err) = error {
                 ui.add_space(5.0);
-                ui.label(egui::RichText::new(err).color(egui::Color32::RED));
+                ui.label(egui::RichText::new(err.as_str()).color(egui::Color32::RED));
             }
 
             ui.add_space(10.0);
@@ -400,16 +405,30 @@ impl LauncherApp {
                 || (response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)))
             {
                 if !token.is_empty() && !validating {
-                    let token_clone = token.clone();
-                    self.state = AppState::TokenInput {
-                        token: token_clone.clone(),
-                        error: None,
-                        validating: true,
-                    };
-                    self.validate_token(token_clone);
+                    should_validate = true;
                 }
             }
         });
+
+        // Apply changes after rendering
+
+        // Update token if changed
+        if token != token_before {
+            if let AppState::TokenInput { token: t, .. } = &mut self.state {
+                *t = token.clone();
+            }
+        }
+
+        // Start validation if requested
+        if should_validate {
+            let token_clone = token.clone();
+            self.state = AppState::TokenInput {
+                token: token_clone.clone(),
+                error: None,
+                validating: true,
+            };
+            self.validate_token(token_clone);
+        }
     }
 
     fn render_game_selection(&mut self, ui: &mut egui::Ui) {
@@ -476,30 +495,31 @@ impl LauncherApp {
             .show(ui, |ui| {
                 for (i, game) in games.iter().enumerate() {
                     let is_selected = selected_index == Some(i);
-                    let response = ui.selectable_label(is_selected, "");
 
-                    // Custom rendering for game item
-                    let rect = response.rect;
-                    ui.allocate_ui_at_rect(rect, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.radio(is_selected, "");
-                            ui.vertical(|ui| {
-                                ui.label(egui::RichText::new(game.display_name()).strong());
-                                ui.label(
-                                    egui::RichText::new(format!(
-                                        "Seed: {} • {} • {}",
-                                        game.seed,
-                                        game.progress_text(),
-                                        game.relative_time()
-                                    ))
-                                    .weak()
-                                    .small(),
-                                );
+                    // Game item as a selectable frame
+                    let response = egui::Frame::none()
+                        .inner_margin(egui::Margin::symmetric(4.0, 2.0))
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                ui.radio(is_selected, "");
+                                ui.vertical(|ui| {
+                                    ui.label(egui::RichText::new(game.display_name()).strong());
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Seed: {} • {} • {}",
+                                            game.seed,
+                                            game.progress_text(),
+                                            game.relative_time()
+                                        ))
+                                        .weak()
+                                        .small(),
+                                    );
+                                });
                             });
-                        });
-                    });
+                        })
+                        .response;
 
-                    if response.clicked() {
+                    if response.interact(egui::Sense::click()).clicked() {
                         new_selected = Some(i);
                     }
                 }
@@ -563,7 +583,8 @@ impl LauncherApp {
     }
 
     fn render_new_game(&mut self, ui: &mut egui::Ui) {
-        let (user, label, spoiler_path, validation, creating, error) = match &mut self.state {
+        // Clone all state upfront to avoid borrow issues
+        let (user, mut label, spoiler_path, validation, creating, error) = match &self.state {
             AppState::NewGame {
                 user,
                 label,
@@ -573,27 +594,37 @@ impl LauncherApp {
                 error,
             } => (
                 user.clone(),
-                label,
-                spoiler_path,
-                validation,
+                label.clone(),
+                spoiler_path.clone(),
+                validation.clone(),
                 *creating,
                 error.clone(),
             ),
             _ => return,
         };
 
+        // Track changes - label can change independently of button actions
+        let mut label_changed = false;
+        let mut new_file: Option<(PathBuf, Result<SpoilerHeader, ValidationError>)> = None;
+        let mut cancel_clicked = false;
+        let mut create_result: Option<Result<(String, Option<String>), String>> = None;
+
         ui.heading("New Game");
         ui.add_space(10.0);
 
         // Error display
-        if let Some(err) = &error {
-            ui.label(egui::RichText::new(err).color(egui::Color32::RED));
+        if let Some(ref err) = error {
+            ui.label(egui::RichText::new(err.as_str()).color(egui::Color32::RED));
             ui.add_space(5.0);
         }
 
         // Label input
         ui.label("Label (optional):");
-        ui.text_edit_singleline(label);
+        let label_before = label.clone();
+        ui.text_edit_singleline(&mut label);
+        if label != label_before {
+            label_changed = true;
+        }
         ui.add_space(10.0);
 
         // Spoiler log selection
@@ -604,25 +635,15 @@ impl LauncherApp {
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|| "No file selected".to_string());
 
-            ui.add(egui::TextEdit::singleline(&mut path_text.clone()).desired_width(300.0));
+            ui.label(&path_text);
 
             if ui.button("Browse...").clicked() {
                 if let Some(path) = rfd::FileDialog::new()
                     .add_filter("Spoiler Log", &["txt"])
                     .pick_file()
                 {
-                    // Validate the file
                     let validation_result = validate_spoiler_file(&path);
-
-                    if let AppState::NewGame {
-                        spoiler_path: sp,
-                        validation: v,
-                        ..
-                    } = &mut self.state
-                    {
-                        *sp = Some(path);
-                        *v = Some(validation_result);
-                    }
+                    new_file = Some((path, validation_result));
                 }
             }
         });
@@ -648,15 +669,7 @@ impl LauncherApp {
         // Buttons
         ui.horizontal(|ui| {
             if ui.button("Cancel").clicked() {
-                // Go back to game selection
-                self.state = AppState::GameSelection {
-                    user: user.clone(),
-                    games: vec![],
-                    selected_index: None,
-                    loading: true,
-                    error: None,
-                };
-                self.load_games();
+                cancel_clicked = true;
             }
 
             let can_create = validation.as_ref().map(|v| v.is_ok()).unwrap_or(false) && !creating;
@@ -669,30 +682,75 @@ impl LauncherApp {
             let create_btn = ui.add_enabled(can_create, egui::Button::new(create_text));
 
             if create_btn.clicked() {
-                if let Some(path) = spoiler_path.clone() {
-                    match read_spoiler_file(&path) {
+                if let Some(ref path) = spoiler_path {
+                    match read_spoiler_file(path) {
                         Ok(content) => {
                             let label_opt = if label.is_empty() {
                                 None
                             } else {
                                 Some(label.clone())
                             };
-
-                            if let AppState::NewGame { creating: c, .. } = &mut self.state {
-                                *c = true;
-                            }
-
-                            self.create_game(content, label_opt);
+                            create_result = Some(Ok((content, label_opt)));
                         }
                         Err(e) => {
-                            if let AppState::NewGame { error: err, .. } = &mut self.state {
-                                *err = Some(e.to_string());
-                            }
+                            create_result = Some(Err(e.to_string()));
                         }
                     }
                 }
             }
         });
+
+        // Apply changes after rendering
+
+        // Always update label if changed (even if other actions happen)
+        if label_changed {
+            if let AppState::NewGame { label: l, .. } = &mut self.state {
+                *l = label.clone();
+            }
+        }
+
+        // Apply file selection
+        if let Some((path, validation_result)) = new_file {
+            if let AppState::NewGame {
+                spoiler_path: sp,
+                validation: v,
+                ..
+            } = &mut self.state
+            {
+                *sp = Some(path);
+                *v = Some(validation_result);
+            }
+        }
+
+        // Handle cancel
+        if cancel_clicked {
+            self.state = AppState::GameSelection {
+                user,
+                games: vec![],
+                selected_index: None,
+                loading: true,
+                error: None,
+            };
+            self.load_games();
+            return;
+        }
+
+        // Handle create
+        if let Some(result) = create_result {
+            match result {
+                Ok((content, label_opt)) => {
+                    if let AppState::NewGame { creating: c, .. } = &mut self.state {
+                        *c = true;
+                    }
+                    self.create_game(content, label_opt);
+                }
+                Err(err) => {
+                    if let AppState::NewGame { error: e, .. } = &mut self.state {
+                        *e = Some(err);
+                    }
+                }
+            }
+        }
     }
 
     fn render_waiting(&mut self, ui: &mut egui::Ui) {

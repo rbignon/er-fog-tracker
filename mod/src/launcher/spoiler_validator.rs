@@ -10,7 +10,7 @@ pub struct SpoilerHeader {
     pub options_line: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ValidationError {
     FileNotFound,
     ReadError(String),
