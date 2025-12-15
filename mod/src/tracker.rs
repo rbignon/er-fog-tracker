@@ -43,8 +43,6 @@ pub struct FogRandoTracker {
     pub(crate) discovery_stats: Option<DiscoveryStats>,
     /// Last known map_id (to detect teleportation)
     last_map_id: Option<u32>,
-    /// Directory where the DLL is located (for loading fonts, etc.)
-    pub(crate) dll_dir: PathBuf,
     /// Font data loaded from file (must persist for imgui)
     pub(crate) font_data: Option<Vec<u8>>,
 }
@@ -111,7 +109,6 @@ impl FogRandoTracker {
             current_exits: Vec::new(),
             discovery_stats: None,
             last_map_id: None,
-            dll_dir,
             font_data,
         })
     }
