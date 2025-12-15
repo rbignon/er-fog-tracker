@@ -1,0 +1,346 @@
+"""
+Spoiler log parser - port from web/js/parser.js
+Parses Fog Gate Randomizer spoiler logs into structured zone pairs.
+"""
+
+import re
+from dataclasses import dataclass, field
+
+# Patterns that ALWAYS indicate a one-way connection
+ALWAYS_ONE_WAY_PATTERNS = [
+    re.compile(r"sending gate", re.IGNORECASE),
+    re.compile(r"abducted", re.IGNORECASE),
+    re.compile(r"dying", re.IGNORECASE),
+    re.compile(r"burning the Sealing Tree", re.IGNORECASE),
+    re.compile(r"using the Pureblood", re.IGNORECASE),
+    re.compile(r"Hole-Laden Necklace", re.IGNORECASE),
+    re.compile(r"return to entrance", re.IGNORECASE),
+    re.compile(r"O Mother", re.IGNORECASE),
+    re.compile(r"resting in the coffin", re.IGNORECASE),
+    re.compile(r"using the coffin", re.IGNORECASE),
+    re.compile(r"lying down", re.IGNORECASE),
+    re.compile(r"warp to", re.IGNORECASE),
+    re.compile(r"warp after", re.IGNORECASE),
+]
+
+# "arriving at/in/from" is only one-way if the SOURCE contains a teleport mechanism
+TELEPORT_SOURCE_PATTERNS = [
+    re.compile(r"sending gate", re.IGNORECASE),
+    re.compile(r"abducted", re.IGNORECASE),
+    re.compile(r"coffin", re.IGNORECASE),
+    re.compile(r"Pureblood", re.IGNORECASE),
+    re.compile(r"Hole-Laden", re.IGNORECASE),
+    re.compile(r"burning", re.IGNORECASE),
+    re.compile(r"warp", re.IGNORECASE),
+    re.compile(r"Horned Remains", re.IGNORECASE),
+    re.compile(r"lying down", re.IGNORECASE),
+]
+
+# Patterns to skip (metadata lines)
+SKIP_PATTERNS = [
+    re.compile(r"^Options and seed:"),
+    re.compile(r"^Key item hash:"),
+    re.compile(r"^Mod directories"),
+    re.compile(r"^Connecting"),
+    re.compile(r"^Main fixup"),
+    re.compile(r"^Areas before"),
+    re.compile(r"^Other areas"),
+    re.compile(r"^This spoiler"),
+    re.compile(r"^For each area"),
+    re.compile(r"^Paired warps"),
+    re.compile(r"^How to get"),
+    re.compile(r"^- Find"),
+    re.compile(r"^- The first"),
+    re.compile(r"^- Repeat"),
+    re.compile(r"^If you're stuck"),
+    re.compile(r"^you haven't"),
+    re.compile(r"^>>>"),
+    re.compile(r"^Optional areas:"),
+    re.compile(r"^Finished"),
+    re.compile(r"^Writing"),
+    re.compile(r"^\$ "),
+    re.compile(r"^\d+ entrances"),
+    re.compile(r"^Done$"),
+    re.compile(r"^C:\\"),
+]
+
+# Patterns that indicate details in connection descriptions
+DETAIL_PATTERNS = [
+    re.compile(r"\s*\(before\s", re.IGNORECASE),
+    re.compile(r"\s*\(after\s", re.IGNORECASE),
+    re.compile(r"\s*\(at\s", re.IGNORECASE),
+    re.compile(r"\s*\(using\s", re.IGNORECASE),
+    re.compile(r"\s*\(in\s", re.IGNORECASE),
+    re.compile(r"\s*\(the\s", re.IGNORECASE),
+    re.compile(r"\s*\(on\s", re.IGNORECASE),
+    re.compile(r"\s*\(arriving\s", re.IGNORECASE),
+    re.compile(r"\s*\(opening\s", re.IGNORECASE),
+    re.compile(r"\s*\(dropping\s", re.IGNORECASE),
+    re.compile(r"\s*\(with\s", re.IGNORECASE),
+    re.compile(r"\s*\(accessing\s", re.IGNORECASE),
+    re.compile(r"\s*\(defeating\s", re.IGNORECASE),
+    re.compile(r"\s*\(completing\s", re.IGNORECASE),
+    re.compile(r"\s*\(riding\s", re.IGNORECASE),
+    re.compile(r"\s*\(jumping\s", re.IGNORECASE),
+    re.compile(r"\s*\(resting\s", re.IGNORECASE),
+    re.compile(r"\s*\(touching\s", re.IGNORECASE),
+    re.compile(r"\s*\(burning\s", re.IGNORECASE),
+    re.compile(r"\s*\(getting\s", re.IGNORECASE),
+    re.compile(r"\s*\(traversing\s", re.IGNORECASE),
+    re.compile(r"\s*\(going\s", re.IGNORECASE),
+    re.compile(r"\s*\(return\s", re.IGNORECASE),
+    re.compile(r"\s*\(unlocking\s", re.IGNORECASE),
+    re.compile(r"\s*\(instead\s", re.IGNORECASE),
+    re.compile(r"\s*\(warp\s", re.IGNORECASE),
+    re.compile(r"\s*\(outside\s", re.IGNORECASE),
+    re.compile(r"\s*\(behind\s", re.IGNORECASE),
+    re.compile(r"\s*\(past\s", re.IGNORECASE),
+    re.compile(r"\s*\(up\s", re.IGNORECASE),
+    re.compile(r"\s*\(down\s", re.IGNORECASE),
+    re.compile(r"\s*\(backwards\s", re.IGNORECASE),
+]
+
+
+@dataclass
+class ZoneInfo:
+    """Parsed zone/area info."""
+
+    id: str
+    is_boss: bool = False
+    scaling: str | None = None
+
+
+@dataclass
+class ConnectionInfo:
+    """Parsed connection info."""
+
+    source: str
+    target: str
+    conn_type: str  # 'random' or 'preexisting'
+    source_details: str = ""
+    target_details: str = ""
+    required_item_from: str | None = None
+    is_inherently_one_way: bool = False
+
+
+@dataclass
+class ParseResult:
+    """Result of parsing a spoiler log."""
+
+    seed: int
+    run_id: str
+    zones: list[ZoneInfo] = field(default_factory=list)
+    connections: list[ConnectionInfo] = field(default_factory=list)
+    options: str = ""
+
+
+class SpoilerParseError(Exception):
+    """Raised when spoiler log parsing fails."""
+
+    pass
+
+
+def _should_skip_line(line: str) -> bool:
+    """Check if a line should be skipped."""
+    trimmed = line.strip()
+    if not trimmed:
+        return True
+    return any(pattern.match(trimmed) for pattern in SKIP_PATTERNS)
+
+
+def _parse_area_line(line: str) -> ZoneInfo | None:
+    """Parse an area definition line."""
+    # Area lines are not indented
+    if line.startswith("  ") or line.startswith("\t"):
+        return None
+    if _should_skip_line(line):
+        return None
+
+    is_boss = "<<<<<" in line
+    line_clean = line.replace("<<<<<", "").strip()
+
+    # Extract scaling info
+    scaling_match = re.search(r"\(scaling:\s*([^)]+)\)", line_clean)
+    scaling = scaling_match.group(1).strip() if scaling_match else None
+
+    # Extract area name (everything before the parenthesis)
+    name_match = re.match(r"^([^(]+)", line_clean)
+    if name_match:
+        name = name_match.group(1).strip()
+        if name:
+            return ZoneInfo(id=name, is_boss=is_boss, scaling=scaling)
+    return None
+
+
+def _extract_area_and_details(text: str) -> tuple[str, str]:
+    """Extract area name and details from a text segment."""
+    for pattern in DETAIL_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            area_name = text[: match.start()].strip()
+            # Extract details in parentheses
+            details_match = re.search(r"\(([^)]+)\)", text[match.start() :])
+            details = details_match.group(1) if details_match else ""
+            return area_name, details
+    return text.strip(), ""
+
+
+def _parse_connection_line(line: str) -> ConnectionInfo | None:
+    """Parse a connection line (Random: or Preexisting:)."""
+    trimmed = line.strip()
+
+    if trimmed.startswith("Random:"):
+        conn_type = "random"
+        content = trimmed[7:].strip()
+    elif trimmed.startswith("Preexisting:"):
+        conn_type = "preexisting"
+        content = trimmed[12:].strip()
+    else:
+        return None
+
+    if " --> " not in content:
+        return None
+
+    parts = content.split(" --> ")
+    if len(parts) != 2:
+        return None
+
+    source_part, target_part = parts
+
+    source, source_details = _extract_area_and_details(source_part)
+    target, target_details = _extract_area_and_details(target_part)
+
+    # Extract "using an item from..." or "using items from..."
+    required_item_from = None
+    using_match = re.search(r",\s*using (?:an )?items? from\s+(.+?)$", content, re.IGNORECASE)
+    if using_match:
+        required_item_from = using_match.group(1).strip()
+
+    # Clean up "using ... from..."
+    clean_source = source.split(", using")[0].strip()
+    clean_target = target.split(", using")[0].strip()
+
+    # Detect if this is a one-way connection based on description patterns
+    is_inherently_one_way = False
+    if conn_type == "random":
+        # Check patterns that always indicate one-way
+        if any(pattern.search(content) for pattern in ALWAYS_ONE_WAY_PATTERNS):
+            is_inherently_one_way = True
+        # Check "arriving" - only one-way if source contains teleport mechanism
+        elif re.search(r"arriving (at|in|from)", content, re.IGNORECASE):
+            is_inherently_one_way = any(
+                pattern.search(source_part) for pattern in TELEPORT_SOURCE_PATTERNS
+            )
+
+    return ConnectionInfo(
+        source=clean_source,
+        target=clean_target,
+        conn_type=conn_type,
+        source_details=source_details,
+        target_details=target_details,
+        required_item_from=required_item_from,
+        is_inherently_one_way=is_inherently_one_way,
+    )
+
+
+def parse_spoiler_log(text: str) -> ParseResult:
+    """
+    Parse a Fog Gate Randomizer spoiler log.
+
+    Args:
+        text: The full spoiler log text content.
+
+    Returns:
+        ParseResult containing seed, run_id, zones, and connections.
+
+    Raises:
+        SpoilerParseError: If the log format is invalid.
+    """
+    lines = text.split("\n")
+
+    if not lines:
+        raise SpoilerParseError("Empty spoiler log")
+
+    # Extract seed and run_id from first line
+    # Format: "Options and seed:12345 ..."
+    first_line = lines[0].strip()
+    seed_match = re.search(r"seed:(\d+)", first_line)
+    if not seed_match:
+        raise SpoilerParseError("Could not find seed in spoiler log header")
+
+    seed = int(seed_match.group(1))
+    options = first_line
+
+    # Generate run_id from options line (hash for uniqueness)
+    # This ensures different randomizer settings produce different run_ids
+    run_id = f"{seed}_{hash(options) & 0xFFFFFFFF:08x}"
+
+    zones: dict[str, ZoneInfo] = {}
+    connections: list[ConnectionInfo] = []
+
+    for line in lines:
+        # Stop at optional areas section
+        if line.strip() == "Optional areas:":
+            break
+
+        # Try to parse as area
+        zone_info = _parse_area_line(line)
+        if zone_info:
+            if zone_info.id not in zones:
+                zones[zone_info.id] = zone_info
+            else:
+                # Update existing zone with boss/scaling info if we have it
+                existing = zones[zone_info.id]
+                if zone_info.is_boss:
+                    existing.is_boss = True
+                if zone_info.scaling:
+                    existing.scaling = zone_info.scaling
+            continue
+
+        # Try to parse as connection
+        if line.startswith("  ") or line.startswith("\t"):
+            conn = _parse_connection_line(line)
+            if conn:
+                # Ensure zones exist
+                if conn.source not in zones:
+                    zones[conn.source] = ZoneInfo(id=conn.source)
+                if conn.target not in zones:
+                    zones[conn.target] = ZoneInfo(id=conn.target)
+                connections.append(conn)
+
+    if not zones:
+        raise SpoilerParseError("No zones found in spoiler log")
+
+    if not connections:
+        raise SpoilerParseError("No connections found in spoiler log")
+
+    return ParseResult(
+        seed=seed,
+        run_id=run_id,
+        zones=list(zones.values()),
+        connections=connections,
+        options=options,
+    )
+
+
+def validate_spoiler_header(text: str) -> tuple[int, str]:
+    """
+    Quick validation of spoiler log header only.
+    Returns (seed, run_id) if valid.
+
+    Raises:
+        SpoilerParseError: If the header is invalid.
+    """
+    lines = text.split("\n", 1)
+    if not lines:
+        raise SpoilerParseError("Empty spoiler log")
+
+    first_line = lines[0].strip()
+    seed_match = re.search(r"seed:(\d+)", first_line)
+    if not seed_match:
+        raise SpoilerParseError("Could not find seed in spoiler log header")
+
+    seed = int(seed_match.group(1))
+    run_id = f"{seed}_{hash(first_line) & 0xFFFFFFFF:08x}"
+
+    return seed, run_id

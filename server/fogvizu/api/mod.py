@@ -1,0 +1,172 @@
+"""
+Mod/Launcher API routes.
+
+These endpoints are authenticated via mod_token (not api_token).
+Used by the game mod and launcher application.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from fogvizu.auth import get_current_user_by_mod_token
+from fogvizu.config import settings
+from fogvizu.database import Game, User, get_db
+from fogvizu.game_logic import compute_total_zones
+from fogvizu.models import GameCreateResponse, GameListResponse, GameSummary, Zone, ZonePair
+from fogvizu.spoiler_parser import SpoilerParseError, parse_spoiler_log
+from fogvizu.websocket import manager as ws_manager
+
+router = APIRouter(prefix="/mod", tags=["mod"])
+
+
+# =============================================================================
+# Models
+# =============================================================================
+
+
+class ModUserInfo(BaseModel):
+    """User info returned to mod/launcher."""
+
+    username: str
+    display_name: str | None
+
+
+class ModGameCreate(BaseModel):
+    """Request body for creating a game from launcher."""
+
+    spoiler_log: str = Field(description="Full spoiler log content")
+    label: str | None = Field(default=None, max_length=200)
+
+
+# =============================================================================
+# Routes
+# =============================================================================
+
+
+@router.get("/me", response_model=ModUserInfo)
+async def get_mod_user(
+    user: User = Depends(get_current_user_by_mod_token),
+):
+    """Get current user info (validate mod token)."""
+    return ModUserInfo(
+        username=user.twitch_username,
+        display_name=user.twitch_display_name,
+    )
+
+
+@router.get("/games", response_model=GameListResponse)
+async def list_games(
+    user: User = Depends(get_current_user_by_mod_token),
+    db: AsyncSession = Depends(get_db),
+):
+    """List user's games (for launcher game selection)."""
+    result = await db.execute(
+        select(Game)
+        .where(Game.user_id == user.id)
+        .where(Game.deleted_at.is_(None))
+        .order_by(Game.updated_at.desc())
+    )
+
+    games = []
+    for game in result.scalars().all():
+        discovered_links = game.discovered_links or []
+        total_zones = compute_total_zones(game.zone_pairs)
+
+        games.append(
+            GameSummary(
+                id=game.id,
+                seed=game.seed,
+                run_id=game.run_id,
+                label=game.label,
+                discovery_count=len(discovered_links),
+                total_zones=total_zones,
+                mod_connected=ws_manager.is_mod_connected(game.id),
+                created_at=game.created_at,
+                updated_at=game.updated_at,
+            )
+        )
+
+    return GameListResponse(games=games)
+
+
+@router.post("/games", response_model=GameCreateResponse)
+async def create_game(
+    data: ModGameCreate,
+    user: User = Depends(get_current_user_by_mod_token),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new game from spoiler log (called by launcher)."""
+    # Check game limit
+    result = await db.execute(
+        select(func.count(Game.id)).where(Game.user_id == user.id).where(Game.deleted_at.is_(None))
+    )
+    game_count = result.scalar_one()
+
+    if game_count >= settings.max_games_per_user:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Maximum games per user ({settings.max_games_per_user}) reached",
+        )
+
+    # Parse spoiler log
+    try:
+        parsed = parse_spoiler_log(data.spoiler_log)
+    except SpoilerParseError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid spoiler log: {e}",
+        ) from None
+
+    # Check if game already exists
+    result = await db.execute(
+        select(Game)
+        .where(Game.user_id == user.id)
+        .where(Game.seed == parsed.seed)
+        .where(Game.run_id == parsed.run_id)
+        .where(Game.deleted_at.is_(None))
+    )
+    existing_game = result.scalar_one_or_none()
+
+    if existing_game:
+        return GameCreateResponse(game_id=existing_game.id, created=False)
+
+    # Convert parsed data to zone_pairs format
+    zone_pairs = [
+        ZonePair(
+            source=conn.source,
+            destination=conn.target,
+            type=conn.conn_type,
+            source_details=conn.source_details or None,
+            target_details=conn.target_details or None,
+        ).model_dump()
+        for conn in parsed.connections
+    ]
+
+    # Convert zones
+    zones = [
+        Zone(
+            id=zone.id,
+            is_boss=zone.is_boss,
+            scaling=zone.scaling,
+        ).model_dump()
+        for zone in parsed.zones
+    ]
+
+    # Create new game
+    game = Game(
+        user_id=user.id,
+        seed=parsed.seed,
+        run_id=parsed.run_id,
+        label=data.label,
+        zone_pairs=zone_pairs,
+        zones=zones,
+        discovered_links=[],
+        node_positions={},
+        tags={},
+    )
+    db.add(game)
+    await db.flush()
+
+    return GameCreateResponse(game_id=game.id, created=True)

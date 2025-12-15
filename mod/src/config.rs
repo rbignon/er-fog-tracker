@@ -214,8 +214,21 @@ impl std::fmt::Display for ConfigError {
     }
 }
 
+/// Launcher config structure (stored in %APPDATA%/FogRandoTracker/launcher.toml)
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct LauncherConfig {
+    #[serde(default)]
+    server_url: String,
+    #[serde(default)]
+    mod_token: Option<String>,
+    #[serde(default)]
+    last_game_id: Option<String>,
+}
+
 impl Config {
     pub const CONFIG_FILENAME: &'static str = "fog_rando_tracker.toml";
+    const LAUNCHER_CONFIG_DIR: &'static str = "FogRandoTracker";
+    const LAUNCHER_CONFIG_FILENAME: &'static str = "launcher.toml";
 
     /// Get the DLL's directory path
     pub fn get_dll_directory(hmodule: HINSTANCE) -> Option<PathBuf> {
@@ -230,21 +243,114 @@ impl Config {
         PathBuf::from(dll_path).parent().map(|p| p.to_path_buf())
     }
 
-    /// Load configuration from file next to the DLL
+    /// Get the launcher config path (%APPDATA%/FogRandoTracker/launcher.toml)
+    fn get_launcher_config_path() -> Option<PathBuf> {
+        // Get %APPDATA% path using Windows API
+        use windows::core::PWSTR;
+        use windows::Win32::UI::Shell::{
+            FOLDERID_RoamingAppData, SHGetKnownFolderPath, KF_FLAG_DEFAULT,
+        };
+
+        unsafe {
+            let mut path_ptr: PWSTR = PWSTR::null();
+            if SHGetKnownFolderPath(
+                &FOLDERID_RoamingAppData,
+                KF_FLAG_DEFAULT,
+                None,
+                &mut path_ptr,
+            )
+            .is_ok()
+            {
+                let len = (0..).take_while(|&i| *path_ptr.0.add(i) != 0).count();
+                let path_str =
+                    String::from_utf16_lossy(std::slice::from_raw_parts(path_ptr.0, len));
+                windows::Win32::System::Com::CoTaskMemFree(Some(path_ptr.0 as *const _));
+                let path = PathBuf::from(path_str)
+                    .join(Self::LAUNCHER_CONFIG_DIR)
+                    .join(Self::LAUNCHER_CONFIG_FILENAME);
+                return Some(path);
+            }
+        }
+        None
+    }
+
+    /// Load launcher config and merge server settings
+    fn load_launcher_config() -> Option<LauncherConfig> {
+        let config_path = Self::get_launcher_config_path()?;
+
+        if !config_path.exists() {
+            println!(
+                "[config] No launcher config found at {}",
+                config_path.display()
+            );
+            return None;
+        }
+
+        match fs::read_to_string(&config_path) {
+            Ok(contents) => match toml::from_str(&contents) {
+                Ok(config) => {
+                    println!(
+                        "[config] Loaded launcher config from {}",
+                        config_path.display()
+                    );
+                    Some(config)
+                }
+                Err(e) => {
+                    eprintln!("[config] Failed to parse launcher config: {}", e);
+                    None
+                }
+            },
+            Err(e) => {
+                eprintln!("[config] Failed to read launcher config: {}", e);
+                None
+            }
+        }
+    }
+
+    /// Load configuration from file next to the DLL, merging with launcher config
     pub fn load(hmodule: HINSTANCE) -> Result<Self, ConfigError> {
         let dir = Self::get_dll_directory(hmodule).ok_or(ConfigError::PathError)?;
         let config_path = dir.join(Self::CONFIG_FILENAME);
 
-        println!("Looking for config at: {}", config_path.display());
+        println!(
+            "[config] Looking for local config at: {}",
+            config_path.display()
+        );
 
-        if !config_path.exists() {
-            return Err(ConfigError::FileNotFound(config_path));
+        // Load local config (overlay, keybindings)
+        let mut config: Config = if config_path.exists() {
+            let contents = fs::read_to_string(&config_path).map_err(ConfigError::ReadError)?;
+            let config: Config = toml::from_str(&contents).map_err(ConfigError::ParseError)?;
+            println!(
+                "[config] Loaded local config from {}",
+                config_path.display()
+            );
+            config
+        } else {
+            println!("[config] No local config found, using defaults");
+            Config::default()
+        };
+
+        // Merge launcher config (server settings)
+        if let Some(launcher_config) = Self::load_launcher_config() {
+            // Override server settings from launcher config
+            if !launcher_config.server_url.is_empty() {
+                config.server.url = launcher_config.server_url;
+                config.server.enabled = true;
+            }
+            if let Some(token) = launcher_config.mod_token {
+                if !token.is_empty() {
+                    config.server.mod_token = token;
+                }
+            }
+            if let Some(game_id) = launcher_config.last_game_id {
+                if !game_id.is_empty() {
+                    config.server.game_id = game_id;
+                }
+            }
+            println!("[config] Merged launcher config into server settings");
         }
 
-        let contents = fs::read_to_string(&config_path).map_err(ConfigError::ReadError)?;
-        let config: Config = toml::from_str(&contents).map_err(ConfigError::ParseError)?;
-
-        println!("Loaded config from {}", config_path.display());
         Ok(config)
     }
 }

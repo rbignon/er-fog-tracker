@@ -15,6 +15,10 @@ name = "fog_rando_tracker"
 name = "fog-rando-tracker-injector"
 path = "src/injector.rs"
 
+[[bin]]
+name = "fog-rando-tracker-launcher"
+path = "src/launcher/main.rs"
+
 # =============================================================================
 # DEPENDENCIES
 # =============================================================================
@@ -41,6 +45,12 @@ toml = "0.8"
 tungstenite = { version = "0.21", features = ["native-tls"] }
 crossbeam-channel = "0.5"
 
+# --- Launcher GUI dependencies (not needed for DLL) ---
+eframe = { version = "0.29", default-features = false, features = ["default_fonts", "glow"], optional = true }
+ureq = { version = "2.10", features = ["json", "tls"], optional = true }
+rfd = { version = "0.15", optional = true }
+dirs = { version = "5.0", optional = true }
+
 # --- Windows API ---
 [dependencies.windows]
 version = "0.54.0"
@@ -53,7 +63,17 @@ features = [
     "Win32_System_SystemServices",
     "Win32_System_SystemInformation",
     "Win32_System_Memory",
+    "Win32_System_Com",
+    # For launcher config path
+    "Win32_UI_Shell",
+    # For launcher process monitoring
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Threading",
 ]
+
+[features]
+launcher = ["eframe", "ureq", "rfd", "dirs"]
 
 [profile.release]
 strip = "symbols"

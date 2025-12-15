@@ -177,3 +177,28 @@ async def get_current_user_optional(
         return None
 
     return await get_user_by_token(db, credentials.credentials)
+
+
+async def get_current_user_by_mod_token(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """
+    Dependency to get the current user authenticated via mod token.
+    Used by the game mod/launcher for API access.
+    Raises 401 if not authenticated.
+    """
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing mod token",
+        )
+
+    user = await get_user_by_mod_token(db, credentials.credentials)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid mod token",
+        )
+
+    return user
