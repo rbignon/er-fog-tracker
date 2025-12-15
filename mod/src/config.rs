@@ -47,13 +47,9 @@ pub struct OverlaySettings {
     #[serde(default = "default_font_path")]
     pub font_path: String,
 
-    /// Font size in pixels
+    /// Font size in pixels (16.0 recommended for 1080p, 24.0 for 4K)
     #[serde(default = "default_font_size")]
     pub font_size: f32,
-
-    /// Font scale factor (1.0 = default, 1.5 = 150%, etc.)
-    #[serde(default = "default_font_scale")]
-    pub font_scale: f32,
 
     /// Background color as hex string "#RRGGBB"
     #[serde(default = "default_bg_color")]
@@ -94,9 +90,6 @@ fn default_font_path() -> String {
 fn default_font_size() -> f32 {
     16.0
 }
-fn default_font_scale() -> f32 {
-    1.0
-}
 fn default_bg_color() -> String {
     "#141414".to_string()
 }
@@ -127,7 +120,6 @@ impl Default for OverlaySettings {
         Self {
             font_path: default_font_path(),
             font_size: default_font_size(),
-            font_scale: default_font_scale(),
             background_color: default_bg_color(),
             background_opacity: default_bg_opacity(),
             text_color: default_text_color(),

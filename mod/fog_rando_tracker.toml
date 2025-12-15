@@ -62,12 +62,8 @@ toggle_debug = "f10"
 #   - Absolute path "C:\Fonts\MyFont.ttf": Uses the specified file
 font_path = ""
 
-# Font size in pixels (16.0 is a good default for 1080p)
+# Font size in pixels (16.0 recommended for 1080p, 24.0 for 4K)
 font_size = 16.0
-
-# Font scale factor (1.0 = default size, 1.5 = 150%, 2.0 = 200%, etc.)
-# Applied on top of font_size for quick adjustments.
-font_scale = 1.0
 
 # Background color and opacity
 background_color = "#141414"
