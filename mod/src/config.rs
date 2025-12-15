@@ -196,7 +196,6 @@ pub struct Config {
 #[derive(Debug)]
 pub enum ConfigError {
     PathError,
-    FileNotFound(PathBuf),
     ReadError(std::io::Error),
     ParseError(toml::de::Error),
 }
@@ -205,9 +204,6 @@ impl std::fmt::Display for ConfigError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ConfigError::PathError => write!(f, "Could not determine config file path"),
-            ConfigError::FileNotFound(path) => {
-                write!(f, "Config file not found: {}", path.display())
-            }
             ConfigError::ReadError(e) => write!(f, "Failed to read config file: {}", e),
             ConfigError::ParseError(e) => write!(f, "Failed to parse config file: {}", e),
         }
@@ -246,32 +242,20 @@ impl Config {
     /// Get the launcher config path (%APPDATA%/FogRandoTracker/launcher.toml)
     fn get_launcher_config_path() -> Option<PathBuf> {
         // Get %APPDATA% path using Windows API
-        use windows::core::PWSTR;
         use windows::Win32::UI::Shell::{
             FOLDERID_RoamingAppData, SHGetKnownFolderPath, KF_FLAG_DEFAULT,
         };
 
         unsafe {
-            let mut path_ptr: PWSTR = PWSTR::null();
-            if SHGetKnownFolderPath(
-                &FOLDERID_RoamingAppData,
-                KF_FLAG_DEFAULT,
-                None,
-                &mut path_ptr,
-            )
-            .is_ok()
-            {
-                let len = (0..).take_while(|&i| *path_ptr.0.add(i) != 0).count();
-                let path_str =
-                    String::from_utf16_lossy(std::slice::from_raw_parts(path_ptr.0, len));
-                windows::Win32::System::Com::CoTaskMemFree(Some(path_ptr.0 as *const _));
-                let path = PathBuf::from(path_str)
-                    .join(Self::LAUNCHER_CONFIG_DIR)
-                    .join(Self::LAUNCHER_CONFIG_FILENAME);
-                return Some(path);
-            }
+            let path_ptr =
+                SHGetKnownFolderPath(&FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, None).ok()?;
+            let path_str = path_ptr.to_string().ok()?;
+            windows::Win32::System::Com::CoTaskMemFree(Some(path_ptr.0 as *const _));
+            let path = PathBuf::from(path_str)
+                .join(Self::LAUNCHER_CONFIG_DIR)
+                .join(Self::LAUNCHER_CONFIG_FILENAME);
+            Some(path)
         }
-        None
     }
 
     /// Load launcher config and merge server settings

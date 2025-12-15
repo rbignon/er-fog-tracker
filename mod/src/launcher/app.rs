@@ -7,7 +7,7 @@ use std::thread;
 
 use super::api_client::{ApiClient, ApiError, GameSummary, UserInfo};
 use super::config::LauncherConfig;
-use super::process_monitor::{find_dll_path, InjectionError, ProcessMonitor, ProcessState};
+use super::process_monitor::{find_dll_path, ProcessMonitor, ProcessState};
 use super::spoiler_validator::{
     read_spoiler_file, validate_spoiler_file, SpoilerHeader, ValidationError,
 };

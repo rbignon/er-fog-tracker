@@ -14,6 +14,7 @@ name = "fog_rando_tracker"
 [[bin]]
 name = "fog-rando-tracker-launcher"
 path = "src/launcher/main.rs"
+required-features = ["launcher"]
 
 # =============================================================================
 # DEPENDENCIES
