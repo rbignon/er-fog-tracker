@@ -32,30 +32,6 @@ pub enum ConnectionStatus {
     Error,
 }
 
-impl ConnectionStatus {
-    pub fn display_text(&self) -> &'static str {
-        match self {
-            ConnectionStatus::Disconnected => "Disconnected",
-            ConnectionStatus::Connecting => "Connecting...",
-            ConnectionStatus::Authenticating => "Authenticating...",
-            ConnectionStatus::Connected => "Connected",
-            ConnectionStatus::Reconnecting => "Reconnecting...",
-            ConnectionStatus::Error => "Error",
-        }
-    }
-
-    pub fn display_color(&self) -> [f32; 4] {
-        match self {
-            ConnectionStatus::Disconnected => [0.5, 0.5, 0.5, 1.0], // Gray
-            ConnectionStatus::Connecting => [1.0, 1.0, 0.0, 1.0],   // Yellow
-            ConnectionStatus::Authenticating => [1.0, 0.8, 0.0, 1.0], // Orange
-            ConnectionStatus::Connected => [0.0, 1.0, 0.0, 1.0],    // Green
-            ConnectionStatus::Reconnecting => [1.0, 0.5, 0.0, 1.0], // Orange
-            ConnectionStatus::Error => [1.0, 0.0, 0.0, 1.0],        // Red
-        }
-    }
-}
-
 /// Position data for discovery messages
 #[derive(Debug, Clone, Serialize)]
 pub struct Position {
@@ -134,8 +110,6 @@ pub struct DiscoveryStats {
     pub discovered: u32,
     /// Total number of random links
     pub total: u32,
-    /// Percentage discovered (0-100)
-    pub percent: f32,
 }
 
 // =============================================================================

@@ -282,42 +282,66 @@ impl FogRandoTracker {
     }
 
     /// Load font data from file
+    ///
+    /// Resolution order:
+    /// - Empty string: Use system default (C:\Windows\Fonts\segoeui.ttf)
+    /// - Filename only (no path separators): Try Windows Fonts dir, then DLL dir
+    /// - Relative path: Relative to DLL directory
+    /// - Absolute path: Use directly
     fn load_font_data(dll_dir: &PathBuf, font_path: &str) -> Option<Vec<u8>> {
         use std::fs;
         use std::path::Path;
 
-        if font_path.is_empty() {
-            return None;
-        }
+        const WINDOWS_FONTS_DIR: &str = r"C:\Windows\Fonts";
+        const DEFAULT_SYSTEM_FONT: &str = "segoeui.ttf";
 
-        let path = Path::new(font_path);
-        let full_path = if path.is_absolute() {
-            path.to_path_buf()
+        // Determine which paths to try
+        let paths_to_try: Vec<PathBuf> = if font_path.is_empty() {
+            // Empty = use system default (Segoe UI)
+            vec![Path::new(WINDOWS_FONTS_DIR).join(DEFAULT_SYSTEM_FONT)]
         } else {
-            dll_dir.join(font_path)
+            let path = Path::new(font_path);
+            if path.is_absolute() {
+                // Absolute path: use directly
+                vec![path.to_path_buf()]
+            } else if !font_path.contains('/') && !font_path.contains('\\') {
+                // Filename only: try Windows Fonts first, then DLL dir
+                vec![
+                    Path::new(WINDOWS_FONTS_DIR).join(font_path),
+                    dll_dir.join(font_path),
+                ]
+            } else {
+                // Relative path with separators: DLL dir only
+                vec![dll_dir.join(font_path)]
+            }
         };
 
-        if !full_path.exists() {
-            eprintln!(
-                "Font file not found: {}. Using default font.",
-                full_path.display()
-            );
-            return None;
+        // Try each path in order
+        for full_path in &paths_to_try {
+            if full_path.exists() {
+                match fs::read(full_path) {
+                    Ok(data) => {
+                        println!(
+                            "Loaded font from: {} ({} bytes)",
+                            full_path.display(),
+                            data.len()
+                        );
+                        return Some(data);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to read font file {}: {}", full_path.display(), e);
+                    }
+                }
+            }
         }
 
-        match fs::read(&full_path) {
-            Ok(data) => {
-                println!(
-                    "Loaded font data from: {} ({} bytes)",
-                    full_path.display(),
-                    data.len()
-                );
-                Some(data)
-            }
-            Err(e) => {
-                eprintln!("Failed to read font file {}: {}", full_path.display(), e);
-                None
-            }
-        }
+        // No font found
+        let tried = paths_to_try
+            .iter()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        eprintln!("Font not found (tried: {}). Using imgui default.", tried);
+        None
     }
 }

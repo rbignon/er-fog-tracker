@@ -43,17 +43,12 @@ jobs:
       - name: Build release
         run: cargo build --release
 
-      - name: Download Roboto font
-        run: |
-          Invoke-WebRequest -Uri "https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Regular.ttf" -OutFile "Roboto-Regular.ttf"
-
       - name: Prepare distribution package
         run: |
           mkdir dist
           cp target/release/fog_rando_tracker.dll dist/
           cp target/release/fog-rando-tracker-injector.exe dist/
           cp fog_rando_tracker.toml dist/
-          cp Roboto-Regular.ttf dist/
 
       - name: Upload distribution package
         uses: actions/upload-artifact@v4

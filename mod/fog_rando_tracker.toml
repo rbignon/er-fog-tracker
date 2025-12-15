@@ -55,10 +55,12 @@ toggle_debug = "f10"
 # Colors use hex format "#RRGGBB".
 #
 [overlay]
-# Path to TTF font file (relative to DLL directory or absolute path)
-# Place your font file next to the DLL, or specify a full path.
-# Leave empty to use the default imgui font.
-font_path = "Roboto-Regular.ttf"
+# Font to use for the overlay. Can be:
+#   - Empty "" (default): Uses Windows system font (Segoe UI)
+#   - Filename only "arial.ttf": Looks in C:\Windows\Fonts\ then DLL directory
+#   - Relative path "fonts/custom.ttf": Relative to DLL directory
+#   - Absolute path "C:\Fonts\MyFont.ttf": Uses the specified file
+font_path = ""
 
 # Font size in pixels (16.0 is a good default for 1080p)
 font_size = 16.0

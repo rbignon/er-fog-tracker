@@ -89,7 +89,7 @@ pub struct OverlaySettings {
 }
 
 fn default_font_path() -> String {
-    "Roboto-Regular.ttf".to_string()
+    String::new() // Empty = use system default (Segoe UI)
 }
 fn default_font_size() -> f32 {
     16.0
