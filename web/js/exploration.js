@@ -688,12 +688,17 @@ export function getNodeExplorationStatus(nodeId, links) {
  * Build a map of node connections from graph data
  * For bidirectional links (oneWay: false), adds connections in both directions
  * Each connection entry includes { link, reversed } to indicate if it's the reverse direction
+ *
+ * Properties:
+ * - incoming/outgoing: arrays of { link, reversed } for directional traversal
+ * - degree: total directional connections (used for path finding)
+ * - distinctLinks: count of unique links (a bidirectional link counts as 1, used for hub detection)
  */
 export function buildNodeConnectionsMap(graphData) {
     const nodeConnections = new Map();
 
     graphData.nodes.forEach(n => {
-        nodeConnections.set(n.id, { incoming: [], outgoing: [], degree: 0 });
+        nodeConnections.set(n.id, { incoming: [], outgoing: [], degree: 0, distinctLinks: 0 });
     });
 
     // Build set of all explicit link pairs to avoid duplicating bidirectional links
@@ -717,10 +722,12 @@ export function buildNodeConnectionsMap(graphData) {
         if (sourceConns) {
             sourceConns.outgoing.push({ link: l, reversed: false });
             sourceConns.degree++;
+            sourceConns.distinctLinks++;  // Each link counts once for source
         }
         if (targetConns && !isSelfLoop) {
             targetConns.incoming.push({ link: l, reversed: false });
             targetConns.degree++;
+            targetConns.distinctLinks++;  // Each link counts once for target
         }
 
         // Reverse direction for bidirectional links: target -> source
@@ -730,10 +737,12 @@ export function buildNodeConnectionsMap(graphData) {
             if (targetConns) {
                 targetConns.outgoing.push({ link: l, reversed: true });
                 targetConns.degree++;
+                // Don't increment distinctLinks - already counted above
             }
             if (sourceConns) {
                 sourceConns.incoming.push({ link: l, reversed: true });
                 sourceConns.degree++;
+                // Don't increment distinctLinks - already counted above
             }
         }
     });

@@ -103,10 +103,10 @@ export function renderGraph(preservePositions = false) {
     // Update button visibility
     updateButtonVisibility(explorationMode);
 
-    // Mark hub nodes (3+ connections)
+    // Mark hub nodes (3+ distinct links - bidirectional links count as 1)
     nodes.forEach(n => {
         const conns = nodeConnections.get(n.id);
-        n.isHub = conns && conns.degree >= 3;
+        n.isHub = conns && conns.distinctLinks >= 3;
     });
 
     document.getElementById("hub-count").textContent = nodes.filter(n => n.isHub).length;
