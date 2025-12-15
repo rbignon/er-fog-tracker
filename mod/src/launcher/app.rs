@@ -327,8 +327,10 @@ impl LauncherApp {
                         let name = game.display_name();
                         let seed = game.seed.to_string();
                         let progress = game.progress_text();
-                        self.games_list
-                            .insert_items_row(None, &[&name, &seed, &progress]);
+                        self.games_list.insert_items_row(
+                            None,
+                            &[name.as_str(), seed.as_str(), progress.as_str()],
+                        );
                     }
                     // Pre-select last game
                     if let Some(ref last_id) = data.config.last_game_id {
