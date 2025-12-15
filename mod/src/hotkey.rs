@@ -322,15 +322,14 @@ pub struct Hotkey {
 }
 
 impl Hotkey {
-    /// Default F9 hotkey
-    pub const F9: Hotkey = Hotkey {
-        key: 0x78,
-        modifiers: Modifiers {
-            ctrl: false,
-            shift: false,
-            alt: false,
-        },
-    };
+    /// Create a hotkey from a key name (e.g., "f9", "a", "numpad0")
+    /// Returns None if the key name is not recognized
+    pub fn from_name(name: &str) -> Option<Self> {
+        name_to_keycode(name).map(|key| Hotkey {
+            key,
+            modifiers: Modifiers::default(),
+        })
+    }
 
     /// Get the display name for this hotkey
     pub fn name(&self) -> String {

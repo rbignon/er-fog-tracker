@@ -18,16 +18,24 @@ pub struct KeyBindings {
     /// Key to toggle UI visibility
     #[serde(default = "default_toggle_ui")]
     pub toggle_ui: Hotkey,
+    /// Key to toggle debug info display
+    #[serde(default = "default_toggle_debug")]
+    pub toggle_debug: Hotkey,
 }
 
 fn default_toggle_ui() -> Hotkey {
-    Hotkey::F9
+    Hotkey::from_name("f9").expect("f9 is a valid key")
+}
+
+fn default_toggle_debug() -> Hotkey {
+    Hotkey::from_name("f10").expect("f10 is a valid key")
 }
 
 impl Default for KeyBindings {
     fn default() -> Self {
         Self {
-            toggle_ui: Hotkey::F9,
+            toggle_ui: default_toggle_ui(),
+            toggle_debug: default_toggle_debug(),
         }
     }
 }

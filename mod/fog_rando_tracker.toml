@@ -44,6 +44,8 @@ debug_console = false
 [keybindings]
 # Key to toggle UI visibility
 toggle_ui = "f9"
+# Key to toggle debug info (map_id, server URL, etc.)
+toggle_debug = "f10"
 
 # =============================================================================
 # OVERLAY SETTINGS
