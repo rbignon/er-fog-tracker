@@ -18,8 +18,9 @@ use super::spoiler_validator::{
 
 #[derive(Debug)]
 pub enum AppState {
-    /// Waiting for user to enter mod token
+    /// Waiting for user to enter server URL and mod token
     TokenInput {
+        server_url: String,
         token: String,
         error: Option<String>,
         validating: bool,
@@ -101,12 +102,14 @@ impl LauncherApp {
             });
 
             AppState::TokenInput {
+                server_url: config.server_url.clone(),
                 token: config.mod_token.clone().unwrap_or_default(),
                 error: None,
                 validating: true,
             }
         } else {
             AppState::TokenInput {
+                server_url: config.server_url.clone(),
                 token: String::new(),
                 error: None,
                 validating: false,
@@ -124,8 +127,7 @@ impl LauncherApp {
         }
     }
 
-    fn validate_token(&mut self, token: String) {
-        let url = self.config.server_url.clone();
+    fn validate_token(&mut self, url: String, token: String) {
         let sender = self.task_sender.clone();
 
         thread::spawn(move || {
@@ -175,7 +177,11 @@ impl LauncherApp {
             match result {
                 TaskResult::TokenValidated(Ok(user)) => {
                     // Token is valid, save it and load games
-                    if let AppState::TokenInput { token, .. } = &self.state {
+                    if let AppState::TokenInput {
+                        server_url, token, ..
+                    } = &self.state
+                    {
+                        self.config.server_url = server_url.clone();
                         self.config.mod_token = Some(token.clone());
                         let _ = self.config.save();
                     }
@@ -191,6 +197,7 @@ impl LauncherApp {
                 }
                 TaskResult::TokenValidated(Err(e)) => {
                     self.state = AppState::TokenInput {
+                        server_url: self.config.server_url.clone(),
                         token: self.config.mod_token.clone().unwrap_or_default(),
                         error: Some(e.to_string()),
                         validating: false,
@@ -351,26 +358,49 @@ impl eframe::App for LauncherApp {
 impl LauncherApp {
     fn render_token_input(&mut self, ui: &mut egui::Ui) {
         // Clone state upfront to avoid borrow issues
-        let (mut token, error, validating) = match &self.state {
+        let (mut server_url, mut token, error, validating) = match &self.state {
             AppState::TokenInput {
+                server_url,
                 token,
                 error,
                 validating,
-            } => (token.clone(), error.clone(), *validating),
+            } => (
+                server_url.clone(),
+                token.clone(),
+                error.clone(),
+                *validating,
+            ),
             _ => return,
         };
 
         // Track changes
         let mut should_validate = false;
+        let server_url_before = server_url.clone();
         let token_before = token.clone();
 
         ui.vertical_centered(|ui| {
-            ui.add_space(40.0);
-            ui.heading("🔑 Mod Token Required");
+            ui.add_space(20.0);
+            ui.heading("🔗 Server Configuration");
+            ui.add_space(15.0);
+
+            // Server URL field
+            ui.label("Server URL:");
+            ui.add_space(5.0);
+            ui.add(
+                egui::TextEdit::singleline(&mut server_url)
+                    .desired_width(400.0)
+                    .hint_text("https://fog-vizu.example.com"),
+            );
+
+            ui.add_space(20.0);
+            ui.separator();
             ui.add_space(20.0);
 
-            ui.label("Enter your mod token from the fog-vizu website:");
-            ui.add_space(10.0);
+            ui.heading("🔑 Mod Token");
+            ui.add_space(15.0);
+
+            ui.label("Enter your mod token:");
+            ui.add_space(5.0);
 
             let response = ui.add(
                 egui::TextEdit::singleline(&mut token)
@@ -396,21 +426,26 @@ impl LauncherApp {
             } else {
                 "Save & Continue"
             };
-            let button = ui.add_enabled(
-                !validating && !token.is_empty(),
-                egui::Button::new(button_text),
-            );
+            let can_validate = !validating && !token.is_empty() && !server_url.is_empty();
+            let button = ui.add_enabled(can_validate, egui::Button::new(button_text));
 
             if button.clicked()
                 || (response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)))
             {
-                if !token.is_empty() && !validating {
+                if can_validate {
                     should_validate = true;
                 }
             }
         });
 
         // Apply changes after rendering
+
+        // Update server_url if changed
+        if server_url != server_url_before {
+            if let AppState::TokenInput { server_url: u, .. } = &mut self.state {
+                *u = server_url.clone();
+            }
+        }
 
         // Update token if changed
         if token != token_before {
@@ -421,13 +456,13 @@ impl LauncherApp {
 
         // Start validation if requested
         if should_validate {
-            let token_clone = token.clone();
             self.state = AppState::TokenInput {
-                token: token_clone.clone(),
+                server_url: server_url.clone(),
+                token: token.clone(),
                 error: None,
                 validating: true,
             };
-            self.validate_token(token_clone);
+            self.validate_token(server_url, token);
         }
     }
 
@@ -461,6 +496,7 @@ impl LauncherApp {
                     self.config.mod_token = None;
                     let _ = self.config.save();
                     self.state = AppState::TokenInput {
+                        server_url: self.config.server_url.clone(),
                         token: String::new(),
                         error: None,
                         validating: false,
