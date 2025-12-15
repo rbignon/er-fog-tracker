@@ -98,11 +98,16 @@ impl ImguiRenderLoop for FogRandoTracker {
         let window_flags =
             WindowFlags::NO_TITLE_BAR | WindowFlags::ALWAYS_AUTO_RESIZE | WindowFlags::NO_SCROLLBAR;
 
+        // Max content width for text wrapping
+        let max_width = 320.0 * scale;
+
         ui.window("FogRandoTracker")
             .position([dw - 350.0 * scale, 20.0], Condition::FirstUseEver)
             .flags(window_flags)
             .build(|| {
-                self.render_header(ui);
+                // Enable text wrapping at max_width
+                let wrap_token = ui.push_text_wrap_pos_with_pos(max_width);
+                self.render_header(ui, max_width);
                 ui.separator();
                 if self.show_debug {
                     self.render_debug_section(ui);
@@ -110,6 +115,7 @@ impl ImguiRenderLoop for FogRandoTracker {
                 }
                 self.render_exits_section(ui);
                 self.render_status_message(ui);
+                wrap_token.pop();
             });
     }
 }
@@ -131,30 +137,46 @@ impl FogRandoTracker {
         }
     }
 
-    /// Render header: zone name + server status indicator + stats
-    fn render_header(&self, ui: &hudhook::imgui::Ui) {
+    /// Render header: zone name + server status indicator + stats (right-aligned)
+    fn render_header(&self, ui: &hudhook::imgui::Ui, max_width: f32) {
         // Zone name (or placeholder)
         let zone_text = self
             .current_zone
             .as_deref()
             .unwrap_or("(traverse a fog to identify)");
 
-        // Build header line with zone name
-        ui.text(zone_text);
-
-        // Same line: server indicator + stats
-        ui.same_line();
-
-        // Server status indicator (colored dot)
+        // Build right-aligned status text: "● X/Y" or "X/Y"
+        let mut status_text = String::new();
         if self.is_server_enabled() {
-            let (dot_color, _) = self.get_status_indicator();
-            ui.text_colored(dot_color, "●");
-            ui.same_line();
+            status_text.push_str("● ");
+        }
+        if let Some(ref stats) = self.discovery_stats {
+            status_text.push_str(&format!("{}/{}", stats.discovered, stats.total));
         }
 
-        // Discovery stats
-        if let Some(ref stats) = self.discovery_stats {
-            ui.text(format!("{}/{}", stats.discovered, stats.total));
+        // Calculate positions for right alignment
+        let status_width = if !status_text.is_empty() {
+            ui.calc_text_size(&status_text)[0]
+        } else {
+            0.0
+        };
+
+        // Zone name on the left
+        ui.text(zone_text);
+
+        // Status on the right (same line)
+        if !status_text.is_empty() {
+            ui.same_line_with_pos(max_width - status_width);
+            if self.is_server_enabled() {
+                let (dot_color, _) = self.get_status_indicator();
+                ui.text_colored(dot_color, "●");
+                ui.same_line();
+                if let Some(ref stats) = self.discovery_stats {
+                    ui.text(format!("{}/{}", stats.discovered, stats.total));
+                }
+            } else if let Some(ref stats) = self.discovery_stats {
+                ui.text(format!("{}/{}", stats.discovered, stats.total));
+            }
         }
     }
 
