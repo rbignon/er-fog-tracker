@@ -13,9 +13,11 @@ from fogvizu.database import Game
 from fogvizu.zone_matching import (
     build_preexisting_adjacency,
     find_candidate_zones,
+    find_path_prioritizing_discovered,
     find_similar_zones,
     find_zone_pair,
     get_discovered_nodes,
+    is_accessible_from_start,
     link_exists,
 )
 
@@ -119,6 +121,28 @@ async def propagate_discovery(
     # Track newly discovered links
     newly_discovered: list[dict[str, str]] = []
     now = datetime.now(UTC).isoformat()
+
+    # Back-propagation: if source is not accessible from START, find path and discover it
+    if not is_accessible_from_start(discovered_links, source):
+        logger.info("[DISCOVERY] Source '%s' not accessible from START, back-propagating", source)
+        path_to_source = find_path_prioritizing_discovered(zone_pairs, discovered_links, source)
+        if path_to_source:
+            logger.debug("[DISCOVERY] Back-propagation path: %s", path_to_source)
+            for src, dst in path_to_source:
+                if not link_exists(discovered_links, src, dst):
+                    new_link = {
+                        "source": src,
+                        "target": dst,
+                        "discovered_at": now,
+                        "discovered_by": f"{discovered_by} (backprop)",
+                    }
+                    discovered_links.append(new_link)
+                    newly_discovered.append({"source": src, "target": dst})
+                    logger.debug("[DISCOVERY] Back-propagated link: %s → %s", src, dst)
+            # Update discovered nodes after back-propagation
+            discovered_nodes = get_discovered_nodes(discovered_links)
+        else:
+            logger.warning("[DISCOVERY] No path found from START to '%s'", source)
 
     # BFS through preexisting links
     queue: list[tuple[str, str]] = [(source, target)]

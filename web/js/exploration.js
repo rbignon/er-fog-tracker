@@ -78,25 +78,93 @@ export function migrateDiscoveredLinks() {
 }
 
 /**
- * Discover an area via a specific link and propagate through pre-existing connections
+ * Discover an area via a specific link and propagate through pre-existing connections.
+ *
+ * In online mode: delegates to server for propagation logic (server is source of truth).
+ * In offline mode: computes propagation locally.
+ *
  * @param {string} areaId - The area to discover
  * @param {string|null} fromNodeId - The node from which we're discovering (for link tracking)
  * @param {Object|null} viaLink - The link used to discover (to check if one-way)
  */
 export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
     State.saveAllNodePositions();
+
+    const isOnline = State.getBackendMode() === 'online';
+    const gameId = State.getGameId();
+
+    // Online mode with fromNodeId: delegate to server
+    if (isOnline && fromNodeId && gameId) {
+        // Optimistic update: just mark the direct link as discovered for responsive UI
+        // Server will send back the full state with back-propagation
+        const explorationState = State.getExplorationState();
+        if (explorationState) {
+            explorationState.discovered.add(areaId);
+            const isBidirectional = !viaLink || !viaLink.oneWay;
+            State.discoverLink(fromNodeId, areaId, isBidirectional);
+        }
+        State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: areaId });
+
+        // Send to server - response will contain full state with back-propagation
+        Api.createDiscovery(gameId, { source: fromNodeId, target: areaId })
+            .then(response => {
+                // Server response contains discovered_links - apply it
+                if (response && response.discovered_links) {
+                    applyServerDiscoveryState(response.discovered_links);
+                }
+            })
+            .catch(err => console.error('Failed to persist discovery:', err));
+        return;
+    }
+
+    // Offline mode: compute everything locally
+    // Back-propagation: if source is not accessible from START, discover path to it first
+    if (fromNodeId && !isAccessibleFromStart(fromNodeId)) {
+        console.log(`[DISCOVERY] Source '${fromNodeId}' not accessible from START, back-propagating`);
+        const pathToSource = findPathPrioritizingDiscovered(fromNodeId);
+        if (pathToSource.length > 0) {
+            console.log(`[DISCOVERY] Back-propagation path:`, pathToSource.map(s => `${s.fromNodeId} → ${s.toNodeId}`));
+            for (const step of pathToSource) {
+                discoverWithPreexisting(step.toNodeId, step.fromNodeId, step.link);
+            }
+        } else {
+            console.warn(`[DISCOVERY] No path found from START to '${fromNodeId}'`);
+        }
+    }
+
     discoverWithPreexisting(areaId, fromNodeId, viaLink);
     State.saveExplorationToStorage();
     State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: areaId });
+}
 
-    // Persist discovery to server in online mode
-    if (State.getBackendMode() === 'online' && fromNodeId) {
-        const gameId = State.getGameId();
-        if (gameId) {
-            // Fire and forget - don't await, just persist in background
-            Api.createDiscovery(gameId, { source: fromNodeId, target: areaId })
-                .catch(err => console.error('Failed to persist discovery:', err));
-        }
+/**
+ * Apply discovery state from server response (server is source of truth).
+ */
+function applyServerDiscoveryState(discoveredLinks) {
+    if (!discoveredLinks || !Array.isArray(discoveredLinks)) return;
+
+    const explorationState = State.getExplorationState();
+    if (!explorationState) return;
+
+    // Rebuild state from server data
+    const newDiscovered = new Set();
+    const newDiscoveredLinks = new Set();
+
+    for (const link of discoveredLinks) {
+        newDiscovered.add(link.source);
+        newDiscovered.add(link.target);
+        newDiscoveredLinks.add(`${link.source}|${link.target}`);
+    }
+
+    // Check if state actually changed
+    const changed = newDiscovered.size !== explorationState.discovered.size ||
+        newDiscoveredLinks.size !== explorationState.discoveredLinks.size;
+
+    if (changed) {
+        explorationState.discovered = newDiscovered;
+        explorationState.discoveredLinks = newDiscoveredLinks;
+        State.saveExplorationToStorage();
+        State.emit('graphNeedsRender', { preservePositions: true });
     }
 }
 
@@ -270,6 +338,108 @@ export function propagatePreexistingDiscoveries() {
 // ============================================================
 // PATH FINDING
 // ============================================================
+
+/**
+ * Check if a node is accessible from START_NODE via discovered links.
+ */
+function isAccessibleFromStart(nodeId) {
+    if (nodeId === State.START_NODE) return true;
+
+    const explorationState = State.getExplorationState();
+    if (!explorationState) return false;
+
+    // BFS through discovered links
+    const visited = new Set([State.START_NODE]);
+    const queue = [State.START_NODE];
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+
+        // Check all discovered links for connections
+        for (const linkId of explorationState.discoveredLinks) {
+            const [src, tgt] = linkId.split('|');
+            let neighbor = null;
+
+            // Can traverse in either direction
+            if (src === current && !visited.has(tgt)) {
+                neighbor = tgt;
+            } else if (tgt === current && !visited.has(src)) {
+                neighbor = src;
+            }
+
+            if (neighbor) {
+                if (neighbor === nodeId) return true;
+                visited.add(neighbor);
+                queue.push(neighbor);
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Find path from START_NODE to target, prioritizing discovered nodes.
+ * Returns array of {fromNodeId, toNodeId, link} for each step.
+ */
+function findPathPrioritizingDiscovered(targetId) {
+    if (targetId === State.START_NODE) return [];
+
+    const graphData = State.getGraphData();
+    const explorationState = State.getExplorationState();
+    if (!graphData || !explorationState) return [];
+
+    const nodeConnections = buildNodeConnectionsMap(graphData);
+
+    // BFS with priority for discovered nodes
+    const visited = new Set([State.START_NODE]);
+    const queue = [{nodeId: State.START_NODE, path: []}];
+
+    while (queue.length > 0) {
+        const {nodeId: current, path} = queue.shift();
+        const conns = nodeConnections.get(current);
+        if (!conns) continue;
+
+        // Split neighbors into discovered/undiscovered
+        const discoveredNeighbors = [];
+        const undiscoveredNeighbors = [];
+
+        for (const {link, reversed} of conns.outgoing) {
+            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+            const targetNodeId = typeof link.target === 'object' ? link.target.id : link.target;
+            const neighborId = reversed ? sourceId : targetNodeId;
+
+            if (visited.has(neighborId)) continue;
+
+            const step = {fromNodeId: current, toNodeId: neighborId, link};
+
+            if (explorationState.discovered.has(neighborId)) {
+                discoveredNeighbors.push({neighborId, step});
+            } else {
+                undiscoveredNeighbors.push({neighborId, step});
+            }
+        }
+
+        // Process discovered first, then undiscovered
+        for (const {neighborId, step} of [...discoveredNeighbors, ...undiscoveredNeighbors]) {
+            const newPath = [...path, step];
+
+            if (neighborId === targetId) {
+                return newPath;
+            }
+
+            visited.add(neighborId);
+            // Insert discovered at front for priority
+            if (explorationState.discovered.has(neighborId)) {
+                queue.unshift({nodeId: neighborId, path: newPath});
+            } else {
+                queue.push({nodeId: neighborId, path: newPath});
+            }
+        }
+    }
+
+    return []; // No path found
+}
 
 /**
  * Discover all nodes on the path from Starting Area to target

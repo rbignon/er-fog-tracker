@@ -150,10 +150,20 @@ class PropagatedLink(BaseModel):
     target: str
 
 
+class DiscoveredLink(BaseModel):
+    """A discovered link with metadata."""
+
+    source: str
+    target: str
+    discovered_at: str | None = None
+    discovered_by: str | None = None
+
+
 class DiscoveryResponse(BaseModel):
     """Response after creating a discovery."""
 
     propagated: list[PropagatedLink]
+    discovered_links: list[DiscoveredLink]
 
 
 # =============================================================================

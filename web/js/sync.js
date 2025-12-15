@@ -1044,7 +1044,7 @@ export async function connectAsHost(gameId) {
 
             // Discovery from mod
             if (data.type === 'discovery') {
-                handleDiscoveryFromServer(data.propagated);
+                handleDiscoveryFromServer(data.propagated, data.discovered_links);
                 return;
             }
         };
@@ -1134,7 +1134,7 @@ export async function connectAsViewer(gameId) {
 
             // Discovery from server
             if (data.type === 'discovery') {
-                handleDiscoveryFromServer(data.propagated);
+                handleDiscoveryFromServer(data.propagated, data.discovered_links);
                 return;
             }
         };
@@ -1224,31 +1224,65 @@ async function handleGameWsDisconnect() {
 
 /**
  * Handle discovery messages from server (mod or other source).
+ * Server is the source of truth - apply the full state it sends.
  */
-function handleDiscoveryFromServer(propagated) {
-    if (!propagated || !Array.isArray(propagated)) return;
-
+function handleDiscoveryFromServer(propagated, discoveredLinks) {
     const explorationState = State.getExplorationState();
+    if (!explorationState) return;
+
     let changed = false;
 
-    for (const link of propagated) {
-        const { source, target } = link;
+    // If server sent full discovered_links, use it directly (server is source of truth)
+    if (discoveredLinks && Array.isArray(discoveredLinks)) {
+        // Rebuild discovered nodes and links from server state
+        const newDiscovered = new Set();
+        const newDiscoveredLinks = new Set();
 
-        // Add to discovered
-        if (!explorationState.discovered.has(source)) {
-            explorationState.discovered.add(source);
-            changed = true;
-        }
-        if (!explorationState.discovered.has(target)) {
-            explorationState.discovered.add(target);
-            changed = true;
+        for (const link of discoveredLinks) {
+            const source = link.source;
+            const target = link.target;
+            newDiscovered.add(source);
+            newDiscovered.add(target);
+            newDiscoveredLinks.add(`${source}|${target}`);
         }
 
-        // Add to discovered links
-        const linkId = `${source}|${target}`;
-        if (!explorationState.discoveredLinks.has(linkId)) {
-            explorationState.discoveredLinks.add(linkId);
+        // Check if anything changed
+        if (newDiscovered.size !== explorationState.discovered.size ||
+            newDiscoveredLinks.size !== explorationState.discoveredLinks.size) {
             changed = true;
+        } else {
+            // Size same, check contents
+            for (const node of newDiscovered) {
+                if (!explorationState.discovered.has(node)) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+
+        if (changed) {
+            explorationState.discovered = newDiscovered;
+            explorationState.discoveredLinks = newDiscoveredLinks;
+        }
+    } else if (propagated && Array.isArray(propagated)) {
+        // Fallback: legacy mode without full state (shouldn't happen with updated server)
+        for (const link of propagated) {
+            const { source, target } = link;
+
+            if (!explorationState.discovered.has(source)) {
+                explorationState.discovered.add(source);
+                changed = true;
+            }
+            if (!explorationState.discovered.has(target)) {
+                explorationState.discovered.add(target);
+                changed = true;
+            }
+
+            const linkId = `${source}|${target}`;
+            if (!explorationState.discoveredLinks.has(linkId)) {
+                explorationState.discoveredLinks.add(linkId);
+                changed = true;
+            }
         }
     }
 

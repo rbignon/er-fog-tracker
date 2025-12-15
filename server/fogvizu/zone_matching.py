@@ -55,6 +55,36 @@ def build_preexisting_adjacency(
     return adj
 
 
+def build_full_adjacency(
+    zone_pairs: list[dict],
+) -> dict[str, list[tuple[str, bool, dict]]]:
+    """
+    Build adjacency list for ALL links (random and preexisting).
+    Returns dict[source] -> list of (destination, is_bidirectional, pair)
+
+    Random links are always bidirectional (fog gates can be traversed both ways).
+    Preexisting links are bidirectional only if a reverse link exists.
+    """
+    adj: dict[str, list[tuple[str, bool, dict]]] = defaultdict(list)
+
+    for pair in zone_pairs:
+        source = pair["source"]
+        dest = pair["destination"]
+
+        if pair["type"] == "random":
+            # Random links are bidirectional
+            adj[source].append((dest, True, pair))
+            adj[dest].append((source, True, pair))
+        else:
+            # Preexisting links: one-way unless reverse exists
+            is_bidir = not is_one_way(pair, zone_pairs)
+            adj[source].append((dest, is_bidir, pair))
+            if is_bidir:
+                adj[dest].append((source, True, pair))
+
+    return adj
+
+
 def get_discovered_nodes(discovered_links: list[dict]) -> set[str]:
     """
     Get all discovered nodes from discovered links.
@@ -285,6 +315,109 @@ def is_link_discovered(discovered_links: list[dict], source: str, target: str) -
         ):
             return True
     return False
+
+
+def is_accessible_from_start(
+    discovered_links: list[dict],
+    target_node: str,
+) -> bool:
+    """
+    Check if a node is accessible from START_NODE via discovered links.
+    """
+    if target_node == START_NODE:
+        return True
+
+    # BFS through discovered links
+    visited = {START_NODE}
+    queue = [START_NODE]
+
+    while queue:
+        current = queue.pop(0)
+        for dl in discovered_links:
+            src = dl.get("source", "")
+            tgt = dl.get("target", "")
+            neighbor = None
+
+            # Can traverse in either direction (discovered links are bidirectional)
+            if src == current and tgt not in visited:
+                neighbor = tgt
+            elif tgt == current and src not in visited:
+                neighbor = src
+
+            if neighbor:
+                if neighbor == target_node:
+                    return True
+                visited.add(neighbor)
+                queue.append(neighbor)
+
+    return False
+
+
+def find_path_prioritizing_discovered(
+    zone_pairs: list[dict],
+    discovered_links: list[dict],
+    target_node: str,
+) -> list[tuple[str, str]]:
+    """
+    Find the shortest path from START_NODE to target_node, prioritizing discovered nodes.
+
+    Uses a modified BFS that explores discovered nodes first at each level.
+    This ensures the path passes through as many already-discovered nodes as possible.
+
+    Returns:
+        List of (source, target) tuples representing the links on the path.
+        Empty list if no path exists or if target is START_NODE.
+    """
+    if target_node == START_NODE:
+        return []
+
+    full_adj = build_full_adjacency(zone_pairs)
+    discovered_nodes = get_discovered_nodes(discovered_links)
+
+    # BFS with priority for discovered nodes
+    # Each entry: (current_node, path_so_far)
+    # path_so_far is a list of (source, target) tuples
+    visited = {START_NODE}
+    queue = [(START_NODE, [])]
+
+    while queue:
+        current, path = queue.pop(0)
+
+        # Get neighbors and split into discovered/undiscovered
+        neighbors = full_adj.get(current, [])
+        discovered_neighbors = []
+        undiscovered_neighbors = []
+
+        for dest, _is_bidir, pair in neighbors:
+            if dest in visited:
+                continue
+
+            # Determine the link direction for recording
+            if pair["source"] == current:
+                link = (current, pair["destination"])
+            else:
+                link = (current, pair["source"])
+
+            if dest in discovered_nodes:
+                discovered_neighbors.append((dest, link))
+            else:
+                undiscovered_neighbors.append((dest, link))
+
+        # Process discovered neighbors first (they stay at the front of the queue)
+        for dest, link in discovered_neighbors + undiscovered_neighbors:
+            new_path = path + [link]
+
+            if dest == target_node:
+                return new_path
+
+            visited.add(dest)
+            # Insert discovered neighbors at front to prioritize them
+            if dest in discovered_nodes:
+                queue.insert(0, (dest, new_path))
+            else:
+                queue.append((dest, new_path))
+
+    return []  # No path found
 
 
 def compute_zone_exits(

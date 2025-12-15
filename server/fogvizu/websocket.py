@@ -250,17 +250,26 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                     )
                     await db.commit()
 
+                    # Refetch game to get full discovered_links
+                    result = await db.execute(select(Game).where(Game.id == game_id))
+                    game_updated = result.scalar_one_or_none()
+                    all_discovered_links = game_updated.discovered_links if game_updated else []
+
                     # Send ack to mod
                     ack_msg = {"type": "discovery_ack", "propagated": propagated}
                     logger.info("[MOD TX] Ack with %d propagated links", len(propagated))
                     logger.debug("[MOD TX] %s", ack_msg)
                     await websocket.send_json(ack_msg)
 
-                    # Broadcast to host and viewers
+                    # Broadcast to host and viewers (with full state)
                     if propagated:
                         await manager.broadcast_to_all(
                             game_id,
-                            {"type": "discovery", "propagated": propagated},
+                            {
+                                "type": "discovery",
+                                "propagated": propagated,
+                                "discovered_links": all_discovered_links,
+                            },
                             exclude=websocket,
                         )
 
@@ -481,11 +490,18 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                     logger.debug("[MOD TX] %s", ack_msg)
                     await websocket.send_json(ack_msg)
 
-                    # Broadcast to host and viewers
+                    # Broadcast to host and viewers (with full state)
                     if all_propagated:
+                        all_discovered_links = (
+                            game_for_exits.discovered_links if game_for_exits else []
+                        )
                         await manager.broadcast_to_all(
                             game_id,
-                            {"type": "discovery", "propagated": all_propagated},
+                            {
+                                "type": "discovery",
+                                "propagated": all_propagated,
+                                "discovered_links": all_discovered_links,
+                            },
                             exclude=websocket,
                         )
 
@@ -609,10 +625,19 @@ async def handle_host_connection(websocket: WebSocket, game_id: UUID):
                         )
                         await db.commit()
 
-                        # Broadcast to all
+                        # Refetch game to get full discovered_links
+                        result = await db.execute(select(Game).where(Game.id == game_id))
+                        game_updated = result.scalar_one_or_none()
+                        all_discovered_links = game_updated.discovered_links if game_updated else []
+
+                        # Broadcast to all (with full state)
                         await manager.broadcast_to_all(
                             game_id,
-                            {"type": "discovery", "propagated": propagated},
+                            {
+                                "type": "discovery",
+                                "propagated": propagated,
+                                "discovered_links": all_discovered_links,
+                            },
                             exclude=websocket,
                         )
 

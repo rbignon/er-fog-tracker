@@ -14,6 +14,7 @@ from fogvizu.config import settings
 from fogvizu.database import Game, User, get_db
 from fogvizu.game_logic import compute_total_zones, get_discovered_nodes, propagate_discovery
 from fogvizu.models import (
+    DiscoveredLink,
     DiscoveredLinkResponse,
     DiscoveryCreate,
     DiscoveryResponse,
@@ -272,9 +273,22 @@ async def create_discovery(
 
     # Propagate discovery
     propagated = await propagate_discovery(
-        db, game_id, data.source, data.target, discovered_by="mod"
+        db, game_id, data.source, data.target, discovered_by="web"
     )
 
+    # Refresh game to get updated discovered_links
+    await db.refresh(game)
+    all_links = game.discovered_links or []
+
     return DiscoveryResponse(
-        propagated=[PropagatedLink(source=p["source"], target=p["target"]) for p in propagated]
+        propagated=[PropagatedLink(source=p["source"], target=p["target"]) for p in propagated],
+        discovered_links=[
+            DiscoveredLink(
+                source=dl["source"],
+                target=dl["target"],
+                discovered_at=dl.get("discovered_at"),
+                discovered_by=dl.get("discovered_by"),
+            )
+            for dl in all_links
+        ],
     )
