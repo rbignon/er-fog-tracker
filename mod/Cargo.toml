@@ -12,10 +12,6 @@ crate-type = ["cdylib"]
 name = "fog_rando_tracker"
 
 [[bin]]
-name = "fog-rando-tracker-injector"
-path = "src/injector.rs"
-
-[[bin]]
 name = "fog-rando-tracker-launcher"
 path = "src/launcher/main.rs"
 
