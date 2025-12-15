@@ -370,7 +370,8 @@ impl LauncherApp {
             if let Some(ref mut monitor) = data.process_monitor {
                 monitor.poll();
 
-                match (&data.current_screen, monitor.state()) {
+                let monitor_state = monitor.state().clone();
+                match (&data.current_screen, &monitor_state) {
                     (AppScreen::WaitingForGame, ProcessState::Running)
                         if monitor.ready_to_inject() =>
                     {
@@ -404,6 +405,7 @@ impl LauncherApp {
                         self.waiting_status.set_text("Please launch the game");
                     }
                     (AppScreen::Injected, ProcessState::NotRunning) => {
+                        monitor.reset();
                         data.current_screen = AppScreen::GameSelection;
                         self.show_screen(AppScreen::GameSelection);
                         data.load_games();
