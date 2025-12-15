@@ -256,7 +256,7 @@ pub struct LauncherApp {
 
 impl LauncherApp {
     fn init(&self) {
-        let mut data = AppData::new();
+        let data = AppData::new();
 
         // Setup ListView columns
         self.games_list.insert_column("Name");
@@ -566,13 +566,14 @@ impl LauncherApp {
     }
 
     fn on_browse_spoiler_click(&self) {
-        let file_dialog = nwg::FileDialog::default();
+        let mut file_dialog = nwg::FileDialog::default();
 
-        if let Err(_) = nwg::FileDialog::builder()
+        if nwg::FileDialog::builder()
             .title("Select Spoiler Log")
             .action(nwg::FileDialogAction::Open)
             .filters("Text Files (*.txt)")
-            .build(&file_dialog)
+            .build(&mut file_dialog)
+            .is_err()
         {
             return;
         }
