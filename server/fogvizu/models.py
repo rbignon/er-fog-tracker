@@ -82,6 +82,7 @@ class GameSummary(BaseModel):
     label: str | None
     discovery_count: int
     total_zones: int
+    mod_connected: bool = False
     created_at: datetime
     updated_at: datetime
 

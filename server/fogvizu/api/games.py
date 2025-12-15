@@ -28,6 +28,7 @@ from fogvizu.models import (
     PropagatedLink,
     Zone,
 )
+from fogvizu.websocket import manager as ws_manager
 
 router = APIRouter()
 
@@ -167,6 +168,7 @@ async def get_my_games(
                 label=game.label,
                 discovery_count=len(discovered_links),
                 total_zones=total_zones,
+                mod_connected=ws_manager.is_mod_connected(game.id),
                 created_at=game.created_at,
                 updated_at=game.updated_at,
             )

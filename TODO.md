@@ -124,145 +124,7 @@
 
 ---
 
-## 7. Make in-game overlay transparent and polished
-
-**Context**: The ImGui overlay in the Rust mod looks too much like a window.
-
-**Chosen approach**: Fully configurable colors and opacity via TOML config file.
-
-### Configuration structure
-
-Extend `OverlaySettings` in `config.rs`:
-
-```rust
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OverlaySettings {
-    #[serde(default = "default_font_scale")]
-    pub font_scale: f32,
-
-    /// Background color as hex string "#RRGGBB"
-    #[serde(default = "default_bg_color")]
-    pub background_color: String,
-
-    /// Background opacity (0.0 = transparent, 1.0 = opaque)
-    #[serde(default = "default_bg_opacity")]
-    pub background_opacity: f32,
-
-    /// Main text color "#RRGGBB"
-    #[serde(default = "default_text_color")]
-    pub text_color: String,
-
-    /// Disabled/secondary text color "#RRGGBB"
-    #[serde(default = "default_text_disabled_color")]
-    pub text_disabled_color: String,
-
-    /// Discovered exit color "#RRGGBB"
-    #[serde(default = "default_discovered_color")]
-    pub discovered_color: String,
-
-    /// Undiscovered exit color "#RRGGBB"
-    #[serde(default = "default_undiscovered_color")]
-    pub undiscovered_color: String,
-
-    /// Show window border
-    #[serde(default = "default_show_border")]
-    pub show_border: bool,
-
-    /// Border color "#RRGGBB" (only if show_border = true)
-    #[serde(default = "default_border_color")]
-    pub border_color: String,
-}
-
-fn default_bg_color() -> String { "#141414".to_string() }
-fn default_bg_opacity() -> f32 { 0.7 }
-fn default_text_color() -> String { "#FFFFFF".to_string() }
-fn default_text_disabled_color() -> String { "#808080".to_string() }
-fn default_discovered_color() -> String { "#80FF80".to_string() }
-fn default_undiscovered_color() -> String { "#B3B3B3".to_string() }
-fn default_show_border() -> bool { false }
-fn default_border_color() -> String { "#404040".to_string() }
-```
-
-### Example config file
-
-```toml
-[overlay]
-font_scale = 1.2
-
-# Colors (hex format "#RRGGBB")
-background_color = "#141414"
-background_opacity = 0.7
-text_color = "#FFFFFF"
-text_disabled_color = "#808080"
-discovered_color = "#80FF80"
-undiscovered_color = "#B3B3B3"
-
-# Border
-show_border = false
-border_color = "#404040"
-```
-
-### Helper function for hex parsing
-
-```rust
-/// Parse hex color "#RRGGBB" to [f32; 4] for ImGui
-fn parse_hex_color(hex: &str, alpha: f32) -> [f32; 4] {
-    let hex = hex.trim_start_matches('#');
-    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255);
-    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(255);
-    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255);
-    [r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, alpha]
-}
-```
-
-### Application in ui.rs
-
-```rust
-fn render(&mut self, ui: &mut hudhook::imgui::Ui) {
-    // ...
-
-    let s = &self.config.overlay;
-
-    // Parse colors from config
-    let bg = parse_hex_color(&s.background_color, s.background_opacity);
-    let text = parse_hex_color(&s.text_color, 1.0);
-    let text_disabled = parse_hex_color(&s.text_disabled_color, 1.0);
-    let border = if s.show_border {
-        parse_hex_color(&s.border_color, 1.0)
-    } else {
-        [0.0, 0.0, 0.0, 0.0]
-    };
-
-    // Push style colors (auto-popped at end of scope)
-    let _tokens = [
-        ui.push_style_color(StyleColor::WindowBg, bg),
-        ui.push_style_color(StyleColor::Text, text),
-        ui.push_style_color(StyleColor::TextDisabled, text_disabled),
-        ui.push_style_color(StyleColor::Border, border),
-    ];
-
-    // Remove window decorations
-    let window_flags = WindowFlags::NO_TITLE_BAR
-        | WindowFlags::ALWAYS_AUTO_RESIZE
-        | WindowFlags::NO_SCROLLBAR;
-
-    ui.window("FogRandoTracker")
-        .flags(window_flags)
-        // ...
-}
-```
-
-### Notes
-
-- Config changes require game restart (no hot reload for simplicity)
-- `text_colored()` calls in `render_position_section` should use `discovered_color` and `undiscovered_color` from config instead of hardcoded values
-- Consider adding `WindowFlags::NO_BACKGROUND` option if user sets opacity to 0
-
-**Files to modify**: `mod/src/config.rs`, `mod/src/ui.rs`
-
----
-
-## 8. Fix incorrect interchange display for pass-through nodes
+## 7. Fix incorrect interchange display for pass-through nodes
 
 **Problem**: Nodes with only 1 entrance and 1 exit are displayed as interchanges (hubs) on the graph.
 
@@ -290,7 +152,7 @@ const isHub = (node) => {
 
 ---
 
-## 9. Show mod connection status on website (host mode)
+## 8. Show mod connection status on website (host mode)
 
 **Implementation plan**:
 
@@ -315,7 +177,7 @@ const isHub = (node) => {
 
 ---
 
-## 10. Create game session directly from in-game mod
+## 9. Create game session directly from in-game mod
 
 **Goal**: Instead of uploading spoiler log on website, configure the mod with the spoiler log path and let it create the session.
 
@@ -338,7 +200,7 @@ const isHub = (node) => {
 
 ---
 
-## 11. Show required key items for exits in overlay
+## 10. Show required key items for exits in overlay
 
 **Context**: Some fog gates require key items (e.g., Stonesword Keys, specific quest items). The overlay should indicate this.
 
@@ -358,7 +220,7 @@ const isHub = (node) => {
 
 ---
 
-## 12. Global frontier view in overlay
+## 11. Global frontier view in overlay
 
 **Goal**: A view showing ALL accessible undiscovered fogs across the entire game, grouped by source zone.
 
@@ -390,7 +252,7 @@ FROM: Farum Azula - Dragon Temple
 
 ---
 
-## 13. Keyboard shortcuts in overlay
+## 12. Keyboard shortcuts in overlay
 
 **Goal**: Quick navigation and actions without mouse.
 
@@ -414,7 +276,7 @@ FROM: Farum Azula - Dragon Temple
 
 ---
 
-## 14. Bidirectional sync between overlay and website
+## 13. Bidirectional sync between overlay and website
 
 **Goal**: Actions in overlay reflect on site and vice-versa.
 
@@ -438,7 +300,7 @@ FROM: Farum Azula - Dragon Temple
 
 ---
 
-## 15. Offline queue for discoveries
+## 14. Offline queue for discoveries
 
 **Problem**: If server is unreachable, discoveries are lost.
 

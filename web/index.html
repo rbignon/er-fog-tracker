@@ -63,66 +63,35 @@
         </header>
 
         <main class="dashboard-main">
-            <section id="games-list-section">
-                <div id="games-list" class="games-grid">
-                    <!-- Populated dynamically -->
-                </div>
-                <div id="games-empty" class="games-empty hidden">
-                    <p>No games yet. Upload a spoiler log to get started!</p>
-                </div>
-                <div id="games-loading" class="games-loading">
-                    <p>Loading your games...</p>
-                </div>
-            </section>
-
-            <section id="new-game-section" class="new-game-section">
-                <h2>Start New Game</h2>
-                <div id="new-game-drop-zone" class="drop-zone">
-                    <div class="icon">📂</div>
-                    <p>Drop your spoiler log file here</p>
-                    <p class="hint">or click to browse</p>
-                </div>
-                <input type="file" id="new-game-file-input" accept=".txt,.log" class="hidden">
-                <div id="new-game-form" class="new-game-form hidden">
-                    <div class="form-row">
-                        <label for="new-game-label">Game Label (optional)</label>
-                        <input type="text" id="new-game-label" placeholder="e.g., Malenia Run">
-                    </div>
-                    <div class="form-row">
-                        <span class="seed-info">Seed: <span id="new-game-seed"></span></span>
-                    </div>
-                    <div class="form-actions">
-                        <button id="create-game-btn" class="btn-primary">Create Game</button>
-                        <button id="cancel-new-game-btn" class="btn-secondary">Cancel</button>
-                    </div>
-                </div>
-                <div id="new-game-error" class="error-message hidden"></div>
-            </section>
-
-            <section id="mod-settings-section" class="mod-settings-section">
-                <h2>Mod Integration</h2>
-                <p class="section-description">Use this token to connect the in-game mod to your account.</p>
-                <form class="mod-token-container" onsubmit="return false" autocomplete="off">
-                    <label for="mod-token-input">Mod Token:</label>
-                    <div class="mod-token-row">
-                        <input type="password" id="mod-token-input" readonly autocomplete="off">
-                        <button type="button" id="toggle-mod-token-btn" class="btn-secondary btn-small btn-icon" title="Show/hide token">
-                            <svg id="eye-icon-show" class="eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                            <svg id="eye-icon-hide" class="eye-icon hidden" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                                <line x1="1" y1="1" x2="23" y2="23"></line>
-                            </svg>
-                        </button>
-                        <button type="button" id="copy-mod-token-btn" class="btn-secondary btn-small" title="Copy to clipboard">Copy</button>
-                        <button type="button" id="regenerate-mod-token-btn" class="btn-secondary btn-small" title="Generate new token">Regenerate</button>
-                    </div>
-                </form>
-                <p class="mod-token-hint">Add this token to your mod's configuration file.</p>
-            </section>
+            <div id="games-list" class="games-grid">
+                <!-- Game cards populated dynamically, including placeholder card -->
+            </div>
+            <div id="games-loading" class="games-loading">
+                <p>Loading your games...</p>
+            </div>
+            <!-- Hidden file input for new game -->
+            <input type="file" id="new-game-file-input" accept=".txt,.log" class="hidden">
         </main>
+    </div>
+
+    <!-- New Game Modal -->
+    <div id="new-game-modal" class="modal hidden">
+        <div class="modal-content">
+            <button id="close-new-game-modal" class="modal-close-btn">&times;</button>
+            <h3>Create New Game</h3>
+            <div class="form-row">
+                <label for="new-game-label">Game Label (optional)</label>
+                <input type="text" id="new-game-label" placeholder="e.g., Malenia Run">
+            </div>
+            <div class="form-row">
+                <span class="seed-info">Seed: <span id="new-game-seed"></span></span>
+            </div>
+            <div id="new-game-error" class="error-message hidden"></div>
+            <div class="form-actions">
+                <button id="cancel-new-game-btn" class="btn-secondary">Cancel</button>
+                <button id="create-game-btn" class="btn-primary">Create Game</button>
+            </div>
+        </div>
     </div>
 
     <!-- =========================================================================
@@ -208,6 +177,9 @@
                     <div id="search-dropdown"></div>
                 </div>
                 <div id="controls-right">
+                    <button id="mod-btn" class="hidden" title="Mod configuration">
+                        <span class="mod-btn-indicator"></span>Mod
+                    </button>
                     <button id="stream-btn" title="Share viewer URL for OBS">Stream</button>
                     <button id="new-file-btn">Load New File</button>
                 </div>

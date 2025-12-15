@@ -333,6 +333,44 @@ body::before {
     color: #a0e8b0;
 }
 
+/* Mod button */
+#mod-btn {
+    background: rgba(70, 130, 180, 0.3);
+    border: 1px solid #4682b4;
+    color: #a0c8e8;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#mod-btn:hover {
+    background: rgba(70, 130, 180, 0.5);
+    border-color: #6090c0;
+    color: #c0e0ff;
+}
+
+/* Mod button connection indicator */
+.mod-btn-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4a4a4a;
+    transition: all 0.3s;
+}
+
+.mod-btn-indicator.mod-connected {
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+    animation: pulse 2s infinite;
+}
+
 /* Stream modal */
 #stream-modal {
     display: none;
@@ -1820,7 +1858,8 @@ marker path {
     #controls .control-group,
     #new-file-btn,
     #reset-exploration-btn,
-    #stream-btn {
+    #stream-btn,
+    #mod-btn {
         display: none !important;
     }
     
@@ -2385,7 +2424,72 @@ marker path {
     text-decoration: none;
 }
 
-/* New game section */
+/* Mod connection indicator */
+.mod-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.mod-indicator.mod-connected {
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+}
+
+/* Placeholder card (new game) */
+.game-card-placeholder {
+    border: 2px dashed #3a3530;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.game-card-placeholder:hover {
+    border-color: #5a5040;
+    background: rgba(26, 24, 21, 0.5);
+}
+
+.game-card-placeholder.drag-over {
+    border-color: #c9a227;
+    background: rgba(201, 162, 39, 0.1);
+}
+
+.placeholder-content {
+    text-align: center;
+    padding: 20px;
+}
+
+.placeholder-icon {
+    font-size: 3rem;
+    color: #5a5040;
+    line-height: 1;
+    margin-bottom: 12px;
+}
+
+.game-card-placeholder:hover .placeholder-icon {
+    color: #c9a227;
+}
+
+.placeholder-text {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    color: #9a8d75;
+    margin-bottom: 4px;
+}
+
+.placeholder-hint {
+    font-size: 0.8rem;
+    color: #5a5040;
+}
+
+/* New game section (deprecated, kept for compatibility) */
 .new-game-section {
     background: linear-gradient(145deg, #1a1815 0%, #12100d 100%);
     border: 1px solid #3a3530;

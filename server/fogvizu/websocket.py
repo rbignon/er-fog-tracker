@@ -49,6 +49,11 @@ class ConnectionManager:
         if room and not room.mod and not room.host and not room.viewers:
             del self.rooms[game_id]
 
+    def is_mod_connected(self, game_id: UUID) -> bool:
+        """Check if a mod is connected to a game."""
+        room = self.rooms.get(game_id)
+        return room is not None and room.mod is not None
+
     async def broadcast_to_viewers(self, game_id: UUID, message: dict):
         """Broadcast message to all viewers of a game."""
         room = self.rooms.get(game_id)
