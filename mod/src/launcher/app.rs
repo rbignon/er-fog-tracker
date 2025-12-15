@@ -324,14 +324,11 @@ impl LauncherApp {
                     data.games = games.clone();
                     self.games_list.clear();
                     for game in &games {
-                        self.games_list.insert_items_row(
-                            None,
-                            &[
-                                game.display_name(),
-                                game.seed.to_string(),
-                                game.progress_text(),
-                            ],
-                        );
+                        let name = game.display_name();
+                        let seed = game.seed.to_string();
+                        let progress = game.progress_text();
+                        self.games_list
+                            .insert_items_row(None, &[&name, &seed, &progress]);
                     }
                     // Pre-select last game
                     if let Some(ref last_id) = data.config.last_game_id {
@@ -509,7 +506,10 @@ impl LauncherApp {
     }
 
     fn on_game_selected(&self) {
-        let mut data_ref = self.data.borrow_mut();
+        // Use try_borrow_mut to avoid panic if already borrowed (e.g., during clear())
+        let Ok(mut data_ref) = self.data.try_borrow_mut() else {
+            return;
+        };
         let data = match data_ref.as_mut() {
             Some(d) => d,
             None => return,
