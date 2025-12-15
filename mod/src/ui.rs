@@ -74,6 +74,9 @@ impl ImguiRenderLoop for FogRandoTracker {
 
         let s = &self.config.overlay;
 
+        // Scale factor for window positioning (based on font size relative to default 16px)
+        let scale = s.font_size / 16.0;
+
         // Parse colors from config
         let bg_color = parse_hex_color(&s.background_color, s.background_opacity);
         let text_color = parse_hex_color(&s.text_color, 1.0);
@@ -96,7 +99,7 @@ impl ImguiRenderLoop for FogRandoTracker {
             WindowFlags::NO_TITLE_BAR | WindowFlags::ALWAYS_AUTO_RESIZE | WindowFlags::NO_SCROLLBAR;
 
         ui.window("FogRandoTracker")
-            .position([dw - 350.0, 20.0], Condition::FirstUseEver)
+            .position([dw - 350.0 * scale, 20.0], Condition::FirstUseEver)
             .flags(window_flags)
             .build(|| {
                 self.render_header(ui);
