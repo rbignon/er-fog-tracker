@@ -1,11 +1,20 @@
 // Build script for FogRandoTracker
 // Copies the config file to the output directory after build
+// Embeds Windows manifest for the launcher (Common Controls v6)
 
 use std::env;
 use std::fs;
 use std::path::Path;
 
 fn main() {
+    // Embed Windows manifest for launcher (enables Common Controls v6)
+    #[cfg(feature = "launcher")]
+    {
+        println!("cargo:rerun-if-changed=launcher.rc");
+        println!("cargo:rerun-if-changed=launcher.manifest");
+        embed_resource::compile("launcher.rc", embed_resource::NONE);
+    }
+
     // Tell Cargo to rerun this script if the config file changes
     println!("cargo:rerun-if-changed=fog_rando_tracker.toml");
 

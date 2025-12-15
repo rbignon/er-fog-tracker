@@ -69,6 +69,9 @@ features = [
     "Win32_System_Threading",
 ]
 
+[build-dependencies]
+embed-resource = "2.4"
+
 [features]
 launcher = ["native-windows-gui", "native-windows-derive", "ureq", "dirs"]
 
