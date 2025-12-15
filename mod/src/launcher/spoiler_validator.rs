@@ -59,22 +59,39 @@ pub fn validate_spoiler_content(content: &str) -> Result<SpoilerHeader, Validati
 
 /// Extract seed number from the options line
 fn extract_seed(line: &str) -> Option<u64> {
-    // Look for "seed:" followed by digits
+    // Look for "seed:" followed immediately by digits
+    // The line may contain "Options and seed: " (with space) before the actual "seed:NUMBER"
     let seed_prefix = "seed:";
-    let seed_start = line.find(seed_prefix)?;
-    let after_prefix = &line[seed_start + seed_prefix.len()..];
 
-    // Extract digits
-    let digits: String = after_prefix
-        .chars()
-        .take_while(|c| c.is_ascii_digit())
-        .collect();
+    // Find all occurrences and look for one followed by digits
+    let mut search_start = 0;
+    while let Some(pos) = line[search_start..].find(seed_prefix) {
+        let abs_pos = search_start + pos;
+        let after_prefix = &line[abs_pos + seed_prefix.len()..];
 
-    if digits.is_empty() {
-        return None;
+        // Check if followed by digit
+        if after_prefix
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_digit())
+            .unwrap_or(false)
+        {
+            // Extract digits
+            let digits: String = after_prefix
+                .chars()
+                .take_while(|c| c.is_ascii_digit())
+                .collect();
+
+            if !digits.is_empty() {
+                return digits.parse().ok();
+            }
+        }
+
+        // Move past this occurrence
+        search_start = abs_pos + seed_prefix.len();
     }
 
-    digits.parse().ok()
+    None
 }
 
 /// Read file content (for uploading to server)
@@ -92,13 +109,25 @@ mod tests {
 
     #[test]
     fn test_extract_seed() {
+        // Simple case
+        assert_eq!(extract_seed("seed:12345"), Some(12345));
+
+        // Seed at end of options
         assert_eq!(
             extract_seed("Options and seed:1851144969 other stuff"),
             Some(1851144969)
         );
-        assert_eq!(extract_seed("seed:12345"), Some(12345));
+
+        // Real format: "Options and seed: " (with space) followed later by "seed:NUMBER"
+        assert_eq!(
+            extract_seed("Options and seed: allmaps fog seed:2066485568 --preset"),
+            Some(2066485568)
+        );
+
+        // No seed
         assert_eq!(extract_seed("no seed here"), None);
         assert_eq!(extract_seed("seed:"), None);
+        assert_eq!(extract_seed("seed: "), None); // space after colon
         assert_eq!(extract_seed("seed:abc"), None);
     }
 
@@ -107,6 +136,14 @@ mod tests {
         let content = "Options and seed:1851144969 fog:true\nChapel of Anticipation\n";
         let header = validate_spoiler_content(content).unwrap();
         assert_eq!(header.seed, 1851144969);
+    }
+
+    #[test]
+    fn test_validate_content_real_format() {
+        // Real spoiler log format with "seed: " (space) before "seed:NUMBER"
+        let content = "Options and seed: allmaps fog seed:2066485568 --preset\nChapel\n";
+        let header = validate_spoiler_content(content).unwrap();
+        assert_eq!(header.seed, 2066485568);
     }
 
     #[test]
