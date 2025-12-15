@@ -385,12 +385,16 @@ fn websocket_thread(
             break;
         }
 
-        // Build WebSocket URL
-        let ws_url = format!(
-            "{}/ws/mod/{}",
-            settings.url.trim_end_matches('/'),
-            settings.game_id
-        );
+        // Build WebSocket URL (convert http(s) to ws(s))
+        let base_url = settings.url.trim_end_matches('/');
+        let ws_base = if base_url.starts_with("https://") {
+            base_url.replacen("https://", "wss://", 1)
+        } else if base_url.starts_with("http://") {
+            base_url.replacen("http://", "ws://", 1)
+        } else {
+            base_url.to_string()
+        };
+        let ws_url = format!("{}/ws/mod/{}", ws_base, settings.game_id);
 
         println!("[WS] Connecting to {}...", ws_url);
         let _ = incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Connecting));
