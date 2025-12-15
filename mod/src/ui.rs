@@ -1,7 +1,7 @@
 // UI Rendering - ImGui overlay implementation
 
-use hudhook::imgui::{Condition, StyleColor, WindowFlags};
-use hudhook::ImguiRenderLoop;
+use hudhook::imgui::{Condition, FontConfig, FontGlyphRanges, FontSource, StyleColor, WindowFlags};
+use hudhook::{ImguiRenderLoop, RenderContext};
 
 use crate::config::parse_hex_color;
 use crate::tracker::FogRandoTracker;
@@ -12,6 +12,41 @@ use crate::websocket::ConnectionStatus;
 // =============================================================================
 
 impl ImguiRenderLoop for FogRandoTracker {
+    fn initialize<'a>(
+        &'a mut self,
+        ctx: &mut hudhook::imgui::Context,
+        _render_context: &'a mut dyn RenderContext,
+    ) {
+        // Load custom font if data was pre-loaded
+        if let Some(ref font_data) = self.font_data {
+            let font_size = self.config.overlay.font_size;
+
+            // Define glyph ranges: Basic Latin + Latin Extended + common symbols
+            // This includes characters like ● (U+25CF) and → (U+2192)
+            let glyph_ranges = FontGlyphRanges::from_slice(&[
+                0x0020, 0x00FF, // Basic Latin + Latin Supplement
+                0x2000, 0x206F, // General Punctuation
+                0x2500,
+                0x25FF, // Box Drawing + Block Elements + Geometric Shapes (includes ●)
+                0x2190, 0x21FF, // Arrows (includes →)
+                0,
+            ]);
+
+            ctx.fonts().add_font(&[FontSource::TtfData {
+                data: font_data,
+                size_pixels: font_size,
+                config: Some(FontConfig {
+                    glyph_ranges,
+                    ..FontConfig::default()
+                }),
+            }]);
+
+            println!("Custom font registered with imgui (size: {}px)", font_size);
+        } else {
+            println!("Using default imgui font");
+        }
+    }
+
     fn render(&mut self, ui: &mut hudhook::imgui::Ui) {
         // Handle keyboard shortcuts
         self.handle_hotkeys();

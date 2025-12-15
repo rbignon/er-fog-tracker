@@ -1,5 +1,6 @@
 // FogRandoTracker - Fog gate traversal tracking for Fog Gate Randomizer
 
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use windows::Win32::Foundation::HINSTANCE;
@@ -42,12 +43,19 @@ pub struct FogRandoTracker {
     pub(crate) discovery_stats: Option<DiscoveryStats>,
     /// Last known map_id (to detect teleportation)
     last_map_id: Option<u32>,
+    /// Directory where the DLL is located (for loading fonts, etc.)
+    pub(crate) dll_dir: PathBuf,
+    /// Font data loaded from file (must persist for imgui)
+    pub(crate) font_data: Option<Vec<u8>>,
 }
 
 impl FogRandoTracker {
     /// Create a new FogRandoTracker instance
     pub fn new(hmodule: HINSTANCE) -> Option<Self> {
         println!("Initializing FogRandoTracker...");
+
+        // Get DLL directory for loading resources
+        let dll_dir = Config::get_dll_directory(hmodule)?;
 
         // Load configuration - REQUIRED (from DLL directory)
         let config = match Config::load(hmodule) {
@@ -87,6 +95,9 @@ impl FogRandoTracker {
             println!("Server integration disabled (missing url, token, or game_id in config)");
         }
 
+        // Pre-load font data (will be used in initialize())
+        let font_data = Self::load_font_data(&dll_dir, &config.overlay.font_path);
+
         Some(Self {
             game_state,
             was_in_fog: false,
@@ -100,6 +111,8 @@ impl FogRandoTracker {
             current_exits: Vec::new(),
             discovery_stats: None,
             last_map_id: None,
+            dll_dir,
+            font_data,
         })
     }
 
@@ -266,5 +279,45 @@ impl FogRandoTracker {
     /// Check if server integration is enabled
     pub fn is_server_enabled(&self) -> bool {
         self.ws_client.is_enabled()
+    }
+
+    /// Load font data from file
+    fn load_font_data(dll_dir: &PathBuf, font_path: &str) -> Option<Vec<u8>> {
+        use std::fs;
+        use std::path::Path;
+
+        if font_path.is_empty() {
+            return None;
+        }
+
+        let path = Path::new(font_path);
+        let full_path = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            dll_dir.join(font_path)
+        };
+
+        if !full_path.exists() {
+            eprintln!(
+                "Font file not found: {}. Using default font.",
+                full_path.display()
+            );
+            return None;
+        }
+
+        match fs::read(&full_path) {
+            Ok(data) => {
+                println!(
+                    "Loaded font data from: {} ({} bytes)",
+                    full_path.display(),
+                    data.len()
+                );
+                Some(data)
+            }
+            Err(e) => {
+                eprintln!("Failed to read font file {}: {}", full_path.display(), e);
+                None
+            }
+        }
     }
 }

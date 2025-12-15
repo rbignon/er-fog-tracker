@@ -43,6 +43,14 @@ impl Default for KeyBindings {
 /// Overlay display settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OverlaySettings {
+    /// Path to TTF font file (relative to DLL or absolute)
+    #[serde(default = "default_font_path")]
+    pub font_path: String,
+
+    /// Font size in pixels
+    #[serde(default = "default_font_size")]
+    pub font_size: f32,
+
     /// Font scale factor (1.0 = default, 1.5 = 150%, etc.)
     #[serde(default = "default_font_scale")]
     pub font_scale: f32,
@@ -80,6 +88,12 @@ pub struct OverlaySettings {
     pub border_color: String,
 }
 
+fn default_font_path() -> String {
+    "Roboto-Regular.ttf".to_string()
+}
+fn default_font_size() -> f32 {
+    16.0
+}
 fn default_font_scale() -> f32 {
     1.0
 }
@@ -111,6 +125,8 @@ fn default_border_color() -> String {
 impl Default for OverlaySettings {
     fn default() -> Self {
         Self {
+            font_path: default_font_path(),
+            font_size: default_font_size(),
             font_scale: default_font_scale(),
             background_color: default_bg_color(),
             background_opacity: default_bg_opacity(),

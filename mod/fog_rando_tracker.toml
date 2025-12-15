@@ -55,8 +55,16 @@ toggle_debug = "f10"
 # Colors use hex format "#RRGGBB".
 #
 [overlay]
+# Path to TTF font file (relative to DLL directory or absolute path)
+# Place your font file next to the DLL, or specify a full path.
+# Leave empty to use the default imgui font.
+font_path = "Roboto-Regular.ttf"
+
+# Font size in pixels (16.0 is a good default for 1080p)
+font_size = 16.0
+
 # Font scale factor (1.0 = default size, 1.5 = 150%, 2.0 = 200%, etc.)
-# Increase this value if the overlay is too small on high-resolution displays.
+# Applied on top of font_size for quick adjustments.
 font_scale = 1.0
 
 # Background color and opacity
