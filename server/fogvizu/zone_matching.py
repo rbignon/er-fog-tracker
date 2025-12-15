@@ -219,28 +219,29 @@ def compute_total_zones(zone_pairs: list[dict]) -> int:
 
 def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]) -> dict:
     """
-    Compute discovery statistics.
+    Compute discovery statistics based on zones (not links).
 
     Returns:
         dict with:
-        - discovered: number of discovered random links
-        - total: total number of random links
+        - discovered: number of discovered zones
+        - total: total number of zones
         - percent: percentage discovered (0-100)
     """
-    # Count total random links (deduplicated, since they're bidirectional)
-    random_links = set()
+    # Collect all unique zones
+    all_zones = set()
     for pair in zone_pairs:
-        if pair["type"] == "random":
-            link_key = frozenset([pair["source"], pair["destination"]])
-            random_links.add(link_key)
-    total = len(random_links)
+        all_zones.add(pair["source"])
+        all_zones.add(pair["destination"])
+    total = len(all_zones)
 
-    # Count discovered random links
-    discovered_count = 0
-    for link_key in random_links:
-        src, tgt = tuple(link_key)
-        if is_link_discovered(discovered_links, src, tgt):
-            discovered_count += 1
+    # Collect discovered zones (appear in any discovered link)
+    discovered_zones = set()
+    for link in discovered_links:
+        discovered_zones.add(link["source"])
+        discovered_zones.add(link["target"])
+
+    # Only count zones that exist in the zone_pairs
+    discovered_count = len(discovered_zones & all_zones)
 
     percent = (discovered_count / total * 100) if total > 0 else 0
 
