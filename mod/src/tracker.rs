@@ -181,8 +181,13 @@ impl FogRandoTracker {
         // Log GameMan warp state changes
         self.log_warp_debug();
 
-        // Track map changes for context (but don't clear exits here anymore)
+        // Track map changes - clear zone info when map changes (teleport, death, fast travel, etc.)
         if let Some(pos) = self.game_state.read_position() {
+            if self.last_map_id != Some(pos.map_id) {
+                // Map changed - clear current zone until we get new info from server
+                self.current_zone = None;
+                self.current_exits.clear();
+            }
             self.last_map_id = Some(pos.map_id);
         }
 
