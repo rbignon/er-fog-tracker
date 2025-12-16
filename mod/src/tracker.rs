@@ -7,7 +7,8 @@ use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
 use crate::game_state::{
-    GameState, PlayerPosition, SpEffectDebugInfo, SpEffectReader, TeleportType,
+    GameManReader, GameState, PlayerPosition, SpEffectDebugInfo, SpEffectReader, TeleportType,
+    WarpInfo,
 };
 use crate::websocket::{
     ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient,
@@ -23,6 +24,16 @@ pub(crate) struct PendingEvent {
     entry: PlayerPosition,
 }
 
+/// Pending fast travel event (includes destination entity ID)
+#[derive(Clone, Debug)]
+pub(crate) struct PendingFastTravel {
+    entry: PlayerPosition,
+    /// Entity ID of the destination grace
+    destination_entity_id: u32,
+    /// Map ID of the destination
+    destination_map_id: u32,
+}
+
 // =============================================================================
 // FOG RANDO TRACKER
 // =============================================================================
@@ -31,6 +42,7 @@ pub(crate) struct PendingEvent {
 pub struct FogRandoTracker {
     game_state: GameState,
     sp_effect_reader: SpEffectReader,
+    game_man_reader: GameManReader,
     // Teleport event state tracking (per TeleportType)
     pub(crate) was_in_fog: bool,
     pub(crate) pending_fog: Option<PendingEvent>,
@@ -40,6 +52,9 @@ pub struct FogRandoTracker {
     pending_medal: Option<PendingEvent>,
     was_in_coffin: bool,
     pending_coffin: Option<PendingEvent>,
+    /// Fast travel state tracking
+    was_warp_requested: bool,
+    pending_fast_travel: Option<PendingFastTravel>,
     pub(crate) show_ui: bool,
     pub(crate) show_debug: bool,
     pub(crate) config: Config,
@@ -63,6 +78,8 @@ pub struct FogRandoTracker {
     last_logged_anim: Option<u32>,
     /// Last time we logged animation debug info
     last_anim_log_time: Instant,
+    /// Last logged warp_requested state
+    last_logged_warp_requested: bool,
 }
 
 impl FogRandoTracker {
@@ -100,6 +117,9 @@ impl FogRandoTracker {
         // Initialize SpEffect reader for teleporter detection
         let sp_effect_reader = SpEffectReader::new(game_state.base_addresses());
 
+        // Initialize GameMan reader for warp detection
+        let game_man_reader = GameManReader::new(game_state.base_addresses());
+
         println!("FogRandoTracker initialized!");
 
         // Initialize WebSocket client for server integration
@@ -120,6 +140,7 @@ impl FogRandoTracker {
         Some(Self {
             game_state,
             sp_effect_reader,
+            game_man_reader,
             // Teleport event state tracking
             was_in_fog: false,
             pending_fog: None,
@@ -129,6 +150,9 @@ impl FogRandoTracker {
             pending_medal: None,
             was_in_coffin: false,
             pending_coffin: None,
+            // Fast travel state tracking
+            was_warp_requested: false,
+            pending_fast_travel: None,
             show_ui: true,
             show_debug: false,
             config,
@@ -143,6 +167,7 @@ impl FogRandoTracker {
             last_speffect_log_time: Instant::now(),
             last_logged_anim: None,
             last_anim_log_time: Instant::now(),
+            last_logged_warp_requested: false,
         })
     }
 
@@ -153,6 +178,9 @@ impl FogRandoTracker {
 
         // Log animation changes (with deduplication)
         self.log_animation_debug();
+
+        // Log GameMan warp state changes
+        self.log_warp_debug();
 
         // Track map changes for context (but don't clear exits here anymore)
         if let Some(pos) = self.game_state.read_position() {
@@ -207,6 +235,32 @@ impl FogRandoTracker {
             self.on_event_exit(TeleportType::Coffin);
         }
         self.was_in_coffin = is_coffin;
+
+        // =========================================================================
+        // FAST TRAVEL DETECTION (GameMan.warp_requested without other events)
+        // =========================================================================
+        let warp_requested = self.game_man_reader.is_warp_requested();
+
+        if warp_requested && !self.was_warp_requested {
+            // Warp was just requested - check if it's a fast travel
+            // (no fog/waygate/medal/coffin event is pending or active)
+            let has_other_event = is_fog
+                || is_waygate
+                || is_medal
+                || is_coffin
+                || self.pending_fog.is_some()
+                || self.pending_waygate.is_some()
+                || self.pending_medal.is_some()
+                || self.pending_coffin.is_some();
+
+            if !has_other_event {
+                self.on_fast_travel_entry();
+            }
+        } else if self.pending_fast_travel.is_some() && !warp_requested {
+            // Warp completed - check for exit position
+            self.on_fast_travel_exit();
+        }
+        self.was_warp_requested = warp_requested;
     }
 
     /// Handle teleport event entry (start of animation/SpEffect)
@@ -236,6 +290,7 @@ impl FogRandoTracker {
                 TeleportType::Waygate => self.pending_waygate.take().map(|p| p.entry),
                 TeleportType::Medal => self.pending_medal.take().map(|p| p.entry),
                 TeleportType::Coffin => self.pending_coffin.take().map(|p| p.entry),
+                TeleportType::FastTravel => None, // Handled separately
             };
 
             if let Some(entry) = entry {
@@ -255,6 +310,55 @@ impl FogRandoTracker {
                 );
 
                 self.send_discovery(event_type, &entry, &exit_pos);
+            }
+        }
+    }
+
+    /// Handle fast travel entry (warp_requested becomes true without other events)
+    fn on_fast_travel_entry(&mut self) {
+        if let Some(pos) = self.game_state.read_position() {
+            let dest_entity_id = self.game_man_reader.get_destination_entity_id();
+            let dest_map_id = self.game_man_reader.get_destination_map_id();
+
+            println!(
+                "[FAST_TRAVEL] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) → dest_entity={} dest_map={}",
+                pos.map_id_str, pos.x, pos.y, pos.z, dest_entity_id, dest_map_id
+            );
+
+            self.pending_fast_travel = Some(PendingFastTravel {
+                entry: pos,
+                destination_entity_id: dest_entity_id,
+                destination_map_id: dest_map_id,
+            });
+        }
+    }
+
+    /// Handle fast travel exit (warp_requested becomes false, position available)
+    fn on_fast_travel_exit(&mut self) {
+        if let Some(exit_pos) = self.game_state.read_position() {
+            if let Some(pending) = self.pending_fast_travel.take() {
+                println!(
+                    "[FAST_TRAVEL] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
+                    exit_pos.map_id_str,
+                    exit_pos.x,
+                    exit_pos.y,
+                    exit_pos.z,
+                    exit_pos.play_region_id
+                );
+                println!(
+                    "[FAST_TRAVEL] Travel complete: {} → {} (dest_entity={}, dest_map={})",
+                    pending.entry.map_id_str,
+                    exit_pos.map_id_str,
+                    pending.destination_entity_id,
+                    pending.destination_map_id
+                );
+
+                // For now, just log - don't send to server since fast travel isn't randomized
+                // But we could add a separate message type for position tracking if needed
+                self.ws_client.send_debug_log(&format!(
+                    "[FAST_TRAVEL] {} → {} (grace_entity={})",
+                    pending.entry.map_id_str, exit_pos.map_id_str, pending.destination_entity_id
+                ));
             }
         }
     }
@@ -381,6 +485,33 @@ impl FogRandoTracker {
     /// Get SpEffect debug info for the debug UI section
     pub fn get_speffect_debug(&self) -> SpEffectDebugInfo {
         self.sp_effect_reader.get_debug_info()
+    }
+
+    /// Log GameMan warp state changes (with deduplication)
+    fn log_warp_debug(&mut self) {
+        let warp_requested = self.game_man_reader.is_warp_requested();
+
+        if warp_requested != self.last_logged_warp_requested {
+            let warp_info = self.game_man_reader.get_warp_info();
+            let msg = if warp_requested {
+                format!(
+                    "[GAMEMAN] >>> WARP REQUESTED <<< dest_entity={} dest_map={}",
+                    warp_info
+                        .as_ref()
+                        .map(|w| w.destination_entity_id)
+                        .unwrap_or(0),
+                    warp_info
+                        .as_ref()
+                        .map(|w| w.destination_map_id)
+                        .unwrap_or(0)
+                )
+            } else {
+                "[GAMEMAN] Warp completed".to_string()
+            };
+            println!("{}", msg);
+            self.ws_client.send_debug_log(&msg);
+            self.last_logged_warp_requested = warp_requested;
+        }
     }
 
     /// Log animation changes (with deduplication)

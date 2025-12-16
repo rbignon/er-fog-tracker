@@ -30,6 +30,24 @@ const SPEFFECT_CTRL_OFFSET: usize = 0x178;
 const DEBUG_TELEPORT_SPEFFECT_ID: u32 = 4280;
 
 // =============================================================================
+// GAMEMAN OFFSETS (from fromsoftware-rs analysis)
+// =============================================================================
+
+/// Offset of warp_requested bool in GameMan structure
+const GAMEMAN_WARP_REQUESTED_OFFSET: usize = 0x10;
+
+/// Offset of initial_area_entity_id in GameMan structure
+/// This is the entity ID of the warp destination (e.g., grace entity ID for fast travel)
+const GAMEMAN_INITIAL_AREA_ENTITY_ID_OFFSET: usize = 0x3C;
+
+/// Offset of load_target_block_id in GameMan structure
+/// This is the map ID (BlockId) of the warp destination
+const GAMEMAN_LOAD_TARGET_BLOCK_ID_OFFSET: usize = 0xAC8;
+
+/// SpEffect ID applied after spawning at a grace (fast travel, death, Memory of Grace)
+const GRACE_SPAWN_SPEFFECT_ID: u32 = 106;
+
+// =============================================================================
 // TELEPORT TYPE ENUM
 // =============================================================================
 
@@ -48,18 +66,22 @@ pub enum TeleportType {
     Medal,
     /// Coffin transport - no animation, detected via SpEffect only
     Coffin,
+    /// Fast travel to a grace - no animation before warp, detected via GameMan.warp_requested
+    FastTravel,
 }
 
 impl TeleportType {
     /// Animation ID that triggers this event type
     ///
     /// Returns None for event types detected via SpEffect only (e.g., Coffin)
+    /// or via GameMan (e.g., FastTravel)
     pub fn animation_id(&self) -> Option<u32> {
         match self {
             Self::FogWall => Some(60060),
             Self::Waygate => Some(60490),
             Self::Medal => Some(50340),
             Self::Coffin => None,
+            Self::FastTravel => None,
         }
     }
 
@@ -74,13 +96,14 @@ impl TeleportType {
             Self::Waygate => &[],
             Self::Medal => &[502160, 502161],
             Self::Coffin => &[4190, 4010, 4510],
+            Self::FastTravel => &[],
         }
     }
 
     /// Whether this event requires SpEffect check for detection
     pub fn requires_speffect(&self) -> bool {
         match self {
-            Self::FogWall | Self::Waygate => false,
+            Self::FogWall | Self::Waygate | Self::FastTravel => false,
             Self::Medal | Self::Coffin => true,
         }
     }
@@ -92,6 +115,17 @@ impl TeleportType {
             Self::Waygate => "WAYGATE",
             Self::Medal => "MEDAL",
             Self::Coffin => "COFFIN",
+            Self::FastTravel => "FAST_TRAVEL",
+        }
+    }
+
+    /// Whether this teleport type is tracked by the fog randomizer
+    ///
+    /// FastTravel is not randomized, but we track it for position awareness
+    pub fn is_randomized(&self) -> bool {
+        match self {
+            Self::FogWall | Self::Waygate | Self::Medal | Self::Coffin => true,
+            Self::FastTravel => false,
         }
     }
 }
@@ -408,4 +442,150 @@ pub struct SpEffectDebugInfo {
     pub first_node: Option<usize>,
     pub active_effects: Vec<u32>,
     pub has_teleport_effect: bool,
+}
+
+// =============================================================================
+// GAMEMAN READER
+// =============================================================================
+
+/// Warp information from GameMan
+#[derive(Debug, Clone)]
+pub struct WarpInfo {
+    /// Whether a warp is currently requested
+    pub warp_requested: bool,
+    /// Entity ID of the destination (e.g., grace entity ID for fast travel)
+    pub destination_entity_id: u32,
+    /// Map ID (BlockId) of the destination
+    pub destination_map_id: u32,
+}
+
+/// Reads GameMan state from Elden Ring memory
+///
+/// GameMan contains global game state including warp requests and destinations.
+/// Structure offsets from fromsoftware-rs analysis.
+pub struct GameManReader {
+    proc: HANDLE,
+    game_man: usize,
+}
+
+impl GameManReader {
+    /// Create a new GameManReader
+    pub fn new(base_addresses: &libeldenring::prelude::base_addresses::BaseAddresses) -> Self {
+        Self {
+            proc: unsafe { GetCurrentProcess() },
+            game_man: base_addresses.game_man,
+        }
+    }
+
+    /// Read a bool (u8) from the given address
+    fn read_bool(&self, addr: usize) -> Option<bool> {
+        if addr == 0 {
+            return None;
+        }
+        let mut value: u8 = 0;
+        unsafe {
+            ReadProcessMemory(
+                self.proc,
+                addr as _,
+                &mut value as *mut _ as _,
+                std::mem::size_of::<u8>(),
+                None,
+            )
+            .ok()
+            .map(|_| value != 0)
+        }
+    }
+
+    /// Read a u32 from the given address
+    fn read_u32(&self, addr: usize) -> Option<u32> {
+        if addr == 0 {
+            return None;
+        }
+        let mut value: u32 = 0;
+        unsafe {
+            ReadProcessMemory(
+                self.proc,
+                addr as _,
+                &mut value as *mut _ as _,
+                std::mem::size_of::<u32>(),
+                None,
+            )
+            .ok()
+            .map(|_| value)
+        }
+    }
+
+    /// Read a pointer (u64) from the given address
+    fn read_ptr(&self, addr: usize) -> Option<usize> {
+        if addr == 0 {
+            return None;
+        }
+        let mut value: u64 = 0;
+        unsafe {
+            ReadProcessMemory(
+                self.proc,
+                addr as _,
+                &mut value as *mut _ as _,
+                std::mem::size_of::<u64>(),
+                None,
+            )
+            .ok()
+            .map(|_| value as usize)
+        }
+    }
+
+    /// Get the GameMan pointer
+    fn get_game_man_ptr(&self) -> Option<usize> {
+        self.read_ptr(self.game_man)
+    }
+
+    /// Check if a warp is currently requested
+    pub fn is_warp_requested(&self) -> bool {
+        self.get_game_man_ptr()
+            .and_then(|gm| self.read_bool(gm + GAMEMAN_WARP_REQUESTED_OFFSET))
+            .unwrap_or(false)
+    }
+
+    /// Get the destination entity ID for the current warp
+    ///
+    /// This is typically the entity ID of the grace being fast traveled to.
+    /// Returns 0 if no warp is active or if the field is not set.
+    pub fn get_destination_entity_id(&self) -> u32 {
+        self.get_game_man_ptr()
+            .and_then(|gm| self.read_u32(gm + GAMEMAN_INITIAL_AREA_ENTITY_ID_OFFSET))
+            .unwrap_or(0)
+    }
+
+    /// Get the destination map ID for the current warp
+    ///
+    /// Returns the BlockId (map ID) of the warp destination.
+    pub fn get_destination_map_id(&self) -> u32 {
+        self.get_game_man_ptr()
+            .and_then(|gm| self.read_u32(gm + GAMEMAN_LOAD_TARGET_BLOCK_ID_OFFSET))
+            .unwrap_or(0)
+    }
+
+    /// Get full warp information
+    pub fn get_warp_info(&self) -> Option<WarpInfo> {
+        let gm = self.get_game_man_ptr()?;
+        Some(WarpInfo {
+            warp_requested: self
+                .read_bool(gm + GAMEMAN_WARP_REQUESTED_OFFSET)
+                .unwrap_or(false),
+            destination_entity_id: self
+                .read_u32(gm + GAMEMAN_INITIAL_AREA_ENTITY_ID_OFFSET)
+                .unwrap_or(0),
+            destination_map_id: self
+                .read_u32(gm + GAMEMAN_LOAD_TARGET_BLOCK_ID_OFFSET)
+                .unwrap_or(0),
+        })
+    }
+}
+
+/// Check if SpEffect 106 (grace spawn) is active
+///
+/// This SpEffect is applied after fast travel, death, or Memory of Grace.
+/// Useful for confirming arrival at a grace.
+pub fn is_grace_spawn_effect_active(sp_effect_reader: &SpEffectReader) -> bool {
+    sp_effect_reader.has_sp_effect(GRACE_SPAWN_SPEFFECT_ID)
 }
