@@ -45,6 +45,7 @@ const GAMEMAN_INITIAL_AREA_ENTITY_ID_OFFSET: usize = 0x3C;
 const GAMEMAN_LOAD_TARGET_BLOCK_ID_OFFSET: usize = 0xAC8;
 
 /// SpEffect ID applied after spawning at a grace (fast travel, death, Memory of Grace)
+#[allow(dead_code)]
 const GRACE_SPAWN_SPEFFECT_ID: u32 = 106;
 
 // =============================================================================
@@ -79,6 +80,7 @@ pub enum TeleportType {
     /// Coffin transport - no animation, detected via SpEffect only
     Coffin,
     /// Fast travel to a grace - no animation before warp, detected via GameMan.warp_requested
+    #[allow(dead_code)]
     FastTravel,
 }
 
@@ -113,6 +115,7 @@ impl TeleportType {
     }
 
     /// Whether this event requires SpEffect check for detection
+    #[allow(dead_code)]
     pub fn requires_speffect(&self) -> bool {
         match self {
             Self::FogWall | Self::Waygate | Self::FastTravel => false,
@@ -134,6 +137,7 @@ impl TeleportType {
     /// Whether this teleport type is tracked by the fog randomizer
     ///
     /// FastTravel is not randomized, but we track it for position awareness
+    #[allow(dead_code)]
     pub fn is_randomized(&self) -> bool {
         match self {
             Self::FogWall | Self::Waygate | Self::Medal | Self::Coffin => true,
@@ -480,6 +484,7 @@ pub struct SpEffectDebugInfo {
 
 /// Warp information from GameMan
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct WarpInfo {
     /// Whether a warp is currently requested
     pub warp_requested: bool,
@@ -616,6 +621,7 @@ impl GameManReader {
 ///
 /// This SpEffect is applied after fast travel, death, or Memory of Grace.
 /// Useful for confirming arrival at a grace.
+#[allow(dead_code)]
 pub fn is_grace_spawn_effect_active(sp_effect_reader: &SpEffectReader) -> bool {
     sp_effect_reader.has_sp_effect(GRACE_SPAWN_SPEFFECT_ID)
 }

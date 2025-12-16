@@ -8,7 +8,6 @@ use windows::Win32::Foundation::HINSTANCE;
 use crate::config::Config;
 use crate::game_state::{
     GameManReader, GameState, PlayerPosition, SpEffectDebugInfo, SpEffectReader, TeleportType,
-    WarpInfo,
 };
 use crate::websocket::{
     ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient,

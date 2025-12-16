@@ -194,6 +194,7 @@ impl GameSummary {
     }
 
     /// Format relative time (simplified)
+    #[allow(dead_code)]
     pub fn relative_time(&self) -> String {
         // Parse ISO timestamp and compute relative time
         // For simplicity, just show the date part
