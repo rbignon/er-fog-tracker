@@ -191,7 +191,7 @@ impl FogRandoTracker {
         }
     }
 
-    /// Render debug section (map_id, server URL, etc.)
+    /// Render debug section (map_id, server URL, SpEffect info, etc.)
     fn render_debug_section(&self, ui: &hudhook::imgui::Ui) {
         // Map ID
         if let Some((map_id, _)) = self.get_current_position() {
@@ -210,6 +210,81 @@ impl FogRandoTracker {
             ui.text_disabled(format!("Server: {}", &self.config.server.url));
             ui.same_line();
             ui.text_colored(dot_color, format!("({})", status_text));
+        }
+
+        // SpEffect debug info
+        ui.separator();
+        let debug = self.get_speffect_debug();
+
+        // Pointer chain status
+        let chain_ok = debug.player_ins.is_some() && debug.sp_effect_ctrl.is_some();
+        let chain_color = if chain_ok {
+            [0.0, 1.0, 0.0, 1.0] // Green
+        } else {
+            [1.0, 0.0, 0.0, 1.0] // Red
+        };
+
+        ui.text_disabled("SpEffect Chain:");
+        ui.same_line();
+        if chain_ok {
+            ui.text_colored(chain_color, "OK");
+        } else {
+            ui.text_colored(chain_color, "BROKEN");
+        }
+
+        // Show pointer values for debugging
+        ui.text_disabled(format!(
+            "  WCM: 0x{:X} → {:?}",
+            debug.world_chr_man_base,
+            debug.world_chr_man_ptr.map(|p| format!("0x{:X}", p))
+        ));
+        ui.text_disabled(format!(
+            "  PlayerIns (+0x{:X}): {:?}",
+            debug.player_ins_offset,
+            debug.player_ins.map(|p| format!("0x{:X}", p))
+        ));
+        ui.text_disabled(format!(
+            "  SpEffCtrl (+0x178): {:?}",
+            debug.sp_effect_ctrl.map(|p| format!("0x{:X}", p))
+        ));
+        ui.text_disabled(format!(
+            "  FirstNode (+0x8): {:?}",
+            debug.first_node.map(|p| format!("0x{:X}", p))
+        ));
+
+        // Teleport status
+        let tp_color = if debug.has_teleport_effect {
+            [0.0, 1.0, 0.0, 1.0] // Green = teleporting
+        } else {
+            [0.5, 0.5, 0.5, 1.0] // Gray = not teleporting
+        };
+        ui.text_disabled("Teleport (4280):");
+        ui.same_line();
+        ui.text_colored(
+            tp_color,
+            if debug.has_teleport_effect {
+                "ACTIVE"
+            } else {
+                "inactive"
+            },
+        );
+
+        // Show active SpEffects (first 8)
+        if !debug.active_effects.is_empty() {
+            let display: Vec<String> = debug
+                .active_effects
+                .iter()
+                .take(8)
+                .map(|id| id.to_string())
+                .collect();
+            let suffix = if debug.active_effects.len() > 8 {
+                format!("... +{}", debug.active_effects.len() - 8)
+            } else {
+                String::new()
+            };
+            ui.text_disabled(format!("Active: [{}]{}", display.join(", "), suffix));
+        } else {
+            ui.text_disabled("Active: (none or chain broken)");
         }
     }
 

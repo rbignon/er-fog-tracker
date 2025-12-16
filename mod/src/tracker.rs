@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
-use crate::game_state::{GameState, PlayerPosition, SpEffectReader};
+use crate::game_state::{GameState, PlayerPosition, SpEffectDebugInfo, SpEffectReader};
 use crate::websocket::{
     ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient,
 };
@@ -331,6 +331,11 @@ impl FogRandoTracker {
     /// Check if server integration is enabled
     pub fn is_server_enabled(&self) -> bool {
         self.ws_client.is_enabled()
+    }
+
+    /// Get SpEffect debug info for the debug UI section
+    pub fn get_speffect_debug(&self) -> SpEffectDebugInfo {
+        self.sp_effect_reader.get_debug_info()
     }
 
     /// Load font data from file

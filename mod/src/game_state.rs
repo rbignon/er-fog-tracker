@@ -278,4 +278,57 @@ impl SpEffectReader {
     pub fn is_teleporting(&self) -> bool {
         self.has_sp_effect(TELEPORT_SPEFFECT_ID)
     }
+
+    /// Get debug info about the SpEffect reading chain
+    /// Returns a struct with diagnostic information
+    pub fn get_debug_info(&self) -> SpEffectDebugInfo {
+        let world_chr_man_ptr = self.read_ptr(self.world_chr_man);
+
+        let player_ins =
+            world_chr_man_ptr.and_then(|wcm| self.read_ptr(wcm + self.player_ins_offset));
+
+        let sp_effect_ctrl = player_ins.and_then(|pi| self.read_ptr(pi + SPEFFECT_CTRL_OFFSET));
+
+        let first_node = sp_effect_ctrl.and_then(|ctrl| self.read_ptr(ctrl + 0x8));
+
+        // Count active SpEffects and collect first few IDs
+        let mut active_effects: Vec<u32> = Vec::new();
+        let mut node = first_node.unwrap_or(0);
+        let mut count = 0;
+        while node != 0 && count < 32 {
+            if let Some(sp_id) = self.read_u32(node + 0x8) {
+                if sp_id != 0 {
+                    active_effects.push(sp_id);
+                }
+            }
+            node = self.read_ptr(node + 0x30).unwrap_or(0);
+            count += 1;
+        }
+
+        let has_teleport_effect = active_effects.contains(&TELEPORT_SPEFFECT_ID);
+
+        SpEffectDebugInfo {
+            world_chr_man_base: self.world_chr_man,
+            world_chr_man_ptr,
+            player_ins_offset: self.player_ins_offset,
+            player_ins,
+            sp_effect_ctrl,
+            first_node,
+            active_effects,
+            has_teleport_effect,
+        }
+    }
+}
+
+/// Debug information about SpEffect reading
+#[derive(Debug, Clone)]
+pub struct SpEffectDebugInfo {
+    pub world_chr_man_base: usize,
+    pub world_chr_man_ptr: Option<usize>,
+    pub player_ins_offset: usize,
+    pub player_ins: Option<usize>,
+    pub sp_effect_ctrl: Option<usize>,
+    pub first_node: Option<usize>,
+    pub active_effects: Vec<u32>,
+    pub has_teleport_effect: bool,
 }
