@@ -430,6 +430,7 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                     # Compute exits from the destination zone
                     exits = []
                     destination_zone = None
+                    game_for_exits = None
                     if resolved_links and game_for_zones:
                         # Determine which zone the player actually arrived at
                         # The resolved link has source/target from spoiler log, but we need
