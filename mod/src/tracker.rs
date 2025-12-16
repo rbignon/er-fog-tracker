@@ -187,13 +187,20 @@ impl FogRandoTracker {
         }
 
         // =========================================================================
+        // Check if position is readable (used for exit detection)
+        // During loading screens, position is unreadable - we must wait
+        // =========================================================================
+        let position_readable = self.game_state.read_position().is_some();
+
+        // =========================================================================
         // FOG WALL DETECTION
         // =========================================================================
         let is_fog = self.game_state.is_in_animation(TeleportType::FogWall);
 
         if is_fog && !self.was_in_fog {
             self.on_event_entry(TeleportType::FogWall);
-        } else if self.pending_fog.is_some() && !is_fog {
+        } else if self.pending_fog.is_some() && !is_fog && position_readable {
+            // Only trigger exit when position is readable (not during loading)
             self.on_event_exit(TeleportType::FogWall);
         }
         self.was_in_fog = is_fog;
@@ -205,7 +212,8 @@ impl FogRandoTracker {
 
         if is_waygate && !self.was_in_waygate {
             self.on_event_entry(TeleportType::Waygate);
-        } else if self.pending_waygate.is_some() && !is_waygate {
+        } else if self.pending_waygate.is_some() && !is_waygate && position_readable {
+            // Only trigger exit when position is readable (not during loading)
             self.on_event_exit(TeleportType::Waygate);
         }
         self.was_in_waygate = is_waygate;
@@ -219,7 +227,8 @@ impl FogRandoTracker {
 
         if is_medal && !self.was_using_medal {
             self.on_event_entry(TeleportType::Medal);
-        } else if self.pending_medal.is_some() && !is_medal {
+        } else if self.pending_medal.is_some() && !is_medal && position_readable {
+            // Only trigger exit when position is readable (not during loading)
             self.on_event_exit(TeleportType::Medal);
         }
         self.was_using_medal = is_medal;
@@ -276,7 +285,8 @@ impl FogRandoTracker {
 
         if is_coffin && !self.was_in_coffin {
             self.on_event_entry(TeleportType::Coffin);
-        } else if self.pending_coffin.is_some() && !is_coffin {
+        } else if self.pending_coffin.is_some() && !is_coffin && position_readable {
+            // Only trigger exit when position is readable (not during loading)
             self.on_event_exit(TeleportType::Coffin);
         }
         self.was_in_coffin = is_coffin;
