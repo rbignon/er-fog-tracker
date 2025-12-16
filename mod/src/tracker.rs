@@ -310,12 +310,16 @@ impl FogRandoTracker {
 
     /// Handle teleport event entry (start of animation/SpEffect)
     fn on_event_entry(&mut self, event_type: TeleportType) {
+        let name = event_type.name();
         if let Some(pos) = self.game_state.read_position() {
-            let name = event_type.name();
             println!(
                 "[{}] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
                 name, pos.map_id_str, pos.x, pos.y, pos.z, pos.play_region_id
             );
+            self.ws_client.send_debug_log(&format!(
+                "[{}] Entry detected [{}] pos=({:.1}, {:.1}, {:.1})",
+                name, pos.map_id_str, pos.x, pos.y, pos.z
+            ));
 
             let pending = PendingEvent { entry: pos };
             match event_type {
@@ -325,22 +329,30 @@ impl FogRandoTracker {
                 TeleportType::Coffin => self.pending_coffin = Some(pending),
                 TeleportType::FastTravel => {} // Handled separately via on_fast_travel_entry
             }
+        } else {
+            // Position not readable - this can happen during state transitions
+            let msg = format!(
+                "[{}] WARNING: Entry detected but position unreadable! Event may be missed.",
+                name
+            );
+            println!("{}", msg);
+            self.ws_client.send_debug_log(&msg);
         }
     }
 
     /// Handle teleport event exit (end of animation/SpEffect, position available)
     fn on_event_exit(&mut self, event_type: TeleportType) {
-        if let Some(exit_pos) = self.game_state.read_position() {
-            let entry = match event_type {
-                TeleportType::FogWall => self.pending_fog.take().map(|p| p.entry),
-                TeleportType::Waygate => self.pending_waygate.take().map(|p| p.entry),
-                TeleportType::Medal => self.pending_medal.take().map(|p| p.entry),
-                TeleportType::Coffin => self.pending_coffin.take().map(|p| p.entry),
-                TeleportType::FastTravel => None, // Handled separately
-            };
+        let name = event_type.name();
+        let entry = match event_type {
+            TeleportType::FogWall => self.pending_fog.take().map(|p| p.entry),
+            TeleportType::Waygate => self.pending_waygate.take().map(|p| p.entry),
+            TeleportType::Medal => self.pending_medal.take().map(|p| p.entry),
+            TeleportType::Coffin => self.pending_coffin.take().map(|p| p.entry),
+            TeleportType::FastTravel => None, // Handled separately
+        };
 
-            if let Some(entry) = entry {
-                let name = event_type.name();
+        if let Some(entry) = entry {
+            if let Some(exit_pos) = self.game_state.read_position() {
                 println!(
                     "[{}] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
                     name,
@@ -350,12 +362,24 @@ impl FogRandoTracker {
                     exit_pos.z,
                     exit_pos.play_region_id
                 );
+                self.ws_client.send_debug_log(&format!(
+                    "[{}] Exit detected [{}] pos=({:.1}, {:.1}, {:.1})",
+                    name, exit_pos.map_id_str, exit_pos.x, exit_pos.y, exit_pos.z
+                ));
                 println!(
                     "[{}] Traversal complete: {} → {}",
                     name, entry.map_id_str, exit_pos.map_id_str
                 );
 
                 self.send_discovery(event_type, &entry, &exit_pos);
+            } else {
+                // Exit position not readable - event lost
+                let msg = format!(
+                    "[{}] WARNING: Exit position unreadable! Entry was at {}",
+                    name, entry.map_id_str
+                );
+                println!("{}", msg);
+                self.ws_client.send_debug_log(&msg);
             }
         }
     }
