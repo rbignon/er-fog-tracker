@@ -12,7 +12,7 @@ Documentation of memory structures, animation IDs, and SpEffects discovered duri
 | Waygate | Animation `60490` | Hand turns blue |
 | Sending gate | Animation `60490` | **Same as waygate!** Hand turns blue |
 | Coffin | SpEffect `4190` or `4010` or `4510` | No animation, detect via SpEffect |
-| Pureblood Knight's Medal | Animation `50340` + SpEffect `502160/502161` | Item use |
+| Pureblood Knight's Medal | Animation `50340` + Item ID `0x40000870` | Item use (via `tae_queued_use_item`) |
 
 ### Events to Track (for position awareness, not randomized)
 
@@ -33,7 +33,7 @@ Documentation of memory structures, animation IDs, and SpEffects discovered duri
 ```
 1. If animation 60060 detected → FOG WALL (track)
 2. If animation 60490 detected → WAYGATE or SENDING GATE (track)
-3. If animation 50340 + SpEffect 502160/502161 → MEDAL (track)
+3. If animation 50340 + tae_queued_use_item == 0x40000870 → MEDAL (track)
 4. If SpEffect 4190/4010/4510 active before BROKEN → COFFIN (track)
 5. If GameMan.warp_requested AND no other event active → FAST TRAVEL (track for position)
 6. If animation 4xxx/20xxx → DEATH (ignore)
@@ -111,7 +111,7 @@ Source: CE Table (`eldenring_all-in-one_Hexinton-v5.0_ce7.5.ct`)
 
 | ID | Description | When |
 |----|-------------|------|
-| 502160, 502161 | Pureblood Knight's Medal | Before teleport |
+| 502160, 502161 | Pureblood Knight's Medal | Before teleport (not used for detection, using item ID instead) |
 | 3226 | Memory of Grace (Réminiscence) | Before teleport |
 | 4190, 4010, 4510 | Coffin transport | Before teleport (while in coffin) |
 | 4651, 4601 | Coffin arrival | After teleport |
@@ -244,7 +244,7 @@ The detection logic is implemented in `mod/src/game_state.rs` using the `Telepor
 pub enum TeleportType {
     FogWall,     // animation 60060
     Waygate,     // animation 60490 (includes sending gates)
-    Medal,       // animation 50340 + SpEffect 502160/502161
+    Medal,       // animation 50340 + item ID 0x40000870 (via tae_queued_use_item)
     Coffin,      // SpEffect 4190/4010/4510 (no animation)
     FastTravel,  // GameMan.warp_requested without other events
 }
@@ -328,6 +328,18 @@ bits 7-0:   index  (mAA_XX_YY_{ZZ})
 ```
 
 This matches our `format_map_id()` implementation.
+
+### ChrIns (PlayerIns) Structure
+
+Character instance with item use tracking.
+
+| Offset | Type | Field | Notes |
+|--------|------|-------|-------|
+| 0x160 | u32 | `tae_queued_use_item` | **IMPLEMENTED** - Item ID being used (animation) |
+| 0x178 | ptr | `speffect_ctrl` | SpEffect controller pointer |
+
+The `tae_queued_use_item` field contains the item ID when an item-use animation is playing.
+This is more reliable than SpEffect detection for Medal since it directly identifies the item.
 
 ### SpEffect Structure (confirmed)
 

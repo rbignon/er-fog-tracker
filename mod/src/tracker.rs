@@ -212,10 +212,11 @@ impl FogRandoTracker {
         self.was_in_waygate = is_waygate;
 
         // =========================================================================
-        // MEDAL DETECTION (animation + SpEffect)
+        // MEDAL DETECTION (animation + item ID check)
+        // Using tae_queued_use_item is more reliable than SpEffect detection
         // =========================================================================
         let is_medal = self.game_state.is_in_animation(TeleportType::Medal)
-            && self.sp_effect_reader.has_event_effect(TeleportType::Medal);
+            && self.sp_effect_reader.is_using_medal();
 
         if is_medal && !self.was_using_medal {
             self.on_event_entry(TeleportType::Medal);
@@ -278,6 +279,7 @@ impl FogRandoTracker {
                 TeleportType::Waygate => self.pending_waygate = Some(pending),
                 TeleportType::Medal => self.pending_medal = Some(pending),
                 TeleportType::Coffin => self.pending_coffin = Some(pending),
+                TeleportType::FastTravel => {} // Handled separately via on_fast_travel_entry
             }
         }
     }
