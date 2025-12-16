@@ -6,24 +6,20 @@ use std::time::{Duration, Instant};
 use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
-use crate::game_state::{GameState, PlayerPosition, SpEffectDebugInfo, SpEffectReader};
+use crate::game_state::{
+    GameState, PlayerPosition, SpEffectDebugInfo, SpEffectReader, TeleportType,
+};
 use crate::websocket::{
     ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient,
 };
 
 // =============================================================================
-// FOG EVENTS
+// PENDING EVENT
 // =============================================================================
 
-/// Pending fog event (entry recorded, waiting for exit)
+/// Pending teleport event (entry position recorded, waiting for exit)
 #[derive(Clone, Debug)]
-pub(crate) struct PendingFogEvent {
-    entry: PlayerPosition,
-}
-
-/// Pending teleporter event (teleport started, waiting for exit)
-#[derive(Clone, Debug)]
-pub(crate) struct PendingTeleportEvent {
+pub(crate) struct PendingEvent {
     entry: PlayerPosition,
 }
 
@@ -35,12 +31,15 @@ pub(crate) struct PendingTeleportEvent {
 pub struct FogRandoTracker {
     game_state: GameState,
     sp_effect_reader: SpEffectReader,
+    // Teleport event state tracking (per TeleportType)
     pub(crate) was_in_fog: bool,
-    pub(crate) pending_fog: Option<PendingFogEvent>,
-    /// Track if player was teleporting last frame (SpEffect 4280)
-    pub(crate) was_teleporting: bool,
-    /// Pending teleporter event (entry recorded, waiting for exit)
-    pub(crate) pending_teleport: Option<PendingTeleportEvent>,
+    pub(crate) pending_fog: Option<PendingEvent>,
+    was_in_waygate: bool,
+    pending_waygate: Option<PendingEvent>,
+    was_using_medal: bool,
+    pending_medal: Option<PendingEvent>,
+    was_in_coffin: bool,
+    pending_coffin: Option<PendingEvent>,
     pub(crate) show_ui: bool,
     pub(crate) show_debug: bool,
     pub(crate) config: Config,
@@ -62,6 +61,8 @@ pub struct FogRandoTracker {
     last_speffect_log_time: Instant,
     /// Last logged animation ID (to avoid duplicate logs)
     last_logged_anim: Option<u32>,
+    /// Last time we logged animation debug info
+    last_anim_log_time: Instant,
 }
 
 impl FogRandoTracker {
@@ -119,10 +120,15 @@ impl FogRandoTracker {
         Some(Self {
             game_state,
             sp_effect_reader,
+            // Teleport event state tracking
             was_in_fog: false,
             pending_fog: None,
-            was_teleporting: false,
-            pending_teleport: None,
+            was_in_waygate: false,
+            pending_waygate: None,
+            was_using_medal: false,
+            pending_medal: None,
+            was_in_coffin: false,
+            pending_coffin: None,
             show_ui: true,
             show_debug: false,
             config,
@@ -136,6 +142,7 @@ impl FogRandoTracker {
             last_logged_speffect_state: None,
             last_speffect_log_time: Instant::now(),
             last_logged_anim: None,
+            last_anim_log_time: Instant::now(),
         })
     }
 
@@ -153,90 +160,89 @@ impl FogRandoTracker {
         }
 
         // =========================================================================
-        // FOG WALL DETECTION (animation 60060)
+        // FOG WALL DETECTION
         // =========================================================================
-        let is_fog = self.game_state.is_in_fog_animation();
+        let is_fog = self.game_state.is_in_animation(TeleportType::FogWall);
 
-        // Detect fog entry: animation just started
         if is_fog && !self.was_in_fog {
-            if let Some(pos) = self.game_state.read_position() {
-                println!(
-                    "[FOG] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
-                    pos.map_id_str, pos.x, pos.y, pos.z, pos.play_region_id
-                );
-                self.pending_fog = Some(PendingFogEvent { entry: pos });
-            }
+            self.on_event_entry(TeleportType::FogWall);
+        } else if self.pending_fog.is_some() && !is_fog {
+            self.on_event_exit(TeleportType::FogWall);
         }
-        // Detect fog exit: we had a pending entry AND animation ended AND position is valid
-        else if self.pending_fog.is_some() && !is_fog {
-            if let Some(exit_pos) = self.game_state.read_position() {
-                let pending = self.pending_fog.take().unwrap();
-                let entry = &pending.entry;
-
-                println!(
-                    "[FOG] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
-                    exit_pos.map_id_str,
-                    exit_pos.x,
-                    exit_pos.y,
-                    exit_pos.z,
-                    exit_pos.play_region_id
-                );
-                println!(
-                    "[FOG] Traversal complete: {} → {}",
-                    entry.map_id_str, exit_pos.map_id_str
-                );
-
-                // Send discovery to server if connected
-                if self.ws_client.is_connected() {
-                    println!(
-                        "[FOG] Sending to server: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?}",
-                        entry.map_id_str,
-                        entry.x, entry.y, entry.z,
-                        entry.play_region_id,
-                        exit_pos.map_id_str,
-                        exit_pos.x, exit_pos.y, exit_pos.z,
-                        exit_pos.play_region_id
-                    );
-                    self.ws_client.send_discovery_v2(
-                        entry.map_id,
-                        entry.pos(),
-                        entry.play_region_id,
-                        exit_pos.map_id,
-                        exit_pos.pos(),
-                        exit_pos.play_region_id,
-                    );
-                } else {
-                    println!("[FOG] Not connected to server, discovery not sent");
-                }
-            }
-        }
-
         self.was_in_fog = is_fog;
 
         // =========================================================================
-        // TELEPORTER DETECTION (SpEffect 4280)
-        // Detects waygates, trap chests, sending gates
+        // WAYGATE / SENDING GATE DETECTION
         // =========================================================================
-        let is_teleporting = self.sp_effect_reader.is_teleporting();
+        let is_waygate = self.game_state.is_in_animation(TeleportType::Waygate);
 
-        // Detect teleport start: SpEffect 4280 just became active
-        if is_teleporting && !self.was_teleporting {
-            if let Some(pos) = self.game_state.read_position() {
-                println!(
-                    "[TELEPORT] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
-                    pos.map_id_str, pos.x, pos.y, pos.z, pos.play_region_id
-                );
-                self.pending_teleport = Some(PendingTeleportEvent { entry: pos });
+        if is_waygate && !self.was_in_waygate {
+            self.on_event_entry(TeleportType::Waygate);
+        } else if self.pending_waygate.is_some() && !is_waygate {
+            self.on_event_exit(TeleportType::Waygate);
+        }
+        self.was_in_waygate = is_waygate;
+
+        // =========================================================================
+        // MEDAL DETECTION (animation + SpEffect)
+        // =========================================================================
+        let is_medal = self.game_state.is_in_animation(TeleportType::Medal)
+            && self.sp_effect_reader.has_event_effect(TeleportType::Medal);
+
+        if is_medal && !self.was_using_medal {
+            self.on_event_entry(TeleportType::Medal);
+        } else if self.pending_medal.is_some() && !is_medal {
+            self.on_event_exit(TeleportType::Medal);
+        }
+        self.was_using_medal = is_medal;
+
+        // =========================================================================
+        // COFFIN DETECTION (SpEffect only, no animation)
+        // =========================================================================
+        let is_coffin = self.sp_effect_reader.has_event_effect(TeleportType::Coffin);
+
+        if is_coffin && !self.was_in_coffin {
+            self.on_event_entry(TeleportType::Coffin);
+        } else if self.pending_coffin.is_some() && !is_coffin {
+            self.on_event_exit(TeleportType::Coffin);
+        }
+        self.was_in_coffin = is_coffin;
+    }
+
+    /// Handle teleport event entry (start of animation/SpEffect)
+    fn on_event_entry(&mut self, event_type: TeleportType) {
+        if let Some(pos) = self.game_state.read_position() {
+            let name = event_type.name();
+            println!(
+                "[{}] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
+                name, pos.map_id_str, pos.x, pos.y, pos.z, pos.play_region_id
+            );
+
+            let pending = PendingEvent { entry: pos };
+            match event_type {
+                TeleportType::FogWall => self.pending_fog = Some(pending),
+                TeleportType::Waygate => self.pending_waygate = Some(pending),
+                TeleportType::Medal => self.pending_medal = Some(pending),
+                TeleportType::Coffin => self.pending_coffin = Some(pending),
             }
         }
-        // Detect teleport exit: we had a pending entry AND SpEffect ended AND position is valid
-        else if self.pending_teleport.is_some() && !is_teleporting {
-            if let Some(exit_pos) = self.game_state.read_position() {
-                let pending = self.pending_teleport.take().unwrap();
-                let entry = &pending.entry;
+    }
 
+    /// Handle teleport event exit (end of animation/SpEffect, position available)
+    fn on_event_exit(&mut self, event_type: TeleportType) {
+        if let Some(exit_pos) = self.game_state.read_position() {
+            let entry = match event_type {
+                TeleportType::FogWall => self.pending_fog.take().map(|p| p.entry),
+                TeleportType::Waygate => self.pending_waygate.take().map(|p| p.entry),
+                TeleportType::Medal => self.pending_medal.take().map(|p| p.entry),
+                TeleportType::Coffin => self.pending_coffin.take().map(|p| p.entry),
+            };
+
+            if let Some(entry) = entry {
+                let name = event_type.name();
                 println!(
-                    "[TELEPORT] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
+                    "[{}] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
+                    name,
                     exit_pos.map_id_str,
                     exit_pos.x,
                     exit_pos.y,
@@ -244,21 +250,45 @@ impl FogRandoTracker {
                     exit_pos.play_region_id
                 );
                 println!(
-                    "[TELEPORT] Traversal complete: {} → {}",
-                    entry.map_id_str, exit_pos.map_id_str
+                    "[{}] Traversal complete: {} → {}",
+                    name, entry.map_id_str, exit_pos.map_id_str
                 );
 
-                // Clear current zone since we teleported
-                self.current_zone = None;
-                self.current_exits.clear();
-
-                // TODO: Send teleporter discovery to server if needed
-                // For now, we just log it. The server would need a separate
-                // endpoint or message type to handle teleporter discoveries.
+                self.send_discovery(event_type, &entry, &exit_pos);
             }
         }
+    }
 
-        self.was_teleporting = is_teleporting;
+    /// Send discovery event to server (shared logic for all teleport types)
+    fn send_discovery(
+        &mut self,
+        event_type: TeleportType,
+        entry: &PlayerPosition,
+        exit_pos: &PlayerPosition,
+    ) {
+        let name = event_type.name();
+        if self.ws_client.is_connected() {
+            println!(
+                "[{}] Sending to server: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?}",
+                name,
+                entry.map_id_str,
+                entry.x, entry.y, entry.z,
+                entry.play_region_id,
+                exit_pos.map_id_str,
+                exit_pos.x, exit_pos.y, exit_pos.z,
+                exit_pos.play_region_id
+            );
+            self.ws_client.send_discovery_v2(
+                entry.map_id,
+                entry.pos(),
+                entry.play_region_id,
+                exit_pos.map_id,
+                exit_pos.pos(),
+                exit_pos.play_region_id,
+            );
+        } else {
+            println!("[{}] Not connected to server, discovery not sent", name);
+        }
     }
 
     /// Set a status message that will be displayed temporarily
@@ -354,15 +384,26 @@ impl FogRandoTracker {
     }
 
     /// Log animation changes (with deduplication)
+    /// Only logs when animation changes or every 5 seconds as a heartbeat
     fn log_animation_debug(&mut self) {
         let cur_anim = self.game_state.read_animation();
 
-        if cur_anim != self.last_logged_anim {
+        // Check if animation changed or 5 seconds elapsed
+        let anim_changed = cur_anim != self.last_logged_anim;
+        let heartbeat_due = self.last_anim_log_time.elapsed() >= Duration::from_secs(5);
+
+        if anim_changed || heartbeat_due {
             let msg = match cur_anim {
                 Some(anim_id) => {
                     // Highlight known animations
                     let label = match anim_id {
                         60060 => " (FOG_WALL)",
+                        60490 => " (WAYGATE)",
+                        60470 => " (SENDING_GATE_BLUE)",
+                        60472 => " (SENDING_GATE_RED)",
+                        50340 => " (ITEM_USE_MEDAL)",
+                        50230 => " (ITEM_USE_MEMORY)",
+                        63000 => " (SPAWN)",
                         0 => " (IDLE?)",
                         _ => "",
                     };
@@ -373,6 +414,7 @@ impl FogRandoTracker {
             println!("{}", msg);
             self.ws_client.send_debug_log(&msg);
             self.last_logged_anim = cur_anim;
+            self.last_anim_log_time = Instant::now();
         }
     }
 

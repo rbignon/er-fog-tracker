@@ -510,6 +510,11 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                             exclude=websocket,
                         )
 
+                elif msg_type == "debug_log":
+                    # Debug log from mod - just print it
+                    message = data.get("message", "")
+                    logger.info("[MOD DEBUG] %s", message)
+
                 else:
                     logger.warning("[MOD] Unknown message type: %s", msg_type)
 

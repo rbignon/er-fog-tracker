@@ -14,23 +14,87 @@ use windows::Win32::System::Diagnostics::Debug::ReadProcessMemory;
 use windows::Win32::System::Threading::GetCurrentProcess;
 
 // =============================================================================
-// CONSTANTS
+// INTERNAL CONSTANTS
 // =============================================================================
 
 /// Offset of PlayRegionId within CS::FieldArea structure
 const FIELD_AREA_PLAY_REGION_ID_OFFSET: usize = 0xE4;
 
-/// Animation ID for fog wall traversal
-pub const FOG_WALL_ANIM_ID: u32 = 60060;
-
 /// Invalid map_id value (during loading screens)
 const INVALID_MAP_ID: u32 = 0xFFFFFFFF;
 
-/// SpEffect ID for teleportation (waygates, trap chests, sending gates)
-pub const TELEPORT_SPEFFECT_ID: u32 = 4280;
-
 /// Offset from PlayerIns to SpEffectCtrl
 const SPEFFECT_CTRL_OFFSET: usize = 0x178;
+
+/// SpEffect ID for teleportation (not actually used - kept for debug display)
+const DEBUG_TELEPORT_SPEFFECT_ID: u32 = 4280;
+
+// =============================================================================
+// TELEPORT TYPE ENUM
+// =============================================================================
+
+/// Types of teleportation events tracked by the mod
+///
+/// Each variant represents a different way the player can be teleported
+/// in the Fog Gate Randomizer. The enum encapsulates the detection logic
+/// (animation IDs and SpEffect IDs) for each type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TeleportType {
+    /// Fog wall traversal - walking through a fog gate
+    FogWall,
+    /// Waygate or Sending gate - hand turns blue before teleport
+    Waygate,
+    /// Pureblood Knight's Medal - item use teleport
+    Medal,
+    /// Coffin transport - no animation, detected via SpEffect only
+    Coffin,
+}
+
+impl TeleportType {
+    /// Animation ID that triggers this event type
+    ///
+    /// Returns None for event types detected via SpEffect only (e.g., Coffin)
+    pub fn animation_id(&self) -> Option<u32> {
+        match self {
+            Self::FogWall => Some(60060),
+            Self::Waygate => Some(60490),
+            Self::Medal => Some(50340),
+            Self::Coffin => None,
+        }
+    }
+
+    /// SpEffect IDs that must be active for detection
+    ///
+    /// Returns empty slice for event types detected via animation only.
+    /// For Medal: requires one of the SpEffects in addition to animation.
+    /// For Coffin: requires one of the SpEffects (no animation check).
+    pub fn speffect_ids(&self) -> &'static [u32] {
+        match self {
+            Self::FogWall => &[],
+            Self::Waygate => &[],
+            Self::Medal => &[502160, 502161],
+            Self::Coffin => &[4190, 4010, 4510],
+        }
+    }
+
+    /// Whether this event requires SpEffect check for detection
+    pub fn requires_speffect(&self) -> bool {
+        match self {
+            Self::FogWall | Self::Waygate => false,
+            Self::Medal | Self::Coffin => true,
+        }
+    }
+
+    /// Log prefix for this event type
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::FogWall => "FOG",
+            Self::Waygate => "WAYGATE",
+            Self::Medal => "MEDAL",
+            Self::Coffin => "COFFIN",
+        }
+    }
+}
 
 // =============================================================================
 // MAP ID UTILITIES
@@ -134,11 +198,17 @@ impl GameState {
         self.pointers.cur_anim.read()
     }
 
-    /// Check if player is currently in fog wall traversal animation
-    pub fn is_in_fog_animation(&self) -> bool {
-        self.read_animation()
-            .map(|a| a == FOG_WALL_ANIM_ID)
-            .unwrap_or(false)
+    /// Check if player is currently in the animation for a given teleport type
+    ///
+    /// Returns false for teleport types that don't have an animation (e.g., Coffin)
+    pub fn is_in_animation(&self, event_type: TeleportType) -> bool {
+        match event_type.animation_id() {
+            Some(expected_anim) => self
+                .read_animation()
+                .map(|a| a == expected_anim)
+                .unwrap_or(false),
+            None => false,
+        }
     }
 
     /// Get base addresses (for creating SpEffectReader)
@@ -274,9 +344,16 @@ impl SpEffectReader {
         false
     }
 
-    /// Check if player is being teleported (SpEffect 4280)
-    pub fn is_teleporting(&self) -> bool {
-        self.has_sp_effect(TELEPORT_SPEFFECT_ID)
+    /// Check if player has any of the SpEffects for a given teleport type
+    ///
+    /// Returns true if any of the event's SpEffect IDs are active.
+    /// Returns false for event types that don't require SpEffect checks.
+    pub fn has_event_effect(&self, event_type: TeleportType) -> bool {
+        let ids = event_type.speffect_ids();
+        if ids.is_empty() {
+            return false;
+        }
+        ids.iter().any(|&id| self.has_sp_effect(id))
     }
 
     /// Get debug info about the SpEffect reading chain
@@ -305,7 +382,7 @@ impl SpEffectReader {
             count += 1;
         }
 
-        let has_teleport_effect = active_effects.contains(&TELEPORT_SPEFFECT_ID);
+        let has_teleport_effect = active_effects.contains(&DEBUG_TELEPORT_SPEFFECT_ID);
 
         SpEffectDebugInfo {
             world_chr_man_base: self.world_chr_man,
