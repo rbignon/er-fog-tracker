@@ -60,6 +60,8 @@ pub struct FogRandoTracker {
     last_logged_speffect_state: Option<(bool, Vec<u32>)>,
     /// Last time we logged SpEffect debug info
     last_speffect_log_time: Instant,
+    /// Last logged animation ID (to avoid duplicate logs)
+    last_logged_anim: Option<u32>,
 }
 
 impl FogRandoTracker {
@@ -133,6 +135,7 @@ impl FogRandoTracker {
             font_data,
             last_logged_speffect_state: None,
             last_speffect_log_time: Instant::now(),
+            last_logged_anim: None,
         })
     }
 
@@ -140,6 +143,9 @@ impl FogRandoTracker {
     pub fn check_fog_traversal(&mut self) {
         // Log SpEffect debug info (with deduplication)
         self.log_speffect_debug();
+
+        // Log animation changes (with deduplication)
+        self.log_animation_debug();
 
         // Track map changes for context (but don't clear exits here anymore)
         if let Some(pos) = self.game_state.read_position() {
@@ -345,6 +351,29 @@ impl FogRandoTracker {
     /// Get SpEffect debug info for the debug UI section
     pub fn get_speffect_debug(&self) -> SpEffectDebugInfo {
         self.sp_effect_reader.get_debug_info()
+    }
+
+    /// Log animation changes to console (with deduplication)
+    fn log_animation_debug(&mut self) {
+        let cur_anim = self.game_state.read_animation();
+
+        if cur_anim != self.last_logged_anim {
+            match cur_anim {
+                Some(anim_id) => {
+                    // Highlight known animations
+                    let label = match anim_id {
+                        60060 => " (FOG_WALL)",
+                        0 => " (IDLE?)",
+                        _ => "",
+                    };
+                    println!("[ANIM] cur_anim: {}{}", anim_id, label);
+                }
+                None => {
+                    println!("[ANIM] cur_anim: None (loading?)");
+                }
+            }
+            self.last_logged_anim = cur_anim;
+        }
     }
 
     /// Log SpEffect debug info to console (with deduplication)
