@@ -286,13 +286,15 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                     target_map_id = data.get("target_map_id")
                     target_pos = data.get("target_pos", {})
                     target_play_region_id = data.get("target_play_region_id")
+                    warp_type = data.get("warp_type", "unknown")
 
                     # Convert play_region_id to Col format (hXXYYZZ)
                     source_col = f"h{source_play_region_id:06x}" if source_play_region_id else None
                     target_col = f"h{target_play_region_id:06x}" if target_play_region_id else None
 
                     logger.info(
-                        "[MOD] Discovery v2: %s (%.1f, %.1f, %.1f) col=%s → %s (%.1f, %.1f, %.1f) col=%s",
+                        "[MOD] Discovery v2 [%s]: %s (%.1f, %.1f, %.1f) col=%s → %s (%.1f, %.1f, %.1f) col=%s",
+                        warp_type,
                         source_map_id,
                         source_pos.get("x", 0),
                         source_pos.get("y", 0),

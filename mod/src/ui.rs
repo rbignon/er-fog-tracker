@@ -185,7 +185,6 @@ impl FogRandoTracker {
             ConnectionStatus::Connected => ([0.0, 1.0, 0.0, 1.0], "Connected"),
             ConnectionStatus::Reconnecting => ([1.0, 0.65, 0.0, 1.0], "Reconnecting"),
             ConnectionStatus::Connecting => ([1.0, 0.65, 0.0, 1.0], "Connecting"),
-            ConnectionStatus::Authenticating => ([1.0, 0.65, 0.0, 1.0], "Authenticating"),
             ConnectionStatus::Disconnected => ([1.0, 0.0, 0.0, 1.0], "Disconnected"),
             ConnectionStatus::Error => ([1.0, 0.0, 0.0, 1.0], "Error"),
         }

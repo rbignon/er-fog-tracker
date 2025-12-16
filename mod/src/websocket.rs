@@ -25,8 +25,6 @@ use crate::game_state::format_map_id;
 pub enum ConnectionStatus {
     Disconnected,
     Connecting,
-    #[allow(dead_code)]
-    Authenticating,
     Connected,
     Reconnecting,
     Error,
@@ -43,15 +41,7 @@ pub struct Position {
 /// Messages sent to the WebSocket thread
 #[derive(Debug)]
 pub enum OutgoingMessage {
-    /// Send a discovery event (legacy, with zone names)
-    #[allow(dead_code)]
-    Discovery {
-        source: String,
-        source_map_id: u32,
-        target: String,
-        target_map_id: u32,
-    },
-    /// Send a discovery event v2 (with positions and play region IDs, server resolves zone names)
+    /// Send a discovery event (with positions and play region IDs, server resolves zone names)
     DiscoveryV2 {
         source_map_id: u32,
         source_pos: Position,
@@ -59,6 +49,8 @@ pub enum OutgoingMessage {
         target_map_id: u32,
         target_pos: Position,
         target_play_region_id: Option<u32>,
+        /// Type of warp (fog, waygate, medal, coffin)
+        warp_type: String,
     },
     /// Send a debug log message
     DebugLog { message: String },
@@ -125,13 +117,6 @@ enum ServerMessage {
     Auth {
         token: String,
     },
-    #[allow(dead_code)]
-    Discovery {
-        source: String,
-        source_map_id: String,
-        target: String,
-        target_map_id: String,
-    },
     DiscoveryV2 {
         source_map_id: String,
         source_pos: Position,
@@ -141,6 +126,7 @@ enum ServerMessage {
         target_pos: Position,
         #[serde(skip_serializing_if = "Option::is_none")]
         target_play_region_id: Option<u32>,
+        warp_type: String,
     },
     DebugLog {
         message: String,
@@ -155,9 +141,6 @@ enum ServerResponse {
     AuthOk,
     AuthError {
         message: String,
-    },
-    DiscoveryAck {
-        propagated: Vec<PropagatedLink>,
     },
     DiscoveryV2Ack {
         propagated: Vec<PropagatedLink>,
@@ -271,26 +254,7 @@ impl WebSocketClient {
         self.current_status = ConnectionStatus::Disconnected;
     }
 
-    /// Send a discovery event to the server (legacy, with zone names)
-    #[allow(dead_code)]
-    pub fn send_discovery(
-        &self,
-        source: &str,
-        source_map_id: u32,
-        target: &str,
-        target_map_id: u32,
-    ) {
-        if let Some(tx) = &self.tx {
-            let _ = tx.try_send(OutgoingMessage::Discovery {
-                source: source.to_string(),
-                source_map_id,
-                target: target.to_string(),
-                target_map_id,
-            });
-        }
-    }
-
-    /// Send a discovery event v2 to the server (with positions and play region IDs, server resolves zone names)
+    /// Send a discovery event to the server (with positions and play region IDs, server resolves zone names)
     pub fn send_discovery_v2(
         &self,
         source_map_id: u32,
@@ -299,6 +263,7 @@ impl WebSocketClient {
         target_map_id: u32,
         target_pos: (f32, f32, f32),
         target_play_region_id: Option<u32>,
+        warp_type: &str,
     ) {
         if let Some(tx) = &self.tx {
             let _ = tx.try_send(OutgoingMessage::DiscoveryV2 {
@@ -316,6 +281,7 @@ impl WebSocketClient {
                     z: target_pos.2,
                 },
                 target_play_region_id,
+                warp_type: warp_type.to_string(),
             });
         }
     }
@@ -535,29 +501,6 @@ fn message_loop(
 
         // Check for outgoing messages
         match outgoing_rx.try_recv() {
-            Ok(OutgoingMessage::Discovery {
-                ref source,
-                source_map_id,
-                ref target,
-                target_map_id,
-            }) => {
-                let source_map_str = format_map_id(source_map_id);
-                let target_map_str = format_map_id(target_map_id);
-                println!(
-                    "[WS TX] Discovery (legacy): {} [{}] → {} [{}]",
-                    source, source_map_str, target, target_map_str
-                );
-                let msg = ServerMessage::Discovery {
-                    source: source.clone(),
-                    source_map_id: source_map_str,
-                    target: target.clone(),
-                    target_map_id: target_map_str,
-                };
-                let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
-                socket
-                    .send(Message::Text(json))
-                    .map_err(|e| e.to_string())?;
-            }
             Ok(OutgoingMessage::DiscoveryV2 {
                 source_map_id,
                 ref source_pos,
@@ -565,13 +508,15 @@ fn message_loop(
                 target_map_id,
                 ref target_pos,
                 target_play_region_id,
+                ref warp_type,
             }) => {
                 let source_map_str = format_map_id(source_map_id);
                 let target_map_str = format_map_id(target_map_id);
                 println!(
-                    "[WS TX] Discovery v2: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?}",
+                    "[WS TX] Discovery v2: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?} [{}]",
                     source_map_str, source_pos.x, source_pos.y, source_pos.z, source_play_region_id,
-                    target_map_str, target_pos.x, target_pos.y, target_pos.z, target_play_region_id
+                    target_map_str, target_pos.x, target_pos.y, target_pos.z, target_play_region_id,
+                    warp_type
                 );
                 let msg = ServerMessage::DiscoveryV2 {
                     source_map_id: source_map_str,
@@ -580,6 +525,7 @@ fn message_loop(
                     target_map_id: target_map_str,
                     target_pos: target_pos.clone(),
                     target_play_region_id,
+                    warp_type: warp_type.clone(),
                 };
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket
@@ -624,15 +570,6 @@ fn message_loop(
                         ServerResponse::Ping => {
                             println!("[WS RX] Ping");
                             let _ = incoming_tx.send(IncomingMessage::Ping);
-                        }
-                        ServerResponse::DiscoveryAck { ref propagated } => {
-                            println!("[WS RX] DiscoveryAck (propagated: {})", propagated.len());
-                            let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
-                                propagated: propagated.clone(),
-                                current_zone: None,
-                                exits: Vec::new(),
-                                stats: DiscoveryStats::default(),
-                            });
                         }
                         ServerResponse::DiscoveryV2Ack {
                             ref propagated,

@@ -268,19 +268,15 @@ impl FogRandoTracker {
 
         // Log warnings for detection mismatches (helps discover new coffin types)
         if is_coffin_by_exclusion && !has_coffin_speffect && !self.was_in_coffin {
-            let msg = format!(
+            println!(
                 "[COFFIN] WARNING: Detected by exclusion but no known SpEffect! dest_entity={} - possible new coffin type",
                 dest_entity_id
             );
-            println!("{}", msg);
-            self.ws_client.send_debug_log(&msg);
         } else if has_coffin_speffect && !is_coffin_by_exclusion && !self.was_in_coffin {
-            let msg = format!(
+            println!(
                 "[COFFIN] INFO: SpEffect detected but exclusion check failed (warp={}, no_anim={}, not_ft={})",
                 warp_requested, no_animation, not_fast_travel
             );
-            println!("{}", msg);
-            self.ws_client.send_debug_log(&msg);
         }
 
         if is_coffin && !self.was_in_coffin {
@@ -325,10 +321,6 @@ impl FogRandoTracker {
                 "[{}] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
                 name, pos.map_id_str, pos.x, pos.y, pos.z, pos.play_region_id
             );
-            self.ws_client.send_debug_log(&format!(
-                "[{}] Entry detected [{}] pos=({:.1}, {:.1}, {:.1})",
-                name, pos.map_id_str, pos.x, pos.y, pos.z
-            ));
 
             let pending = PendingEvent { entry: pos };
             match event_type {
@@ -340,12 +332,10 @@ impl FogRandoTracker {
             }
         } else {
             // Position not readable - this can happen during state transitions
-            let msg = format!(
+            println!(
                 "[{}] WARNING: Entry detected but position unreadable! Event may be missed.",
                 name
             );
-            println!("{}", msg);
-            self.ws_client.send_debug_log(&msg);
         }
     }
 
@@ -371,10 +361,6 @@ impl FogRandoTracker {
                     exit_pos.z,
                     exit_pos.play_region_id
                 );
-                self.ws_client.send_debug_log(&format!(
-                    "[{}] Exit detected [{}] pos=({:.1}, {:.1}, {:.1})",
-                    name, exit_pos.map_id_str, exit_pos.x, exit_pos.y, exit_pos.z
-                ));
                 println!(
                     "[{}] Traversal complete: {} → {}",
                     name, entry.map_id_str, exit_pos.map_id_str
@@ -383,12 +369,10 @@ impl FogRandoTracker {
                 self.send_discovery(event_type, &entry, &exit_pos);
             } else {
                 // Exit position not readable - event lost
-                let msg = format!(
+                println!(
                     "[{}] WARNING: Exit position unreadable! Entry was at {}",
                     name, entry.map_id_str
                 );
-                println!("{}", msg);
-                self.ws_client.send_debug_log(&msg);
             }
         }
     }
@@ -431,13 +415,6 @@ impl FogRandoTracker {
                     pending.destination_entity_id,
                     pending.destination_map_id
                 );
-
-                // For now, just log - don't send to server since fast travel isn't randomized
-                // But we could add a separate message type for position tracking if needed
-                self.ws_client.send_debug_log(&format!(
-                    "[FAST_TRAVEL] {} → {} (grace_entity={})",
-                    pending.entry.map_id_str, exit_pos.map_id_str, pending.destination_entity_id
-                ));
             }
         }
     }
@@ -468,6 +445,7 @@ impl FogRandoTracker {
                 exit_pos.map_id,
                 exit_pos.pos(),
                 exit_pos.play_region_id,
+                name,
             );
         } else {
             println!("[{}] Not connected to server, discovery not sent", name);
@@ -572,8 +550,8 @@ impl FogRandoTracker {
 
         if warp_requested != self.last_logged_warp_requested {
             let warp_info = self.game_man_reader.get_warp_info();
-            let msg = if warp_requested {
-                format!(
+            if warp_requested {
+                println!(
                     "[GAMEMAN] >>> WARP REQUESTED <<< dest_entity={} dest_map={}",
                     warp_info
                         .as_ref()
@@ -583,12 +561,10 @@ impl FogRandoTracker {
                         .as_ref()
                         .map(|w| w.destination_map_id)
                         .unwrap_or(0)
-                )
+                );
             } else {
-                "[GAMEMAN] Warp completed".to_string()
-            };
-            println!("{}", msg);
-            self.ws_client.send_debug_log(&msg);
+                println!("[GAMEMAN] Warp completed");
+            }
             self.last_logged_warp_requested = warp_requested;
         }
     }
@@ -603,7 +579,7 @@ impl FogRandoTracker {
         let heartbeat_due = self.last_anim_log_time.elapsed() >= Duration::from_secs(5);
 
         if anim_changed || heartbeat_due {
-            let msg = match cur_anim {
+            match cur_anim {
                 Some(anim_id) => {
                     // Highlight known animations
                     let label = match anim_id {
@@ -617,12 +593,10 @@ impl FogRandoTracker {
                         0 => " (IDLE?)",
                         _ => "",
                     };
-                    format!("[ANIM] cur_anim: {}{}", anim_id, label)
+                    println!("[ANIM] cur_anim: {}{}", anim_id, label);
                 }
-                None => "[ANIM] cur_anim: None (loading?)".to_string(),
+                None => println!("[ANIM] cur_anim: None (loading?)"),
             };
-            println!("{}", msg);
-            self.ws_client.send_debug_log(&msg);
             self.last_logged_anim = cur_anim;
             self.last_anim_log_time = Instant::now();
         }
@@ -646,18 +620,16 @@ impl FogRandoTracker {
                 "BROKEN"
             };
 
-            let chain_msg = format!(
+            println!(
                 "[SPEFFECT] Chain: {} | PlayerIns: {:?} | SpEffCtrl: {:?}",
                 chain_status,
                 debug.player_ins.map(|p| format!("0x{:X}", p)),
                 debug.sp_effect_ctrl.map(|p| format!("0x{:X}", p)),
             );
-            println!("{}", chain_msg);
-            self.ws_client.send_debug_log(&chain_msg);
 
             // Log active effects
-            let effects_msg = if debug.active_effects.is_empty() {
-                "[SPEFFECT] Active: (none)".to_string()
+            if debug.active_effects.is_empty() {
+                println!("[SPEFFECT] Active: (none)");
             } else {
                 let display: Vec<String> = debug
                     .active_effects
@@ -670,22 +642,18 @@ impl FogRandoTracker {
                         }
                     })
                     .collect();
-                format!("[SPEFFECT] Active: [{}]", display.join(", "))
-            };
-            println!("{}", effects_msg);
-            self.ws_client.send_debug_log(&effects_msg);
+                println!("[SPEFFECT] Active: [{}]", display.join(", "));
+            }
 
             // Log teleport status change specifically
             if state_changed {
                 if let Some((was_teleporting, _)) = &self.last_logged_speffect_state {
                     if *was_teleporting != debug.has_teleport_effect {
-                        let tp_msg = if debug.has_teleport_effect {
-                            "[SPEFFECT] >>> TELEPORT EFFECT 4280 ACTIVATED <<<"
+                        if debug.has_teleport_effect {
+                            println!("[SPEFFECT] >>> TELEPORT EFFECT 4280 ACTIVATED <<<");
                         } else {
-                            "[SPEFFECT] >>> TELEPORT EFFECT 4280 DEACTIVATED <<<"
-                        };
-                        println!("{}", tp_msg);
-                        self.ws_client.send_debug_log(tp_msg);
+                            println!("[SPEFFECT] >>> TELEPORT EFFECT 4280 DEACTIVATED <<<");
+                        }
                     }
                 }
             }
