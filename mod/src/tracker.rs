@@ -56,6 +56,10 @@ pub struct FogRandoTracker {
     last_map_id: Option<u32>,
     /// Font data loaded from file (must persist for imgui)
     pub(crate) font_data: Option<Vec<u8>>,
+    /// Last logged SpEffect debug state (to avoid duplicate logs)
+    last_logged_speffect_state: Option<(bool, Vec<u32>)>,
+    /// Last time we logged SpEffect debug info
+    last_speffect_log_time: Instant,
 }
 
 impl FogRandoTracker {
@@ -127,11 +131,16 @@ impl FogRandoTracker {
             discovery_stats: None,
             last_map_id: None,
             font_data,
+            last_logged_speffect_state: None,
+            last_speffect_log_time: Instant::now(),
         })
     }
 
     /// Check for fog wall and teleporter traversals each frame
     pub fn check_fog_traversal(&mut self) {
+        // Log SpEffect debug info (with deduplication)
+        self.log_speffect_debug();
+
         // Track map changes for context (but don't clear exits here anymore)
         if let Some(pos) = self.game_state.read_position() {
             self.last_map_id = Some(pos.map_id);
@@ -336,6 +345,71 @@ impl FogRandoTracker {
     /// Get SpEffect debug info for the debug UI section
     pub fn get_speffect_debug(&self) -> SpEffectDebugInfo {
         self.sp_effect_reader.get_debug_info()
+    }
+
+    /// Log SpEffect debug info to console (with deduplication)
+    /// Only logs when state changes or every 5 seconds as a heartbeat
+    fn log_speffect_debug(&mut self) {
+        let debug = self.sp_effect_reader.get_debug_info();
+        let current_state = (debug.has_teleport_effect, debug.active_effects.clone());
+
+        // Check if state changed or 5 seconds elapsed
+        let state_changed = self.last_logged_speffect_state.as_ref() != Some(&current_state);
+        let heartbeat_due = self.last_speffect_log_time.elapsed() >= Duration::from_secs(5);
+
+        if state_changed || heartbeat_due {
+            // Log pointer chain status
+            let chain_status = if debug.player_ins.is_some() && debug.sp_effect_ctrl.is_some() {
+                "OK"
+            } else {
+                "BROKEN"
+            };
+
+            println!(
+                "[SPEFFECT] Chain: {} | WCM: 0x{:X} → {:?} | PlayerIns(+0x{:X}): {:?} | SpEffCtrl: {:?} | FirstNode: {:?}",
+                chain_status,
+                debug.world_chr_man_base,
+                debug.world_chr_man_ptr.map(|p| format!("0x{:X}", p)),
+                debug.player_ins_offset,
+                debug.player_ins.map(|p| format!("0x{:X}", p)),
+                debug.sp_effect_ctrl.map(|p| format!("0x{:X}", p)),
+                debug.first_node.map(|p| format!("0x{:X}", p)),
+            );
+
+            // Log active effects
+            if debug.active_effects.is_empty() {
+                println!("[SPEFFECT] Active: (none)");
+            } else {
+                let display: Vec<String> = debug
+                    .active_effects
+                    .iter()
+                    .map(|id| {
+                        if *id == 4280 {
+                            format!("*{}*", id) // Highlight teleport effect
+                        } else {
+                            id.to_string()
+                        }
+                    })
+                    .collect();
+                println!("[SPEFFECT] Active: [{}]", display.join(", "));
+            }
+
+            // Log teleport status change specifically
+            if state_changed {
+                if let Some((was_teleporting, _)) = &self.last_logged_speffect_state {
+                    if *was_teleporting != debug.has_teleport_effect {
+                        if debug.has_teleport_effect {
+                            println!("[SPEFFECT] >>> TELEPORT EFFECT 4280 ACTIVATED <<<");
+                        } else {
+                            println!("[SPEFFECT] >>> TELEPORT EFFECT 4280 DEACTIVATED <<<");
+                        }
+                    }
+                }
+            }
+
+            self.last_logged_speffect_state = Some(current_state);
+            self.last_speffect_log_time = Instant::now();
+        }
     }
 
     /// Load font data from file
