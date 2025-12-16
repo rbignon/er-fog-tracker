@@ -11,7 +11,7 @@ Documentation of memory structures, animation IDs, and SpEffects discovered duri
 | Fog wall | Animation `60060` | Walk through fog gate |
 | Waygate | Animation `60490` | Hand turns blue |
 | Sending gate | Animation `60490` | **Same as waygate!** Hand turns blue |
-| Coffin | SpEffect `4190` or `4010` or `4510` | No animation, detect via SpEffect |
+| Coffin | Exclusion + SpEffect verification | No animation, `warp_requested` + `dest_entity_id == 0` |
 | Pureblood Knight's Medal | Animation `50340` + Item ID `0x40000870` | Item use (via `tae_queued_use_item`) |
 
 ### Events to Track (for position awareness, not randomized)
@@ -34,8 +34,9 @@ Documentation of memory structures, animation IDs, and SpEffects discovered duri
 1. If animation 60060 detected → FOG WALL (track)
 2. If animation 60490 detected → WAYGATE or SENDING GATE (track)
 3. If animation 50340 + tae_queued_use_item == 0x40000870 → MEDAL (track)
-4. If SpEffect 4190/4010/4510 active before BROKEN → COFFIN (track)
-5. If GameMan.warp_requested AND no other event active → FAST TRAVEL (track for position)
+4. If warp_requested + no animation + dest_entity_id == 0 → COFFIN (track)
+   - Secondary verification: SpEffect 4190/4010/4510 (not required, for confirmation)
+5. If warp_requested + dest_entity_id != 0 + no animation → FAST TRAVEL (track for position)
 6. If animation 4xxx/20xxx → DEATH (ignore)
 7. If animation 50230 + SpEffect 3226 → MEMORY OF GRACE (ignore)
 ```
@@ -113,7 +114,7 @@ Source: CE Table (`eldenring_all-in-one_Hexinton-v5.0_ce7.5.ct`)
 |----|-------------|------|
 | 502160, 502161 | Pureblood Knight's Medal | Before teleport (not used for detection, using item ID instead) |
 | 3226 | Memory of Grace (Réminiscence) | Before teleport |
-| 4190, 4010, 4510 | Coffin transport | Before teleport (while in coffin) |
+| 4190, 4010, 4510 | Coffin transport | Secondary verification (exclusion-based detection is primary) |
 | 4651, 4601 | Coffin arrival | After teleport |
 | 106 | Grace spawn | After fast travel / death / Réminiscence |
 | 4289 | Post-teleport effect | After most teleports |
@@ -170,15 +171,24 @@ SpEffects after: 4289, 19996, 32
 
 ### Coffin (TRACK)
 ```
-SpEffect 4190/4010/4510 (in coffin) → BROKEN → new PlayerIns
+warp_requested=true + no animation + dest_entity_id=0 → BROKEN → new PlayerIns
 SpEffects after: 4651, 4601, 4289, 19996
-Note: No animation detected before BROKEN! Detection via SpEffect only.
+
+Detection logic:
+- Primary: Exclusion-based (warp + no animation + dest_entity_id == 0)
+- Secondary: SpEffect 4190/4010/4510 (for confirmation, not required)
+- Logs warning if exclusion detects but no known SpEffect (possible new coffin type)
 ```
 
-### Fast Travel (IGNORE)
+### Fast Travel (TRACK for position)
 ```
-[no animation] → BROKEN → new PlayerIns → SpEffect 106 → 63000
+warp_requested=true + dest_entity_id != 0 + no animation → BROKEN → new PlayerIns → SpEffect 106 → 63000
 SpEffects after: 106, 4289, 19996
+
+Detection logic:
+- warp_requested == true (GameMan confirms warp)
+- dest_entity_id != 0 (grace entity ID is set via menu)
+- No animation (fog/waygate/medal)
 ```
 
 ### Memory of Grace / Réminiscence (IGNORE)
@@ -245,7 +255,7 @@ pub enum TeleportType {
     FogWall,     // animation 60060
     Waygate,     // animation 60490 (includes sending gates)
     Medal,       // animation 50340 + item ID 0x40000870 (via tae_queued_use_item)
-    Coffin,      // SpEffect 4190/4010/4510 (no animation)
+    Coffin,      // exclusion-based: warp_requested + no animation + dest_entity_id == 0
     FastTravel,  // GameMan.warp_requested without other events
 }
 ```

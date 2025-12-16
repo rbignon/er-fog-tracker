@@ -226,9 +226,54 @@ impl FogRandoTracker {
         self.was_using_medal = is_medal;
 
         // =========================================================================
-        // COFFIN DETECTION (SpEffect only, no animation)
+        // COFFIN DETECTION (exclusion-based with SpEffect verification)
+        //
+        // Primary detection: warp_requested + no animation + no medal
+        // Secondary verification: SpEffect IDs (4190/4010/4510)
+        //
+        // A coffin is detected when:
+        // - warp_requested is true (GameMan confirms a warp is happening)
+        // - No fog wall animation (60060)
+        // - No waygate animation (60490)
+        // - No medal use (item ID check)
+        // - Not a fast travel (destination_entity_id == 0, no grace selected)
+        //
+        // The SpEffect check provides additional confidence but is not required,
+        // allowing detection of modded coffins with different SpEffect IDs.
         // =========================================================================
-        let is_coffin = self.sp_effect_reader.has_event_effect(TeleportType::Coffin);
+        let has_coffin_speffect = self.sp_effect_reader.has_event_effect(TeleportType::Coffin);
+
+        // Exclusion-based detection: warp without animation and not fast travel
+        let warp_requested = self.game_man_reader.is_warp_requested();
+        let no_animation = !is_fog && !is_waygate && !is_medal;
+        let dest_entity_id = self.game_man_reader.get_destination_entity_id();
+        // Fast travel sets destination_entity_id to the grace entity ID (non-zero)
+        // Coffin typically has destination_entity_id == 0
+        let not_fast_travel = dest_entity_id == 0;
+
+        // Coffin detected by exclusion: warp + no animation + not fast travel
+        let is_coffin_by_exclusion = warp_requested && no_animation && not_fast_travel;
+
+        // Final coffin detection: exclusion-based OR SpEffect-based
+        // This ensures we catch both known coffins (SpEffect) and potential new ones (exclusion)
+        let is_coffin = is_coffin_by_exclusion || has_coffin_speffect;
+
+        // Log warnings for detection mismatches (helps discover new coffin types)
+        if is_coffin_by_exclusion && !has_coffin_speffect && !self.was_in_coffin {
+            let msg = format!(
+                "[COFFIN] WARNING: Detected by exclusion but no known SpEffect! dest_entity={} - possible new coffin type",
+                dest_entity_id
+            );
+            println!("{}", msg);
+            self.ws_client.send_debug_log(&msg);
+        } else if has_coffin_speffect && !is_coffin_by_exclusion && !self.was_in_coffin {
+            let msg = format!(
+                "[COFFIN] INFO: SpEffect detected but exclusion check failed (warp={}, no_anim={}, not_ft={})",
+                warp_requested, no_animation, not_fast_travel
+            );
+            println!("{}", msg);
+            self.ws_client.send_debug_log(&msg);
+        }
 
         if is_coffin && !self.was_in_coffin {
             self.on_event_entry(TeleportType::Coffin);
@@ -238,23 +283,22 @@ impl FogRandoTracker {
         self.was_in_coffin = is_coffin;
 
         // =========================================================================
-        // FAST TRAVEL DETECTION (GameMan.warp_requested without other events)
+        // FAST TRAVEL DETECTION (GameMan.warp_requested with destination_entity_id)
+        //
+        // Fast travel is detected when:
+        // - warp_requested is true
+        // - destination_entity_id != 0 (grace entity ID is set)
+        // - No animation-based event is active (fog/waygate/medal)
+        //
+        // Note: warp_requested is already computed above for coffin detection
         // =========================================================================
-        let warp_requested = self.game_man_reader.is_warp_requested();
-
         if warp_requested && !self.was_warp_requested {
             // Warp was just requested - check if it's a fast travel
-            // (no fog/waygate/medal/coffin event is pending or active)
-            let has_other_event = is_fog
-                || is_waygate
-                || is_medal
-                || is_coffin
-                || self.pending_fog.is_some()
-                || self.pending_waygate.is_some()
-                || self.pending_medal.is_some()
-                || self.pending_coffin.is_some();
+            // Fast travel has a non-zero destination_entity_id (grace ID)
+            // and no animation-based events active
+            let is_fast_travel = dest_entity_id != 0 && no_animation;
 
-            if !has_other_event {
+            if is_fast_travel {
                 self.on_fast_travel_entry();
             }
         } else if self.pending_fast_travel.is_some() && !warp_requested {
