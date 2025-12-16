@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
-use crate::game_state::{GameState, PlayerPosition};
+use crate::game_state::{GameState, PlayerPosition, SpEffectReader};
 use crate::websocket::{
     ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient,
 };
@@ -21,6 +21,12 @@ pub(crate) struct PendingFogEvent {
     entry: PlayerPosition,
 }
 
+/// Pending teleporter event (teleport started, waiting for exit)
+#[derive(Clone, Debug)]
+pub(crate) struct PendingTeleportEvent {
+    entry: PlayerPosition,
+}
+
 // =============================================================================
 // FOG RANDO TRACKER
 // =============================================================================
@@ -28,8 +34,13 @@ pub(crate) struct PendingFogEvent {
 /// Fog gate traversal tracking state
 pub struct FogRandoTracker {
     game_state: GameState,
+    sp_effect_reader: SpEffectReader,
     pub(crate) was_in_fog: bool,
     pub(crate) pending_fog: Option<PendingFogEvent>,
+    /// Track if player was teleporting last frame (SpEffect 4280)
+    pub(crate) was_teleporting: bool,
+    /// Pending teleporter event (entry recorded, waiting for exit)
+    pub(crate) pending_teleport: Option<PendingTeleportEvent>,
     pub(crate) show_ui: bool,
     pub(crate) show_debug: bool,
     pub(crate) config: Config,
@@ -79,6 +90,9 @@ impl FogRandoTracker {
         // Wait for the game to be loaded
         game_state.wait_for_game_loaded();
 
+        // Initialize SpEffect reader for teleporter detection
+        let sp_effect_reader = SpEffectReader::new(game_state.base_addresses());
+
         println!("FogRandoTracker initialized!");
 
         // Initialize WebSocket client for server integration
@@ -98,8 +112,11 @@ impl FogRandoTracker {
 
         Some(Self {
             game_state,
+            sp_effect_reader,
             was_in_fog: false,
             pending_fog: None,
+            was_teleporting: false,
+            pending_teleport: None,
             show_ui: true,
             show_debug: false,
             config,
@@ -113,25 +130,16 @@ impl FogRandoTracker {
         })
     }
 
-    /// Check for fog wall traversals each frame
+    /// Check for fog wall and teleporter traversals each frame
     pub fn check_fog_traversal(&mut self) {
-        // Detect map change (teleportation) - clear exits since we don't know exact zone
+        // Track map changes for context (but don't clear exits here anymore)
         if let Some(pos) = self.game_state.read_position() {
-            if let Some(last_map) = self.last_map_id {
-                if last_map != pos.map_id && !self.was_in_fog {
-                    // Map changed without fog traversal = teleport
-                    println!(
-                        "[FOG] Map change detected (TP?): {} → {}, clearing exits",
-                        crate::game_state::format_map_id(last_map),
-                        pos.map_id_str
-                    );
-                    self.current_zone = None;
-                    self.current_exits.clear();
-                }
-            }
             self.last_map_id = Some(pos.map_id);
         }
 
+        // =========================================================================
+        // FOG WALL DETECTION (animation 60060)
+        // =========================================================================
         let is_fog = self.game_state.is_in_fog_animation();
 
         // Detect fog entry: animation just started
@@ -189,6 +197,53 @@ impl FogRandoTracker {
         }
 
         self.was_in_fog = is_fog;
+
+        // =========================================================================
+        // TELEPORTER DETECTION (SpEffect 4280)
+        // Detects waygates, trap chests, sending gates
+        // =========================================================================
+        let is_teleporting = self.sp_effect_reader.is_teleporting();
+
+        // Detect teleport start: SpEffect 4280 just became active
+        if is_teleporting && !self.was_teleporting {
+            if let Some(pos) = self.game_state.read_position() {
+                println!(
+                    "[TELEPORT] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
+                    pos.map_id_str, pos.x, pos.y, pos.z, pos.play_region_id
+                );
+                self.pending_teleport = Some(PendingTeleportEvent { entry: pos });
+            }
+        }
+        // Detect teleport exit: we had a pending entry AND SpEffect ended AND position is valid
+        else if self.pending_teleport.is_some() && !is_teleporting {
+            if let Some(exit_pos) = self.game_state.read_position() {
+                let pending = self.pending_teleport.take().unwrap();
+                let entry = &pending.entry;
+
+                println!(
+                    "[TELEPORT] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
+                    exit_pos.map_id_str,
+                    exit_pos.x,
+                    exit_pos.y,
+                    exit_pos.z,
+                    exit_pos.play_region_id
+                );
+                println!(
+                    "[TELEPORT] Traversal complete: {} → {}",
+                    entry.map_id_str, exit_pos.map_id_str
+                );
+
+                // Clear current zone since we teleported
+                self.current_zone = None;
+                self.current_exits.clear();
+
+                // TODO: Send teleporter discovery to server if needed
+                // For now, we just log it. The server would need a separate
+                // endpoint or message type to handle teleporter discoveries.
+            }
+        }
+
+        self.was_teleporting = is_teleporting;
     }
 
     /// Set a status message that will be displayed temporarily
