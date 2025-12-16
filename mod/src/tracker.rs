@@ -353,12 +353,12 @@ impl FogRandoTracker {
         self.sp_effect_reader.get_debug_info()
     }
 
-    /// Log animation changes to console (with deduplication)
+    /// Log animation changes (with deduplication)
     fn log_animation_debug(&mut self) {
         let cur_anim = self.game_state.read_animation();
 
         if cur_anim != self.last_logged_anim {
-            match cur_anim {
+            let msg = match cur_anim {
                 Some(anim_id) => {
                     // Highlight known animations
                     let label = match anim_id {
@@ -366,17 +366,17 @@ impl FogRandoTracker {
                         0 => " (IDLE?)",
                         _ => "",
                     };
-                    println!("[ANIM] cur_anim: {}{}", anim_id, label);
+                    format!("[ANIM] cur_anim: {}{}", anim_id, label)
                 }
-                None => {
-                    println!("[ANIM] cur_anim: None (loading?)");
-                }
-            }
+                None => "[ANIM] cur_anim: None (loading?)".to_string(),
+            };
+            println!("{}", msg);
+            self.ws_client.send_debug_log(&msg);
             self.last_logged_anim = cur_anim;
         }
     }
 
-    /// Log SpEffect debug info to console (with deduplication)
+    /// Log SpEffect debug info (with deduplication)
     /// Only logs when state changes or every 5 seconds as a heartbeat
     fn log_speffect_debug(&mut self) {
         let debug = self.sp_effect_reader.get_debug_info();
@@ -394,20 +394,18 @@ impl FogRandoTracker {
                 "BROKEN"
             };
 
-            println!(
-                "[SPEFFECT] Chain: {} | WCM: 0x{:X} → {:?} | PlayerIns(+0x{:X}): {:?} | SpEffCtrl: {:?} | FirstNode: {:?}",
+            let chain_msg = format!(
+                "[SPEFFECT] Chain: {} | PlayerIns: {:?} | SpEffCtrl: {:?}",
                 chain_status,
-                debug.world_chr_man_base,
-                debug.world_chr_man_ptr.map(|p| format!("0x{:X}", p)),
-                debug.player_ins_offset,
                 debug.player_ins.map(|p| format!("0x{:X}", p)),
                 debug.sp_effect_ctrl.map(|p| format!("0x{:X}", p)),
-                debug.first_node.map(|p| format!("0x{:X}", p)),
             );
+            println!("{}", chain_msg);
+            self.ws_client.send_debug_log(&chain_msg);
 
             // Log active effects
-            if debug.active_effects.is_empty() {
-                println!("[SPEFFECT] Active: (none)");
+            let effects_msg = if debug.active_effects.is_empty() {
+                "[SPEFFECT] Active: (none)".to_string()
             } else {
                 let display: Vec<String> = debug
                     .active_effects
@@ -420,18 +418,22 @@ impl FogRandoTracker {
                         }
                     })
                     .collect();
-                println!("[SPEFFECT] Active: [{}]", display.join(", "));
-            }
+                format!("[SPEFFECT] Active: [{}]", display.join(", "))
+            };
+            println!("{}", effects_msg);
+            self.ws_client.send_debug_log(&effects_msg);
 
             // Log teleport status change specifically
             if state_changed {
                 if let Some((was_teleporting, _)) = &self.last_logged_speffect_state {
                     if *was_teleporting != debug.has_teleport_effect {
-                        if debug.has_teleport_effect {
-                            println!("[SPEFFECT] >>> TELEPORT EFFECT 4280 ACTIVATED <<<");
+                        let tp_msg = if debug.has_teleport_effect {
+                            "[SPEFFECT] >>> TELEPORT EFFECT 4280 ACTIVATED <<<"
                         } else {
-                            println!("[SPEFFECT] >>> TELEPORT EFFECT 4280 DEACTIVATED <<<");
-                        }
+                            "[SPEFFECT] >>> TELEPORT EFFECT 4280 DEACTIVATED <<<"
+                        };
+                        println!("{}", tp_msg);
+                        self.ws_client.send_debug_log(tp_msg);
                     }
                 }
             }

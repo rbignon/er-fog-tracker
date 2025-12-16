@@ -60,6 +60,8 @@ pub enum OutgoingMessage {
         target_pos: Position,
         target_play_region_id: Option<u32>,
     },
+    /// Send a debug log message
+    DebugLog { message: String },
     /// Respond to server ping
     Pong,
     /// Shutdown the connection
@@ -139,6 +141,9 @@ enum ServerMessage {
         target_pos: Position,
         #[serde(skip_serializing_if = "Option::is_none")]
         target_play_region_id: Option<u32>,
+    },
+    DebugLog {
+        message: String,
     },
     Pong,
 }
@@ -358,6 +363,15 @@ impl WebSocketClient {
     pub fn is_connected(&self) -> bool {
         self.current_status == ConnectionStatus::Connected
     }
+
+    /// Send a debug log message to the server
+    pub fn send_debug_log(&self, message: &str) {
+        if let Some(tx) = &self.tx {
+            let _ = tx.try_send(OutgoingMessage::DebugLog {
+                message: message.to_string(),
+            });
+        }
+    }
 }
 
 impl Drop for WebSocketClient {
@@ -566,6 +580,16 @@ fn message_loop(
                     target_map_id: target_map_str,
                     target_pos: target_pos.clone(),
                     target_play_region_id,
+                };
+                let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
+                socket
+                    .send(Message::Text(json))
+                    .map_err(|e| e.to_string())?;
+            }
+            Ok(OutgoingMessage::DebugLog { ref message }) => {
+                // Don't print to console, just send to server
+                let msg = ServerMessage::DebugLog {
+                    message: message.clone(),
                 };
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket
