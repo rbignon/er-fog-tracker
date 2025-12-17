@@ -126,9 +126,9 @@ pub struct LauncherApp {
     #[nwg_events(OnWindowClose: [LauncherApp::on_exit])]
     window: nwg::Window,
 
-    #[nwg_control(parent: window, interval: std::time::Duration::from_millis(200))]
+    #[nwg_control(parent: window, interval: 500, stopped: true)]
     #[nwg_events(OnTimerTick: [LauncherApp::on_timer])]
-    timer: nwg::AnimationTimer,
+    timer: nwg::Timer,
 
     // =========================================================================
     // Token Input Screen
