@@ -95,7 +95,10 @@ export function renderGraph(preservePositions = false) {
 
     // Update seed display
     if (graphData.metadata && graphData.metadata.seed) {
-        document.getElementById("seed-info").textContent = `Seed: ${graphData.metadata.seed}`;
+        const label = graphData.metadata.label;
+        document.getElementById("seed-info").textContent = label
+            ? `${label} — Seed: ${graphData.metadata.seed}`
+            : `Seed: ${graphData.metadata.seed}`;
     } else {
         document.getElementById("seed-info").textContent = 'Spoiler Log Visualizer';
     }

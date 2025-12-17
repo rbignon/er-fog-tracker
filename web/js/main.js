@@ -182,9 +182,6 @@ async function initPlayMode(gameId) {
     const { getGame } = await import('./api.js');
     const game = await getGame(gameId);
 
-    // Update seed info
-    document.getElementById('seed-info').textContent = `Seed: ${game.seed}${game.label ? ` - ${game.label}` : ''}`;
-
     // Convert server data to graph format
     const graphData = await convertServerDataToGraph(game);
 
@@ -216,9 +213,6 @@ async function initViewerMode(gameId) {
   try {
     const { getGame } = await import('./api.js');
     const game = await getGame(gameId);
-
-    // Update seed info
-    document.getElementById('seed-info').textContent = `Seed: ${game.seed}${game.label ? ` - ${game.label}` : ''}`;
 
     // Convert server data to graph format
     const graphData = await convertServerDataToGraph(game);
@@ -302,6 +296,10 @@ async function convertServerDataToGraph(game) {
   return {
     nodes: Array.from(nodes.values()),
     links,
+    metadata: {
+      seed: game.seed,
+      label: game.label,
+    },
   };
 }
 
