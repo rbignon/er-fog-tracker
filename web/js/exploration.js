@@ -509,7 +509,9 @@ export function discoverPathTo(targetId) {
                         }
                     });
 
-                    State.emit('graphNeedsRender', { preservePositions: true });
+                    // Select the target node
+                    State.setSelectedNodeId(targetId);
+                    State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: targetId });
                     showDiscoveryNotification(discoveredCount, targetId);
 
                     // Send to server - server will back-propagate
@@ -537,8 +539,10 @@ export function discoverPathTo(targetId) {
                 }
             });
 
+            // Select the target node
+            State.setSelectedNodeId(targetId);
             State.saveExplorationToStorage();
-            State.emit('graphNeedsRender', { preservePositions: true });
+            State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: targetId });
             showDiscoveryNotification(discoveredCount, targetId);
             return;
         }

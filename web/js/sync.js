@@ -1338,6 +1338,7 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
     if (!explorationState) return;
 
     let changed = false;
+    let newlyDiscoveredTarget = null;
 
     // If server sent full discovered_links, use it directly (server is source of truth)
     if (discoveredLinks && Array.isArray(discoveredLinks)) {
@@ -1368,6 +1369,10 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
         }
 
         if (changed) {
+            // Find the target of the first propagated link (the newly discovered node)
+            if (propagated && propagated.length > 0) {
+                newlyDiscoveredTarget = propagated[0].target;
+            }
             explorationState.discovered = newDiscovered;
             explorationState.discoveredLinks = newDiscoveredLinks;
         }
@@ -1383,6 +1388,10 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
             if (!explorationState.discovered.has(target)) {
                 explorationState.discovered.add(target);
                 changed = true;
+                // First newly discovered target
+                if (!newlyDiscoveredTarget) {
+                    newlyDiscoveredTarget = target;
+                }
             }
 
             const linkId = `${source}|${target}`;
@@ -1394,8 +1403,16 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
     }
 
     if (changed) {
+        // On host, select the newly discovered node (if not already selected)
+        if (State.isStreamerHost() && newlyDiscoveredTarget) {
+            const currentSelected = State.getSelectedNodeId();
+            if (currentSelected !== newlyDiscoveredTarget) {
+                State.setSelectedNodeId(newlyDiscoveredTarget);
+            }
+        }
+
         // Re-render graph to show newly discovered areas
-        State.emit('graphNeedsRender', { preservePositions: true });
+        State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: newlyDiscoveredTarget });
         Toast.show('New area discovered!');
     }
 }
