@@ -290,6 +290,7 @@ async function convertServerDataToGraph(game) {
       sourceDetails: pair.source_details,
       targetDetails: pair.target_details,
       requiredItemFrom,
+      isInherentlyOneWay: pair.is_inherently_one_way || false,
     });
   }
 

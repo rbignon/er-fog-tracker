@@ -18,6 +18,7 @@ class ZonePair(BaseModel):
     type: str = Field(pattern="^(random|preexisting)$")
     source_details: str | None = None
     target_details: str | None = None
+    is_inherently_one_way: bool = False
 
 
 class Zone(BaseModel):

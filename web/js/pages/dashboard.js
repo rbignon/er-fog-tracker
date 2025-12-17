@@ -120,6 +120,7 @@ async function createGame() {
     type: link.type || 'random',
     source_details: link.sourceDetails || null,
     target_details: link.targetDetails || null,
+    is_inherently_one_way: link.isInherentlyOneWay || false,
   }));
 
   // Convert graph data to zones format (node metadata)

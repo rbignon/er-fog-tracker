@@ -140,6 +140,7 @@ async def create_game(
             type=conn.conn_type,
             source_details=conn.source_details or None,
             target_details=conn.target_details or None,
+            is_inherently_one_way=conn.is_inherently_one_way,
         ).model_dump()
         for conn in parsed.connections
     ]
