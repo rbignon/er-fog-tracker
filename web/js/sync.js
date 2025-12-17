@@ -1111,6 +1111,17 @@ export async function connectAsHost(gameId) {
                 handleDiscoveryFromServer(data.propagated, data.discovered_links);
                 return;
             }
+
+            // Mod connection status
+            if (data.type === 'mod_connected') {
+                updateModConnectionIndicator(true);
+                return;
+            }
+
+            if (data.type === 'mod_disconnected') {
+                updateModConnectionIndicator(false);
+                return;
+            }
         };
 
         gameWs.onerror = () => {
@@ -1223,6 +1234,9 @@ export async function connectAsViewer(gameId) {
  * Handle disconnection from game WebSocket - attempt reconnection.
  */
 async function handleGameWsDisconnect() {
+    // Reset mod connection indicator (we don't know the status while disconnected)
+    updateModConnectionIndicator(false);
+
     // Prevent multiple concurrent reconnection attempts
     if (gameWsIsReconnecting) {
         return;

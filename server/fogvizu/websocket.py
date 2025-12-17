@@ -215,6 +215,14 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
         room.mod = websocket
         logger.info("[MOD] Connected successfully for game %s", game_id)
 
+        # Notify host that mod connected
+        if room.host:
+            try:
+                await room.host.send_json({"type": "mod_connected"})
+                logger.info("[MOD] Notified host of mod connection")
+            except Exception:
+                pass
+
         # Start heartbeat
         heartbeat_task = asyncio.create_task(heartbeat_loop(websocket))
 
@@ -528,6 +536,15 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
         finally:
             heartbeat_task.cancel()
             room.mod = None
+
+            # Notify host that mod disconnected
+            if room.host:
+                try:
+                    await room.host.send_json({"type": "mod_disconnected"})
+                    logger.info("[MOD] Notified host of mod disconnection")
+                except Exception:
+                    pass
+
             manager.cleanup_room(game_id)
             logger.info("[MOD] Cleaned up for game %s", game_id)
 
@@ -574,6 +591,10 @@ async def handle_host_connection(websocket: WebSocket, game_id: UUID):
             "tags": game.tags or {},
         }
         await websocket.send_json({"type": "game_state", "state": game_state})
+
+        # Send mod connection status
+        if room.mod:
+            await websocket.send_json({"type": "mod_connected"})
 
         # Start heartbeat
         heartbeat_task = asyncio.create_task(heartbeat_loop(websocket))
