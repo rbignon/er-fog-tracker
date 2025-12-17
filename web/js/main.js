@@ -300,6 +300,8 @@ async function convertServerDataToGraph(game) {
     metadata: {
       seed: game.seed,
       label: game.label,
+      discoveryCount: game.discovery_count,
+      totalZones: game.total_zones,
     },
   };
 }

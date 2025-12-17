@@ -75,20 +75,28 @@ export function renderGraph(preservePositions = false) {
     document.getElementById("preexisting-count").textContent = links.filter(l => l.type === "preexisting").length;
 
     // Update discovered stats (exploration mode only)
-    // Count zones that appear in discovered links AND exist in the graph (same as server logic)
+    // Use server-calculated stats if available, otherwise calculate locally
     const discoveredStat = document.getElementById("discovered-stat");
     if (explorationMode && explorationState) {
-        const totalAreas = nodes.length;
-        const nodeIds = new Set(nodes.map(n => n.id));
+        let discoveredCount, totalAreas;
 
-        // Build discovered zones from discovered links (same logic as server)
-        const discoveredFromLinks = new Set();
-        for (const linkKey of explorationState.discoveredLinks || []) {
-            const [source, target] = linkKey.split('|');
-            if (nodeIds.has(source)) discoveredFromLinks.add(source);
-            if (nodeIds.has(target)) discoveredFromLinks.add(target);
+        if (graphData.metadata?.discoveryCount !== undefined && graphData.metadata?.totalZones !== undefined) {
+            // Use server-calculated stats (most accurate)
+            discoveredCount = graphData.metadata.discoveryCount;
+            totalAreas = graphData.metadata.totalZones;
+        } else {
+            // Fallback: calculate locally from discovered links
+            totalAreas = nodes.length;
+            const nodeIds = new Set(nodes.map(n => n.id));
+            const discoveredFromLinks = new Set();
+            for (const linkKey of explorationState.discoveredLinks || []) {
+                const [source, target] = linkKey.split('|');
+                if (nodeIds.has(source)) discoveredFromLinks.add(source);
+                if (nodeIds.has(target)) discoveredFromLinks.add(target);
+            }
+            discoveredCount = discoveredFromLinks.size;
         }
-        const discoveredCount = discoveredFromLinks.size;
+
         const percent = totalAreas > 0 ? Math.round((discoveredCount / totalAreas) * 100) : 0;
 
         document.getElementById("discovered-count").textContent = discoveredCount;

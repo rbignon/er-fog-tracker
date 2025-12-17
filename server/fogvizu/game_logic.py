@@ -69,10 +69,13 @@ async def propagate_discovery(
     # Check if the link exists in zone_pairs
     found_pair = find_zone_pair(zone_pairs, source, target)
     if found_pair:
+        # Use exact names from zone_pairs for consistency
+        source = found_pair["source"]
+        target = found_pair["destination"]
         logger.info(
             "[DISCOVERY] Found matching pair: %s → %s (type=%s)",
-            found_pair["source"],
-            found_pair["destination"],
+            source,
+            target,
             found_pair["type"],
         )
     else:

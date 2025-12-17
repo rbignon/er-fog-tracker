@@ -117,6 +117,8 @@ class GameFull(BaseModel):
     discovered_nodes: list[str]
     node_positions: dict[str, NodePositionResponse]
     tags: dict[str, list[str]]
+    discovery_count: int
+    total_zones: int
     created_at: datetime
     updated_at: datetime
 

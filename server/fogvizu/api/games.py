@@ -116,6 +116,9 @@ async def get_game(
     discovered_links = game.discovered_links or []
     discovered_nodes = get_discovered_nodes(discovered_links)
 
+    # Compute discovery stats
+    stats = compute_discovery_stats(game.zone_pairs, discovered_links)
+
     # Parse node positions
     node_positions = {
         node_id: NodePositionResponse(x=pos["x"], y=pos["y"])
@@ -144,6 +147,8 @@ async def get_game(
         discovered_nodes=list(discovered_nodes),
         node_positions=node_positions,
         tags=game.tags or {},
+        discovery_count=stats["discovered"],
+        total_zones=stats["total"],
         created_at=game.created_at,
         updated_at=game.updated_at,
     )
