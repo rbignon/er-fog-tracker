@@ -75,10 +75,20 @@ export function renderGraph(preservePositions = false) {
     document.getElementById("preexisting-count").textContent = links.filter(l => l.type === "preexisting").length;
 
     // Update discovered stats (exploration mode only)
+    // Count zones that appear in discovered links AND exist in the graph (same as server logic)
     const discoveredStat = document.getElementById("discovered-stat");
     if (explorationMode && explorationState) {
         const totalAreas = nodes.length;
-        const discoveredCount = explorationState.discovered.size;
+        const nodeIds = new Set(nodes.map(n => n.id));
+
+        // Build discovered zones from discovered links (same logic as server)
+        const discoveredFromLinks = new Set();
+        for (const linkKey of explorationState.discoveredLinks || []) {
+            const [source, target] = linkKey.split('|');
+            if (nodeIds.has(source)) discoveredFromLinks.add(source);
+            if (nodeIds.has(target)) discoveredFromLinks.add(target);
+        }
+        const discoveredCount = discoveredFromLinks.size;
         const percent = totalAreas > 0 ? Math.round((discoveredCount / totalAreas) * 100) : 0;
 
         document.getElementById("discovered-count").textContent = discoveredCount;

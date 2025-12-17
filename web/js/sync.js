@@ -250,8 +250,19 @@ function getFullSyncState() {
         : [];
 
     // Calculate discovered stats for viewer counter
-    const discoveredCount = explorationState?.discovered?.size || 0;
+    // Count zones that appear in discovered links AND exist in the graph (same as server logic)
     const totalAreas = graphData?.nodes?.length || 0;
+    let discoveredCount = 0;
+    if (explorationState?.discoveredLinks && graphData?.nodes) {
+        const nodeIds = new Set(graphData.nodes.map(n => n.id));
+        const discoveredFromLinks = new Set();
+        for (const linkKey of explorationState.discoveredLinks) {
+            const [source, target] = linkKey.split('|');
+            if (nodeIds.has(source)) discoveredFromLinks.add(source);
+            if (nodeIds.has(target)) discoveredFromLinks.add(target);
+        }
+        discoveredCount = discoveredFromLinks.size;
+    }
 
     return {
         created: Date.now(),
