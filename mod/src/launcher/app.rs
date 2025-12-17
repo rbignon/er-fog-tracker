@@ -247,8 +247,12 @@ pub struct LauncherApp {
     #[nwg_control(parent: window, text: "Press F9 in-game to toggle the overlay", position: (20, 180), size: (460, 25))]
     injected_hint: nwg::Label,
 
-    #[nwg_control(parent: window, text: "This window will unlock when the game closes", position: (20, 220), size: (460, 25))]
+    #[nwg_control(parent: window, text: "", position: (20, 220), size: (460, 25))]
     injected_status: nwg::Label,
+
+    #[nwg_control(parent: window, text: "Back to Games", position: (200, 280), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_injected_back_click])]
+    injected_back_btn: nwg::Button,
 
     // Application data
     data: RefCell<Option<AppData>>,
@@ -463,6 +467,7 @@ impl LauncherApp {
         self.injected_game_label.set_visible(show_injected);
         self.injected_hint.set_visible(show_injected);
         self.injected_status.set_visible(show_injected);
+        self.injected_back_btn.set_visible(show_injected);
     }
 
     // =========================================================================
@@ -671,6 +676,22 @@ impl LauncherApp {
 
         data.current_screen = AppScreen::GameSelection;
         self.show_screen(AppScreen::GameSelection);
+    }
+
+    fn on_injected_back_click(&self) {
+        let mut data_ref = self.data.borrow_mut();
+        let data = match data_ref.as_mut() {
+            Some(d) => d,
+            None => return,
+        };
+
+        if let Some(ref mut monitor) = data.process_monitor {
+            monitor.reset();
+        }
+
+        data.current_screen = AppScreen::GameSelection;
+        self.show_screen(AppScreen::GameSelection);
+        data.load_games();
     }
 }
 
