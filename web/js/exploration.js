@@ -582,14 +582,18 @@ export function findPathFromStart(targetNodeId) {
     // Build node connections map
     const nodeConnections = buildNodeConnectionsMap(graphData);
     
-    // In exploration mode, only traverse through discovered nodes
+    // In exploration mode, only traverse through discovered nodes AND discovered links
     const explorationMode = State.isExplorationMode();
     const explorationState = State.getExplorationState();
-    const canTraverse = (nodeId) => {
+    const canTraverseNode = (nodeId) => {
         if (!explorationMode) return true;
         return explorationState.discovered.has(nodeId);
     };
-    
+    const canTraverseLink = (fromId, toId) => {
+        if (!explorationMode) return true;
+        return State.isLinkDiscovered(fromId, toId) || State.isLinkDiscovered(toId, fromId);
+    };
+
     const visited = new Set([State.START_NODE]);
     const queue = [[State.START_NODE, [], []]]; // [nodeId, pathNodes, pathLinks]
 
@@ -606,7 +610,9 @@ export function findPathFromStart(targetNodeId) {
             const neighborId = reversed ? sourceId : targetId;
 
             if (visited.has(neighborId)) continue;
-            if (neighborId !== targetNodeId && !canTraverse(neighborId)) continue;
+            // Must be able to traverse both the link AND the node (unless it's the target)
+            if (!canTraverseLink(currentId, neighborId)) continue;
+            if (neighborId !== targetNodeId && !canTraverseNode(neighborId)) continue;
             visited.add(neighborId);
 
             const newPathNodes = [...pathNodes, currentId];
@@ -634,12 +640,16 @@ export function followLinearPath(startNodeId) {
     const graphData = State.getGraphData();
     if (!graphData) return { nodes: new Set([startNodeId]), links: new Set() };
 
-    // In exploration mode, only traverse through discovered nodes
+    // In exploration mode, only traverse through discovered nodes AND discovered links
     const explorationMode = State.isExplorationMode();
     const explorationState = State.getExplorationState();
-    const canTraverse = (nodeId) => {
+    const canTraverseNode = (nodeId) => {
         if (!explorationMode) return true;
         return explorationState.discovered.has(nodeId);
+    };
+    const canTraverseLink = (fromId, toId) => {
+        if (!explorationMode) return true;
+        return State.isLinkDiscovered(fromId, toId) || State.isLinkDiscovered(toId, fromId);
     };
 
     const nodeConnections = buildNodeConnectionsMap(graphData);
@@ -660,8 +670,9 @@ export function followLinearPath(startNodeId) {
 
             if (visitedNodes.has(neighborId)) continue;
 
-            // In exploration mode, stop at undiscovered nodes
-            if (!canTraverse(neighborId)) continue;
+            // In exploration mode, stop at undiscovered links or nodes
+            if (!canTraverseLink(currentId, neighborId)) continue;
+            if (!canTraverseNode(neighborId)) continue;
 
             visitedLinks.add(link);
             visitedNodes.add(neighborId);

@@ -291,6 +291,14 @@ export function highlightFrontier() {
         }
     });
 
+    // Also check placeholders for undiscovered links (between two discovered nodes)
+    // These placeholders have a sourceNodeId that should be an access node
+    nodes.each(function(d) {
+        if (d.isPlaceholder && d.sourceNodeId) {
+            accessNodes.add(d.sourceNodeId);
+        }
+    });
+
     // Apply frontier highlights - only when nothing is selected
     // placeholder nodes (isPlaceholder) are frontier nodes
     nodes.classed("frontier-highlight", d => d.isPlaceholder === true)
