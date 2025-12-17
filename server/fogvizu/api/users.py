@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fogvizu.auth import get_user_by_username
 from fogvizu.database import Game, get_db
-from fogvizu.game_logic import compute_total_zones
+from fogvizu.game_logic import compute_discovery_stats
 from fogvizu.models import GameListResponse, GameSummary, UserPublic
 
 router = APIRouter()
@@ -57,7 +57,7 @@ async def get_user_games_public(
     games = []
     for game in result.scalars().all():
         discovered_links = game.discovered_links or []
-        total_zones = compute_total_zones(game.zone_pairs)
+        stats = compute_discovery_stats(game.zone_pairs, discovered_links)
 
         games.append(
             GameSummary(
@@ -65,8 +65,8 @@ async def get_user_games_public(
                 seed=game.seed,
                 run_id=game.run_id,
                 label=game.label,
-                discovery_count=len(discovered_links),
-                total_zones=total_zones,
+                discovery_count=stats["discovered"],
+                total_zones=stats["total"],
                 created_at=game.created_at,
                 updated_at=game.updated_at,
             )

@@ -12,7 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fogvizu.auth import get_current_user
 from fogvizu.config import settings
 from fogvizu.database import Game, User, get_db
-from fogvizu.game_logic import compute_total_zones, get_discovered_nodes, propagate_discovery
+from fogvizu.game_logic import (
+    compute_discovery_stats,
+    get_discovered_nodes,
+    propagate_discovery,
+)
 from fogvizu.models import (
     DiscoveredLink,
     DiscoveredLinkResponse,
@@ -161,7 +165,7 @@ async def get_my_games(
     games = []
     for game in result.scalars().all():
         discovered_links = game.discovered_links or []
-        total_zones = compute_total_zones(game.zone_pairs)
+        stats = compute_discovery_stats(game.zone_pairs, discovered_links)
 
         games.append(
             GameSummary(
@@ -169,8 +173,8 @@ async def get_my_games(
                 seed=game.seed,
                 run_id=game.run_id,
                 label=game.label,
-                discovery_count=len(discovered_links),
-                total_zones=total_zones,
+                discovery_count=stats["discovered"],
+                total_zones=stats["total"],
                 mod_connected=ws_manager.is_mod_connected(game.id),
                 created_at=game.created_at,
                 updated_at=game.updated_at,
@@ -235,14 +239,15 @@ async def update_game(
     await db.flush()
 
     discovered_links = game.discovered_links or []
+    stats = compute_discovery_stats(game.zone_pairs, discovered_links)
 
     return GameSummary(
         id=game.id,
         seed=game.seed,
         run_id=game.run_id,
         label=game.label,
-        discovery_count=len(discovered_links),
-        total_zones=compute_total_zones(game.zone_pairs),
+        discovery_count=stats["discovered"],
+        total_zones=stats["total"],
         created_at=game.created_at,
         updated_at=game.updated_at,
     )

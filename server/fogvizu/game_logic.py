@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 # Re-export commonly used functions for backward compatibility
 from fogvizu.zone_matching import (  # noqa: E402, F401
+    compute_discovery_stats,
     compute_total_zones,
     find_all_matching_zone_pairs,
     find_matching_zone_pair,
