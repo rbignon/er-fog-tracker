@@ -14,6 +14,76 @@ use windows::Win32::System::Diagnostics::Debug::ReadProcessMemory;
 use windows::Win32::System::Threading::GetCurrentProcess;
 
 // =============================================================================
+// MEMORY READER TRAIT
+// =============================================================================
+
+/// Common memory reading utilities for process memory access
+///
+/// Provides default implementations for reading u32, u64 (pointer), and bool
+/// values from process memory. Implementors only need to provide `proc()`.
+trait MemoryReader {
+    /// Returns the process handle for memory operations
+    fn proc(&self) -> HANDLE;
+
+    /// Read a u32 from the given address
+    fn read_u32(&self, addr: usize) -> Option<u32> {
+        if addr == 0 {
+            return None;
+        }
+        let mut value: u32 = 0;
+        unsafe {
+            ReadProcessMemory(
+                self.proc(),
+                addr as _,
+                &mut value as *mut _ as _,
+                std::mem::size_of::<u32>(),
+                None,
+            )
+            .ok()
+            .map(|_| value)
+        }
+    }
+
+    /// Read a pointer (u64) from the given address
+    fn read_ptr(&self, addr: usize) -> Option<usize> {
+        if addr == 0 {
+            return None;
+        }
+        let mut value: u64 = 0;
+        unsafe {
+            ReadProcessMemory(
+                self.proc(),
+                addr as _,
+                &mut value as *mut _ as _,
+                std::mem::size_of::<u64>(),
+                None,
+            )
+            .ok()
+            .map(|_| value as usize)
+        }
+    }
+
+    /// Read a bool (u8) from the given address
+    fn read_bool(&self, addr: usize) -> Option<bool> {
+        if addr == 0 {
+            return None;
+        }
+        let mut value: u8 = 0;
+        unsafe {
+            ReadProcessMemory(
+                self.proc(),
+                addr as _,
+                &mut value as *mut _ as _,
+                std::mem::size_of::<u8>(),
+                None,
+            )
+            .ok()
+            .map(|_| value != 0)
+        }
+    }
+}
+
+// =============================================================================
 // INTERNAL CONSTANTS
 // =============================================================================
 
@@ -99,27 +169,17 @@ impl TeleportType {
         }
     }
 
-    /// SpEffect IDs that must be active for detection
+    /// SpEffect IDs used for detection (secondary verification)
     ///
-    /// Returns empty slice for event types detected via animation only.
-    /// For Medal: requires one of the SpEffects in addition to animation.
-    /// For Coffin: requires one of the SpEffects (no animation check).
+    /// Returns empty slice for event types detected via animation or item ID only.
+    /// For Coffin: SpEffect IDs for secondary verification (primary is exclusion-based).
     pub fn speffect_ids(&self) -> &'static [u32] {
         match self {
             Self::FogWall => &[],
             Self::Waygate => &[],
-            Self::Medal => &[502160, 502161],
+            Self::Medal => &[], // Detection uses tae_queued_use_item, not SpEffect
             Self::Coffin => &[4190, 4010, 4510],
             Self::FastTravel => &[],
-        }
-    }
-
-    /// Whether this event requires SpEffect check for detection
-    #[allow(dead_code)]
-    pub fn requires_speffect(&self) -> bool {
-        match self {
-            Self::FogWall | Self::Waygate | Self::FastTravel => false,
-            Self::Medal | Self::Coffin => true,
         }
     }
 
@@ -131,17 +191,6 @@ impl TeleportType {
             Self::Medal => "MEDAL",
             Self::Coffin => "COFFIN",
             Self::FastTravel => "FAST_TRAVEL",
-        }
-    }
-
-    /// Whether this teleport type is tracked by the fog randomizer
-    ///
-    /// FastTravel is not randomized, but we track it for position awareness
-    #[allow(dead_code)]
-    pub fn is_randomized(&self) -> bool {
-        match self {
-            Self::FogWall | Self::Waygate | Self::Medal | Self::Coffin => true,
-            Self::FastTravel => false,
         }
     }
 }
@@ -285,6 +334,12 @@ pub struct SpEffectReader {
     player_ins_offset: usize,
 }
 
+impl MemoryReader for SpEffectReader {
+    fn proc(&self) -> HANDLE {
+        self.proc
+    }
+}
+
 impl SpEffectReader {
     /// Create a new SpEffectReader
     pub fn new(base_addresses: &libeldenring::prelude::base_addresses::BaseAddresses) -> Self {
@@ -310,44 +365,6 @@ impl SpEffectReader {
             proc: unsafe { GetCurrentProcess() },
             world_chr_man: base_addresses.world_chr_man,
             player_ins_offset,
-        }
-    }
-
-    /// Read a u32 from the given address
-    fn read_u32(&self, addr: usize) -> Option<u32> {
-        if addr == 0 {
-            return None;
-        }
-        let mut value: u32 = 0;
-        unsafe {
-            ReadProcessMemory(
-                self.proc,
-                addr as _,
-                &mut value as *mut _ as _,
-                std::mem::size_of::<u32>(),
-                None,
-            )
-            .ok()
-            .map(|_| value)
-        }
-    }
-
-    /// Read a pointer (u64) from the given address
-    fn read_ptr(&self, addr: usize) -> Option<usize> {
-        if addr == 0 {
-            return None;
-        }
-        let mut value: u64 = 0;
-        unsafe {
-            ReadProcessMemory(
-                self.proc,
-                addr as _,
-                &mut value as *mut _ as _,
-                std::mem::size_of::<u64>(),
-                None,
-            )
-            .ok()
-            .map(|_| value as usize)
         }
     }
 
@@ -503,69 +520,18 @@ pub struct GameManReader {
     game_man: usize,
 }
 
+impl MemoryReader for GameManReader {
+    fn proc(&self) -> HANDLE {
+        self.proc
+    }
+}
+
 impl GameManReader {
     /// Create a new GameManReader
     pub fn new(base_addresses: &libeldenring::prelude::base_addresses::BaseAddresses) -> Self {
         Self {
             proc: unsafe { GetCurrentProcess() },
             game_man: base_addresses.game_man,
-        }
-    }
-
-    /// Read a bool (u8) from the given address
-    fn read_bool(&self, addr: usize) -> Option<bool> {
-        if addr == 0 {
-            return None;
-        }
-        let mut value: u8 = 0;
-        unsafe {
-            ReadProcessMemory(
-                self.proc,
-                addr as _,
-                &mut value as *mut _ as _,
-                std::mem::size_of::<u8>(),
-                None,
-            )
-            .ok()
-            .map(|_| value != 0)
-        }
-    }
-
-    /// Read a u32 from the given address
-    fn read_u32(&self, addr: usize) -> Option<u32> {
-        if addr == 0 {
-            return None;
-        }
-        let mut value: u32 = 0;
-        unsafe {
-            ReadProcessMemory(
-                self.proc,
-                addr as _,
-                &mut value as *mut _ as _,
-                std::mem::size_of::<u32>(),
-                None,
-            )
-            .ok()
-            .map(|_| value)
-        }
-    }
-
-    /// Read a pointer (u64) from the given address
-    fn read_ptr(&self, addr: usize) -> Option<usize> {
-        if addr == 0 {
-            return None;
-        }
-        let mut value: u64 = 0;
-        unsafe {
-            ReadProcessMemory(
-                self.proc,
-                addr as _,
-                &mut value as *mut _ as _,
-                std::mem::size_of::<u64>(),
-                None,
-            )
-            .ok()
-            .map(|_| value as usize)
         }
     }
 
