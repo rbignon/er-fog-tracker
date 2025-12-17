@@ -6,6 +6,7 @@ import { SpoilerLogParser } from './parser.js';
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
 import * as Toast from './toast.js';
+import { restoreLastVisualState } from './sync.js';
 
 // ============================================================
 // DOM ELEMENTS
@@ -508,30 +509,36 @@ export function initUI() {
     });
 
     // Re-apply frontier highlight after graph render if it's active AND nothing is selected
+    // Overlay viewers get highlights from host, everyone else calculates locally
     State.subscribe('graphRenderCompleted', () => {
-        if (State.isFrontierHighlightActive() && !State.getSelectedNodeId() && (!State.isSyncConnected() || State.isStreamerHost())) {
+        if (State.isFrontierHighlightActive() && !State.getSelectedNodeId() && !State.isOverlayMode()) {
             highlightFrontier();
         }
     });
 
     // Re-apply frontier highlight when selection is cleared
     State.subscribe('restoreFrontierHighlight', () => {
-        if (State.isFrontierHighlightActive() && (!State.isSyncConnected() || State.isStreamerHost())) {
-            highlightFrontier();
+        if (State.isFrontierHighlightActive()) {
+            if (State.isOverlayMode()) {
+                // Overlay viewer: restore host's visual state (don't recalculate)
+                restoreLastVisualState();
+            } else {
+                // Host, interactive viewer, or not connected: recalculate locally
+                highlightFrontier();
+            }
         }
     });
 
     // Update UI based on frontier state changes
-    // Only recalculate frontier if we're the host (not viewer)
     State.subscribe('frontierHighlightChanged', (active) => {
         const frontierCheckbox = document.getElementById('show-frontier-checkbox');
         if (frontierCheckbox) {
             frontierCheckbox.checked = active;
         }
 
-        // Only apply highlight changes if we're the host or not connected
-        // Viewers receive visual classes directly from host via applyVisualClasses()
-        if (!State.isSyncConnected() || State.isStreamerHost()) {
+        // Overlay viewers receive visual classes from host via applyVisualClasses()
+        // Everyone else (host, interactive viewer, not connected) calculates locally
+        if (!State.isOverlayMode()) {
             if (active) {
                 highlightFrontier();
             } else {

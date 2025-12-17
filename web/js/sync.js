@@ -24,6 +24,7 @@ let syncThrottle = null;
 let lastSyncedViewport = null;
 let isRenderingGraph = false;
 let isSyncing = false;
+let lastReceivedVisualState = null;  // Store last visual state from host for viewer restoration
 
 // Game WebSocket variables
 let gameWs = null;
@@ -459,9 +460,13 @@ function applyViewport(vp) {
 /**
  * Apply only positions and discovery state from visual_state (for interactive viewers).
  * Ignores selection, highlights, and viewport.
+ * Still stores the full state for restoration after local interactions.
  */
 function applyPositionsAndDiscoveryOnly(data) {
     if (!data.nodes) return;
+
+    // Interactive viewer: only sync positions and discovery
+    // Options like frontier highlight remain local and independent from host
 
     const simulation = State.getSimulation();
     const d3Nodes = simulation ? simulation.nodes() : [];
@@ -539,6 +544,9 @@ function applyPositionsAndDiscoveryOnly(data) {
 
 function applyVisualState(data) {
     if (!data.nodes) return false;
+
+    // Store the received state for viewer restoration
+    lastReceivedVisualState = data;
 
     if (data.explorationMode !== undefined) {
         const currentMode = State.isExplorationMode();
@@ -651,7 +659,9 @@ function applyVisualState(data) {
     if (data.frontierHighlightActive !== undefined) {
         const currentFrontierActive = State.isFrontierHighlightActive();
         if (data.frontierHighlightActive !== currentFrontierActive) {
-            updateFrontierCheckboxState(data.frontierHighlightActive);
+            // Update both state and checkbox - the event handler in ui.js
+            // will update the checkbox and skip recalculation for viewers
+            State.setFrontierHighlightActive(data.frontierHighlightActive);
         }
     }
 
@@ -666,13 +676,6 @@ function applyVisualState(data) {
     }
 
     return false;
-}
-
-function updateFrontierCheckboxState(active) {
-    const frontierCheckbox = document.getElementById('show-frontier-checkbox');
-    if (frontierCheckbox) {
-        frontierCheckbox.checked = active;
-    }
 }
 
 function applyVisualClasses(data) {
@@ -724,6 +727,16 @@ function applyVisualClasses(data) {
 
     // Update viewer discovery counter
     updateViewerDiscoveryCounter(data);
+}
+
+/**
+ * Restore the last visual state received from host.
+ * Used by overlay mode when clearing local selection to restore frontier highlights.
+ */
+export function restoreLastVisualState() {
+    if (lastReceivedVisualState) {
+        applyVisualClasses(lastReceivedVisualState);
+    }
 }
 
 // Update viewer discovery counter (OBS overlay only)
