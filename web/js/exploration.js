@@ -477,6 +477,9 @@ export function discoverPathTo(targetId) {
     const graphData = State.getGraphData();
     if (!graphData) return;
 
+    const isOnline = State.getBackendMode() === 'online';
+    const gameId = State.getGameId();
+
     // BFS to find shortest path (using all nodes, not just discovered)
     // Track both nodes and the links used to reach them
     const visited = new Set([State.START_NODE]);
@@ -489,6 +492,39 @@ export function discoverPathTo(targetId) {
             // Found the target - discover all nodes on the path with their links
             State.saveAllNodePositions();
 
+            // Online mode: send to server, which handles back-propagation
+            if (isOnline && gameId && pathSteps.length > 1) {
+                // Find last step with fromNodeId to send to server
+                const lastStep = pathSteps[pathSteps.length - 1];
+                if (lastStep.fromNodeId) {
+                    // Optimistic update
+                    let discoveredCount = 0;
+                    pathSteps.forEach(step => {
+                        if (!State.isDiscovered(step.nodeId)) {
+                            discoverWithPreexisting(step.nodeId, step.fromNodeId, step.viaLink);
+                            discoveredCount++;
+                        } else if (step.fromNodeId) {
+                            const isBidirectional = !step.viaLink || !step.viaLink.oneWay;
+                            State.discoverLink(step.fromNodeId, step.nodeId, isBidirectional);
+                        }
+                    });
+
+                    State.emit('graphNeedsRender', { preservePositions: true });
+                    showDiscoveryNotification(discoveredCount, targetId);
+
+                    // Send to server - server will back-propagate
+                    Api.createDiscovery(gameId, { source: lastStep.fromNodeId, target: targetId })
+                        .then(response => {
+                            if (response && response.discovered_links) {
+                                applyServerDiscoveryState(response.discovered_links);
+                            }
+                        })
+                        .catch(err => console.error('Failed to persist discovery:', err));
+                    return;
+                }
+            }
+
+            // Offline mode: compute everything locally
             let discoveredCount = 0;
             pathSteps.forEach(step => {
                 if (!State.isDiscovered(step.nodeId)) {
