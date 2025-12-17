@@ -65,8 +65,8 @@ pub struct FogRandoTracker {
     pub(crate) current_exits: Vec<FogExit>,
     /// Discovery statistics from server
     pub(crate) discovery_stats: Option<DiscoveryStats>,
-    /// Last known map_id (to detect teleportation)
-    last_map_id: Option<u32>,
+    /// Whether position was readable last frame (to detect loading screens)
+    was_position_readable: bool,
     /// Font data loaded from file (must persist for imgui)
     pub(crate) font_data: Option<Vec<u8>>,
     /// Last logged SpEffect debug state (to avoid duplicate logs)
@@ -160,7 +160,7 @@ impl FogRandoTracker {
             current_zone: None,
             current_exits: Vec::new(),
             discovery_stats: None,
-            last_map_id: None,
+            was_position_readable: false,
             font_data,
             last_logged_speffect_state: None,
             last_speffect_log_time: Instant::now(),
@@ -181,15 +181,17 @@ impl FogRandoTracker {
         // Log GameMan warp state changes
         self.log_warp_debug();
 
-        // Track map changes - clear zone info when map changes (teleport, death, fast travel, etc.)
-        if let Some(pos) = self.game_state.read_position() {
-            if self.last_map_id != Some(pos.map_id) {
-                // Map changed - clear current zone until we get new info from server
-                self.current_zone = None;
-                self.current_exits.clear();
-            }
-            self.last_map_id = Some(pos.map_id);
+        // Track loading screens - clear zone info when exiting a loading screen
+        // (position goes from None to Some). This handles teleportation, death, fast travel, etc.
+        // We don't clear on map_id change alone because walking between map tiles doesn't
+        // change the zone from the fog randomizer's perspective.
+        let position_now_readable = self.game_state.read_position().is_some();
+        if position_now_readable && !self.was_position_readable {
+            // Just exited a loading screen - clear current zone until we get new info from server
+            self.current_zone = None;
+            self.current_exits.clear();
         }
+        self.was_position_readable = position_now_readable;
 
         // =========================================================================
         // Check if position is readable (used for exit detection)
