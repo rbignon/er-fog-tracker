@@ -62,7 +62,8 @@ def build_full_adjacency(
     Build adjacency list for ALL links (random and preexisting).
     Returns dict[source] -> list of (destination, is_bidirectional, pair)
 
-    Random links are always bidirectional (fog gates can be traversed both ways).
+    Random links are bidirectional UNLESS marked as inherently one-way
+    (e.g., sending gates, abductions).
     Preexisting links are bidirectional only if a reverse link exists.
     """
     adj: dict[str, list[tuple[str, bool, dict]]] = defaultdict(list)
@@ -72,9 +73,11 @@ def build_full_adjacency(
         dest = pair["destination"]
 
         if pair["type"] == "random":
-            # Random links are bidirectional
-            adj[source].append((dest, True, pair))
-            adj[dest].append((source, True, pair))
+            # Random links are bidirectional UNLESS marked as inherently one-way
+            is_bidir = not pair.get("is_inherently_one_way", False)
+            adj[source].append((dest, is_bidir, pair))
+            if is_bidir:
+                adj[dest].append((source, True, pair))
         else:
             # Preexisting links: one-way unless reverse exists
             is_bidir = not is_one_way(pair, zone_pairs)
@@ -531,13 +534,15 @@ def compute_zone_exits(
         to_zone = None
         description = None
 
+        is_one_way_link = pair.get("is_inherently_one_way", False)
+
         if pair_source in merged_zones:
             from_zone = pair_source
             to_zone = pair_target
             # When exiting from source, use source_details as description
             description = pair.get("source_details") or ""
-        elif pair_target in merged_zones:
-            # Random links are bidirectional, so target can also be an exit point
+        elif pair_target in merged_zones and not is_one_way_link:
+            # Bidirectional random links can be exited from target side too
             from_zone = pair_target
             to_zone = pair_source
             # When exiting from target side, use target_details as description
