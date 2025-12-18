@@ -18,11 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fogvizu.api import api_router
 from fogvizu.config import settings
 from fogvizu.database import init_db
-from fogvizu.websocket import (
-    handle_host_connection,
-    handle_mod_connection,
-    handle_viewer_connection,
-)
+from fogvizu.websocket import HostClient, ModClient, ViewerClient
 from fogvizu.zone_resolver import init_resolver
 
 # Configure logging
@@ -81,19 +77,19 @@ app.include_router(api_router)
 @app.websocket("/ws/mod/{game_id}")
 async def ws_mod(websocket: WebSocket, game_id: UUID):
     """WebSocket endpoint for mod connections."""
-    await handle_mod_connection(websocket, game_id)
+    await ModClient.handle_connection(websocket, game_id)
 
 
 @app.websocket("/ws/host/{game_id}")
 async def ws_host(websocket: WebSocket, game_id: UUID):
     """WebSocket endpoint for host (streamer browser) connections."""
-    await handle_host_connection(websocket, game_id)
+    await HostClient.handle_connection(websocket, game_id)
 
 
 @app.websocket("/ws/viewer/{game_id}")
 async def ws_viewer(websocket: WebSocket, game_id: UUID):
     """WebSocket endpoint for viewer connections."""
-    await handle_viewer_connection(websocket, game_id)
+    await ViewerClient.handle_connection(websocket, game_id)
 
 
 # =============================================================================

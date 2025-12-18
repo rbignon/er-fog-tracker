@@ -330,6 +330,58 @@ class ModClient(Client):
                     exclude=self.ws,
                 )
 
+    @classmethod
+    async def handle_connection(cls, websocket: WebSocket, game_id: UUID):
+        """Handle mod WebSocket connection."""
+        await websocket.accept()
+        logger.info("[MOD] Connection attempt for game %s", game_id)
+
+        # Auth requires a DB session
+        async with async_session() as db:
+            user = await authenticate_ws(websocket, db)
+            if not user:
+                logger.warning("[MOD] Authentication failed for game %s", game_id)
+                await websocket.close()
+                return
+
+            logger.info("[MOD] Authenticated as user %s (id=%s)", user.twitch_username, user.id)
+
+            game = await verify_game_access(db, game_id, user, require_owner=True)
+            if not game:
+                logger.warning("[MOD] Game %s not found or not owned by user", game_id)
+                await websocket.send_json({"type": "error", "message": "Game not found"})
+                await websocket.close()
+                return
+
+            logger.info("[MOD] Game access verified: %s (seed=%s)", game.label, game.seed)
+
+        # Register in room
+        room = manager.get_or_create_room(game_id)
+        if room.mod:
+            logger.warning("[MOD] Mod already connected for game %s", game_id)
+            await websocket.send_json({"type": "error", "message": "Mod already connected"})
+            await websocket.close()
+            return
+
+        client = cls(websocket, game_id, user)
+        room.mod = client
+        logger.info("[MOD] Connected successfully for game %s", game_id)
+
+        # Notify host
+        if room.host:
+            with contextlib.suppress(Exception):
+                await room.host.send({"type": "mod_connected"})
+
+        try:
+            await client.run()
+        finally:
+            room.mod = None
+            if room.host:
+                with contextlib.suppress(Exception):
+                    await room.host.send({"type": "mod_disconnected"})
+            manager.cleanup_room(game_id)
+            logger.info("[MOD] Cleaned up for game %s", game_id)
+
 
 # =============================================================================
 # Host Client
@@ -422,6 +474,58 @@ class HostClient(Client):
             exclude=self.ws,
         )
 
+    @classmethod
+    async def handle_connection(cls, websocket: WebSocket, game_id: UUID):
+        """Handle host WebSocket connection."""
+        await websocket.accept()
+
+        async with async_session() as db:
+            user = await authenticate_ws(websocket, db)
+            if not user:
+                await websocket.close()
+                return
+
+            game = await verify_game_access(db, game_id, user, require_owner=True)
+            if not game:
+                await websocket.send_json({"type": "error", "message": "Game not found"})
+                await websocket.close()
+                return
+
+            # Send current game state
+            zone_pairs = game.zone_pairs or []
+            zp_index = {zp["id"]: zp for zp in zone_pairs if zp.get("id")}
+            expanded_links = []
+            for dl in game.discovered_links or []:
+                zp = zp_index.get(dl["link_id"])
+                if zp:
+                    expanded_links.append({"source": zp["source"], "target": zp["destination"]})
+
+            game_state = {
+                "discovered_links": expanded_links,
+                "node_positions": game.node_positions or {},
+                "tags": game.tags or {},
+            }
+            await websocket.send_json({"type": "game_state", "state": game_state})
+
+        # Register in room
+        room = manager.get_or_create_room(game_id)
+        if room.host:
+            await websocket.send_json({"type": "error", "message": "Host already connected"})
+            await websocket.close()
+            return
+
+        client = cls(websocket, game_id, user)
+        room.host = client
+
+        if room.mod:
+            await client.send({"type": "mod_connected"})
+
+        try:
+            await client.run()
+        finally:
+            room.host = None
+            manager.cleanup_room(game_id)
+
 
 # =============================================================================
 # Viewer Client
@@ -439,6 +543,45 @@ class ViewerClient(Client):
     async def _handle_pong(self, data: dict):
         """Handle pong response."""
         pass
+
+    @classmethod
+    async def handle_connection(cls, websocket: WebSocket, game_id: UUID):
+        """Handle viewer WebSocket connection (no auth required)."""
+        await websocket.accept()
+
+        async with async_session() as db:
+            game = await verify_game_access(db, game_id)
+            if not game:
+                await websocket.send_json({"type": "error", "message": "Game not found"})
+                await websocket.close()
+                return
+
+        room = manager.get_or_create_room(game_id)
+        if len(room.viewers) >= settings.max_viewers_per_game:
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "message": f"Maximum viewers ({settings.max_viewers_per_game}) reached",
+                }
+            )
+            await websocket.close()
+            return
+
+        client = cls(websocket, game_id)
+        room.viewers.append(client)
+
+        # Send current state
+        if room.last_visual_state:
+            await client.send(room.last_visual_state)
+        else:
+            await client.send({"type": "waiting", "message": "Waiting for host to connect"})
+
+        try:
+            await client.run()
+        finally:
+            if client in room.viewers:
+                room.viewers.remove(client)
+            manager.cleanup_room(game_id)
 
 
 # =============================================================================
@@ -578,151 +721,3 @@ async def verify_game_access(
         query = query.where(Game.user_id == user.id)
     result = await db.execute(query)
     return result.scalar_one_or_none()
-
-
-# =============================================================================
-# WebSocket Handlers (FastAPI endpoints)
-# =============================================================================
-
-
-async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
-    """Handle mod WebSocket connection."""
-    await websocket.accept()
-    logger.info("[MOD] Connection attempt for game %s", game_id)
-
-    # Auth requires a DB session
-    async with async_session() as db:
-        user = await authenticate_ws(websocket, db)
-        if not user:
-            logger.warning("[MOD] Authentication failed for game %s", game_id)
-            await websocket.close()
-            return
-
-        logger.info("[MOD] Authenticated as user %s (id=%s)", user.twitch_username, user.id)
-
-        game = await verify_game_access(db, game_id, user, require_owner=True)
-        if not game:
-            logger.warning("[MOD] Game %s not found or not owned by user", game_id)
-            await websocket.send_json({"type": "error", "message": "Game not found"})
-            await websocket.close()
-            return
-
-        logger.info("[MOD] Game access verified: %s (seed=%s)", game.label, game.seed)
-
-    # Register in room
-    room = manager.get_or_create_room(game_id)
-    if room.mod:
-        logger.warning("[MOD] Mod already connected for game %s", game_id)
-        await websocket.send_json({"type": "error", "message": "Mod already connected"})
-        await websocket.close()
-        return
-
-    client = ModClient(websocket, game_id, user)
-    room.mod = client
-    logger.info("[MOD] Connected successfully for game %s", game_id)
-
-    # Notify host
-    if room.host:
-        with contextlib.suppress(Exception):
-            await room.host.send({"type": "mod_connected"})
-
-    try:
-        await client.run()
-    finally:
-        room.mod = None
-        if room.host:
-            with contextlib.suppress(Exception):
-                await room.host.send({"type": "mod_disconnected"})
-        manager.cleanup_room(game_id)
-        logger.info("[MOD] Cleaned up for game %s", game_id)
-
-
-async def handle_host_connection(websocket: WebSocket, game_id: UUID):
-    """Handle host WebSocket connection."""
-    await websocket.accept()
-
-    async with async_session() as db:
-        user = await authenticate_ws(websocket, db)
-        if not user:
-            await websocket.close()
-            return
-
-        game = await verify_game_access(db, game_id, user, require_owner=True)
-        if not game:
-            await websocket.send_json({"type": "error", "message": "Game not found"})
-            await websocket.close()
-            return
-
-        # Send current game state
-        zone_pairs = game.zone_pairs or []
-        zp_index = {zp["id"]: zp for zp in zone_pairs if zp.get("id")}
-        expanded_links = []
-        for dl in game.discovered_links or []:
-            zp = zp_index.get(dl["link_id"])
-            if zp:
-                expanded_links.append({"source": zp["source"], "target": zp["destination"]})
-
-        game_state = {
-            "discovered_links": expanded_links,
-            "node_positions": game.node_positions or {},
-            "tags": game.tags or {},
-        }
-        await websocket.send_json({"type": "game_state", "state": game_state})
-
-    # Register in room
-    room = manager.get_or_create_room(game_id)
-    if room.host:
-        await websocket.send_json({"type": "error", "message": "Host already connected"})
-        await websocket.close()
-        return
-
-    client = HostClient(websocket, game_id, user)
-    room.host = client
-
-    if room.mod:
-        await client.send({"type": "mod_connected"})
-
-    try:
-        await client.run()
-    finally:
-        room.host = None
-        manager.cleanup_room(game_id)
-
-
-async def handle_viewer_connection(websocket: WebSocket, game_id: UUID):
-    """Handle viewer WebSocket connection (no auth required)."""
-    await websocket.accept()
-
-    async with async_session() as db:
-        game = await verify_game_access(db, game_id)
-        if not game:
-            await websocket.send_json({"type": "error", "message": "Game not found"})
-            await websocket.close()
-            return
-
-    room = manager.get_or_create_room(game_id)
-    if len(room.viewers) >= settings.max_viewers_per_game:
-        await websocket.send_json(
-            {
-                "type": "error",
-                "message": f"Maximum viewers ({settings.max_viewers_per_game}) reached",
-            }
-        )
-        await websocket.close()
-        return
-
-    client = ViewerClient(websocket, game_id)
-    room.viewers.append(client)
-
-    # Send current state
-    if room.last_visual_state:
-        await client.send(room.last_visual_state)
-    else:
-        await client.send({"type": "waiting", "message": "Waiting for host to connect"})
-
-    try:
-        await client.run()
-    finally:
-        if client in room.viewers:
-            room.viewers.remove(client)
-        manager.cleanup_room(game_id)
