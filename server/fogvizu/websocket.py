@@ -236,56 +236,6 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
                     logger.debug("[MOD] Pong received")
                     continue
 
-                elif msg_type == "discovery":
-                    # Legacy discovery with zone names from mod
-                    source = data.get("source")
-                    target = data.get("target")
-                    source_map_id = data.get("source_map_id", "?")
-                    target_map_id = data.get("target_map_id", "?")
-                    logger.info(
-                        "[MOD] Discovery (legacy): '%s' [%s] → '%s' [%s]",
-                        source,
-                        source_map_id,
-                        target,
-                        target_map_id,
-                    )
-
-                    if not source or not target:
-                        logger.warning("[MOD] Missing source or target in discovery")
-                        await websocket.send_json(
-                            {"type": "error", "message": "Missing source or target"}
-                        )
-                        continue
-
-                    # Propagate discovery
-                    propagated = await propagate_discovery(
-                        db, game_id, source, target, discovered_by="mod"
-                    )
-                    await db.commit()
-
-                    # Refetch game to get full discovered_links
-                    result = await db.execute(select(Game).where(Game.id == game_id))
-                    game_updated = result.scalar_one_or_none()
-                    all_discovered_links = game_updated.discovered_links if game_updated else []
-
-                    # Send ack to mod
-                    ack_msg = {"type": "discovery_ack", "propagated": propagated}
-                    logger.info("[MOD TX] Ack with %d propagated links", len(propagated))
-                    logger.debug("[MOD TX] %s", ack_msg)
-                    await websocket.send_json(ack_msg)
-
-                    # Broadcast to host and viewers (with full state)
-                    if propagated:
-                        await manager.broadcast_to_all(
-                            game_id,
-                            {
-                                "type": "discovery",
-                                "propagated": propagated,
-                                "discovered_links": all_discovered_links,
-                            },
-                            exclude=websocket,
-                        )
-
                 elif msg_type == "discovery_v2":
                     # New discovery with map_id + position + play_region_id (server resolves zone names)
                     source_map_id = data.get("source_map_id")
