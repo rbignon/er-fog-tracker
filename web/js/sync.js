@@ -1023,8 +1023,17 @@ State.subscribe('nodeUndiscovered', () => {
     }
 });
 
-State.subscribe('nodeTagsChanged', () => {
+State.subscribe('nodeTagsChanged', ({ nodeId, tags }) => {
     if (State.isSyncConnected() && State.isStreamerHost()) {
+        // Send tag_update to persist on server and broadcast to mod/viewers
+        if (gameWs && gameWs.readyState === WebSocket.OPEN) {
+            gameWs.send(JSON.stringify({
+                type: 'tag_update',
+                zone: nodeId,
+                tags: tags || []
+            }));
+        }
+        // Also sync visual state
         syncState();
     }
 });
@@ -1157,6 +1166,12 @@ export async function connectAsHost(gameId) {
                 updateModConnectionIndicator(false);
                 return;
             }
+
+            // Tag update from mod
+            if (data.type === 'tag_update') {
+                handleTagUpdateFromServer(data.zone, data.tags);
+                return;
+            }
         };
 
         gameWs.onerror = () => {
@@ -1247,6 +1262,12 @@ export async function connectAsViewer(gameId) {
                 handleDiscoveryFromServer(data.propagated, data.discovered_links);
                 return;
             }
+
+            // Tag update from host/mod
+            if (data.type === 'tag_update') {
+                handleTagUpdateFromServer(data.zone, data.tags);
+                return;
+            }
         };
 
         gameWs.onerror = () => {
@@ -1333,6 +1354,36 @@ async function handleGameWsDisconnect() {
             handleGameWsDisconnect();
         }
     }, delay);
+}
+
+/**
+ * Handle tag update messages from server (mod or host).
+ * Updates local tag state and triggers re-render.
+ */
+function handleTagUpdateFromServer(zone, tags) {
+    if (!zone) return;
+
+    const explorationState = State.getExplorationState();
+    if (!explorationState) return;
+
+    // Update local tags without emitting (to avoid loop)
+    const currentTags = explorationState.tags.get(zone) || [];
+    const newTags = tags || [];
+
+    // Check if tags actually changed
+    if (JSON.stringify(currentTags) !== JSON.stringify(newTags)) {
+        if (newTags.length > 0) {
+            explorationState.tags.set(zone, newTags);
+        } else {
+            explorationState.tags.delete(zone);
+        }
+
+        // Save to local storage
+        State.saveExplorationToStorage();
+
+        // Trigger UI update
+        State.emit('graphNeedsRender', { preservePositions: true });
+    }
 }
 
 /**

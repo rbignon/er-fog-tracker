@@ -114,6 +114,7 @@ class ModClient(Client):
             "pong": self._handle_pong,
             "discovery_v2": self._handle_discovery_v2,
             "debug_log": self._handle_debug_log,
+            "tag_update": self._handle_tag_update,
         }
 
     async def _handle_pong(self, data: dict):
@@ -124,6 +125,28 @@ class ModClient(Client):
         """Handle debug log from mod."""
         message = data.get("message", "")
         logger.info("[MOD DEBUG] %s", message)
+
+    async def _handle_tag_update(self, data: dict):
+        """Handle tag update from mod."""
+        zone = data.get("zone")
+        tags = data.get("tags", [])
+
+        logger.info("[MOD] Tag update for zone %s: %s", zone, tags)
+
+        async with async_session() as db:
+            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            game = result.scalar_one_or_none()
+            if game:
+                current_tags = dict(game.tags or {})
+                if tags:
+                    current_tags[zone] = tags
+                else:
+                    current_tags.pop(zone, None)
+                game.tags = current_tags
+                flag_modified(game, "tags")
+                await db.commit()
+
+        await manager.broadcast_to_all(self.game_id, data, exclude=self.ws)
 
     async def _handle_discovery_v2(self, data: dict):
         """Handle discovery with map_id + position (server resolves zone names)."""
