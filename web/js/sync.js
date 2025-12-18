@@ -1415,6 +1415,12 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
     }
 
     if (changed) {
+        // Update metadata.discoveryCount so the counter updates correctly
+        const graphData = State.getGraphData();
+        if (graphData?.metadata) {
+            graphData.metadata.discoveryCount = explorationState.discovered.size;
+        }
+
         // On host, select the newly discovered node (if not already selected)
         if (State.isStreamerHost() && newlyDiscoveredTarget) {
             const currentSelected = State.getSelectedNodeId();
