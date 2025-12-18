@@ -260,11 +260,17 @@ function getFullSyncState() {
         discoveredCount = 0;
         if (explorationState?.discoveredLinks && graphData?.nodes) {
             const nodeIds = new Set(graphData.nodes.map(n => n.id));
+            const linkIndex = State.getLinkIndex();
             const discoveredFromLinks = new Set();
-            for (const linkKey of explorationState.discoveredLinks) {
-                const [source, target] = linkKey.split('|');
-                if (nodeIds.has(source)) discoveredFromLinks.add(source);
-                if (nodeIds.has(target)) discoveredFromLinks.add(target);
+            for (const linkUUID of explorationState.discoveredLinks) {
+                // Use link index to get source/target from UUID
+                const link = linkIndex?.byId.get(linkUUID);
+                if (link) {
+                    const source = typeof link.source === 'object' ? link.source.id : link.source;
+                    const target = typeof link.target === 'object' ? link.target.id : link.target;
+                    if (nodeIds.has(source)) discoveredFromLinks.add(source);
+                    if (nodeIds.has(target)) discoveredFromLinks.add(target);
+                }
             }
             discoveredCount = discoveredFromLinks.size;
         }
@@ -1332,6 +1338,7 @@ async function handleGameWsDisconnect() {
 /**
  * Handle discovery messages from server (mod or other source).
  * Server is the source of truth - apply the full state it sends.
+ * Server sends links with {link_id, source, target} format.
  */
 function handleDiscoveryFromServer(propagated, discoveredLinks) {
     const explorationState = State.getExplorationState();
@@ -1347,11 +1354,13 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
         const newDiscoveredLinks = new Set();
 
         for (const link of discoveredLinks) {
-            const source = link.source;
-            const target = link.target;
-            newDiscovered.add(source);
-            newDiscovered.add(target);
-            newDiscoveredLinks.add(`${source}|${target}`);
+            // Server expands link_id to include source/target
+            newDiscovered.add(link.source);
+            newDiscovered.add(link.target);
+            // Store link UUID
+            if (link.link_id) {
+                newDiscoveredLinks.add(link.link_id);
+            }
         }
 
         // Check if anything changed
@@ -1377,7 +1386,7 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
             explorationState.discoveredLinks = newDiscoveredLinks;
         }
     } else if (propagated && Array.isArray(propagated)) {
-        // Fallback: legacy mode without full state (shouldn't happen with updated server)
+        // Fallback: legacy mode without full state - use link index to find link UUIDs
         for (const link of propagated) {
             const { source, target } = link;
 
@@ -1394,10 +1403,13 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
                 }
             }
 
-            const linkId = `${source}|${target}`;
-            if (!explorationState.discoveredLinks.has(linkId)) {
-                explorationState.discoveredLinks.add(linkId);
-                changed = true;
+            // Find link UUID from endpoints using link index
+            const linkIds = State.getLinkIdsByEndpoints(source, target);
+            for (const linkId of linkIds) {
+                if (!explorationState.discoveredLinks.has(linkId)) {
+                    explorationState.discoveredLinks.add(linkId);
+                    changed = true;
+                }
             }
         }
     }

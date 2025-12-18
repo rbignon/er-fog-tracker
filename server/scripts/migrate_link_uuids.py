@@ -106,8 +106,15 @@ async def migrate_game(session: AsyncSession, game: Game, dry_run: bool = False)
     # Step 4: Update game if changes were made
     has_changes = zone_pairs_modified or stats["discovered_links_converted"] > 0
     if has_changes and not dry_run:
-        game.zone_pairs = zone_pairs
-        game.discovered_links = new_discovered_links
+        import copy
+
+        from sqlalchemy.orm.attributes import flag_modified
+
+        # Deep copy and flag_modified to force SQLAlchemy to detect JSONB changes
+        game.zone_pairs = copy.deepcopy(zone_pairs)
+        game.discovered_links = list(new_discovered_links)
+        flag_modified(game, "zone_pairs")
+        flag_modified(game, "discovered_links")
 
     return stats
 

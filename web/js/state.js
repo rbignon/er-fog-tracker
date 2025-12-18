@@ -8,6 +8,11 @@ const state = {
     graphData: null,
     seed: null,
 
+    // Link index for fast lookups (built when graphData is set)
+    // - byId: Map<linkId, link>
+    // - byEndpoints: Map<"source|target", linkId[]> (supports parallel links)
+    linkIndex: null,
+
     // Backend mode: 'offline' (localStorage) or 'online' (server)
     backendMode: 'offline',
     gameId: null,  // UUID when in online mode
@@ -18,7 +23,7 @@ const state = {
     explorationMode: true,  // true = Explorer, false = Full Spoiler
     explorationState: {
         discovered: new Set(['Chapel of Anticipation']),  // Start with starting area discovered
-        discoveredLinks: new Set(),  // Links that have been explicitly traversed (format: "sourceId|targetId")
+        discoveredLinks: new Set(),  // Link UUIDs that have been traversed
         tags: new Map()
     },
     frontierHighlightActive: false,
@@ -181,13 +186,61 @@ function computeOneWayLinks(links) {
     });
 }
 
+/**
+ * Build link index for fast lookups.
+ * Called when graphData is set.
+ */
+function buildLinkIndex(links) {
+    const byId = new Map();
+    const byEndpoints = new Map();
+
+    if (!links) return { byId, byEndpoints };
+
+    for (const link of links) {
+        // Index by ID
+        if (link.id) {
+            byId.set(link.id, link);
+        }
+
+        // Index by endpoints (supports parallel links)
+        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        const key = `${sourceId}|${targetId}`;
+
+        if (!byEndpoints.has(key)) {
+            byEndpoints.set(key, []);
+        }
+        byEndpoints.get(key).push(link.id);
+
+        // Also index reverse direction for bidirectional links
+        if (!link.oneWay) {
+            const reverseKey = `${targetId}|${sourceId}`;
+            if (!byEndpoints.has(reverseKey)) {
+                byEndpoints.set(reverseKey, []);
+            }
+            // Only add if not already there (avoid duplicates)
+            if (!byEndpoints.get(reverseKey).includes(link.id)) {
+                byEndpoints.get(reverseKey).push(link.id);
+            }
+        }
+    }
+
+    return { byId, byEndpoints };
+}
+
 export function setGraphData(data) {
     // Compute one-way links before storing (ensures consistency across all entry points)
     if (data && data.links) {
         computeOneWayLinks(data.links);
     }
     state.graphData = data;
+    // Build link index for fast lookups
+    state.linkIndex = buildLinkIndex(data?.links);
     emit('graphDataChanged', data);
+}
+
+export function getLinkIndex() {
+    return state.linkIndex;
 }
 
 export function setSeed(seed) {
@@ -302,47 +355,100 @@ export function undiscoverNode(nodeId) {
 // ============================================================
 
 /**
- * Create a canonical link ID from source and target
+ * Create an endpoint key from source and target (for index lookups)
  * Format: "sourceId|targetId"
  */
-export function makeLinkId(sourceId, targetId) {
+export function makeEndpointKey(sourceId, targetId) {
     return `${sourceId}|${targetId}`;
 }
 
 /**
- * Check if a link has been discovered (in either direction for bidirectional links)
+ * Get link object by its UUID
  */
-export function isLinkDiscovered(sourceId, targetId) {
-    return state.explorationState.discoveredLinks.has(makeLinkId(sourceId, targetId));
+export function getLinkById(linkId) {
+    return state.linkIndex?.byId.get(linkId);
 }
 
 /**
- * Mark a link as discovered
- * @param {string} sourceId - Source node ID
- * @param {string} targetId - Target node ID
- * @param {boolean} bidirectional - If true, also mark reverse direction
+ * Get all link IDs connecting two nodes (supports parallel links)
+ * Returns array of link UUIDs
  */
-export function discoverLink(sourceId, targetId, bidirectional = false) {
-    const linkId = makeLinkId(sourceId, targetId);
+export function getLinkIdsByEndpoints(sourceId, targetId) {
+    if (!state.linkIndex) return [];
+    const key = makeEndpointKey(sourceId, targetId);
+    return state.linkIndex.byEndpoints.get(key) || [];
+}
+
+/**
+ * Check if a specific link (by UUID) has been discovered
+ */
+export function isLinkIdDiscovered(linkId) {
+    return state.explorationState.discoveredLinks.has(linkId);
+}
+
+/**
+ * Check if any link between two nodes has been discovered
+ * (For cases where we don't care which specific parallel link)
+ */
+export function isLinkDiscovered(sourceId, targetId) {
+    const linkIds = getLinkIdsByEndpoints(sourceId, targetId);
+    return linkIds.some(id => state.explorationState.discoveredLinks.has(id));
+}
+
+/**
+ * Mark a link as discovered by its UUID
+ * @param {string} linkId - Link UUID
+ */
+export function discoverLinkById(linkId) {
     const added = !state.explorationState.discoveredLinks.has(linkId);
-
-    state.explorationState.discoveredLinks.add(linkId);
-
-    if (bidirectional) {
-        state.explorationState.discoveredLinks.add(makeLinkId(targetId, sourceId));
-    }
-
     if (added) {
-        emit('linkDiscovered', { sourceId, targetId, bidirectional });
+        state.explorationState.discoveredLinks.add(linkId);
+        const link = getLinkById(linkId);
+        if (link) {
+            emit('linkDiscovered', { linkId, sourceId: link.source, targetId: link.target });
+        }
     }
     return added;
 }
 
 /**
- * Remove a link from discovered set
+ * Mark a link as discovered by source/target
+ * If multiple parallel links exist, discovers only the first one found
+ * @param {string} sourceId - Source node ID
+ * @param {string} targetId - Target node ID
+ * @returns {string|null} The link UUID that was discovered, or null if no link found
  */
-export function undiscoverLink(sourceId, targetId) {
-    const linkId = makeLinkId(sourceId, targetId);
+export function discoverLink(sourceId, targetId) {
+    const linkIds = getLinkIdsByEndpoints(sourceId, targetId);
+    if (linkIds.length === 0) return null;
+
+    // Find first undiscovered link, or use first link if all discovered
+    const linkId = linkIds.find(id => !state.explorationState.discoveredLinks.has(id)) || linkIds[0];
+    discoverLinkById(linkId);
+    return linkId;
+}
+
+/**
+ * Discover all links between two nodes (for preexisting link propagation)
+ * @param {string} sourceId - Source node ID
+ * @param {string} targetId - Target node ID
+ * @returns {string[]} Array of link UUIDs that were discovered
+ */
+export function discoverAllLinksBetween(sourceId, targetId) {
+    const linkIds = getLinkIdsByEndpoints(sourceId, targetId);
+    const discovered = [];
+    for (const linkId of linkIds) {
+        if (discoverLinkById(linkId)) {
+            discovered.push(linkId);
+        }
+    }
+    return discovered;
+}
+
+/**
+ * Remove a link from discovered set by UUID
+ */
+export function undiscoverLinkById(linkId) {
     return state.explorationState.discoveredLinks.delete(linkId);
 }
 
@@ -350,11 +456,17 @@ export function undiscoverLink(sourceId, targetId) {
  * Remove all discovered links involving a specific node
  */
 export function undiscoverLinksForNode(nodeId) {
+    if (!state.linkIndex) return 0;
+
     const toRemove = [];
     state.explorationState.discoveredLinks.forEach(linkId => {
-        const [source, target] = linkId.split('|');
-        if (source === nodeId || target === nodeId) {
-            toRemove.push(linkId);
+        const link = state.linkIndex.byId.get(linkId);
+        if (link) {
+            const source = typeof link.source === 'object' ? link.source.id : link.source;
+            const target = typeof link.target === 'object' ? link.target.id : link.target;
+            if (source === nodeId || target === nodeId) {
+                toRemove.push(linkId);
+            }
         }
     });
     toRemove.forEach(linkId => state.explorationState.discoveredLinks.delete(linkId));
@@ -429,13 +541,57 @@ function getStorageKey(seed) {
     return STORAGE_KEY_PREFIX + seed;
 }
 
+/**
+ * Check if a string looks like an old-format link ID ("source|target")
+ * vs a UUID (contains dashes, 36 chars)
+ */
+function isOldFormatLinkId(str) {
+    // UUIDs are 36 chars with dashes (e.g., "550e8400-e29b-41d4-a716-446655440000")
+    // Old format is "NodeName|OtherNodeName" which contains a pipe
+    return str.includes('|');
+}
+
+/**
+ * Migrate old-format discoveredLinks ("source|target") to UUIDs
+ * Requires linkIndex to be built (call after setGraphData)
+ */
+export function migrateDiscoveredLinksToUUIDs(discoveredLinks) {
+    if (!state.linkIndex || !discoveredLinks) return discoveredLinks;
+
+    const migrated = new Set();
+    let hadOldFormat = false;
+
+    for (const linkId of discoveredLinks) {
+        if (isOldFormatLinkId(linkId)) {
+            // Old format: "source|target"
+            hadOldFormat = true;
+            const [source, target] = linkId.split('|');
+            // Find all link UUIDs for this source/target pair
+            const uuids = getLinkIdsByEndpoints(source, target);
+            for (const uuid of uuids) {
+                migrated.add(uuid);
+            }
+        } else {
+            // Already a UUID
+            migrated.add(linkId);
+        }
+    }
+
+    if (hadOldFormat) {
+        console.log(`Migrated ${discoveredLinks.size} old-format links to ${migrated.size} UUIDs`);
+    }
+
+    return migrated;
+}
+
 export function saveExplorationToStorage() {
     if (!state.seed || !state.explorationState) return;
 
     const toSave = {
         discovered: Array.from(state.explorationState.discovered),
         discoveredLinks: Array.from(state.explorationState.discoveredLinks),
-        tags: Object.fromEntries(state.explorationState.tags)
+        tags: Object.fromEntries(state.explorationState.tags),
+        version: 2  // Mark as new UUID format
     };
 
     try {
@@ -454,7 +610,8 @@ export function loadExplorationFromStorage(seed) {
         return {
             discovered: new Set(parsed.discovered || []),
             discoveredLinks: new Set(parsed.discoveredLinks || []),
-            tags: new Map(Object.entries(parsed.tags || {}))
+            tags: new Map(Object.entries(parsed.tags || {})),
+            version: parsed.version || 1  // v1 = old format, v2 = UUID format
         };
     } catch (err) {
         console.error('Failed to load exploration state:', err);

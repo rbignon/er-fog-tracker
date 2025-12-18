@@ -85,14 +85,20 @@ export function renderGraph(preservePositions = false) {
             discoveredCount = graphData.metadata.discoveryCount;
             totalAreas = graphData.metadata.totalZones;
         } else {
-            // Fallback: calculate locally from discovered links
+            // Fallback: calculate locally from discovered links (using link UUIDs)
             totalAreas = nodes.length;
             const nodeIds = new Set(nodes.map(n => n.id));
+            const linkIndex = State.getLinkIndex();
             const discoveredFromLinks = new Set();
-            for (const linkKey of explorationState.discoveredLinks || []) {
-                const [source, target] = linkKey.split('|');
-                if (nodeIds.has(source)) discoveredFromLinks.add(source);
-                if (nodeIds.has(target)) discoveredFromLinks.add(target);
+            for (const linkUUID of explorationState.discoveredLinks || []) {
+                // Use link index to get source/target from UUID
+                const link = linkIndex?.byId.get(linkUUID);
+                if (link) {
+                    const source = typeof link.source === 'object' ? link.source.id : link.source;
+                    const target = typeof link.target === 'object' ? link.target.id : link.target;
+                    if (nodeIds.has(source)) discoveredFromLinks.add(source);
+                    if (nodeIds.has(target)) discoveredFromLinks.add(target);
+                }
             }
             discoveredCount = discoveredFromLinks.size;
         }

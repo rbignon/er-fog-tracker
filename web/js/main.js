@@ -308,6 +308,7 @@ async function convertServerDataToGraph(game) {
 
 /**
  * Load exploration state from server response.
+ * Server sends links with {link_id, source, target} format.
  */
 function loadExplorationFromServer(game) {
   // Build discovered nodes from discovered links
@@ -317,7 +318,10 @@ function loadExplorationFromServer(game) {
   for (const link of game.discovered_links || []) {
     discovered.add(link.source);
     discovered.add(link.target);
-    discoveredLinks.add(`${link.source}|${link.target}`);
+    // Store link UUID (server sends link_id)
+    if (link.link_id) {
+      discoveredLinks.add(link.link_id);
+    }
   }
 
   // Build tags map

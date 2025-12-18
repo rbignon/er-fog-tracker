@@ -92,10 +92,11 @@ class GameSummary(BaseModel):
 class DiscoveredLinkResponse(BaseModel):
     """A discovered link."""
 
+    link_id: str | None = None  # Unique link identifier (new format)
     source: str
     target: str
-    discovered_at: datetime | str  # Can be datetime or ISO string from JSONB
-    discovered_by: str
+    discovered_at: datetime | str | None = None  # Can be datetime or ISO string from JSONB
+    discovered_by: str | None = None
 
 
 class NodePositionResponse(BaseModel):
@@ -146,6 +147,7 @@ class DiscoveryCreate(BaseModel):
 
     source: str
     target: str
+    link_id: str | None = None  # Optional: specific link UUID (for parallel links)
 
 
 class PropagatedLink(BaseModel):
@@ -158,6 +160,7 @@ class PropagatedLink(BaseModel):
 class DiscoveredLink(BaseModel):
     """A discovered link with metadata."""
 
+    link_id: str | None = None  # Unique link identifier (new format)
     source: str
     target: str
     discovered_at: str | None = None

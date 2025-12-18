@@ -35,10 +35,15 @@ export function resetExplorationState() {
 
 /**
  * Load existing exploration state from storage
+ * Note: Call after setGraphData() so link index is available for migration
  */
 export function loadExplorationState(seed) {
     const saved = State.loadExplorationFromStorage(seed);
     if (saved) {
+        // Migrate old-format discoveredLinks if needed
+        if (saved.version !== 2) {
+            saved.discoveredLinks = State.migrateDiscoveredLinksToUUIDs(saved.discoveredLinks);
+        }
         State.setExplorationState(saved);
         return true;
     }
@@ -58,16 +63,18 @@ export function migrateDiscoveredLinks() {
     // If discoveredLinks already has entries, no migration needed
     if (explorationState.discoveredLinks && explorationState.discoveredLinks.size > 0) return;
 
-    // Mark all links between discovered nodes as discovered
+    // Mark all links between discovered nodes as discovered (using link UUIDs)
     let migrated = false;
     graphData.links.forEach(link => {
         const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
         const targetId = typeof link.target === 'object' ? link.target.id : link.target;
 
         if (explorationState.discovered.has(sourceId) && explorationState.discovered.has(targetId)) {
-            // Both nodes discovered - mark link as discovered in both directions (if bidirectional)
-            State.discoverLink(sourceId, targetId, !link.oneWay);
-            migrated = true;
+            // Both nodes discovered - mark this specific link as discovered
+            if (link.id) {
+                State.discoverLinkById(link.id);
+                migrated = true;
+            }
         }
     });
 
@@ -100,13 +107,16 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
         const explorationState = State.getExplorationState();
         if (explorationState) {
             explorationState.discovered.add(areaId);
-            const isBidirectional = !viaLink || !viaLink.oneWay;
-            State.discoverLink(fromNodeId, areaId, isBidirectional);
+            if (viaLink && viaLink.id) {
+                State.discoverLinkById(viaLink.id);
+            } else {
+                State.discoverLink(fromNodeId, areaId);
+            }
         }
         State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: areaId });
 
         // Send to server - response will contain full state with back-propagation
-        Api.createDiscovery(gameId, { source: fromNodeId, target: areaId })
+        Api.createDiscovery(gameId, { source: fromNodeId, target: areaId, link_id: viaLink?.id })
             .then(response => {
                 // Server response contains discovered_links - apply it
                 if (response && response.discovered_links) {
@@ -139,6 +149,7 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
 
 /**
  * Apply discovery state from server response (server is source of truth).
+ * Server sends links with {link_id, source, target} format.
  */
 function applyServerDiscoveryState(discoveredLinks) {
     if (!discoveredLinks || !Array.isArray(discoveredLinks)) return;
@@ -151,9 +162,13 @@ function applyServerDiscoveryState(discoveredLinks) {
     const newDiscoveredLinks = new Set();
 
     for (const link of discoveredLinks) {
+        // Add nodes from source/target (server expands link_id to include these)
         newDiscovered.add(link.source);
         newDiscovered.add(link.target);
-        newDiscoveredLinks.add(`${link.source}|${link.target}`);
+        // Store link UUID
+        if (link.link_id) {
+            newDiscoveredLinks.add(link.link_id);
+        }
     }
 
     // Check if state actually changed
@@ -281,11 +296,12 @@ function discoverWithPreexisting(areaId, fromNodeId, viaLink) {
     const explorationState = State.getExplorationState();
     const wasAlreadyDiscovered = explorationState.discovered.has(areaId);
 
-    // If coming from another node, record the link as discovered
-    if (fromNodeId) {
-        // Determine if the link is bidirectional
-        const isBidirectional = !viaLink || !viaLink.oneWay;
-        State.discoverLink(fromNodeId, areaId, isBidirectional);
+    // If coming from another node via a specific link, record that link as discovered
+    if (fromNodeId && viaLink && viaLink.id) {
+        State.discoverLinkById(viaLink.id);
+    } else if (fromNodeId) {
+        // No specific link provided - discover one link between the nodes
+        State.discoverLink(fromNodeId, areaId);
     }
 
     // If node was already discovered, we only needed to record the link
@@ -308,10 +324,9 @@ function discoverWithPreexisting(areaId, fromNodeId, viaLink) {
             if (!explorationState.discovered.has(targetId)) {
                 // Target not discovered - discover it recursively
                 discoverWithPreexisting(targetId, areaId, link);
-            } else {
+            } else if (link.id) {
                 // Target already discovered - just record the preexisting link
-                const isBidirectional = !link.oneWay;
-                State.discoverLink(areaId, targetId, isBidirectional);
+                State.discoverLinkById(link.id);
             }
         }
         // Can go FROM target TO areaId only if link is NOT one-way
@@ -319,9 +334,9 @@ function discoverWithPreexisting(areaId, fromNodeId, viaLink) {
             if (!explorationState.discovered.has(sourceId)) {
                 // Source not discovered - discover it recursively
                 discoverWithPreexisting(sourceId, areaId, link);
-            } else {
+            } else if (link.id) {
                 // Source already discovered - just record the preexisting link
-                State.discoverLink(areaId, sourceId, true); // bidirectional since we're going backwards
+                State.discoverLinkById(link.id);
             }
         }
     });
@@ -347,17 +362,16 @@ export function propagatePreexistingDiscoveries() {
             if (sourceId === areaId) {
                 if (!explorationState.discovered.has(targetId)) {
                     discoverWithPreexisting(targetId, areaId, link);
-                } else {
+                } else if (link.id) {
                     // Both already discovered - ensure preexisting link is recorded
-                    const isBidirectional = !link.oneWay;
-                    State.discoverLink(areaId, targetId, isBidirectional);
+                    State.discoverLinkById(link.id);
                 }
             } else if (targetId === areaId && !link.oneWay) {
                 if (!explorationState.discovered.has(sourceId)) {
                     discoverWithPreexisting(sourceId, areaId, link);
-                } else {
+                } else if (link.id) {
                     // Both already discovered - ensure preexisting link is recorded
-                    State.discoverLink(areaId, sourceId, true);
+                    State.discoverLinkById(link.id);
                 }
             }
         });
@@ -375,7 +389,8 @@ function isAccessibleFromStart(nodeId) {
     if (nodeId === State.START_NODE) return true;
 
     const explorationState = State.getExplorationState();
-    if (!explorationState) return false;
+    const linkIndex = State.getLinkIndex();
+    if (!explorationState || !linkIndex) return false;
 
     // BFS through discovered links
     const visited = new Set([State.START_NODE]);
@@ -385,11 +400,15 @@ function isAccessibleFromStart(nodeId) {
         const current = queue.shift();
 
         // Check all discovered links for connections
-        for (const linkId of explorationState.discoveredLinks) {
-            const [src, tgt] = linkId.split('|');
+        for (const linkUUID of explorationState.discoveredLinks) {
+            const link = linkIndex.byId.get(linkUUID);
+            if (!link) continue;
+
+            const src = typeof link.source === 'object' ? link.source.id : link.source;
+            const tgt = typeof link.target === 'object' ? link.target.id : link.target;
             let neighbor = null;
 
-            // Can traverse in either direction
+            // Can traverse in either direction (bidirectional links already have both indexed)
             if (src === current && !visited.has(tgt)) {
                 neighbor = tgt;
             } else if (tgt === current && !visited.has(src)) {
@@ -503,9 +522,10 @@ export function discoverPathTo(targetId) {
                         if (!State.isDiscovered(step.nodeId)) {
                             discoverWithPreexisting(step.nodeId, step.fromNodeId, step.viaLink);
                             discoveredCount++;
+                        } else if (step.fromNodeId && step.viaLink && step.viaLink.id) {
+                            State.discoverLinkById(step.viaLink.id);
                         } else if (step.fromNodeId) {
-                            const isBidirectional = !step.viaLink || !step.viaLink.oneWay;
-                            State.discoverLink(step.fromNodeId, step.nodeId, isBidirectional);
+                            State.discoverLink(step.fromNodeId, step.nodeId);
                         }
                     });
 
@@ -515,7 +535,7 @@ export function discoverPathTo(targetId) {
                     showDiscoveryNotification(discoveredCount, targetId);
 
                     // Send to server - server will back-propagate
-                    Api.createDiscovery(gameId, { source: lastStep.fromNodeId, target: targetId })
+                    Api.createDiscovery(gameId, { source: lastStep.fromNodeId, target: targetId, link_id: lastStep.viaLink?.id })
                         .then(response => {
                             if (response && response.discovered_links) {
                                 applyServerDiscoveryState(response.discovered_links);
@@ -532,10 +552,11 @@ export function discoverPathTo(targetId) {
                 if (!State.isDiscovered(step.nodeId)) {
                     discoverWithPreexisting(step.nodeId, step.fromNodeId, step.viaLink);
                     discoveredCount++;
-                } else if (step.fromNodeId) {
+                } else if (step.fromNodeId && step.viaLink && step.viaLink.id) {
                     // Node already discovered, but still record the link
-                    const isBidirectional = !step.viaLink || !step.viaLink.oneWay;
-                    State.discoverLink(step.fromNodeId, step.nodeId, isBidirectional);
+                    State.discoverLinkById(step.viaLink.id);
+                } else if (step.fromNodeId) {
+                    State.discoverLink(step.fromNodeId, step.nodeId);
                 }
             });
 

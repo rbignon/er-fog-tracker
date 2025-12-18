@@ -88,24 +88,44 @@ def build_full_adjacency(
     return adj
 
 
-def get_discovered_nodes(discovered_links: list[dict]) -> set[str]:
+def build_zone_pairs_index(zone_pairs: list[dict]) -> dict[str, dict]:
+    """Build an index of zone_pairs by their ID for fast lookup."""
+    return {zp["id"]: zp for zp in zone_pairs if zp.get("id")}
+
+
+def get_discovered_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -> set[str]:
     """
     Get all discovered nodes from discovered links.
     A node is discovered if it's the source or target of any discovered link,
     or is START_NODE.
     """
     discovered = {START_NODE}
+    zp_index = build_zone_pairs_index(zone_pairs)
 
     for link in discovered_links:
-        discovered.add(link["source"])
-        discovered.add(link["target"])
+        zp = zp_index.get(link["link_id"])
+        if zp:
+            discovered.add(zp["source"])
+            discovered.add(zp["destination"])
 
     return discovered
 
 
-def link_exists(discovered_links: list[dict], source: str, target: str) -> bool:
+def link_exists(
+    discovered_links: list[dict],
+    source: str,
+    target: str,
+    zone_pairs: list[dict],
+) -> bool:
     """Check if a link already exists in discovered_links."""
-    return any(dl["source"] == source and dl["target"] == target for dl in discovered_links)
+    zp_index = build_zone_pairs_index(zone_pairs)
+
+    for dl in discovered_links:
+        zp = zp_index.get(dl["link_id"])
+        if zp and zp["source"] == source and zp["destination"] == target:
+            return True
+
+    return False
 
 
 def find_zone_pair(zone_pairs: list[dict], source: str, target: str) -> dict | None:
@@ -267,11 +287,15 @@ def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]
         all_zones.add(pair["destination"])
     total = len(all_zones)
 
+    zp_index = build_zone_pairs_index(zone_pairs)
+
     # Collect discovered zones (appear in any discovered link)
     discovered_zones = set()
     for link in discovered_links:
-        discovered_zones.add(link["source"])
-        discovered_zones.add(link["target"])
+        zp = zp_index.get(link["link_id"])
+        if zp:
+            discovered_zones.add(zp["source"])
+            discovered_zones.add(zp["destination"])
 
     # Only count zones that exist in the zone_pairs
     discovered_count = len(discovered_zones & all_zones)
@@ -307,28 +331,45 @@ def get_zones_via_preexisting(zone_pairs: list[dict], start_zone: str) -> set[st
     return visited
 
 
-def is_link_discovered(discovered_links: list[dict], source: str, target: str) -> bool:
+def is_link_discovered(
+    discovered_links: list[dict],
+    source: str,
+    target: str,
+    zone_pairs: list[dict],
+) -> bool:
     """Check if a link (in either direction) has been discovered."""
+    zp_index = build_zone_pairs_index(zone_pairs)
+
     for dl in discovered_links:
-        dl_src = dl.get("source", "")
-        dl_tgt = dl.get("target", "")
-        # Check both directions (random links are bidirectional)
-        if (names_match(dl_src, source) and names_match(dl_tgt, target)) or (
-            names_match(dl_src, target) and names_match(dl_tgt, source)
-        ):
-            return True
+        zp = zp_index.get(dl["link_id"])
+        if zp:
+            dl_src = zp["source"]
+            dl_tgt = zp["destination"]
+            # Check both directions (random links are bidirectional)
+            if (names_match(dl_src, source) and names_match(dl_tgt, target)) or (
+                names_match(dl_src, target) and names_match(dl_tgt, source)
+            ):
+                return True
     return False
 
 
 def is_accessible_from_start(
     discovered_links: list[dict],
     target_node: str,
+    zone_pairs: list[dict],
 ) -> bool:
-    """
-    Check if a node is accessible from START_NODE via discovered links.
-    """
+    """Check if a node is accessible from START_NODE via discovered links."""
     if target_node == START_NODE:
         return True
+
+    zp_index = build_zone_pairs_index(zone_pairs)
+
+    # Expand links to (source, destination) tuples
+    expanded_links = []
+    for dl in discovered_links:
+        zp = zp_index.get(dl["link_id"])
+        if zp:
+            expanded_links.append((zp["source"], zp["destination"]))
 
     # BFS through discovered links
     visited = {START_NODE}
@@ -336,9 +377,7 @@ def is_accessible_from_start(
 
     while queue:
         current = queue.pop(0)
-        for dl in discovered_links:
-            src = dl.get("source", "")
-            tgt = dl.get("target", "")
+        for src, tgt in expanded_links:
             neighbor = None
 
             # Can traverse in either direction (discovered links are bidirectional)
@@ -375,7 +414,7 @@ def find_path_prioritizing_discovered(
         return []
 
     full_adj = build_full_adjacency(zone_pairs)
-    discovered_nodes = get_discovered_nodes(discovered_links)
+    discovered_nodes = get_discovered_nodes(discovered_links, zone_pairs)
 
     # BFS with priority for discovered nodes
     # Each entry: (current_node, path_so_far)
@@ -423,7 +462,7 @@ def find_path_prioritizing_discovered(
     return []  # No path found
 
 
-def find_reachable_nodes(discovered_links: list[dict]) -> set[str]:
+def find_reachable_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -> set[str]:
     """
     Find all nodes reachable from START_NODE via discovered links.
     Uses BFS through the discovered link graph.
@@ -431,11 +470,18 @@ def find_reachable_nodes(discovered_links: list[dict]) -> set[str]:
     reachable = {START_NODE}
     queue = [START_NODE]
 
+    zp_index = build_zone_pairs_index(zone_pairs)
+
+    # Expand links to (source, destination) tuples
+    expanded_links = []
+    for dl in discovered_links:
+        zp = zp_index.get(dl["link_id"])
+        if zp:
+            expanded_links.append((zp["source"], zp["destination"]))
+
     while queue:
         current = queue.pop(0)
-        for dl in discovered_links:
-            src = dl.get("source", "")
-            tgt = dl.get("target", "")
+        for src, tgt in expanded_links:
             neighbor = None
 
             # Can traverse in either direction (discovered links are bidirectional)
@@ -454,6 +500,7 @@ def find_reachable_nodes(discovered_links: list[dict]) -> set[str]:
 def undiscover_zone(
     discovered_links: list[dict],
     zone_to_remove: str,
+    zone_pairs: list[dict],
 ) -> tuple[list[dict], list[str]]:
     """
     Undiscover a zone and all zones that become unreachable from START.
@@ -461,6 +508,7 @@ def undiscover_zone(
     Args:
         discovered_links: Current list of discovered links
         zone_to_remove: The zone to undiscover
+        zone_pairs: Zone pairs for expanding link_ids
 
     Returns:
         Tuple of (new_discovered_links, removed_zones)
@@ -468,28 +516,37 @@ def undiscover_zone(
     if zone_to_remove == START_NODE:
         return discovered_links, []
 
+    zp_index = build_zone_pairs_index(zone_pairs)
+
+    def get_link_endpoints(dl: dict) -> tuple[str, str]:
+        """Get source and destination from a discovered link."""
+        zp = zp_index.get(dl["link_id"])
+        if zp:
+            return zp["source"], zp["destination"]
+        return "", ""
+
     # First, remove all links involving the zone to remove
-    filtered_links = [
-        dl
-        for dl in discovered_links
-        if dl.get("source") != zone_to_remove and dl.get("target") != zone_to_remove
-    ]
+    filtered_links = []
+    for dl in discovered_links:
+        src, tgt = get_link_endpoints(dl)
+        if src != zone_to_remove and tgt != zone_to_remove:
+            filtered_links.append(dl)
 
     # Find all zones that are still reachable from START
-    reachable = find_reachable_nodes(filtered_links)
+    reachable = find_reachable_nodes(filtered_links, zone_pairs)
 
     # Get zones that were discovered before
-    previously_discovered = get_discovered_nodes(discovered_links)
+    previously_discovered = get_discovered_nodes(discovered_links, zone_pairs)
 
     # Find zones that became unreachable (cascade undiscovery)
     removed_zones = previously_discovered - reachable
 
     # Remove all links involving unreachable zones
-    final_links = [
-        dl
-        for dl in filtered_links
-        if dl.get("source") in reachable and dl.get("target") in reachable
-    ]
+    final_links = []
+    for dl in filtered_links:
+        src, tgt = get_link_endpoints(dl)
+        if src in reachable and tgt in reachable:
+            final_links.append(dl)
 
     return final_links, list(removed_zones)
 
@@ -520,7 +577,7 @@ def compute_zone_exits(
     merged_zones = get_zones_via_preexisting(zone_pairs, current_zone)
 
     exits = []
-    seen_links = set()  # Deduplicate bidirectional links
+    seen_link_ids = set()  # Deduplicate by link ID
 
     for pair in zone_pairs:
         if pair["type"] != "random":
@@ -528,6 +585,7 @@ def compute_zone_exits(
 
         pair_source = pair["source"]
         pair_target = pair["destination"]
+        pair_id = pair.get("id")
 
         # Check if this link exits from one of our merged zones
         from_zone = None
@@ -550,21 +608,22 @@ def compute_zone_exits(
         else:
             continue
 
-        # Deduplicate (A↔B is one link)
-        link_key = frozenset([pair_source, pair_target])
-        if link_key in seen_links:
-            continue
-        seen_links.add(link_key)
+        # Deduplicate by link ID (each zone_pair is unique, even with same endpoints)
+        if pair_id:
+            if pair_id in seen_link_ids:
+                continue
+            seen_link_ids.add(pair_id)
 
         # Check if destination is in the same merged group (skip internal links)
         if to_zone in merged_zones:
             continue
 
         # Check if this link has been discovered
-        discovered = is_link_discovered(discovered_links, pair_source, pair_target)
+        discovered = is_link_discovered(discovered_links, pair_source, pair_target, zone_pairs)
 
         exits.append(
             {
+                "id": pair_id,  # Include link ID in response
                 "destination": to_zone if discovered else "???",
                 "description": description,
                 "from_zone": from_zone if from_zone != current_zone else None,

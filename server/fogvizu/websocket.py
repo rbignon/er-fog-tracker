@@ -582,11 +582,17 @@ async def handle_host_connection(websocket: WebSocket, game_id: UUID):
         room.host = websocket
 
         # Send current game state (directly from JSONB columns)
+        # Expand discovered_links to source/target format for client compatibility
+        zone_pairs = game.zone_pairs or []
+        zp_index = {zp["id"]: zp for zp in zone_pairs if zp.get("id")}
+        expanded_links = []
+        for dl in game.discovered_links or []:
+            zp = zp_index.get(dl["link_id"])
+            if zp:
+                expanded_links.append({"source": zp["source"], "target": zp["destination"]})
+
         game_state = {
-            "discovered_links": [
-                {"source": dl["source"], "target": dl["target"]}
-                for dl in (game.discovered_links or [])
-            ],
+            "discovered_links": expanded_links,
             "node_positions": game.node_positions or {},
             "tags": game.tags or {},
         }

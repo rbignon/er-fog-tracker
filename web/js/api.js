@@ -145,13 +145,17 @@ export async function regenerateModToken() {
 /**
  * Create a discovery.
  * @param {string} gameId - Game UUID
- * @param {Object} data - { source, target }
- * @returns {Promise<{ propagated: Array<{ source, target }> }>}
+ * @param {Object} data - { source, target, link_id? }
+ * @returns {Promise<{ propagated: Array<{ source, target }>, discovered_links: Array }>}
  */
-export async function createDiscovery(gameId, { source, target }) {
+export async function createDiscovery(gameId, { source, target, link_id }) {
+  const body = { source, target };
+  if (link_id) {
+    body.link_id = link_id;
+  }
   return apiFetch(`/api/games/${gameId}/discoveries`, {
     method: 'POST',
-    body: JSON.stringify({ source, target }),
+    body: JSON.stringify(body),
   });
 }
 
