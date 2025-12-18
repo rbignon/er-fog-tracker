@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 
 class ZonePair(BaseModel):
+    id: str | None = None  # Unique identifier for this link
     source: str
     destination: str
     type: str = Field(pattern="^(random|preexisting)$")

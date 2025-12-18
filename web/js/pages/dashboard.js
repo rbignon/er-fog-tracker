@@ -115,6 +115,7 @@ async function createGame() {
 
   // Convert graph data to zone_pairs format
   const zonePairs = parsedData.graphData.links.map((link) => ({
+    id: link.id,
     source: typeof link.source === 'object' ? link.source.id : link.source,
     destination: typeof link.target === 'object' ? link.target.id : link.target,
     type: link.type || 'random',

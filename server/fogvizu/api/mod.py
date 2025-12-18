@@ -135,6 +135,7 @@ async def create_game(
     # Convert parsed data to zone_pairs format
     zone_pairs = [
         ZonePair(
+            id=conn.id,
             source=conn.source,
             destination=conn.target,
             type=conn.conn_type,

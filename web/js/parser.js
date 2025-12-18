@@ -194,6 +194,7 @@ export const SpoilerLogParser = {
         }
 
         return {
+            id: crypto.randomUUID(),
             source: cleanSource,
             target: cleanTarget,
             type: connType,

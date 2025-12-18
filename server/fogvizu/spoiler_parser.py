@@ -5,6 +5,7 @@ Parses Fog Gate Randomizer spoiler logs into structured zone pairs.
 
 import re
 from dataclasses import dataclass, field
+from uuid import uuid4
 
 # Patterns that ALWAYS indicate a one-way connection
 ALWAYS_ONE_WAY_PATTERNS = [
@@ -114,6 +115,7 @@ class ZoneInfo:
 class ConnectionInfo:
     """Parsed connection info."""
 
+    id: str  # Unique identifier for this link
     source: str
     target: str
     conn_type: str  # 'random' or 'preexisting'
@@ -233,6 +235,7 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
             )
 
     return ConnectionInfo(
+        id=str(uuid4()),
         source=clean_source,
         target=clean_target,
         conn_type=conn_type,
