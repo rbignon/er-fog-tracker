@@ -2,6 +2,17 @@
 // PARSER - Converts spoiler log text to graph data
 // ============================================================
 
+// UUID generator with fallback for browsers without crypto.randomUUID
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    // Fallback using crypto.getRandomValues
+    return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
+        (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+    );
+}
+
 export const SpoilerLogParser = {
     // Patterns that ALWAYS indicate a one-way connection
     alwaysOneWayPatterns: [
@@ -194,7 +205,7 @@ export const SpoilerLogParser = {
         }
 
         return {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             source: cleanSource,
             target: cleanTarget,
             type: connType,
