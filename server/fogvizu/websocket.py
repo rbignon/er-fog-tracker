@@ -12,6 +12,7 @@ from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
 from sqlalchemy import or_, select
+from sqlalchemy.orm.attributes import flag_modified
 
 from fogvizu.config import settings
 from fogvizu.database import Game, User, async_session
@@ -422,6 +423,7 @@ class HostClient(Client):
                 current_positions = dict(game.node_positions or {})
                 current_positions.update(positions)
                 game.node_positions = current_positions
+                flag_modified(game, "node_positions")
                 await db.commit()
 
         await manager.broadcast_to_viewers(self.game_id, data)
@@ -441,6 +443,7 @@ class HostClient(Client):
                 else:
                     current_tags.pop(zone, None)
                 game.tags = current_tags
+                flag_modified(game, "tags")
                 await db.commit()
 
         await manager.broadcast_to_all(self.game_id, data, exclude=self.ws)

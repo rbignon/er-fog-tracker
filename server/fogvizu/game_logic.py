@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from fogvizu.database import Game
 from fogvizu.zone_matching import (
@@ -209,6 +210,7 @@ async def propagate_discovery(
     # Update game with new discovered_links
     if newly_discovered:
         game.discovered_links = discovered_links
+        flag_modified(game, "discovered_links")
         await db.flush()
         logger.info(
             "[DISCOVERY] Propagated %d new links (total discovered: %d)",

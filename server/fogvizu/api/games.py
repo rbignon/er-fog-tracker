@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from fogvizu.auth import get_current_user
 from fogvizu.config import settings
@@ -366,6 +367,7 @@ async def create_undiscovery(
 
     # Update game
     game.discovered_links = new_links
+    flag_modified(game, "discovered_links")
     await db.flush()
 
     # Build response with expanded links
