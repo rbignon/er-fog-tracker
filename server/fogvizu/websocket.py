@@ -1,15 +1,17 @@
 """
-WebSocket connection manager and handlers.
+WebSocket connection manager and client handlers.
 """
 
 import asyncio
+import contextlib
 import logging
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import or_, select
 
 from fogvizu.config import settings
 from fogvizu.database import Game, User, async_session
@@ -17,7 +19,431 @@ from fogvizu.game_logic import find_all_matching_zone_pairs, propagate_discovery
 from fogvizu.zone_matching import compute_discovery_stats, compute_zone_exits
 from fogvizu.zone_resolver import get_resolver
 
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Client Base Class
+# =============================================================================
+
+
+class Client(ABC):
+    """Base class for WebSocket clients."""
+
+    def __init__(self, ws: WebSocket, game_id: UUID, user: User | None = None):
+        self.ws = ws
+        self.game_id = game_id
+        self.user = user
+        self._handlers: dict[str, callable] = {}
+        self._running = False
+
+    @abstractmethod
+    def _register_handlers(self) -> dict[str, callable]:
+        """Return message type -> handler mapping."""
+        pass
+
+    async def send(self, message: dict):
+        """Send a message to the client."""
+        await self.ws.send_json(message)
+
+    async def run(self):
+        """Main loop - handle heartbeat and message dispatch."""
+        self._handlers = self._register_handlers()
+        self._running = True
+
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(self._heartbeat_loop())
+            tg.create_task(self._message_loop())
+
+    async def _heartbeat_loop(self):
+        """Send periodic pings to keep connection alive."""
+        interval = settings.heartbeat_interval
+        while self._running:
+            await asyncio.sleep(interval)
+            try:
+                await self.ws.send_json({"type": "ping"})
+            except Exception:
+                break
+
+    async def _message_loop(self):
+        """Receive and dispatch messages to handlers."""
+        try:
+            while self._running:
+                data = await self.ws.receive_json()
+                msg_type = data.get("type")
+                logger.debug("[%s RX] %s", self.__class__.__name__, data)
+
+                handler = self._handlers.get(msg_type)
+                if handler:
+                    try:
+                        await handler(data)
+                    except Exception as e:
+                        logger.exception(
+                            "[%s] Handler error for %s: %s", self.__class__.__name__, msg_type, e
+                        )
+                elif msg_type != "pong":
+                    logger.warning(
+                        "[%s] Unknown message type: %s", self.__class__.__name__, msg_type
+                    )
+        except WebSocketDisconnect:
+            logger.info("[%s] Disconnected for game %s", self.__class__.__name__, self.game_id)
+        except Exception as e:
+            logger.exception("[%s] Connection error: %s", self.__class__.__name__, e)
+        finally:
+            self._running = False
+
+    def stop(self):
+        """Stop the client."""
+        self._running = False
+
+
+# =============================================================================
+# Mod Client
+# =============================================================================
+
+
+class ModClient(Client):
+    """Client for the game mod."""
+
+    def _register_handlers(self) -> dict[str, callable]:
+        return {
+            "pong": self._handle_pong,
+            "discovery_v2": self._handle_discovery_v2,
+            "debug_log": self._handle_debug_log,
+        }
+
+    async def _handle_pong(self, data: dict):
+        """Handle pong response."""
+        logger.debug("[MOD] Pong received")
+
+    async def _handle_debug_log(self, data: dict):
+        """Handle debug log from mod."""
+        message = data.get("message", "")
+        logger.info("[MOD DEBUG] %s", message)
+
+    async def _handle_discovery_v2(self, data: dict):
+        """Handle discovery with map_id + position (server resolves zone names)."""
+        source_map_id = data.get("source_map_id")
+        source_pos = data.get("source_pos", {})
+        source_play_region_id = data.get("source_play_region_id")
+        target_map_id = data.get("target_map_id")
+        target_pos = data.get("target_pos", {})
+        target_play_region_id = data.get("target_play_region_id")
+        warp_type = data.get("warp_type", "unknown")
+
+        # Convert play_region_id to Col format (hXXYYZZ)
+        source_col = f"h{source_play_region_id:06x}" if source_play_region_id else None
+        target_col = f"h{target_play_region_id:06x}" if target_play_region_id else None
+
+        logger.info(
+            "[MOD] Discovery v2 [%s]: %s (%.1f, %.1f, %.1f) col=%s -> %s (%.1f, %.1f, %.1f) col=%s",
+            warp_type,
+            source_map_id,
+            source_pos.get("x", 0),
+            source_pos.get("y", 0),
+            source_pos.get("z", 0),
+            source_col,
+            target_map_id,
+            target_pos.get("x", 0),
+            target_pos.get("y", 0),
+            target_pos.get("z", 0),
+            target_col,
+        )
+
+        if not source_map_id or not target_map_id:
+            logger.warning("[MOD] Missing map_id in discovery_v2")
+            await self.send({"type": "error", "message": "Missing source_map_id or target_map_id"})
+            return
+
+        resolver = get_resolver()
+
+        # Try exact Col resolution first (if available)
+        source_col_internal, source_col_display = None, None
+        target_col_internal, target_col_display = None, None
+
+        if source_col:
+            source_col_internal, source_col_display = resolver.resolve_by_col(
+                source_map_id, source_col
+            )
+            if source_col_display:
+                logger.info("[MOD] Source resolved by Col: %s", source_col_display)
+
+        if target_col:
+            target_col_internal, target_col_display = resolver.resolve_by_col(
+                target_map_id, target_col
+            )
+            if target_col_display:
+                logger.info("[MOD] Target resolved by Col: %s", target_col_display)
+
+        # Get all candidate zones for source and target (fallback)
+        source_candidates = resolver.resolve_all_candidates(
+            source_map_id,
+            source_pos.get("x", 0),
+            source_pos.get("y", 0),
+            source_pos.get("z", 0),
+        )
+        target_candidates = resolver.resolve_all_candidates(
+            target_map_id,
+            target_pos.get("x", 0),
+            target_pos.get("y", 0),
+            target_pos.get("z", 0),
+        )
+
+        # If Col resolved, prepend to candidates with highest priority
+        if source_col_internal:
+            source_candidates = [(source_col_internal, source_col_display)] + [
+                c for c in source_candidates if c[0] != source_col_internal
+            ]
+        if target_col_internal:
+            target_candidates = [(target_col_internal, target_col_display)] + [
+                c for c in target_candidates if c[0] != target_col_internal
+            ]
+
+        logger.debug(
+            "[MOD] Zone candidates: source=%s, target=%s",
+            [c[1] for c in source_candidates[:5]],
+            [c[1] for c in target_candidates[:5]],
+        )
+
+        if not source_candidates or not target_candidates:
+            logger.warning("[MOD] No zone candidates for %s -> %s", source_map_id, target_map_id)
+            await self.send(
+                {
+                    "type": "discovery_v2_ack",
+                    "propagated": [],
+                    "resolved": [],
+                    "error": "No zone candidates found",
+                }
+            )
+            return
+
+        # Process with fresh DB session
+        async with async_session() as db:
+            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            game = result.scalar_one_or_none()
+
+            all_propagated = []
+            resolved_links = []
+
+            if game and game.zone_pairs:
+                # Find ALL valid combinations of candidates in the spoiler log
+                matches = find_all_matching_zone_pairs(
+                    game.zone_pairs,
+                    source_candidates[:15],
+                    target_candidates[:15],
+                )
+
+                if matches:
+                    logger.info("[MOD] Found %d valid link(s) in spoiler log", len(matches))
+                    for source_display, target_display, _ in matches:
+                        logger.info(
+                            "[MOD] Discovered: '%s' -> '%s'", source_display, target_display
+                        )
+                        resolved_links.append({"source": source_display, "target": target_display})
+
+                        propagated = await propagate_discovery(
+                            db, self.game_id, source_display, target_display, discovered_by="mod"
+                        )
+                        all_propagated.extend(propagated)
+                else:
+                    logger.warning(
+                        "[MOD] No spoiler log match (tried %d x %d combinations)",
+                        len(source_candidates[:15]),
+                        len(target_candidates[:15]),
+                    )
+            else:
+                logger.warning("[MOD] Game has no zone_pairs, cannot resolve")
+
+            await db.commit()
+
+            # Compute exits from the destination zone
+            exits = []
+            destination_zone = None
+            if resolved_links and game:
+                link = resolved_links[0]
+                target_display_names = {c[1] for c in target_candidates}
+
+                if link["target"] in target_display_names:
+                    destination_zone = link["target"]
+                elif link["source"] in target_display_names:
+                    destination_zone = link["source"]
+                else:
+                    destination_zone = link["target"]
+
+                logger.info("[MOD] Player arrived at zone: %s", destination_zone)
+
+                # Refetch game to get updated discovered_links
+                result = await db.execute(select(Game).where(Game.id == self.game_id))
+                game = result.scalar_one_or_none()
+
+                if game:
+                    exits = compute_zone_exits(
+                        game.zone_pairs or [],
+                        game.discovered_links or [],
+                        destination_zone,
+                    )
+                    logger.info(
+                        "[MOD] Computed %d exits from zone '%s'", len(exits), destination_zone
+                    )
+
+            # Compute discovery stats
+            stats = {"discovered": 0, "total": 0, "percent": 0}
+            if game:
+                stats = compute_discovery_stats(game.zone_pairs or [], game.discovered_links or [])
+
+            # Send ack to mod
+            ack_msg = {
+                "type": "discovery_v2_ack",
+                "propagated": all_propagated,
+                "resolved": resolved_links,
+                "current_zone": destination_zone,
+                "exits": exits,
+                "stats": stats,
+            }
+            if not resolved_links:
+                ack_msg["error"] = "No matching link found in spoiler log"
+
+            logger.info(
+                "[MOD TX] Ack: %d resolved, %d propagated, %d exits, discovered %d/%d (%.1f%%)",
+                len(resolved_links),
+                len(all_propagated),
+                len(exits),
+                stats["discovered"],
+                stats["total"],
+                stats["percent"],
+            )
+            await self.send(ack_msg)
+
+            # Broadcast to host and viewers
+            if all_propagated:
+                all_discovered_links = game.discovered_links if game else []
+                await manager.broadcast_to_all(
+                    self.game_id,
+                    {
+                        "type": "discovery",
+                        "propagated": all_propagated,
+                        "discovered_links": all_discovered_links,
+                    },
+                    exclude=self.ws,
+                )
+
+
+# =============================================================================
+# Host Client
+# =============================================================================
+
+
+class HostClient(Client):
+    """Client for the host (streamer browser)."""
+
+    def _register_handlers(self) -> dict[str, callable]:
+        return {
+            "pong": self._handle_pong,
+            "visual_state": self._handle_visual_state,
+            "positions_update": self._handle_positions_update,
+            "tag_update": self._handle_tag_update,
+            "manual_discovery": self._handle_manual_discovery,
+        }
+
+    async def _handle_pong(self, data: dict):
+        """Handle pong response."""
+        pass
+
+    async def _handle_visual_state(self, data: dict):
+        """Handle visual state update from host."""
+        room = manager.rooms.get(self.game_id)
+        if room:
+            room.last_visual_state = data
+        await manager.broadcast_to_viewers(self.game_id, data)
+
+    async def _handle_positions_update(self, data: dict):
+        """Handle node positions update."""
+        positions = data.get("positions", {})
+
+        async with async_session() as db:
+            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            game = result.scalar_one_or_none()
+            if game:
+                current_positions = dict(game.node_positions or {})
+                current_positions.update(positions)
+                game.node_positions = current_positions
+                await db.commit()
+
+        await manager.broadcast_to_viewers(self.game_id, data)
+
+    async def _handle_tag_update(self, data: dict):
+        """Handle tag update for a zone."""
+        zone = data.get("zone")
+        tags = data.get("tags", [])
+
+        async with async_session() as db:
+            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            game = result.scalar_one_or_none()
+            if game:
+                current_tags = dict(game.tags or {})
+                if tags:
+                    current_tags[zone] = tags
+                else:
+                    current_tags.pop(zone, None)
+                game.tags = current_tags
+                await db.commit()
+
+        await manager.broadcast_to_all(self.game_id, data, exclude=self.ws)
+
+    async def _handle_manual_discovery(self, data: dict):
+        """Handle manual discovery from host."""
+        source = data.get("source")
+        target = data.get("target")
+
+        if not source or not target:
+            return
+
+        async with async_session() as db:
+            propagated = await propagate_discovery(
+                db, self.game_id, source, target, discovered_by="manual"
+            )
+            await db.commit()
+
+            # Refetch game to get full discovered_links
+            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            game = result.scalar_one_or_none()
+            all_discovered_links = game.discovered_links if game else []
+
+        await manager.broadcast_to_all(
+            self.game_id,
+            {
+                "type": "discovery",
+                "propagated": propagated,
+                "discovered_links": all_discovered_links,
+            },
+            exclude=self.ws,
+        )
+
+
+# =============================================================================
+# Viewer Client
+# =============================================================================
+
+
+class ViewerClient(Client):
+    """Client for viewers (read-only, no auth required)."""
+
+    def _register_handlers(self) -> dict[str, callable]:
+        return {
+            "pong": self._handle_pong,
+        }
+
+    async def _handle_pong(self, data: dict):
+        """Handle pong response."""
+        pass
+
+
+# =============================================================================
+# Game Room
+# =============================================================================
 
 
 @dataclass
@@ -25,10 +451,15 @@ class GameRoom:
     """Tracks all connections for a game."""
 
     game_id: UUID
-    mod: WebSocket | None = None
-    host: WebSocket | None = None
-    viewers: list[WebSocket] = field(default_factory=list)
+    mod: ModClient | None = None
+    host: HostClient | None = None
+    viewers: list[ViewerClient] = field(default_factory=list)
     last_visual_state: dict | None = None
+
+
+# =============================================================================
+# Connection Manager
+# =============================================================================
 
 
 class ConnectionManager:
@@ -63,7 +494,7 @@ class ConnectionManager:
         disconnected = []
         for viewer in room.viewers:
             try:
-                await viewer.send_json(message)
+                await viewer.send(message)
             except Exception:
                 disconnected.append(viewer)
 
@@ -79,9 +510,9 @@ class ConnectionManager:
             return
 
         # Send to host
-        if room.host and room.host != exclude:
+        if room.host and room.host.ws != exclude:
             try:
-                await room.host.send_json(message)
+                await room.host.send(message)
             except Exception:
                 room.host = None
 
@@ -97,13 +528,9 @@ manager = ConnectionManager()
 # =============================================================================
 
 
-async def authenticate_ws(websocket: WebSocket, db: AsyncSession) -> User | None:
-    """Wait for auth message and validate token.
-
-    Accepts either api_token (from browser) or mod_token (from game mod).
-    """
+async def authenticate_ws(websocket: WebSocket, db: "AsyncSession") -> User | None:
+    """Wait for auth message and validate token."""
     try:
-        # Wait for auth message (5 second timeout)
         logger.debug("[AUTH] Waiting for auth message...")
         data = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
         logger.debug("[AUTH] Received: %s", {**data, "token": "***" if data.get("token") else None})
@@ -119,16 +546,13 @@ async def authenticate_ws(websocket: WebSocket, db: AsyncSession) -> User | None
             await websocket.send_json({"type": "auth_error", "message": "Missing token"})
             return None
 
-        # Validate token - check both api_token and mod_token
-        from sqlalchemy import or_
-
         result = await db.execute(
             select(User).where(or_(User.api_token == token, User.mod_token == token))
         )
         user = result.scalar_one_or_none()
 
         if not user:
-            logger.warning("[AUTH] Invalid token (not found in database)")
+            logger.warning("[AUTH] Invalid token")
             await websocket.send_json({"type": "auth_error", "message": "Invalid token"})
             return None
 
@@ -141,41 +565,23 @@ async def authenticate_ws(websocket: WebSocket, db: AsyncSession) -> User | None
         await websocket.send_json({"type": "auth_error", "message": "Auth timeout"})
         return None
     except Exception as e:
-        logger.exception("[AUTH] Error during authentication: %s", e)
+        logger.exception("[AUTH] Error: %s", e)
         return None
 
 
 async def verify_game_access(
-    db: AsyncSession, game_id: UUID, user: User | None = None, require_owner: bool = False
+    db: "AsyncSession", game_id: UUID, user: User | None = None, require_owner: bool = False
 ) -> Game | None:
     """Verify game exists and optionally check ownership."""
     query = select(Game).where(Game.id == game_id).where(Game.deleted_at.is_(None))
-
     if require_owner and user:
         query = query.where(Game.user_id == user.id)
-
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
 
 # =============================================================================
-# Heartbeat
-# =============================================================================
-
-
-async def heartbeat_loop(websocket: WebSocket, interval: int = None):
-    """Send periodic pings to keep connection alive."""
-    interval = interval or settings.heartbeat_interval
-    while True:
-        await asyncio.sleep(interval)
-        try:
-            await websocket.send_json({"type": "ping"})
-        except Exception:
-            break
-
-
-# =============================================================================
-# Mod WebSocket Handler
+# WebSocket Handlers (FastAPI endpoints)
 # =============================================================================
 
 
@@ -184,8 +590,8 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
     await websocket.accept()
     logger.info("[MOD] Connection attempt for game %s", game_id)
 
+    # Auth requires a DB session
     async with async_session() as db:
-        # Authenticate
         user = await authenticate_ws(websocket, db)
         if not user:
             logger.warning("[MOD] Authentication failed for game %s", game_id)
@@ -194,7 +600,6 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
 
         logger.info("[MOD] Authenticated as user %s (id=%s)", user.twitch_username, user.id)
 
-        # Verify game access
         game = await verify_game_access(db, game_id, user, require_owner=True)
         if not game:
             logger.warning("[MOD] Game %s not found or not owned by user", game_id)
@@ -204,335 +609,51 @@ async def handle_mod_connection(websocket: WebSocket, game_id: UUID):
 
         logger.info("[MOD] Game access verified: %s (seed=%s)", game.label, game.seed)
 
-        # Register in room
-        room = manager.get_or_create_room(game_id)
-        if room.mod:
-            logger.warning("[MOD] Mod already connected for game %s", game_id)
-            await websocket.send_json({"type": "error", "message": "Mod already connected"})
-            await websocket.close()
-            return
+    # Register in room
+    room = manager.get_or_create_room(game_id)
+    if room.mod:
+        logger.warning("[MOD] Mod already connected for game %s", game_id)
+        await websocket.send_json({"type": "error", "message": "Mod already connected"})
+        await websocket.close()
+        return
 
-        room.mod = websocket
-        logger.info("[MOD] Connected successfully for game %s", game_id)
+    client = ModClient(websocket, game_id, user)
+    room.mod = client
+    logger.info("[MOD] Connected successfully for game %s", game_id)
 
-        # Notify host that mod connected
+    # Notify host
+    if room.host:
+        with contextlib.suppress(Exception):
+            await room.host.send({"type": "mod_connected"})
+
+    try:
+        await client.run()
+    finally:
+        room.mod = None
         if room.host:
-            try:
-                await room.host.send_json({"type": "mod_connected"})
-                logger.info("[MOD] Notified host of mod connection")
-            except Exception:
-                pass
-
-        # Start heartbeat
-        heartbeat_task = asyncio.create_task(heartbeat_loop(websocket))
-
-        try:
-            while True:
-                data = await websocket.receive_json()
-                msg_type = data.get("type")
-                logger.debug("[MOD RX] %s", data)
-
-                if msg_type == "pong":
-                    logger.debug("[MOD] Pong received")
-                    continue
-
-                elif msg_type == "discovery_v2":
-                    # New discovery with map_id + position + play_region_id (server resolves zone names)
-                    source_map_id = data.get("source_map_id")
-                    source_pos = data.get("source_pos", {})
-                    source_play_region_id = data.get("source_play_region_id")
-                    target_map_id = data.get("target_map_id")
-                    target_pos = data.get("target_pos", {})
-                    target_play_region_id = data.get("target_play_region_id")
-                    warp_type = data.get("warp_type", "unknown")
-
-                    # Convert play_region_id to Col format (hXXYYZZ)
-                    source_col = f"h{source_play_region_id:06x}" if source_play_region_id else None
-                    target_col = f"h{target_play_region_id:06x}" if target_play_region_id else None
-
-                    logger.info(
-                        "[MOD] Discovery v2 [%s]: %s (%.1f, %.1f, %.1f) col=%s → %s (%.1f, %.1f, %.1f) col=%s",
-                        warp_type,
-                        source_map_id,
-                        source_pos.get("x", 0),
-                        source_pos.get("y", 0),
-                        source_pos.get("z", 0),
-                        source_col,
-                        target_map_id,
-                        target_pos.get("x", 0),
-                        target_pos.get("y", 0),
-                        target_pos.get("z", 0),
-                        target_col,
-                    )
-
-                    if not source_map_id or not target_map_id:
-                        logger.warning("[MOD] Missing map_id in discovery_v2")
-                        await websocket.send_json(
-                            {"type": "error", "message": "Missing source_map_id or target_map_id"}
-                        )
-                        continue
-
-                    resolver = get_resolver()
-
-                    # Try exact Col resolution first (if available)
-                    source_col_internal, source_col_display = None, None
-                    target_col_internal, target_col_display = None, None
-
-                    if source_col:
-                        source_col_internal, source_col_display = resolver.resolve_by_col(
-                            source_map_id, source_col
-                        )
-                        if source_col_display:
-                            logger.info("[MOD] Source resolved by Col: %s", source_col_display)
-
-                    if target_col:
-                        target_col_internal, target_col_display = resolver.resolve_by_col(
-                            target_map_id, target_col
-                        )
-                        if target_col_display:
-                            logger.info("[MOD] Target resolved by Col: %s", target_col_display)
-
-                    # Get all candidate zones for source and target (fallback)
-                    source_candidates = resolver.resolve_all_candidates(
-                        source_map_id,
-                        source_pos.get("x", 0),
-                        source_pos.get("y", 0),
-                        source_pos.get("z", 0),
-                    )
-                    target_candidates = resolver.resolve_all_candidates(
-                        target_map_id,
-                        target_pos.get("x", 0),
-                        target_pos.get("y", 0),
-                        target_pos.get("z", 0),
-                    )
-
-                    # If Col resolved, prepend to candidates with highest priority
-                    if source_col_internal:
-                        source_candidates = [(source_col_internal, source_col_display)] + [
-                            c for c in source_candidates if c[0] != source_col_internal
-                        ]
-                    if target_col_internal:
-                        target_candidates = [(target_col_internal, target_col_display)] + [
-                            c for c in target_candidates if c[0] != target_col_internal
-                        ]
-
-                    logger.debug(
-                        "[MOD] Zone candidates: source=%s, target=%s",
-                        [c[1] for c in source_candidates[:5]],
-                        [c[1] for c in target_candidates[:5]],
-                    )
-
-                    if not source_candidates or not target_candidates:
-                        logger.warning(
-                            "[MOD] No zone candidates for %s → %s",
-                            source_map_id,
-                            target_map_id,
-                        )
-                        await websocket.send_json(
-                            {
-                                "type": "discovery_v2_ack",
-                                "propagated": [],
-                                "resolved": [],
-                                "error": "No zone candidates found",
-                            }
-                        )
-                        continue
-
-                    # Get game's zone_pairs to find ALL matching combinations
-                    result = await db.execute(select(Game).where(Game.id == game_id))
-                    game_for_zones = result.scalar_one_or_none()
-
-                    all_propagated = []
-                    resolved_links = []
-
-                    if game_for_zones and game_for_zones.zone_pairs:
-                        # Find ALL valid combinations of candidates in the spoiler log
-                        matches = find_all_matching_zone_pairs(
-                            game_for_zones.zone_pairs,
-                            source_candidates[:15],  # Limit to top 15 candidates
-                            target_candidates[:15],
-                        )
-
-                        if matches:
-                            logger.info(
-                                "[MOD] Found %d valid link(s) in spoiler log",
-                                len(matches),
-                            )
-                            for source_display, target_display, _ in matches:
-                                logger.info(
-                                    "[MOD] Discovered: '%s' → '%s'",
-                                    source_display,
-                                    target_display,
-                                )
-                                resolved_links.append(
-                                    {
-                                        "source": source_display,
-                                        "target": target_display,
-                                    }
-                                )
-
-                                # Propagate each discovered link
-                                propagated = await propagate_discovery(
-                                    db, game_id, source_display, target_display, discovered_by="mod"
-                                )
-                                all_propagated.extend(propagated)
-                        else:
-                            logger.warning(
-                                "[MOD] No spoiler log match (tried %d × %d combinations)",
-                                len(source_candidates[:15]),
-                                len(target_candidates[:15]),
-                            )
-                    else:
-                        logger.warning("[MOD] Game has no zone_pairs, cannot resolve")
-
-                    await db.commit()
-
-                    # Compute exits from the destination zone
-                    exits = []
-                    destination_zone = None
-                    game_for_exits = None
-                    if resolved_links and game_for_zones:
-                        # Determine which zone the player actually arrived at
-                        # The resolved link has source/target from spoiler log, but we need
-                        # to find which one matches the player's exit position (target_candidates)
-                        link = resolved_links[0]
-                        target_display_names = {c[1] for c in target_candidates}
-
-                        if link["target"] in target_display_names:
-                            destination_zone = link["target"]
-                        elif link["source"] in target_display_names:
-                            destination_zone = link["source"]
-                        else:
-                            # Fallback: use target (shouldn't happen normally)
-                            destination_zone = link["target"]
-
-                        logger.info("[MOD] Player arrived at zone: %s", destination_zone)
-
-                        # Refetch game to get updated discovered_links
-                        result = await db.execute(select(Game).where(Game.id == game_id))
-                        game_for_exits = result.scalar_one_or_none()
-
-                        if game_for_exits:
-                            exits = compute_zone_exits(
-                                game_for_exits.zone_pairs or [],
-                                game_for_exits.discovered_links or [],
-                                destination_zone,
-                            )
-                            logger.info(
-                                "[MOD] Computed %d exits from zone '%s'",
-                                len(exits),
-                                destination_zone,
-                            )
-
-                    # Compute discovery stats
-                    stats = {"discovered": 0, "total": 0, "percent": 0}
-                    if game_for_exits:
-                        stats = compute_discovery_stats(
-                            game_for_exits.zone_pairs or [],
-                            game_for_exits.discovered_links or [],
-                        )
-
-                    # Send ack to mod with all resolved links, exits, and stats
-                    ack_msg = {
-                        "type": "discovery_v2_ack",
-                        "propagated": all_propagated,
-                        "resolved": resolved_links,
-                        "current_zone": destination_zone,
-                        "exits": exits,
-                        "stats": stats,
-                    }
-                    if not resolved_links:
-                        ack_msg["error"] = "No matching link found in spoiler log"
-
-                    logger.info(
-                        "[MOD TX] Ack: %d resolved, %d propagated, %d exits, discovered %d/%d (%.1f%%)",
-                        len(resolved_links),
-                        len(all_propagated),
-                        len(exits),
-                        stats["discovered"],
-                        stats["total"],
-                        stats["percent"],
-                    )
-                    logger.debug("[MOD TX] %s", ack_msg)
-                    await websocket.send_json(ack_msg)
-
-                    # Broadcast to host and viewers (with full state)
-                    if all_propagated:
-                        all_discovered_links = (
-                            game_for_exits.discovered_links if game_for_exits else []
-                        )
-                        await manager.broadcast_to_all(
-                            game_id,
-                            {
-                                "type": "discovery",
-                                "propagated": all_propagated,
-                                "discovered_links": all_discovered_links,
-                            },
-                            exclude=websocket,
-                        )
-
-                elif msg_type == "debug_log":
-                    # Debug log from mod - just print it
-                    message = data.get("message", "")
-                    logger.info("[MOD DEBUG] %s", message)
-
-                else:
-                    logger.warning("[MOD] Unknown message type: %s", msg_type)
-
-        except WebSocketDisconnect:
-            logger.info("[MOD] Disconnected for game %s", game_id)
-        except Exception as e:
-            logger.exception("[MOD] Connection error for game %s: %s", game_id, e)
-        finally:
-            heartbeat_task.cancel()
-            room.mod = None
-
-            # Notify host that mod disconnected
-            if room.host:
-                try:
-                    await room.host.send_json({"type": "mod_disconnected"})
-                    logger.info("[MOD] Notified host of mod disconnection")
-                except Exception:
-                    pass
-
-            manager.cleanup_room(game_id)
-            logger.info("[MOD] Cleaned up for game %s", game_id)
-
-
-# =============================================================================
-# Host WebSocket Handler
-# =============================================================================
+            with contextlib.suppress(Exception):
+                await room.host.send({"type": "mod_disconnected"})
+        manager.cleanup_room(game_id)
+        logger.info("[MOD] Cleaned up for game %s", game_id)
 
 
 async def handle_host_connection(websocket: WebSocket, game_id: UUID):
-    """Handle host (streamer browser) WebSocket connection."""
+    """Handle host WebSocket connection."""
     await websocket.accept()
 
     async with async_session() as db:
-        # Authenticate
         user = await authenticate_ws(websocket, db)
         if not user:
             await websocket.close()
             return
 
-        # Verify game access
         game = await verify_game_access(db, game_id, user, require_owner=True)
         if not game:
             await websocket.send_json({"type": "error", "message": "Game not found"})
             await websocket.close()
             return
 
-        # Register in room
-        room = manager.get_or_create_room(game_id)
-        if room.host:
-            await websocket.send_json({"type": "error", "message": "Host already connected"})
-            await websocket.close()
-            return
-
-        room.host = websocket
-
-        # Send current game state (directly from JSONB columns)
-        # Expand discovered_links to source/target format for client compatibility
+        # Send current game state
         zone_pairs = game.zone_pairs or []
         zp_index = {zp["id"]: zp for zp in zone_pairs if zp.get("id")}
         expanded_links = []
@@ -548,102 +669,24 @@ async def handle_host_connection(websocket: WebSocket, game_id: UUID):
         }
         await websocket.send_json({"type": "game_state", "state": game_state})
 
-        # Send mod connection status
-        if room.mod:
-            await websocket.send_json({"type": "mod_connected"})
+    # Register in room
+    room = manager.get_or_create_room(game_id)
+    if room.host:
+        await websocket.send_json({"type": "error", "message": "Host already connected"})
+        await websocket.close()
+        return
 
-        # Start heartbeat
-        heartbeat_task = asyncio.create_task(heartbeat_loop(websocket))
+    client = HostClient(websocket, game_id, user)
+    room.host = client
 
-        try:
-            while True:
-                data = await websocket.receive_json()
-                msg_type = data.get("type")
+    if room.mod:
+        await client.send({"type": "mod_connected"})
 
-                if msg_type == "pong":
-                    continue
-
-                elif msg_type == "visual_state":
-                    # Store last visual state for late-joining viewers
-                    room.last_visual_state = data
-
-                    # Broadcast to viewers
-                    await manager.broadcast_to_viewers(game_id, data)
-
-                elif msg_type == "positions_update":
-                    positions = data.get("positions", {})
-
-                    # Update JSONB column (merge with existing)
-                    # Refetch game to get current state
-                    result = await db.execute(select(Game).where(Game.id == game_id))
-                    game = result.scalar_one_or_none()
-                    if game:
-                        current_positions = dict(game.node_positions or {})
-                        current_positions.update(positions)
-                        game.node_positions = current_positions
-                        await db.commit()
-
-                    # Broadcast to viewers
-                    await manager.broadcast_to_viewers(game_id, data)
-
-                elif msg_type == "tag_update":
-                    zone = data.get("zone")
-                    tags = data.get("tags", [])
-
-                    # Update JSONB column
-                    result = await db.execute(select(Game).where(Game.id == game_id))
-                    game = result.scalar_one_or_none()
-                    if game:
-                        current_tags = dict(game.tags or {})
-                        if tags:
-                            current_tags[zone] = tags
-                        else:
-                            current_tags.pop(zone, None)
-                        game.tags = current_tags
-                        await db.commit()
-
-                    # Broadcast to all (including mod if connected)
-                    await manager.broadcast_to_all(game_id, data, exclude=websocket)
-
-                elif msg_type == "manual_discovery":
-                    source = data.get("source")
-                    target = data.get("target")
-
-                    if source and target:
-                        propagated = await propagate_discovery(
-                            db, game_id, source, target, discovered_by="manual"
-                        )
-                        await db.commit()
-
-                        # Refetch game to get full discovered_links
-                        result = await db.execute(select(Game).where(Game.id == game_id))
-                        game_updated = result.scalar_one_or_none()
-                        all_discovered_links = game_updated.discovered_links if game_updated else []
-
-                        # Broadcast to all (with full state)
-                        await manager.broadcast_to_all(
-                            game_id,
-                            {
-                                "type": "discovery",
-                                "propagated": propagated,
-                                "discovered_links": all_discovered_links,
-                            },
-                            exclude=websocket,
-                        )
-
-        except WebSocketDisconnect:
-            pass
-        except Exception as e:
-            print(f"Host connection error: {e}")
-        finally:
-            heartbeat_task.cancel()
-            room.host = None
-            manager.cleanup_room(game_id)
-
-
-# =============================================================================
-# Viewer WebSocket Handler
-# =============================================================================
+    try:
+        await client.run()
+    finally:
+        room.host = None
+        manager.cleanup_room(game_id)
 
 
 async def handle_viewer_connection(websocket: WebSocket, game_id: UUID):
@@ -651,53 +694,35 @@ async def handle_viewer_connection(websocket: WebSocket, game_id: UUID):
     await websocket.accept()
 
     async with async_session() as db:
-        # Verify game exists
         game = await verify_game_access(db, game_id)
         if not game:
             await websocket.send_json({"type": "error", "message": "Game not found"})
             await websocket.close()
             return
 
-        # Check viewer limit
-        room = manager.get_or_create_room(game_id)
-        if len(room.viewers) >= settings.max_viewers_per_game:
-            await websocket.send_json(
-                {
-                    "type": "error",
-                    "message": f"Maximum viewers ({settings.max_viewers_per_game}) reached",
-                }
-            )
-            await websocket.close()
-            return
+    room = manager.get_or_create_room(game_id)
+    if len(room.viewers) >= settings.max_viewers_per_game:
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": f"Maximum viewers ({settings.max_viewers_per_game}) reached",
+            }
+        )
+        await websocket.close()
+        return
 
-        # Register viewer
-        room.viewers.append(websocket)
+    client = ViewerClient(websocket, game_id)
+    room.viewers.append(client)
 
-        # Send current state
-        if room.last_visual_state:
-            await websocket.send_json(room.last_visual_state)
-        else:
-            # No host connected yet, send basic game info
-            await websocket.send_json({"type": "waiting", "message": "Waiting for host to connect"})
+    # Send current state
+    if room.last_visual_state:
+        await client.send(room.last_visual_state)
+    else:
+        await client.send({"type": "waiting", "message": "Waiting for host to connect"})
 
-        # Start heartbeat
-        heartbeat_task = asyncio.create_task(heartbeat_loop(websocket))
-
-        try:
-            while True:
-                data = await websocket.receive_json()
-                msg_type = data.get("type")
-
-                if msg_type == "pong":
-                    continue
-                # Viewers don't send other messages
-
-        except WebSocketDisconnect:
-            pass
-        except Exception as e:
-            print(f"Viewer connection error: {e}")
-        finally:
-            heartbeat_task.cancel()
-            if websocket in room.viewers:
-                room.viewers.remove(websocket)
-            manager.cleanup_room(game_id)
+    try:
+        await client.run()
+    finally:
+        if client in room.viewers:
+            room.viewers.remove(client)
+        manager.cleanup_room(game_id)
