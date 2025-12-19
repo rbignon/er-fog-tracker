@@ -93,6 +93,30 @@ def build_zone_pairs_index(zone_pairs: list[dict]) -> dict[str, dict]:
     return {zp["id"]: zp for zp in zone_pairs if zp.get("id")}
 
 
+def expand_discovered_links(discovered_links: list[dict], zone_pairs: list[dict]) -> list[dict]:
+    """
+    Expand discovered_links to include source and target from zone_pairs.
+    Returns list of {link_id, source, target, discovered_at, discovered_by}.
+    """
+    zp_index = build_zone_pairs_index(zone_pairs)
+    expanded = []
+
+    for link in discovered_links:
+        zp = zp_index.get(link.get("link_id"))
+        if zp:
+            expanded.append(
+                {
+                    "link_id": link["link_id"],
+                    "source": zp["source"],
+                    "target": zp["destination"],
+                    "discovered_at": link.get("discovered_at"),
+                    "discovered_by": link.get("discovered_by"),
+                }
+            )
+
+    return expanded
+
+
 def get_discovered_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -> set[str]:
     """
     Get all discovered nodes from discovered links.

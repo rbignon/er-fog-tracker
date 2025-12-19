@@ -17,7 +17,11 @@ from sqlalchemy.orm.attributes import flag_modified
 from fogvizu.config import settings
 from fogvizu.database import Game, User, async_session
 from fogvizu.game_logic import find_all_matching_zone_pairs, propagate_discovery
-from fogvizu.zone_matching import compute_discovery_stats, compute_zone_exits
+from fogvizu.zone_matching import (
+    compute_discovery_stats,
+    compute_zone_exits,
+    expand_discovered_links,
+)
 from fogvizu.zone_resolver import get_resolver
 
 if TYPE_CHECKING:
@@ -342,14 +346,16 @@ class ModClient(Client):
             await self.send(ack_msg)
 
             # Broadcast to host and viewers
-            if all_propagated:
-                all_discovered_links = game.discovered_links if game else []
+            if all_propagated and game:
+                expanded_links = expand_discovered_links(
+                    game.discovered_links or [], game.zone_pairs or []
+                )
                 await manager.broadcast_to_all(
                     self.game_id,
                     {
                         "type": "discovery",
                         "propagated": all_propagated,
-                        "discovered_links": all_discovered_links,
+                        "discovered_links": expanded_links,
                     },
                     exclude=self.ws,
                 )
@@ -488,17 +494,20 @@ class HostClient(Client):
             # Refetch game to get full discovered_links
             result = await db.execute(select(Game).where(Game.id == self.game_id))
             game = result.scalar_one_or_none()
-            all_discovered_links = game.discovered_links if game else []
 
-        await manager.broadcast_to_all(
-            self.game_id,
-            {
-                "type": "discovery",
-                "propagated": propagated,
-                "discovered_links": all_discovered_links,
-            },
-            exclude=self.ws,
-        )
+        if game:
+            expanded_links = expand_discovered_links(
+                game.discovered_links or [], game.zone_pairs or []
+            )
+            await manager.broadcast_to_all(
+                self.game_id,
+                {
+                    "type": "discovery",
+                    "propagated": propagated,
+                    "discovered_links": expanded_links,
+                },
+                exclude=self.ws,
+            )
 
     @classmethod
     async def handle_connection(cls, websocket: WebSocket, game_id: UUID):
