@@ -545,9 +545,20 @@ class HostClient(Client):
         # Register in room
         room = manager.get_or_create_room(game_id)
         if room.host:
-            await websocket.send_json({"type": "error", "message": "Host already connected"})
-            await websocket.close()
-            return
+            # Same user reconnecting (e.g., page reload) - take over the session
+            if room.host.user and room.host.user.id == user.id:
+                logger.info(
+                    "[HOST] Same user reconnecting, closing old connection for game %s", game_id
+                )
+                old_host = room.host
+                old_host.stop()
+                with contextlib.suppress(Exception):
+                    await old_host.ws.close()
+                room.host = None
+            else:
+                await websocket.send_json({"type": "error", "message": "Host already connected"})
+                await websocket.close()
+                return
 
         client = cls(websocket, game_id, user)
         room.host = client
