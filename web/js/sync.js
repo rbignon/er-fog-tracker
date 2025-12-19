@@ -1401,7 +1401,8 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
     // If server sent full discovered_links, use it directly (server is source of truth)
     if (discoveredLinks && Array.isArray(discoveredLinks)) {
         // Rebuild discovered nodes and links from server state
-        const newDiscovered = new Set();
+        // Always include START_NODE (same as server-side logic)
+        const newDiscovered = new Set([State.START_NODE]);
         const newDiscoveredLinks = new Set();
 
         for (const link of discoveredLinks) {
@@ -1473,7 +1474,8 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
         }
 
         // On host, select the newly discovered node (if not already selected)
-        if (State.isStreamerHost() && newlyDiscoveredTarget) {
+        // But don't auto-select if frontier mode is active (to preserve frontier view)
+        if (State.isStreamerHost() && newlyDiscoveredTarget && !State.isFrontierHighlightActive()) {
             const currentSelected = State.getSelectedNodeId();
             if (currentSelected !== newlyDiscoveredTarget) {
                 State.setSelectedNodeId(newlyDiscoveredTarget);
