@@ -153,11 +153,6 @@ export function renderGraph(preservePositions = false) {
         const placeholderNodes = [];
         const processedLinks = [];
 
-        // Helper to check if link is discovered in a given direction
-        const isLinkDiscoveredInDirection = (fromId, toId) => {
-            return State.isLinkDiscovered(fromId, toId);
-        };
-
         links.forEach(link => {
             const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
             const targetId = typeof link.target === 'object' ? link.target.id : link.target;
@@ -165,11 +160,14 @@ export function renderGraph(preservePositions = false) {
             const targetDiscovered = explorationState.discovered.has(targetId);
 
             if (sourceDiscovered && targetDiscovered) {
-                // Both nodes discovered - but is the LINK discovered?
-                const linkDiscoveredForward = isLinkDiscoveredInDirection(sourceId, targetId);
-                const linkDiscoveredBackward = isLinkDiscoveredInDirection(targetId, sourceId);
+                // Both nodes discovered - but is THIS SPECIFIC link discovered?
+                // We must check the link's UUID directly, not just if any link between
+                // endpoints is discovered. Otherwise, parallel links (e.g., a preexisting
+                // link AND a random link between same nodes) would all show as discovered
+                // when only one of them was actually traversed.
+                const isThisLinkDiscovered = link.id && explorationState.discoveredLinks.has(link.id);
 
-                if (linkDiscoveredForward || linkDiscoveredBackward) {
+                if (isThisLinkDiscovered) {
                     // Link is discovered: show normal link
                     processedLinks.push({...link});
                 } else {
@@ -1058,10 +1056,11 @@ function buildConnectionsList(connections, direction, isUndiscovered, exploratio
 
         const hasReq = link.requiredItemFrom;
 
-        // Check if the link is discovered (in exploration mode)
+        // Check if THIS SPECIFIC link is discovered (not just any link between endpoints)
+        // This prevents parallel links (e.g., preexisting + random) from all showing as
+        // discovered when only one was traversed
         const isLinkDiscovered = !explorationMode || !explorationState ||
-            State.isLinkDiscovered(linkSource, linkTarget) ||
-            State.isLinkDiscovered(linkTarget, linkSource);
+            (link.id && explorationState.discoveredLinks.has(link.id));
 
         // For outgoing: hide if target not discovered OR link not discovered
         // For incoming: hide if source not discovered OR link not discovered

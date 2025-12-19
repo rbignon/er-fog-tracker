@@ -166,6 +166,21 @@ async def propagate_discovery(
         else:
             logger.warning("[DISCOVERY] No path found from START to '%s'", source)
 
+    # Build index for looking up ALL links between two zones (not just one direction)
+    def find_all_link_ids(src: str, dst: str) -> list[tuple[str, str]]:
+        """Find all zone_pair IDs for links between src and dst (both directions)."""
+        results = []
+        for zp in zone_pairs:
+            zp_id = zp.get("id")
+            if not zp_id:
+                continue
+            zp_src = zp["source"]
+            zp_dst = zp["destination"]
+            # Match either direction
+            if (zp_src == src and zp_dst == dst) or (zp_src == dst and zp_dst == src):
+                results.append((zp_id, zp["type"]))
+        return results
+
     # BFS through preexisting links
     # For the initial link, use provided link_id if available
     queue: list[tuple[str, str, str | None]] = [(source, target, link_id)]
@@ -206,6 +221,30 @@ async def propagate_discovery(
                     # Preexisting link to already-discovered node
                     queue.append((dst, next_dst, None))  # No provided link_id for propagated links
                     logger.debug("[DISCOVERY] Queuing preexisting: %s → %s", dst, next_dst)
+        else:
+            # Both nodes already discovered - check for preexisting links between them
+            # that haven't been discovered yet (parallel links scenario)
+            all_links = find_all_link_ids(src, dst)
+            for link_uuid, link_type in all_links:
+                if link_type == "preexisting":
+                    # Check if this specific link is already discovered
+                    already_discovered = any(
+                        dl.get("link_id") == link_uuid for dl in discovered_links
+                    )
+                    if not already_discovered:
+                        new_link = {
+                            "link_id": link_uuid,
+                            "discovered_at": now,
+                            "discovered_by": discovered_by,
+                        }
+                        discovered_links.append(new_link)
+                        newly_discovered.append({"source": src, "target": dst})
+                        logger.debug(
+                            "[DISCOVERY] Parallel preexisting link: %s ↔ %s (id=%s)",
+                            src,
+                            dst,
+                            link_uuid,
+                        )
 
     # Update game with new discovered_links
     if newly_discovered:

@@ -1,0 +1,410 @@
+[
+    {
+        "link_id": "ea925c7f-5de4-453b-8488-fbd84ef65f51",
+        "source": "Chapel of Anticipation",
+        "target": "Caelid - Sellia Crystal Tunnel",
+        "discovered_at": "2025-12-18T19:12:48.054663+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "174e8120-5964-4a0a-8bb0-096e642717c8",
+        "source": "Caelid - Sellia Crystal Tunnel",
+        "target": "Ashen Leyndell",
+        "discovered_at": "2025-12-18T19:16:10.667433+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "7603eafa-5a3f-49d7-9fbd-236162f67d5a",
+        "source": "Ashen Leyndell",
+        "target": "Ashen Leyndell - South of Erdtree Sanctuary",
+        "discovered_at": "2025-12-18T19:21:37.807783+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "7603eafa-5a3f-49d7-9fbd-236162f67d5a",
+        "source": "Ashen Leyndell",
+        "target": "Ashen Leyndell - South of Erdtree Sanctuary",
+        "discovered_at": "2025-12-18T19:21:37.807783+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "0830ff60-dd40-43cc-b6b7-7d7eeaed895b",
+        "source": "Ashen Leyndell - South of Erdtree Sanctuary",
+        "target": "Stranded Graveyard",
+        "discovered_at": "2025-12-18T19:23:38.534578+00:00",
+        "discovered_by": "web"
+    },
+    {
+        "link_id": "d9979d7c-6764-4b7e-8c1b-578bae09d0d5",
+        "source": "Stranded Graveyard",
+        "target": "Godrick the Grafted",
+        "discovered_at": "2025-12-18T19:24:20.622782+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "1062bfef-208c-4ca2-9507-bfc015156c71",
+        "source": "Ashen Leyndell",
+        "target": "Regal Ancestor Spirit",
+        "discovered_at": "2025-12-18T19:27:02.709900+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "44e16b0b-d0b9-4195-b7ad-a90745b5bddf",
+        "source": "Ashen Leyndell",
+        "target": "Subterranean Shunning-Grounds - Ashen Capital Dropdown",
+        "discovered_at": "2025-12-18T19:33:57.362728+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "1ae099a9-46d4-4e7b-b04b-a97aa0b00b39",
+        "source": "Subterranean Shunning-Grounds - Ashen Capital Dropdown",
+        "target": "Subterranean Shunning-Grounds",
+        "discovered_at": "2025-12-18T19:33:57.362728+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "1ae099a9-46d4-4e7b-b04b-a97aa0b00b39",
+        "source": "Subterranean Shunning-Grounds - Ashen Capital Dropdown",
+        "target": "Subterranean Shunning-Grounds",
+        "discovered_at": "2025-12-18T19:33:57.362728+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "147070e2-37f7-4652-a733-f81140d83abb",
+        "source": "Subterranean Shunning-Grounds",
+        "target": "Cave of Knowledge",
+        "discovered_at": "2025-12-18T19:34:12.334633+00:00",
+        "discovered_by": "web"
+    },
+    {
+        "link_id": "1ef77b21-bf15-41f0-8707-8df4fd3bae22",
+        "source": "Cave of Knowledge",
+        "target": "Ashen Leyndell - Behind Erdtree Sanctuary",
+        "discovered_at": "2025-12-18T19:36:23.609445+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "d191eb0b-abff-4aad-9ca9-706d71707378",
+        "source": "Ashen Leyndell - Behind Erdtree Sanctuary",
+        "target": "Mohg, Lord of Blood",
+        "discovered_at": "2025-12-18T19:37:16.763163+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "34afd117-431e-4733-9cf9-ff76e72e2913",
+        "source": "Chapel of Anticipation",
+        "target": "Roundtable Hold",
+        "discovered_at": "2025-12-18T19:44:19.569492+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "34afd117-431e-4733-9cf9-ff76e72e2913",
+        "source": "Chapel of Anticipation",
+        "target": "Roundtable Hold",
+        "discovered_at": "2025-12-18T19:44:19.569492+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "b87cf3e6-a22c-42ed-87d9-e3f2ef3b8d2b",
+        "source": "Roundtable Hold",
+        "target": "Jagged Peak - Bayle",
+        "discovered_at": "2025-12-18T19:44:26.324529+00:00",
+        "discovered_by": "web"
+    },
+    {
+        "link_id": "0d0630bf-58d3-4ce6-93bb-418cfb78b3cf",
+        "source": "Ashen Leyndell - Behind Erdtree Sanctuary",
+        "target": "Gravesite Plain - Dragon's Pit",
+        "discovered_at": "2025-12-18T19:45:28.188279+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "84f9168b-519e-4f8a-9976-908eb997decd",
+        "source": "Gravesite Plain - Dragon's Pit",
+        "target": "Gravesite Plain - Dragon's Pit - Before Boss",
+        "discovered_at": "2025-12-18T19:47:25.205102+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "84f9168b-519e-4f8a-9976-908eb997decd",
+        "source": "Gravesite Plain - Dragon's Pit",
+        "target": "Gravesite Plain - Dragon's Pit - Before Boss",
+        "discovered_at": "2025-12-18T19:47:25.205102+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "18d45d19-643c-4c41-97d9-1d10a1bfb909",
+        "source": "Gravesite Plain - Dragon's Pit - Before Boss",
+        "target": "Nokron - Ancestral Woods",
+        "discovered_at": "2025-12-18T19:48:38.153853+00:00",
+        "discovered_by": "web"
+    },
+    {
+        "link_id": "595e8db6-139d-4413-b932-36429ff2d781",
+        "source": "Nokron - Ancestral Woods",
+        "target": "Siofra River before Ancestor Spirit",
+        "discovered_at": "2025-12-18T19:52:30.821913+00:00",
+        "discovered_by": "web"
+    },
+    {
+        "link_id": "616d5a2d-156e-4a94-8cd5-cff41317f282",
+        "source": "Siofra River before Ancestor Spirit",
+        "target": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
+        "discovered_at": "2025-12-18T19:52:48.864213+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "fffaee5a-89c8-45ca-9384-397deea375f5",
+        "source": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
+        "target": "Leyndell - Erdtree Sanctuary Treasure",
+        "discovered_at": "2025-12-18T20:00:12.723559+00:00",
+        "discovered_by": "web"
+    },
+    {
+        "link_id": "9317f37c-11f5-4ce8-8101-3a7b6e79714f",
+        "source": "Subterranean Shunning-Grounds",
+        "target": "Subterranean Shunning-Grounds - From Royal Capital",
+        "discovered_at": "2025-12-18T20:00:30.673532+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "77ac275e-108f-4ba8-9634-c339a1e3b7ad",
+        "source": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
+        "target": "Leyndell - Erdtree Sanctuary Stairs",
+        "discovered_at": "2025-12-18T20:00:30.682248+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "c22c7e25-b8cd-4fba-8f29-736d999eddb6",
+        "source": "Mohg, Lord of Blood",
+        "target": "Ainsel River Main",
+        "discovered_at": "2025-12-18T20:17:02.260497+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "f56d86a9-92b2-45e0-a0c3-d822ca775f2f",
+        "source": "Nokron - Ancestral Woods",
+        "target": "Nokron - Night's Sacred Grounds",
+        "discovered_at": "2025-12-18T20:33:50.052138+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "f56d86a9-92b2-45e0-a0c3-d822ca775f2f",
+        "source": "Nokron - Ancestral Woods",
+        "target": "Nokron - Night's Sacred Grounds",
+        "discovered_at": "2025-12-18T20:33:50.052138+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "9dab2971-63df-4325-8717-d7afa8a6f358",
+        "source": "Godrick the Grafted",
+        "target": "Stormveil Castle Throne Room",
+        "discovered_at": "2025-12-18T20:58:52.881592+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "9dab2971-63df-4325-8717-d7afa8a6f358",
+        "source": "Godrick the Grafted",
+        "target": "Stormveil Castle Throne Room",
+        "discovered_at": "2025-12-18T20:58:52.881592+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "306db475-e1a6-478e-b688-8dfd03ebd7c7",
+        "source": "Stormveil Castle Throne Room",
+        "target": "Specimen Storehouse",
+        "discovered_at": "2025-12-18T21:00:49.758932+00:00",
+        "discovered_by": "web"
+    },
+    {
+        "link_id": "54d19707-80d0-42ef-824d-51fe966b62d9",
+        "source": "Specimen Storehouse",
+        "target": "Before Astel, Naturalborn of the Void",
+        "discovered_at": "2025-12-18T21:01:20.514601+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "3c296a24-9752-4dca-b3ed-43e398b03469",
+        "source": "Regal Ancestor Spirit",
+        "target": "After Loretta, Knight of the Haligtree",
+        "discovered_at": "2025-12-18T21:02:48.931788+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "9c45ac5f-3834-4c86-8561-dcf143e2eaf3",
+        "source": "After Loretta, Knight of the Haligtree",
+        "target": "Elphael, Brace of the Haligtree",
+        "discovered_at": "2025-12-18T21:02:48.931788+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "9c45ac5f-3834-4c86-8561-dcf143e2eaf3",
+        "source": "After Loretta, Knight of the Haligtree",
+        "target": "Elphael, Brace of the Haligtree",
+        "discovered_at": "2025-12-18T21:02:48.931788+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "77475a17-25d8-4d33-a297-5f7dbdb8e2d9",
+        "source": "Elphael, Brace of the Haligtree",
+        "target": "Leyndell",
+        "discovered_at": "2025-12-18T21:13:38.194392+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "77475a17-25d8-4d33-a297-5f7dbdb8e2d9",
+        "source": "Elphael, Brace of the Haligtree",
+        "target": "Leyndell",
+        "discovered_at": "2025-12-18T21:13:38.194392+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "5d8b9294-927b-4140-afc0-11459c0a6df6",
+        "source": "Leyndell",
+        "target": "Altus Tunnel",
+        "discovered_at": "2025-12-18T21:14:30.119545+00:00",
+        "discovered_by": "web"
+    },
+    {
+        "link_id": "66d6ca27-a43e-4093-80e0-cf203da03dd3",
+        "source": "Altus Tunnel",
+        "target": "Ashen Leyndell - Queen's Bedchamber",
+        "discovered_at": "2025-12-18T21:15:12.979513+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "13d31207-6674-4f49-b2e0-a9275fa3a191",
+        "source": "Ashen Leyndell - Queen's Bedchamber",
+        "target": "Ashen Leyndell",
+        "discovered_at": "2025-12-18T21:15:12.979513+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "8667dcea-3259-4518-95b1-5be005301fff",
+        "source": "Ashen Leyndell - Queen's Bedchamber",
+        "target": "Ashen Leyndell - Behind Erdtree Sanctuary",
+        "discovered_at": "2025-12-18T21:15:12.979513+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "2a5ecde9-fbd8-44e1-8ca6-1da07bf69550",
+        "source": "Ashen Leyndell - Queen's Bedchamber",
+        "target": "Ashen Leyndell - Erdtree Sanctuary",
+        "discovered_at": "2025-12-18T21:22:05.779218+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "2a5ecde9-fbd8-44e1-8ca6-1da07bf69550",
+        "source": "Ashen Leyndell - Queen's Bedchamber",
+        "target": "Ashen Leyndell - Erdtree Sanctuary",
+        "discovered_at": "2025-12-18T21:22:05.779218+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "3c36b1ae-1419-4f10-831d-b44a510fbda7",
+        "source": "Ashen Leyndell - Queen's Bedchamber",
+        "target": "Divine Tower of Caelid - After Godskin Apostle",
+        "discovered_at": "2025-12-18T21:22:05.806684+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "d73aca04-df02-4984-82a2-bc4923160fe8",
+        "source": "Divine Tower of Caelid - After Godskin Apostle",
+        "target": "Academy of Raya Lucaria after Red Wolf",
+        "discovered_at": "2025-12-18T21:22:49.222202+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "f7147af4-562f-49a9-8ded-75a422682411",
+        "source": "Leyndell",
+        "target": "Leyndell - before Divine Tower",
+        "discovered_at": "2025-12-18T21:22:49.229359+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "958e33f6-8467-4fab-9b9c-5cb7dde61e93",
+        "source": "Nokron - Night's Sacred Grounds",
+        "target": "Siofra River",
+        "discovered_at": "2025-12-18T21:31:55.597726+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "1120856b-2e30-4101-b7c1-e44a0e456d71",
+        "source": "Nokron - Ancestral Woods",
+        "target": "Nokron - Aqueduct-Facing Cliffs",
+        "discovered_at": "2025-12-18T21:33:25.638581+00:00",
+        "discovered_by": "mod (backprop)"
+    },
+    {
+        "link_id": "1120856b-2e30-4101-b7c1-e44a0e456d71",
+        "source": "Nokron - Ancestral Woods",
+        "target": "Nokron - Aqueduct-Facing Cliffs",
+        "discovered_at": "2025-12-18T21:33:25.638581+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "6613aa13-c022-4612-9add-3ee3646e44eb",
+        "source": "Nokron - Aqueduct-Facing Cliffs",
+        "target": "Leyndell - Erdtree Sanctuary",
+        "discovered_at": "2025-12-18T21:33:25.894084+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "d189a57a-f188-4927-81ec-f66d4fe39384",
+        "source": "Academy of Raya Lucaria after Red Wolf",
+        "target": "Red Wolf of Radagon",
+        "discovered_at": "2025-12-18T21:42:18.594395+00:00",
+        "discovered_by": "mod"
+    },
+    {
+        "link_id": "b820e840-28cd-4676-bd1e-4e6368dea224",
+        "source": "Academy of Raya Lucaria after Red Wolf",
+        "target": "Fire Giant",
+        "discovered_at": "2025-12-19T17:12:19.697166+00:00",
+        "discovered_by": "mod"
+    }
+]
+
+[
+    "Elphael, Brace of the Haligtree",
+    "Siofra River",
+    "Subterranean Shunning-Grounds - From Royal Capital",
+    "Leyndell - Erdtree Sanctuary Treasure",
+    "Caelid - Sellia Crystal Tunnel",
+    "Ashen Leyndell - Behind Erdtree Sanctuary",
+    "Subterranean Shunning-Grounds - Ashen Capital Dropdown",
+    "Ashen Leyndell - Erdtree Sanctuary",
+    "Cave of Knowledge",
+    "Ashen Leyndell - South of Erdtree Sanctuary",
+    "Specimen Storehouse",
+    "Siofra River before Ancestor Spirit",
+    "Divine Tower of Caelid - After Godskin Apostle",
+    "Before Astel, Naturalborn of the Void",
+    "Gravesite Plain - Dragon's Pit",
+    "Stormveil Castle Throne Room",
+    "Red Wolf of Radagon",
+    "Ashen Leyndell",
+    "Leyndell - Erdtree Sanctuary Stairs",
+    "Godrick the Grafted",
+    "Mohg, Lord of Blood",
+    "After Loretta, Knight of the Haligtree",
+    "Nokron - Night's Sacred Grounds",
+    "Stranded Graveyard",
+    "Nokron - Ancestral Woods",
+    "Roundtable Hold",
+    "Subterranean Shunning-Grounds",
+    "Regal Ancestor Spirit",
+    "Jagged Peak - Bayle",
+    "Nokron - Aqueduct-Facing Cliffs",
+    "Chapel of Anticipation",
+    "Academy of Raya Lucaria after Red Wolf",
+    "Leyndell - before Divine Tower",
+    "Altus Tunnel",
+    "Gravesite Plain - Dragon's Pit - Before Boss",
+    "Ashen Leyndell - Queen's Bedchamber",
+    "Ainsel River Main",
+    "Fire Giant",
+    "Leyndell",
+    "Capital Outskirts - Sealed Tunnel - Onyx Lord",
+    "Leyndell - Erdtree Sanctuary"
+]

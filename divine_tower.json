@@ -1,0 +1,3540 @@
+discoveredLinks: [
+  "ea925c7f-5de4-453b-8488-fbd84ef65f51",
+  "174e8120-5964-4a0a-8bb0-096e642717c8",
+  "7603eafa-5a3f-49d7-9fbd-236162f67d5a",
+  "0830ff60-dd40-43cc-b6b7-7d7eeaed895b",
+  "d9979d7c-6764-4b7e-8c1b-578bae09d0d5",
+  "1062bfef-208c-4ca2-9507-bfc015156c71",
+  "44e16b0b-d0b9-4195-b7ad-a90745b5bddf",
+  "1ae099a9-46d4-4e7b-b04b-a97aa0b00b39",
+  "147070e2-37f7-4652-a733-f81140d83abb",
+  "1ef77b21-bf15-41f0-8707-8df4fd3bae22",
+  "d191eb0b-abff-4aad-9ca9-706d71707378",
+  "34afd117-431e-4733-9cf9-ff76e72e2913",
+  "b87cf3e6-a22c-42ed-87d9-e3f2ef3b8d2b",
+  "0d0630bf-58d3-4ce6-93bb-418cfb78b3cf",
+  "84f9168b-519e-4f8a-9976-908eb997decd",
+  "18d45d19-643c-4c41-97d9-1d10a1bfb909",
+  "595e8db6-139d-4413-b932-36429ff2d781",
+  "616d5a2d-156e-4a94-8cd5-cff41317f282",
+  "fffaee5a-89c8-45ca-9384-397deea375f5",
+  "9317f37c-11f5-4ce8-8101-3a7b6e79714f",
+  "77ac275e-108f-4ba8-9634-c339a1e3b7ad",
+  "c22c7e25-b8cd-4fba-8f29-736d999eddb6",
+  "f56d86a9-92b2-45e0-a0c3-d822ca775f2f",
+  "9dab2971-63df-4325-8717-d7afa8a6f358",
+  "306db475-e1a6-478e-b688-8dfd03ebd7c7",
+  "54d19707-80d0-42ef-824d-51fe966b62d9",
+  "3c296a24-9752-4dca-b3ed-43e398b03469",
+  "9c45ac5f-3834-4c86-8561-dcf143e2eaf3",
+  "77475a17-25d8-4d33-a297-5f7dbdb8e2d9",
+  "5d8b9294-927b-4140-afc0-11459c0a6df6",
+  "66d6ca27-a43e-4093-80e0-cf203da03dd3",
+  "13d31207-6674-4f49-b2e0-a9275fa3a191",
+  "8667dcea-3259-4518-95b1-5be005301fff",
+  "2a5ecde9-fbd8-44e1-8ca6-1da07bf69550",
+  "3c36b1ae-1419-4f10-831d-b44a510fbda7",
+  "d73aca04-df02-4984-82a2-bc4923160fe8",
+  "f7147af4-562f-49a9-8ded-75a422682411",
+  "958e33f6-8467-4fab-9b9c-5cb7dde61e93",
+  "1120856b-2e30-4101-b7c1-e44a0e456d71",
+  "6613aa13-c022-4612-9add-3ee3646e44eb",
+  "d189a57a-f188-4927-81ec-f66d4fe39384",
+  "b820e840-28cd-4676-bd1e-4e6368dea224",
+  "3e0cb45c-44b4-4d2e-be7a-4a9e6817c5b7",
+  null
+]
+
+"links": {
+    "Chapel of Anticipation->???_Chapel of Anticipation_Caelid - Sellia Crystal Tunnel": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Caelid - Sellia Crystal Tunnel",
+        "originalSource": null
+    },
+    "???_Caelid - Sellia Crystal Tunnel_Chapel of Anticipation->Caelid - Sellia Crystal Tunnel": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Chapel of Anticipation"
+    },
+    "Caelid - Sellia Crystal Tunnel->???_Caelid - Sellia Crystal Tunnel_Ashen Leyndell": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Ashen Leyndell",
+        "originalSource": null
+    },
+    "???_Ashen Leyndell_Caelid - Sellia Crystal Tunnel->Ashen Leyndell": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Caelid - Sellia Crystal Tunnel"
+    },
+    "Ashen Leyndell - Queen's Bedchamber->???_Ashen Leyndell - Queen's Bedchamber_Ashen Leyndell": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Ashen Leyndell",
+        "originalSource": null
+    },
+    "Ashen Leyndell->???_Ashen Leyndell_Ashen Leyndell - South of Erdtree Sanctuary": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Ashen Leyndell - South of Erdtree Sanctuary",
+        "originalSource": null
+    },
+    "Ashen Leyndell->???_Ashen Leyndell_Subterranean Shunning-Grounds - Ashen Capital Dropdown": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Subterranean Shunning-Grounds - Ashen Capital Dropdown",
+        "originalSource": null
+    },
+    "Ashen Leyndell->???_Ashen Leyndell_Regal Ancestor Spirit": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Regal Ancestor Spirit",
+        "originalSource": null
+    },
+    "???_Regal Ancestor Spirit_Ashen Leyndell->Regal Ancestor Spirit": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Ashen Leyndell"
+    },
+    "Ashen Leyndell - South of Erdtree Sanctuary->???_Ashen Leyndell - South of Erdtree Sanctuary_Stranded Graveyard": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Stranded Graveyard",
+        "originalSource": null
+    },
+    "???_Stranded Graveyard_Ashen Leyndell - South of Erdtree Sanctuary->Stranded Graveyard": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Ashen Leyndell - South of Erdtree Sanctuary"
+    },
+    "Limgrave - Fringefolk Hero's Grave->???_Limgrave - Fringefolk Hero's Grave_Stranded Graveyard": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": "Stranded Graveyard",
+        "originalSource": null
+    },
+    "???_Stranded Graveyard_Limgrave - Fringefolk Hero's Grave->Stranded Graveyard": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Limgrave - Fringefolk Hero's Grave"
+    },
+    "Subterranean Shunning-Grounds - Ashen Capital Dropdown->???_Subterranean Shunning-Grounds - Ashen Capital Dropdown_Subterranean Shunning-Grounds": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Subterranean Shunning-Grounds",
+        "originalSource": null
+    },
+    "Subterranean Shunning-Grounds - From Royal Capital->???_Subterranean Shunning-Grounds - From Royal Capital_Subterranean Shunning-Grounds": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": "Subterranean Shunning-Grounds",
+        "originalSource": null
+    },
+    "???_Subterranean Shunning-Grounds_Subterranean Shunning-Grounds - From Royal Capital->Subterranean Shunning-Grounds": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Subterranean Shunning-Grounds - From Royal Capital"
+    },
+    "Stranded Graveyard->???_Stranded Graveyard_Limgrave - Fringefolk Hero's Grave": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": "Limgrave - Fringefolk Hero's Grave",
+        "originalSource": null
+    },
+    "???_Limgrave - Fringefolk Hero's Grave_Stranded Graveyard->Limgrave - Fringefolk Hero's Grave": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Stranded Graveyard"
+    },
+    "Stranded Graveyard->???_Stranded Graveyard_Godrick the Grafted": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Godrick the Grafted",
+        "originalSource": null
+    },
+    "???_Godrick the Grafted_Stranded Graveyard->Godrick the Grafted": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Stranded Graveyard"
+    },
+    "Subterranean Shunning-Grounds->???_Subterranean Shunning-Grounds_Cave of Knowledge": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Cave of Knowledge",
+        "originalSource": null
+    },
+    "???_Cave of Knowledge_Subterranean Shunning-Grounds->Cave of Knowledge": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Subterranean Shunning-Grounds"
+    },
+    "Cave of Knowledge->???_Cave of Knowledge_Ashen Leyndell - Behind Erdtree Sanctuary": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Ashen Leyndell - Behind Erdtree Sanctuary",
+        "originalSource": null
+    },
+    "???_Ashen Leyndell - Behind Erdtree Sanctuary_Cave of Knowledge->Ashen Leyndell - Behind Erdtree Sanctuary": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Cave of Knowledge"
+    },
+    "Ashen Leyndell - Queen's Bedchamber->???_Ashen Leyndell - Queen's Bedchamber_Ashen Leyndell - Behind Erdtree Sanctuary": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Ashen Leyndell - Behind Erdtree Sanctuary",
+        "originalSource": null
+    },
+    "Ashen Leyndell - Behind Erdtree Sanctuary->???_Ashen Leyndell - Behind Erdtree Sanctuary_Mohg, Lord of Blood": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Mohg, Lord of Blood",
+        "originalSource": null
+    },
+    "???_Mohg, Lord of Blood_Ashen Leyndell - Behind Erdtree Sanctuary->Mohg, Lord of Blood": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Ashen Leyndell - Behind Erdtree Sanctuary"
+    },
+    "Leyndell->???_Leyndell_Mohg, Lord of Blood": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Mohg, Lord of Blood",
+        "originalSource": null
+    },
+    "???_Mohg, Lord of Blood_Leyndell->Mohg, Lord of Blood": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Leyndell"
+    },
+    "Ashen Leyndell - Behind Erdtree Sanctuary->???_Ashen Leyndell - Behind Erdtree Sanctuary_Gravesite Plain - Dragon's Pit": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Gravesite Plain - Dragon's Pit",
+        "originalSource": null
+    },
+    "???_Gravesite Plain - Dragon's Pit_Ashen Leyndell - Behind Erdtree Sanctuary->Gravesite Plain - Dragon's Pit": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Ashen Leyndell - Behind Erdtree Sanctuary"
+    },
+    "Regal Ancestor Spirit->???_Regal Ancestor Spirit_After Loretta, Knight of the Haligtree": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "After Loretta, Knight of the Haligtree",
+        "originalSource": null
+    },
+    "After Loretta, Knight of the Haligtree->???_After Loretta, Knight of the Haligtree_Elphael, Brace of the Haligtree": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Elphael, Brace of the Haligtree",
+        "originalSource": null
+    },
+    "Chapel of Anticipation->???_Chapel of Anticipation_Roundtable Hold": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Roundtable Hold",
+        "originalSource": null
+    },
+    "Godrick the Grafted->???_Godrick the Grafted_Stormveil Castle Throne Room": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Stormveil Castle Throne Room",
+        "originalSource": null
+    },
+    "Roundtable Hold->???_Roundtable Hold_Jagged Peak - Bayle": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Jagged Peak - Bayle",
+        "originalSource": null
+    },
+    "???_Jagged Peak - Bayle_Roundtable Hold->Jagged Peak - Bayle": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Roundtable Hold"
+    },
+    "Stormveil Castle Throne Room->???_Stormveil Castle Throne Room_Specimen Storehouse": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Specimen Storehouse",
+        "originalSource": null
+    },
+    "???_Specimen Storehouse_Stormveil Castle Throne Room->Specimen Storehouse": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Stormveil Castle Throne Room"
+    },
+    "Gravesite Plain - Dragon's Pit->???_Gravesite Plain - Dragon's Pit_Gravesite Plain - Dragon's Pit - Before Boss": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Gravesite Plain - Dragon's Pit - Before Boss",
+        "originalSource": null
+    },
+    "Gravesite Plain - Dragon's Pit - Before Boss->???_Gravesite Plain - Dragon's Pit - Before Boss_Nokron - Ancestral Woods": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Nokron - Ancestral Woods",
+        "originalSource": null
+    },
+    "???_Nokron - Ancestral Woods_Gravesite Plain - Dragon's Pit - Before Boss->Nokron - Ancestral Woods": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Gravesite Plain - Dragon's Pit - Before Boss"
+    },
+    "Elphael, Brace of the Haligtree->???_Elphael, Brace of the Haligtree_Leyndell": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Leyndell",
+        "originalSource": null
+    },
+    "???_Leyndell_Elphael, Brace of the Haligtree->Leyndell": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Elphael, Brace of the Haligtree"
+    },
+    "Leyndell - Erdtree Sanctuary Stairs->???_Leyndell - Erdtree Sanctuary Stairs_Leyndell": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Leyndell",
+        "originalSource": null
+    },
+    "Fire Giant->???_Fire Giant_Leyndell": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Leyndell",
+        "originalSource": null
+    },
+    "Specimen Storehouse->???_Specimen Storehouse_Specimen Storehouse - Before Messmer": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Specimen Storehouse - Before Messmer",
+        "originalSource": null
+    },
+    "Specimen Storehouse->???_Specimen Storehouse_Before Astel, Naturalborn of the Void": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Before Astel, Naturalborn of the Void",
+        "originalSource": null
+    },
+    "???_Before Astel, Naturalborn of the Void_Specimen Storehouse->Before Astel, Naturalborn of the Void": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Specimen Storehouse"
+    },
+    "Specimen Storehouse - Before Messmer->???_Specimen Storehouse - Before Messmer_Ruin-Strewn Precipice": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Ruin-Strewn Precipice",
+        "originalSource": null
+    },
+    "Nokron - Ancestral Woods->???_Nokron - Ancestral Woods_Nokron - Aqueduct-Facing Cliffs": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Nokron - Aqueduct-Facing Cliffs",
+        "originalSource": null
+    },
+    "Nokron - Ancestral Woods->???_Nokron - Ancestral Woods_Nokron - Night's Sacred Grounds": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Nokron - Night's Sacred Grounds",
+        "originalSource": null
+    },
+    "Nokron - Ancestral Woods->???_Nokron - Ancestral Woods_Nokron to Siofra Path": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Nokron to Siofra Path",
+        "originalSource": null
+    },
+    "Lake of Rot->???_Lake of Rot_Nokron to Siofra Path": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Nokron to Siofra Path",
+        "originalSource": null
+    },
+    "Nokron - Ancestral Woods->???_Nokron - Ancestral Woods_Siofra River before Ancestor Spirit": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Siofra River before Ancestor Spirit",
+        "originalSource": null
+    },
+    "Siofra River before Ancestor Spirit->???_Siofra River before Ancestor Spirit_Capital Outskirts - Sealed Tunnel - Onyx Lord": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
+        "originalSource": null
+    },
+    "???_Capital Outskirts - Sealed Tunnel - Onyx Lord_Siofra River before Ancestor Spirit->Capital Outskirts - Sealed Tunnel - Onyx Lord": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Siofra River before Ancestor Spirit"
+    },
+    "Leyndell->???_Leyndell_Leyndell - Divine Bridge (taking the elevator from Fortified Manor)": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Leyndell - Divine Bridge (taking the elevator from Fortified Manor)",
+        "originalSource": null
+    },
+    "Leyndell->???_Leyndell_Leyndell - before Divine Tower": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Leyndell - before Divine Tower",
+        "originalSource": null
+    },
+    "Leyndell->???_Leyndell_Altus Tunnel": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Altus Tunnel",
+        "originalSource": null
+    },
+    "???_Altus Tunnel_Leyndell->Altus Tunnel": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Leyndell"
+    },
+    "Mohg, Lord of Blood->???_Mohg, Lord of Blood_Ainsel River Main": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Ainsel River Main",
+        "originalSource": null
+    },
+    "???_Ainsel River Main_Mohg, Lord of Blood->Ainsel River Main": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Mohg, Lord of Blood"
+    },
+    "Lake of Rot->???_Lake of Rot_Ainsel River Main": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": "Ainsel River Main",
+        "originalSource": null
+    },
+    "???_Ainsel River Main_Lake of Rot->Ainsel River Main": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Lake of Rot"
+    },
+    "Nokron - Aqueduct-Facing Cliffs->???_Nokron - Aqueduct-Facing Cliffs_Leyndell - Erdtree Sanctuary": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Leyndell - Erdtree Sanctuary",
+        "originalSource": null
+    },
+    "???_Leyndell - Erdtree Sanctuary_Nokron - Aqueduct-Facing Cliffs->Leyndell - Erdtree Sanctuary": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Nokron - Aqueduct-Facing Cliffs"
+    },
+    "Nokron - Night's Sacred Grounds->???_Nokron - Night's Sacred Grounds_Siofra River": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Siofra River",
+        "originalSource": null
+    },
+    "Nokron to Siofra Path->???_Nokron to Siofra Path_Siofra River": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Siofra River",
+        "originalSource": null
+    },
+    "Capital Outskirts - Sealed Tunnel - Onyx Lord->???_Capital Outskirts - Sealed Tunnel - Onyx Lord_Leyndell - Erdtree Sanctuary Treasure": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Leyndell - Erdtree Sanctuary Treasure",
+        "originalSource": null
+    },
+    "Capital Outskirts - Sealed Tunnel - Onyx Lord->???_Capital Outskirts - Sealed Tunnel - Onyx Lord_Leyndell - Erdtree Sanctuary Stairs": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Leyndell - Erdtree Sanctuary Stairs",
+        "originalSource": null
+    },
+    "???_Leyndell - Erdtree Sanctuary Stairs_Capital Outskirts - Sealed Tunnel - Onyx Lord->Leyndell - Erdtree Sanctuary Stairs": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Capital Outskirts - Sealed Tunnel - Onyx Lord"
+    },
+    "Leyndell - before Divine Tower->???_Leyndell - before Divine Tower_Divine Tower of Caelid": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Divine Tower of Caelid",
+        "originalSource": null
+    },
+    "???_Divine Tower of Caelid_Leyndell - before Divine Tower->Divine Tower of Caelid": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Leyndell - before Divine Tower"
+    },
+    "Altus Tunnel->???_Altus Tunnel_Ashen Leyndell - Queen's Bedchamber": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Ashen Leyndell - Queen's Bedchamber",
+        "originalSource": null
+    },
+    "???_Ashen Leyndell - Queen's Bedchamber_Altus Tunnel->Ashen Leyndell - Queen's Bedchamber": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Altus Tunnel"
+    },
+    "Ainsel River Main->???_Ainsel River Main_Lake of Rot": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": "Lake of Rot",
+        "originalSource": null
+    },
+    "???_Lake of Rot_Ainsel River Main->Lake of Rot": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Ainsel River Main"
+    },
+    "Ashen Leyndell - Queen's Bedchamber->???_Ashen Leyndell - Queen's Bedchamber_Ashen Leyndell - Erdtree Sanctuary": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "originalTarget": "Ashen Leyndell - Erdtree Sanctuary",
+        "originalSource": null
+    },
+    "Ashen Leyndell - Queen's Bedchamber->???_Ashen Leyndell - Queen's Bedchamber_Divine Tower of Caelid - After Godskin Apostle": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Divine Tower of Caelid - After Godskin Apostle",
+        "originalSource": null
+    },
+    "Divine Tower of Caelid - After Godskin Apostle->???_Divine Tower of Caelid - After Godskin Apostle_Academy of Raya Lucaria after Red Wolf": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Academy of Raya Lucaria after Red Wolf",
+        "originalSource": null
+    },
+    "???_Academy of Raya Lucaria after Red Wolf_Divine Tower of Caelid - After Godskin Apostle->Academy of Raya Lucaria after Red Wolf": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Divine Tower of Caelid - After Godskin Apostle"
+    },
+    "Siofra River->???_Siofra River_Deeproot Depths": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Deeproot Depths",
+        "originalSource": null
+    },
+    "Siofra River->???_Siofra River_Starscourge Radahn": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Starscourge Radahn",
+        "originalSource": null
+    },
+    "Siofra River->???_Siofra River_Ancient Ruins of Rauh - Belfry Area": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Ancient Ruins of Rauh - Belfry Area",
+        "originalSource": null
+    },
+    "Siofra River->???_Siofra River_Mohgwyn Palace": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Mohgwyn Palace",
+        "originalSource": null
+    },
+    "Siofra River->???_Siofra River_Margit, the Fell Omen": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Margit, the Fell Omen",
+        "originalSource": null
+    },
+    "Siofra River->???_Siofra River_Volcano Manor - Audience Pathway": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Volcano Manor - Audience Pathway",
+        "originalSource": null
+    },
+    "Divine Tower of Caelid->???_Divine Tower of Caelid_Redmane Castle": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Redmane Castle",
+        "originalSource": null
+    },
+    "Divine Tower of Caelid->???_Divine Tower of Caelid_Stormveil Castle before Gate": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Stormveil Castle before Gate",
+        "originalSource": null
+    },
+    "Divine Tower of Caelid->???_Divine Tower of Caelid_Castle Ensis - Rellana, Twin Moon Knight": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Castle Ensis - Rellana, Twin Moon Knight",
+        "originalSource": null
+    },
+    "Divine Tower of Caelid->???_Divine Tower of Caelid_Academy of Raya Lucaria - Grand Library": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Academy of Raya Lucaria - Grand Library",
+        "originalSource": null
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->???_Ashen Leyndell - Erdtree Sanctuary_Redmane Castle Boss": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Redmane Castle Boss",
+        "originalSource": null
+    },
+    "Academy of Raya Lucaria after Red Wolf->???_Academy of Raya Lucaria after Red Wolf_Red Wolf of Radagon": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Red Wolf of Radagon",
+        "originalSource": null
+    },
+    "???_Red Wolf of Radagon_Academy of Raya Lucaria after Red Wolf->Red Wolf of Radagon": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Academy of Raya Lucaria after Red Wolf"
+    },
+    "Academy of Raya Lucaria after Red Wolf->???_Academy of Raya Lucaria after Red Wolf_Finger Birthing Grounds - Metyr, Mother of Fingers": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Finger Birthing Grounds - Metyr, Mother of Fingers",
+        "originalSource": null
+    },
+    "Academy of Raya Lucaria after Red Wolf->???_Academy of Raya Lucaria after Red Wolf_Fire Giant": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Fire Giant",
+        "originalSource": null
+    },
+    "???_Fire Giant_Academy of Raya Lucaria after Red Wolf->Fire Giant": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Academy of Raya Lucaria after Red Wolf"
+    },
+    "Leyndell - Erdtree Sanctuary->???_Leyndell - Erdtree Sanctuary_Liurnia - Raya Lucaria Crystal Tunnel - Crystalian": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Liurnia - Raya Lucaria Crystal Tunnel - Crystalian",
+        "originalSource": null
+    },
+    "Leyndell - Erdtree Sanctuary->???_Leyndell - Erdtree Sanctuary_Volcano Manor - Abductor Virgins": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Volcano Manor - Abductor Virgins",
+        "originalSource": null
+    },
+    "Leyndell - Erdtree Sanctuary->???_Leyndell - Erdtree Sanctuary_Stormveil Castle after Gate": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Stormveil Castle after Gate",
+        "originalSource": null
+    },
+    "Leyndell - Erdtree Sanctuary->???_Leyndell - Erdtree Sanctuary_Midra's Manse": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Midra's Manse",
+        "originalSource": null
+    },
+    "Leyndell - Erdtree Sanctuary->???_Leyndell - Erdtree Sanctuary_Ashen Leyndell - before Divine Tower": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Ashen Leyndell - before Divine Tower",
+        "originalSource": null
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->???_Ashen Leyndell - Erdtree Sanctuary_Divine Tower of Caelid - Godskin Apostle": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Divine Tower of Caelid - Godskin Apostle",
+        "originalSource": null
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->???_Ashen Leyndell - Erdtree Sanctuary_Belurat": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Belurat",
+        "originalSource": null
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->???_Ashen Leyndell - Erdtree Sanctuary_Astel, Naturalborn of the Void": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Astel, Naturalborn of the Void",
+        "originalSource": null
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->???_Ashen Leyndell - Erdtree Sanctuary_Cave of Knowledge - After Soldier of Godrick": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Cave of Knowledge - After Soldier of Godrick",
+        "originalSource": null
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->???_Ashen Leyndell - Erdtree Sanctuary_Haligtree Town": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Haligtree Town",
+        "originalSource": null
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->???_Ashen Leyndell - Erdtree Sanctuary_Volcano Manor - Room Before Sending Gate": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Volcano Manor - Room Before Sending Gate",
+        "originalSource": null
+    },
+    "Chapel of Anticipation->???_Chapel of Anticipation_Volcano Manor Prison Town": {
+        "visible": true,
+        "highlighted": true,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "originalTarget": "Volcano Manor Prison Town",
+        "originalSource": null
+    },
+    "Red Wolf of Radagon->???_Red Wolf of Radagon_Commander Niall": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Commander Niall",
+        "originalSource": null
+    },
+    "Fire Giant->???_Fire Giant_Old Altus Tunnel - Stonedigger Troll": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Old Altus Tunnel - Stonedigger Troll",
+        "originalSource": null
+    },
+    "???_Subterranean Shunning-Grounds - From Royal Capital_Godskin Duo->Subterranean Shunning-Grounds - From Royal Capital": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Godskin Duo"
+    },
+    "Subterranean Shunning-Grounds->???_Subterranean Shunning-Grounds_Subterranean Shunning-Grounds - From Royal Capital": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": "Subterranean Shunning-Grounds - From Royal Capital",
+        "originalSource": null
+    },
+    "???_Subterranean Shunning-Grounds - From Royal Capital_Subterranean Shunning-Grounds->Subterranean Shunning-Grounds - From Royal Capital": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "originalTarget": null,
+        "originalSource": "Subterranean Shunning-Grounds"
+    },
+    "Leyndell - Erdtree Sanctuary->???_Leyndell - Erdtree Sanctuary_Divine Tower of Caelid Interior": {
+        "visible": true,
+        "highlighted": false,
+        "dimmed": true,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "originalTarget": "Divine Tower of Caelid Interior",
+        "originalSource": null
+    },
+    "Chapel of Anticipation->Caelid - Sellia Crystal Tunnel": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Caelid - Sellia Crystal Tunnel->Ashen Leyndell": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Divine Bridge->Ashen Leyndell": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Queen's Bedchamber->Ashen Leyndell": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell->Ashen Leyndell - South of Erdtree Sanctuary": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell->Subterranean Shunning-Grounds - Ashen Capital Dropdown": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell->Regal Ancestor Spirit": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - South of Erdtree Sanctuary->Stranded Graveyard": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Limgrave - Fringefolk Hero's Grave->Stranded Graveyard": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Subterranean Shunning-Grounds - Ashen Capital Dropdown->Subterranean Shunning-Grounds": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Subterranean Shunning-Grounds - From Royal Capital->Subterranean Shunning-Grounds": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Stranded Graveyard->Limgrave - Fringefolk Hero's Grave": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Stranded Graveyard->Godrick the Grafted": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Subterranean Shunning-Grounds->Cave of Knowledge": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Cave of Knowledge - From Seaside Ruins->Cave of Knowledge": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Cave of Knowledge - After Soldier of Godrick->Cave of Knowledge": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Cave of Knowledge->Ashen Leyndell - Behind Erdtree Sanctuary": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Queen's Bedchamber->Ashen Leyndell - Behind Erdtree Sanctuary": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Behind Erdtree Sanctuary->Mohg, Lord of Blood": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell->Mohg, Lord of Blood": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Behind Erdtree Sanctuary->Gravesite Plain - Dragon's Pit": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Regal Ancestor Spirit->After Loretta, Knight of the Haligtree": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "After Loretta, Knight of the Haligtree->Elphael, Brace of the Haligtree": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Chapel of Anticipation->Roundtable Hold": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Godrick the Grafted->Stormveil Castle Throne Room": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Roundtable Hold->Jagged Peak - Bayle": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Stormveil Castle Throne Room->Specimen Storehouse": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Specimen Storehouse - Back Section->Specimen Storehouse": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Gravesite Plain - Dragon's Pit->Gravesite Plain - Dragon's Pit - Before Boss": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Gravesite Plain - Dragon's Pit - Before Boss->Nokron - Ancestral Woods": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Before Radahn->Nokron - Ancestral Woods": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Elphael, Brace of the Haligtree->Leyndell": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Erdtree Sanctuary Stairs->Leyndell": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Fire Giant->Leyndell": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Specimen Storehouse->Specimen Storehouse - Before Messmer": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Specimen Storehouse->Before Astel, Naturalborn of the Void": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Farum Azula Rooftop and Bridge->Before Astel, Naturalborn of the Void": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Specimen Storehouse - Before Messmer->Ruin-Strewn Precipice": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Nokron - Ancestral Woods->Nokron - Aqueduct-Facing Cliffs": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Nokron - Aqueduct-Facing Cliffs Room->Nokron - Aqueduct-Facing Cliffs": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Nokron - Ancestral Woods->Nokron - Night's Sacred Grounds": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Nokron - Ancestral Woods->Nokron to Siofra Path": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Lake of Rot->Nokron to Siofra Path": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Nokron - Ancestral Woods->Siofra River before Ancestor Spirit": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Siofra River before Ancestor Spirit->Capital Outskirts - Sealed Tunnel - Onyx Lord": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell->Leyndell - Divine Bridge (taking the elevator from Fortified Manor)": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Divine Tower of Liurnia->Leyndell - Divine Bridge": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell->Leyndell - before Divine Tower": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Leyndell->Altus Tunnel": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Mohg, Lord of Blood->Ainsel River Main": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Lake of Rot->Ainsel River Main": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Volcano Manor - Room Before Sending Gate->Ainsel River Main": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ruin-Strewn Precipice->Old Altus Tunnel": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Nokron - Aqueduct-Facing Cliffs->Leyndell - Erdtree Sanctuary": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Queen's Bedchamber->Leyndell - Erdtree Sanctuary": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Nokron - Night's Sacred Grounds->Siofra River": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Nokron to Siofra Path->Siofra River": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Finger Ruins of Miyr->Siofra River": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Capital Outskirts - Sealed Tunnel - Onyx Lord->Leyndell - Erdtree Sanctuary Treasure": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Capital Outskirts - Sealed Tunnel - Onyx Lord->Leyndell - Erdtree Sanctuary Stairs": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Queen's Bedchamber->Leyndell - Erdtree Sanctuary Stairs": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Leyndell - before Divine Tower->Divine Tower of Caelid": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Altus Tunnel->Ashen Leyndell - Queen's Bedchamber": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ainsel River Main->Lake of Rot": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Queen's Bedchamber->Ashen Leyndell - Erdtree Sanctuary": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Queen's Bedchamber->Divine Tower of Caelid - After Godskin Apostle": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Divine Tower of Caelid - After Godskin Apostle->Academy of Raya Lucaria after Red Wolf": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria Rooftops->Academy of Raya Lucaria after Red Wolf": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Old Altus Tunnel->Shaded Castle - Elemer of the Briar": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Siofra River->Deeproot Depths": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Deeproot Depths from Proscription->Deeproot Depths": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Siofra River->Starscourge Radahn": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Siofra River->Ancient Ruins of Rauh - Belfry Area": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ancient Ruins of Rauh - West->Ancient Ruins of Rauh - Belfry Area": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Siofra River->Mohgwyn Palace": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Siofra River->Margit, the Fell Omen": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Siofra River->Volcano Manor - Audience Pathway": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Deeproot Depths - Fia's Champions->Volcano Manor - Audience Pathway": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Divine Tower of Caelid->Redmane Castle": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Divine Tower of Caelid->Stormveil Castle before Gate": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Stormveil Castle after Gate->Stormveil Castle before Gate": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Divine Tower of Caelid->Castle Ensis - Rellana, Twin Moon Knight": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Divine Tower of Caelid->Academy of Raya Lucaria - Grand Library": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "After Redmane Castle Boss->Redmane Castle Boss": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->Redmane Castle Boss": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria after Red Wolf->Red Wolf of Radagon": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria after Red Wolf->Finger Birthing Grounds - Metyr, Mother of Fingers": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria after Red Wolf->Fire Giant": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Deeproot Depths->After Redmane Castle Boss": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Mohgwyn Palace->Loretta, Knight of the Haligtree": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "After Redmane Castle Boss->Leyndell - Queen's Bedchamber": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Queen's Bedchamber->Leyndell - Behind Erdtree Sanctuary": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Leyndell - Queen's Bedchamber->Cave of Knowledge - From Seaside Ruins": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Behind Erdtree Sanctuary->Farum Azula - Dragon Temple Transept": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Farum Azula - Dragon Temple->Farum Azula - Dragon Temple Transept": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Leyndell - Behind Erdtree Sanctuary->Rykard, Lord of Blasphemy": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Behind Erdtree Sanctuary->Academy of Raya Lucaria Main Entrance": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria->Academy of Raya Lucaria Main Entrance": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Redmane Castle->Scaduview - Commander Gaius": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Leyndell - Erdtree Sanctuary->Liurnia - Raya Lucaria Crystal Tunnel - Crystalian": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Leyndell - Erdtree Sanctuary->Volcano Manor - Abductor Virgins": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Erdtree Sanctuary->Stormveil Castle after Gate": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Stormveil Castle before Gate->Stormveil Castle after Gate": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Erdtree Sanctuary->Midra's Manse": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Erdtree Sanctuary->Ashen Leyndell - before Divine Tower": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria Main Entrance->Academy of Raya Lucaria": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria Rooftops->Academy of Raya Lucaria": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->Divine Tower of Caelid - Godskin Apostle": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->Belurat": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Belurat Swamp->Belurat": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->Astel, Naturalborn of the Void": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->Cave of Knowledge - After Soldier of Godrick": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->Haligtree Town": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Erdtree Sanctuary->Volcano Manor - Room Before Sending Gate": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Volcano Manor after Temple of Eiglay->Volcano Manor - Room Before Sending Gate": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Chapel of Anticipation->Volcano Manor Prison Town": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Volcano Manor Prison Town Church->Volcano Manor Prison Town": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Volcano Manor - Hallway Opposite Sending Gate->Volcano Manor Prison Town": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Starscourge Radahn->Midra's Manse - Midra, Lord of Frenzied Flame": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Margit, the Fell Omen->Gravesite Plain - Dragon's Pit - Ancient Dragon-Man": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Liurnia - Raya Lucaria Crystal Tunnel - Crystalian->Shadow Keep": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Volcano Manor - Abductor Virgins->Malenia, Blade of Miquella": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Stormveil Castle after Gate->Shadow Keep - Church District": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Midra's Manse->Specimen Storehouse - Messmer the Impaler": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria->Before Regal Ancestor Spirit": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria->Mohg, the Omen": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Before Regal Ancestor Spirit->Leyndell - Erdtree Entrance": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Castle Ensis - Rellana, Twin Moon Knight->Specimen Storehouse - Back Section": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Divine Tower of Caelid - Godskin Apostle->Ancient Ruins of Rauh - Romina, Saint of the Bud": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Redmane Castle Boss->Scadu Altus - Manus Metyr": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Belurat->Farum Azula - Dragon Temple Balcony": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Red Wolf of Radagon->Commander Niall": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Fire Giant->Old Altus Tunnel - Stonedigger Troll": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Farum Azula - Dragon Temple Balcony->Godskin Duo": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Loretta, Knight of the Haligtree->Scadutree Base - Scadutree Avatar": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Volcano Manor Prison Town->Ancient Ruins of Rauh - West": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ancient Ruins of Rauh - East->Ancient Ruins of Rauh - West": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Volcano Manor Prison Town->Volcano Manor - Temple of Eiglay": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Shadow Keep->Dragonlord Placidusax": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Shadow Keep->Consecrated Snowfield - Yelough Anix Tunnel": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Shadow Keep->Weeping Peninsula - Morne Tunnel - Scaly Misbegotten": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Shadow Keep - Church District->Shadow Keep - Drained Church District": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Shadow Keep - Church District->Deeproot Depths - Fia's Champions": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Scaduview - Commander Gaius->Stone Coffin Fissure - Putrescent Knight": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Stone Coffin Fissure - Before Boss->Stone Coffin Fissure - Putrescent Knight": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Specimen Storehouse - Back Section->Before Radahn": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Scadu Altus - Manus Metyr->Belurat - Divine Beast Dancing Lion": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Scadu Altus - Manus Metyr->Leonine Misbegotten": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Old Altus Tunnel - Stonedigger Troll->Magma Wrym Makar": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Consecrated Snowfield - Yelough Anix Tunnel->After Commander Niall": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Weeping Peninsula - Morne Tunnel - Scaly Misbegotten->Shadow Keep - West Rampart": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Shadow Keep - Drained Church District->Shadow Keep - Tree-Worship Sanctum": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Shadow Keep - Tree-Worship Sanctum->Ancient Ruins of Rauh - East": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Astel, Naturalborn of the Void->Weeping Peninsula - Morne Tunnel": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Volcano Manor - Room Before Sending Gate->Volcano Manor after Temple of Eiglay": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Volcano Manor - Temple of Eiglay->Volcano Manor after Temple of Eiglay": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Volcano Manor - Hallway Opposite Sending Gate->Volcano Manor after Temple of Eiglay": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man->Gravesite Plain - Dragon's Pit - After Boss": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man->Farum Azula - Dragon Temple": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Farum Azula - Crumbling Beast Grave Depths->Farum Azula - Dragon Temple": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Gravesite Plain - Dragon's Pit - After Boss->Altus Tunnel - Crystalian Duo": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Shadow Keep - West Rampart->Scadu Altus - Darklight Catacombs - Jori, Elder Inquisitor": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ancient Ruins of Rauh - Romina, Saint of the Bud->Cave of Knowledge - Soldier of Godrick": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Weeping Peninsula - Morne Tunnel->Valiant Gargoyles": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Volcano Manor after Temple of Eiglay->Volcano Manor - Temple of Eiglay Shortcut Elevator": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Commander Niall->Shaded Castle": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Godskin Duo->Subterranean Shunning-Grounds - From Royal Capital": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Subterranean Shunning-Grounds->Subterranean Shunning-Grounds - From Royal Capital": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Godskin Duo->Castle Sol": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Godskin Duo->After Dragonkin Soldier of Nokstella": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Godskin Duo->Divine Tower of Limgrave": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Volcano Manor - Temple of Eiglay Shortcut Elevator->Caelid - Gael Tunnel - Magma Wyrm": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Divine Tower of Limgrave->Divine Tower of Liurnia Interior": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ancient Ruins of Rauh - West->Ancient Ruins of Rauh - Central Stairs": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Volcano Manor - Temple of Eiglay->Stone Coffin Fissure - Before Boss": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Farum Azula - Dragon Temple->Nokron from Limgrave": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Farum Azula - Dragon Temple->Royal Knight Loretta": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Altus Tunnel - Crystalian Duo->Dragonkin Soldier of Nokstella": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Belurat - Divine Beast Dancing Lion->After Mohg, Lord of Blood": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Cave of Knowledge - Soldier of Godrick->Scaduview - Scadutree Chalice": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Magma Wrym Makar->Ancestor Spirit": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Shaded Castle->Above Ainsel River Downstream": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Castle Sol->Leyndell - Elden Throne": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Caelid - Gael Tunnel - Magma Wyrm->Volcano Manor Prison Town Church": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "After Mohg, Lord of Blood->Farum Azula - Dragon Temple Lift": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Above Ainsel River Downstream->Ainsel River Downstream": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Stone Coffin Fissure - Before Boss->Stone Coffin Fissure - After Waypoint": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Stone Coffin Fissure->Stone Coffin Fissure - After Waypoint": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Nokron from Limgrave->Nokron before Mimic Tear": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Farum Azula - Dragon Temple Lift->Farum Azula - Crumbling Beast Grave Depths": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Farum Azula - Crumbling Beast Grave->Farum Azula - Crumbling Beast Grave Depths": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ainsel River Downstream->Liurnia - Caria Manor": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Liurnia - Raya Lucaria Crystal Tunnel->Liurnia - Caria Manor": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Liurnia Behind Caria Manor->Liurnia - Caria Manor": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ainsel River Downstream->Hidden Path to the Haligtree": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Leyndell - Erdtree Sanctuary->Divine Tower of Caelid Interior": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Scadu Altus - Darklight Catacombs - Jori, Elder Inquisitor->Volcano Manor - Hallway Opposite Sending Gate": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Stone Coffin Fissure - After Waypoint->Limgrave Tunnels": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Volcano Manor - Hallway Opposite Sending Gate->Volcano Manor Entrance": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Before Volcano Manor Entrance->Volcano Manor Entrance": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Specimen Storehouse - Back Section->Castle Ensis": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Valiant Gargoyles->Divine Tower of Limgrave after Sending Gate": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Valiant Gargoyles->Weeping Peninsula - Castle Morne": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Royal Knight Loretta->Maliketh the Black Blade": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Dragonkin Soldier of Nokstella->Divine Tower of East Altus": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Limgrave Tunnels->Caelid - Gael Tunnel Start": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Divine Tower of East Altus (approaching the Divine Tower of East Altus gate, or using the grace menu)->Divine Tower of West Altus": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Caelid - Gael Tunnel Start->Caelid - Gael Tunnel": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Castle Ensis->Shadow Keep - Golden Hippopotamus": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Weeping Peninsula - Castle Morne->Weeping Peninsula - Beside the Rampart Gaol": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ancestor Spirit->Academy of Raya Lucaria Rooftops": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Leyndell - Elden Throne->Capital Outskirts - Sealed Tunnel": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Weeping Peninsula - Beside the Rampart Gaol->Liurnia - Raya Lucaria Crystal Tunnel": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Caelid - Gael Tunnel->Caelid - Rear Gael Tunnel": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Caelid - Gael Tunnel->Ancient Ruins of Rauh - After Romina": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Caelid - Rear Gael Tunnel->Liurnia Behind Caria Manor": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Capital Outskirts - Sealed Tunnel->Capital Outskirts - Sealed Tunnel Before Boss": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Capital Outskirts - Sealed Tunnel Before Boss->Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Maliketh the Black Blade->Isolated Divine Tower": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness->Ashen Leyndell - Elden Throne": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Shadow Keep - Golden Hippopotamus->Divine Tower of East Altus - Fell Twins (inside the Fell Twins' arena)": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Shadow Keep - Golden Hippopotamus->Scadu Altus - Darklight Catacombs": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria - Grand Library->Academy of Raya Lucaria - Grand Library Chest": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Scadu Altus - Darklight Catacombs->Farum Azula Rooftop and Bridge": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Divine Tower of Limgrave after Sending Gate->Divine Tower of Limgrave Interior": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Farum Azula Rooftop and Bridge->Roundtable Hold Balcony": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Farum Azula Rooftop and Bridge->Mimic Tear": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Divine Tower of East Altus->Divine Tower of East Altus Interior": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Isolated Divine Tower->Isolated Divine Tower Interior": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Leyndell - Erdtree Entrance->Ashen Leyndell - Erdtree Entrance": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Elden Throne->Belurat - After Divine Beast Dancing Lion": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Belurat - After Divine Beast Dancing Lion->Belurat - Stairs before Enir-Ilim": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Enir-Ilim->Belurat - Stairs before Enir-Ilim": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Belurat->Belurat Swamp": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Enir-Ilim - Belurat->Belurat Swamp": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Academy of Raya Lucaria Main Entrance->Limgrave Tunnels - Stonedigger Troll": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Mimic Tear->Carian Study Hall": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Limgrave Tunnels - Stonedigger Troll->Stone Coffin Fissure": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Mohg, the Omen->Above Frenzied Flame Proscription": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Above Frenzied Flame Proscription->Frenzied Flame Proscription": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Frenzied Flame Proscription->Deeproot Depths from Proscription": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Nokron before Mimic Tear->Deep Ainsel Well": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Deep Ainsel Well->Caelid - Sellia Crystal Tunnel - Fallingstar Beast": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Divine Tower of East Altus->Divine Tower of East Altus Start": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Divine Tower of West Altus->Divine Tower of West Altus Interior": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Caelid - Sellia Crystal Tunnel - Fallingstar Beast->Nokron - Aqueduct-Facing Cliffs Room": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Divine Tower of East Altus Start->Stone Coffin Fissure - After Putrescent Knight": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Carian Study Hall->Divine Tower of Liurnia": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Volcano Manor Entrance->Volcano Manor Drawing Room": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Volcano Manor Drawing Room->Before Volcano Manor Entrance": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Scadu Altus - Manus Metyr->Finger Ruins of Miyr": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Ashen Leyndell - Erdtree Entrance->Stone Platform": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Deeproot Depths->Enir-Ilim": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Enir-Ilim - After Leda->Enir-Ilim": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Belurat - Stairs before Enir-Ilim->Enir-Ilim": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Ancient Ruins of Rauh - After Romina->Farum Azula - Crumbling Beast Grave": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "random",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Enir-Ilim->Enir-Ilim - Belurat": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    },
+    "Enir-Ilim->Enir-Ilim - After Leda": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": false,
+        "isOriginalLink": true
+    },
+    "Enir-Ilim - After Leda->Enir-Ilim - Promised Consort Radahn": {
+        "visible": false,
+        "highlighted": false,
+        "dimmed": false,
+        "frontierHighlight": false,
+        "type": "preexisting",
+        "oneWay": true,
+        "isOriginalLink": true
+    }
+}

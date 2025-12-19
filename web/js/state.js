@@ -400,6 +400,10 @@ export function isLinkDiscovered(sourceId, targetId) {
  * @param {string} linkId - Link UUID
  */
 export function discoverLinkById(linkId) {
+    // Guard against null/undefined linkIds
+    if (!linkId) {
+        return false;
+    }
     const added = !state.explorationState.discoveredLinks.has(linkId);
     if (added) {
         state.explorationState.discoveredLinks.add(linkId);

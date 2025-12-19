@@ -284,6 +284,7 @@ async function convertServerDataToGraph(game) {
 
     // Add link
     links.push({
+      id: pair.id,
       source: pair.source,
       target: pair.destination,
       type: pair.type,

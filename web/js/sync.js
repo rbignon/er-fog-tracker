@@ -186,6 +186,7 @@ function getFullSyncState() {
         const targetId = typeof d.target === 'object' ? d.target.id : d.target;
 
         linksState[`${sourceId}->${targetId}`] = {
+            id: d.id || null,
             visible: linkEl.style("display") !== "none",
             highlighted: linkEl.classed("highlighted"),
             dimmed: linkEl.classed("dimmed"),
@@ -231,6 +232,7 @@ function getFullSyncState() {
             // Only add if not already present (don't overwrite visual state)
             if (!linksState[key]) {
                 linksState[key] = {
+                    id: l.id || null,
                     visible: false,
                     highlighted: false,
                     dimmed: false,
@@ -369,6 +371,7 @@ function buildGraphFromSessionData(data) {
             seenLinks.add(linkKey);
 
             links.push({
+                id: linkState.id || null,
                 source: source,
                 target: target,
                 type: linkState.type || 'fog',
@@ -380,7 +383,10 @@ function buildGraphFromSessionData(data) {
     // Restore discovered links from sync data
     if (data.discoveredLinks && Array.isArray(data.discoveredLinks)) {
         data.discoveredLinks.forEach(linkId => {
-            explorationState.discoveredLinks.add(linkId);
+            // Filter out null/undefined linkIds
+            if (linkId) {
+                explorationState.discoveredLinks.add(linkId);
+            }
         });
     }
 
