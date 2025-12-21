@@ -203,6 +203,12 @@ impl FogRandoTracker {
 
         // =========================================================================
         // FOG WALL DETECTION
+        //
+        // Timing is critical: WarpPlayer (which sets initial_area_entity_id) is
+        // called ~1 second AFTER the fog animation starts. So we:
+        // 1. Detect animation start → store entry position (dest_entity_id = 0)
+        // 2. Detect warp_requested = true → capture destination_entity_id now
+        // 3. Detect animation end + position readable → send discovery
         // =========================================================================
         let is_fog = self.game_state.is_in_animation(TeleportType::FogWall);
 
@@ -295,6 +301,47 @@ impl FogRandoTracker {
             self.on_event_exit(TeleportType::Coffin);
         }
         self.was_in_coffin = is_coffin;
+
+        // =========================================================================
+        // DESTINATION ENTITY CAPTURE (when warp_requested becomes true)
+        //
+        // WarpPlayer instruction sets initial_area_entity_id and warp_requested.
+        // For fog gates, this happens ~1 second AFTER the animation starts.
+        // We capture destination_entity_id here to update pending events.
+        // =========================================================================
+        if warp_requested && !self.was_warp_requested {
+            // Capture destination_entity_id for pending animation-based events
+            // WarpPlayer has just been executed, initial_area_entity_id is now set
+            let current_dest = self.game_man_reader.get_destination_entity_id();
+
+            if let Some(ref mut pending) = self.pending_fog {
+                if pending.destination_entity_id == 0 && current_dest != 0 {
+                    pending.destination_entity_id = current_dest;
+                    println!(
+                        "[FOG] Captured destination_entity_id on warp_requested: {}",
+                        current_dest
+                    );
+                }
+            }
+            if let Some(ref mut pending) = self.pending_waygate {
+                if pending.destination_entity_id == 0 && current_dest != 0 {
+                    pending.destination_entity_id = current_dest;
+                    println!(
+                        "[WAYGATE] Captured destination_entity_id on warp_requested: {}",
+                        current_dest
+                    );
+                }
+            }
+            if let Some(ref mut pending) = self.pending_medal {
+                if pending.destination_entity_id == 0 && current_dest != 0 {
+                    pending.destination_entity_id = current_dest;
+                    println!(
+                        "[MEDAL] Captured destination_entity_id on warp_requested: {}",
+                        current_dest
+                    );
+                }
+            }
+        }
 
         // =========================================================================
         // FAST TRAVEL DETECTION (GameMan.warp_requested with destination_entity_id)
