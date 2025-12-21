@@ -56,12 +56,20 @@ async def propagate_discovery(
     """
     logger.info("[DISCOVERY] Request: '%s' → '%s' (by %s)", source, target, discovered_by)
 
-    # Get game data
+    # Get game data - refresh to ensure we see latest changes from other calls
     result = await db.execute(select(Game).where(Game.id == game_id))
     game = result.scalar_one_or_none()
     if not game:
         logger.warning("[DISCOVERY] Game %s not found", game_id)
         return []
+
+    # Force refresh to get latest discovered_links from DB
+    await db.refresh(game, ["discovered_links"])
+
+    logger.debug(
+        "[DISCOVERY] Starting with %d discovered links",
+        len(game.discovered_links) if game.discovered_links else 0,
+    )
 
     zone_pairs = game.zone_pairs
     if not zone_pairs:
@@ -248,9 +256,24 @@ async def propagate_discovery(
 
     # Update game with new discovered_links
     if newly_discovered:
+        # Log all link_ids being saved
+        link_ids_to_save = [dl.get("link_id") for dl in discovered_links]
+        logger.debug(
+            "[DISCOVERY] Saving %d links, last 5 link_ids: %s",
+            len(link_ids_to_save),
+            link_ids_to_save[-5:],
+        )
+
         game.discovered_links = discovered_links
         flag_modified(game, "discovered_links")
         await db.flush()
+
+        # Verify the assignment
+        logger.debug(
+            "[DISCOVERY] After flush, game.discovered_links has %d items",
+            len(game.discovered_links) if game.discovered_links else 0,
+        )
+
         logger.info(
             "[DISCOVERY] Propagated %d new links (total discovered: %d)",
             len(newly_discovered),

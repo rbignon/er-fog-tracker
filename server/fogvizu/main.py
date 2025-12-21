@@ -22,10 +22,22 @@ from fogvizu.websocket import HostClient, ModClient, ViewerClient
 from fogvizu.zone_resolver import init_resolver
 
 # Configure logging
+log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
+log_format = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+log_datefmt = "%Y-%m-%d %H:%M:%S"
+
+handlers: list[logging.Handler] = [logging.StreamHandler()]
+
+if settings.log_file:
+    file_handler = logging.FileHandler(settings.log_file, encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter(log_format, datefmt=log_datefmt))
+    handlers.append(file_handler)
+
 logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper(), logging.INFO),
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
+    level=log_level,
+    format=log_format,
+    datefmt=log_datefmt,
+    handlers=handlers,
 )
 
 

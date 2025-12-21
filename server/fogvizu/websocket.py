@@ -79,7 +79,7 @@ class Client(ABC):
             while self._running:
                 data = await self.ws.receive_json()
                 msg_type = data.get("type")
-                logger.debug("[%s RX] %s", self.__class__.__name__, data)
+                logger.debug("[%s:%s RX] %s", self.__class__.__name__, str(self.game_id)[:8], data)
 
                 handler = self._handlers.get(msg_type)
                 if handler:
@@ -287,6 +287,9 @@ class ModClient(Client):
 
             await db.commit()
 
+            # Expire cached objects to ensure fresh data after propagate_discovery
+            db.expire_all()
+
             # Compute exits from the destination zone
             exits = []
             destination_zone = None
@@ -346,19 +349,49 @@ class ModClient(Client):
             await self.send(ack_msg)
 
             # Broadcast to host and viewers
-            if all_propagated and game:
-                expanded_links = expand_discovered_links(
-                    game.discovered_links or [], game.zone_pairs or []
-                )
-                await manager.broadcast_to_all(
-                    self.game_id,
-                    {
-                        "type": "discovery",
-                        "propagated": all_propagated,
-                        "discovered_links": expanded_links,
-                    },
-                    exclude=self.ws,
-                )
+            if all_propagated:
+                # Refetch game to ensure we have ALL discovered_links after multiple propagate calls
+                result = await db.execute(select(Game).where(Game.id == self.game_id))
+                game = result.scalar_one_or_none()
+
+                if game:
+                    # Debug: log raw discovered_links before expansion
+                    raw_links = game.discovered_links or []
+                    logger.debug(
+                        "[MOD] Before expand: %d raw links, last 5 link_ids: %s",
+                        len(raw_links),
+                        [dl.get("link_id") for dl in raw_links[-5:]],
+                    )
+
+                    expanded_links = expand_discovered_links(
+                        game.discovered_links or [], game.zone_pairs or []
+                    )
+
+                    # Debug: check if expansion dropped any links
+                    if len(expanded_links) != len(raw_links):
+                        logger.warning(
+                            "[MOD] Expansion lost links! Raw: %d, Expanded: %d",
+                            len(raw_links),
+                            len(expanded_links),
+                        )
+                    logger.info(
+                        "[MOD] Broadcasting %d propagated links, %d total discovered to host/viewers",
+                        len(all_propagated),
+                        len(expanded_links),
+                    )
+                    await manager.broadcast_to_all(
+                        self.game_id,
+                        {
+                            "type": "discovery",
+                            "propagated": all_propagated,
+                            "discovered_links": expanded_links,
+                        },
+                        exclude=self.ws,
+                    )
+                else:
+                    logger.warning("[MOD] Game not found for broadcast after propagation")
+            else:
+                logger.debug("[MOD] No links propagated, skipping broadcast")
 
     @classmethod
     async def handle_connection(cls, websocket: WebSocket, game_id: UUID):
@@ -562,6 +595,7 @@ class HostClient(Client):
 
         client = cls(websocket, game_id, user)
         room.host = client
+        logger.info("[HOST] Connected to game %s (user: %s)", game_id, user.twitch_username)
 
         if room.mod:
             await client.send({"type": "mod_connected"})
@@ -696,14 +730,19 @@ class ConnectionManager:
         """Broadcast message to host and all viewers."""
         room = self.rooms.get(game_id)
         if not room:
+            logger.warning("[BROADCAST] No room found for game %s", game_id)
             return
 
         # Send to host
         if room.host and room.host.ws != exclude:
             try:
                 await room.host.send(message)
-            except Exception:
+                logger.debug("[BROADCAST] Sent to host for game %s", game_id)
+            except Exception as e:
+                logger.warning("[BROADCAST] Failed to send to host: %s", e)
                 room.host = None
+        elif not room.host:
+            logger.debug("[BROADCAST] No host connected for game %s", game_id)
 
         # Send to viewers
         await self.broadcast_to_viewers(game_id, message)

@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
+    log_file: str | None = None  # Optional file path for logging
 
     # Data files (fog randomizer data)
     data_dir: str = "data"

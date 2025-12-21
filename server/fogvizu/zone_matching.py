@@ -98,11 +98,17 @@ def expand_discovered_links(discovered_links: list[dict], zone_pairs: list[dict]
     Expand discovered_links to include source and target from zone_pairs.
     Returns list of {link_id, source, target, discovered_at, discovered_by}.
     """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
     zp_index = build_zone_pairs_index(zone_pairs)
     expanded = []
+    skipped = []
 
     for link in discovered_links:
-        zp = zp_index.get(link.get("link_id"))
+        link_id = link.get("link_id")
+        zp = zp_index.get(link_id) if link_id else None
         if zp:
             expanded.append(
                 {
@@ -113,6 +119,15 @@ def expand_discovered_links(discovered_links: list[dict], zone_pairs: list[dict]
                     "discovered_by": link.get("discovered_by"),
                 }
             )
+        else:
+            skipped.append(link_id)
+
+    if skipped:
+        logger.warning(
+            "[EXPAND] Skipped %d links (not in zone_pairs): %s",
+            len(skipped),
+            skipped[:10],  # Show first 10
+        )
 
     return expanded
 
