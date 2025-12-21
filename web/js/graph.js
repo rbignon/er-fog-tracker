@@ -38,6 +38,9 @@ export function renderGraph(preservePositions = false) {
     // Create container for zoom
     const container = svg.append("g");
 
+    // Save current transform BEFORE setting up zoom (svg.call(zoom) triggers the handler with identity)
+    const savedTransform = preservePositions ? State.getCurrentZoomTransform() : null;
+
     // Zoom behavior
     const zoom = d3.zoom()
         .scaleExtent([0.1, 4])
@@ -46,11 +49,10 @@ export function renderGraph(preservePositions = false) {
             State.setCurrentZoomTransform(event.transform);
             State.emit('viewportChanged', event.transform);
         });
-    
+
     svg.call(zoom);
-    
-    // Restore zoom if preserving positions
-    const savedTransform = State.getCurrentZoomTransform();
+
+    // Restore zoom if preserving positions (use savedTransform captured before svg.call(zoom))
     if (preservePositions && savedTransform &&
         isFinite(savedTransform.x) && isFinite(savedTransform.y) && isFinite(savedTransform.k)) {
         svg.call(zoom.transform, savedTransform);
@@ -1386,7 +1388,12 @@ export function centerOnNode(nodeId, duration = 500) {
         }
     });
 
+    // Validate node exists and has valid coordinates
     if (!targetNode || targetNode.x === undefined || targetNode.y === undefined) {
+        return;
+    }
+    if (!isFinite(targetNode.x) || !isFinite(targetNode.y)) {
+        console.warn('centerOnNode: invalid coordinates for node', nodeId, targetNode.x, targetNode.y);
         return;
     }
 

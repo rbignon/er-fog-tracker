@@ -2044,6 +2044,7 @@ marker path {
    ============================================================ */
 
 /* Hide Reset button and mode toggle for interactive viewers */
+.viewer-interactive #controls-left,
 .viewer-interactive #reset-exploration-btn,
 .viewer-interactive #mode-explorer,
 .viewer-interactive #mode-spoiler {

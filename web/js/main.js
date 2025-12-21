@@ -399,7 +399,8 @@ async function init() {
     Graph.renderGraph(preservePositions);
 
     // Center on discovered node after render stabilizes
-    if (centerOnNodeId) {
+    // Only for host - viewers control their own viewport
+    if (centerOnNodeId && !State.isViewerMode()) {
       setTimeout(() => {
         Graph.centerOnNode(centerOnNodeId);
       }, 300);
