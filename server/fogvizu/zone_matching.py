@@ -192,6 +192,121 @@ def find_zone_pair(zone_pairs: list[dict], source: str, target: str) -> dict | N
     return None
 
 
+def find_zone_pair_by_keys(
+    zone_pairs: list[dict],
+    source_key: str,
+    target_key: str,
+    source_details: str | None = None,
+) -> dict | None:
+    """
+    Find a zone pair by matching on zone_keys (internal names from fog.txt).
+
+    More precise than display name matching. Uses source_details to disambiguate
+    when multiple zone pairs have the same source_key and destination_key.
+
+    Args:
+        zone_pairs: List of zone pairs from the spoiler log
+        source_key: Internal zone key for source
+        target_key: Internal zone key for target
+        source_details: Optional ASide/BSide text for disambiguation
+
+    Returns:
+        The matching zone pair, or None if not found.
+    """
+    matches = []
+
+    for pair in zone_pairs:
+        pair_source_key = pair.get("source_key")
+        pair_dest_key = pair.get("destination_key")
+
+        if not pair_source_key or not pair_dest_key:
+            continue
+
+        # Check direct match
+        if pair_source_key == source_key and pair_dest_key == target_key:
+            matches.append((pair, "direct"))
+            continue
+
+        # For random (bidirectional) links, check reverse
+        if (
+            pair["type"] == "random"
+            and not pair.get("is_inherently_one_way", False)
+            and pair_source_key == target_key
+            and pair_dest_key == source_key
+        ):
+            matches.append((pair, "reverse"))
+
+    if not matches:
+        return None
+
+    if len(matches) == 1:
+        return matches[0][0]
+
+    # Multiple matches - try to disambiguate using source_details
+    if source_details:
+        for pair, direction in matches:
+            if direction == "direct" and pair.get("source_details") == source_details:
+                logger.debug(
+                    "[MATCH] Disambiguated by source_details: %s -> %s",
+                    pair["source"],
+                    pair["destination"],
+                )
+                return pair
+            if direction == "reverse" and pair.get("target_details") == source_details:
+                logger.debug(
+                    "[MATCH] Disambiguated by target_details (reverse): %s -> %s",
+                    pair["source"],
+                    pair["destination"],
+                )
+                return pair
+
+    # Still multiple matches - log warning and return first
+    logger.warning(
+        "[MATCH] Multiple matches for %s -> %s, returning first (count=%d)",
+        source_key,
+        target_key,
+        len(matches),
+    )
+    return matches[0][0]
+
+
+def find_matching_zone_pair_by_keys(
+    zone_pairs: list[dict],
+    source_candidates: list[tuple[str, str]],
+    target_candidates: list[tuple[str, str]],
+    source_details: str | None = None,
+) -> tuple[str, str, dict] | None:
+    """
+    Find a matching zone pair using zone_keys from candidate lists.
+
+    Tries all combinations of source and target candidates (using internal keys)
+    until finding a match in zone_pairs.
+
+    Args:
+        zone_pairs: List of zone pairs from the spoiler log
+        source_candidates: List of (internal_key, display_name) for source
+        target_candidates: List of (internal_key, display_name) for target
+        source_details: Optional ASide/BSide text for disambiguation
+
+    Returns:
+        Tuple of (source_display, target_display, zone_pair) if found, None otherwise.
+    """
+    for source_key, _source_display in source_candidates:
+        for target_key, _target_display in target_candidates:
+            pair = find_zone_pair_by_keys(zone_pairs, source_key, target_key, source_details)
+            if pair:
+                logger.debug(
+                    "[MATCH] Found pair by keys: '%s' -> '%s' (keys: %s -> %s)",
+                    pair["source"],
+                    pair["destination"],
+                    source_key,
+                    target_key,
+                )
+                return pair["source"], pair["destination"], pair
+
+    return None
+
+
 def find_matching_zone_pair(
     zone_pairs: list[dict],
     source_candidates: list[tuple[str, str]],

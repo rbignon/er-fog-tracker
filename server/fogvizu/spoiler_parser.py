@@ -3,9 +3,15 @@ Spoiler log parser - port from web/js/parser.js
 Parses Fog Gate Randomizer spoiler logs into structured zone pairs.
 """
 
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from fogvizu.zone_resolver import ZoneResolver
 
 # Patterns that ALWAYS indicate a one-way connection
 ALWAYS_ONE_WAY_PATTERNS = [
@@ -121,6 +127,8 @@ class ConnectionInfo:
     conn_type: str  # 'random' or 'preexisting'
     source_details: str = ""
     target_details: str = ""
+    source_key: str | None = None  # Internal zone key (from fog.txt)
+    destination_key: str | None = None  # Internal zone key (from fog.txt)
     required_item_from: str | None = None
     is_inherently_one_way: bool = False
 
@@ -347,3 +355,65 @@ def validate_spoiler_header(text: str) -> tuple[int, str]:
     run_id = f"{seed}_{hash(first_line) & 0xFFFFFFFF:08x}"
 
     return seed, run_id
+
+
+def enrich_connections_with_zone_keys(
+    connections: list[ConnectionInfo],
+    resolver: ZoneResolver,
+) -> list[ConnectionInfo]:
+    """
+    Enrich connections with zone_keys from fog.txt.
+
+    For each connection, looks up the internal zone key from:
+    1. source_details/target_details (ASide/BSide text in fog.txt)
+    2. Fallback: display_name → zone_key reverse lookup
+
+    Args:
+        connections: List of parsed connections
+        resolver: ZoneResolver with fog.txt data loaded
+
+    Returns:
+        List of enriched connections with source_key and destination_key populated.
+    """
+    enriched = []
+    for conn in connections:
+        source_key = None
+        destination_key = None
+
+        # Try to resolve source_key from source_details (ASide/BSide text)
+        if conn.source_details:
+            zone_key, _ = resolver.lookup_by_detail_text(conn.source_details)
+            if zone_key:
+                source_key = zone_key
+
+        # Fallback: try display_name → zone_key
+        if not source_key:
+            source_key = resolver.lookup_by_display_name(conn.source)
+
+        # Try to resolve destination_key from target_details
+        if conn.target_details:
+            zone_key, _ = resolver.lookup_by_detail_text(conn.target_details)
+            if zone_key:
+                destination_key = zone_key
+
+        # Fallback: try display_name → zone_key
+        if not destination_key:
+            destination_key = resolver.lookup_by_display_name(conn.target)
+
+        # Create enriched connection
+        enriched.append(
+            ConnectionInfo(
+                id=conn.id,
+                source=conn.source,
+                target=conn.target,
+                conn_type=conn.conn_type,
+                source_details=conn.source_details,
+                target_details=conn.target_details,
+                source_key=source_key,
+                destination_key=destination_key,
+                required_item_from=conn.required_item_from,
+                is_inherently_one_way=conn.is_inherently_one_way,
+            )
+        )
+
+    return enriched

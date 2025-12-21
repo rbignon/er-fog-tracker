@@ -21,6 +21,8 @@ use crate::websocket::{
 #[derive(Clone, Debug)]
 pub(crate) struct PendingEvent {
     entry: PlayerPosition,
+    /// Entity ID of the warp destination (755890xxx for fog rando warps)
+    destination_entity_id: u32,
 }
 
 /// Pending fast travel event (includes destination entity ID)
@@ -324,12 +326,16 @@ impl FogRandoTracker {
     fn on_event_entry(&mut self, event_type: TeleportType) {
         let name = event_type.name();
         if let Some(pos) = self.game_state.read_position() {
+            let dest_entity_id = self.game_man_reader.get_destination_entity_id();
             println!(
-                "[{}] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
-                name, pos.map_id_str, pos.x, pos.y, pos.z, pos.play_region_id
+                "[{}] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?} dest_entity={}",
+                name, pos.map_id_str, pos.x, pos.y, pos.z, pos.play_region_id, dest_entity_id
             );
 
-            let pending = PendingEvent { entry: pos };
+            let pending = PendingEvent {
+                entry: pos,
+                destination_entity_id: dest_entity_id,
+            };
             match event_type {
                 TeleportType::FogWall => self.pending_fog = Some(pending),
                 TeleportType::Waygate => self.pending_waygate = Some(pending),
@@ -349,15 +355,15 @@ impl FogRandoTracker {
     /// Handle teleport event exit (end of animation/SpEffect, position available)
     fn on_event_exit(&mut self, event_type: TeleportType) {
         let name = event_type.name();
-        let entry = match event_type {
-            TeleportType::FogWall => self.pending_fog.take().map(|p| p.entry),
-            TeleportType::Waygate => self.pending_waygate.take().map(|p| p.entry),
-            TeleportType::Medal => self.pending_medal.take().map(|p| p.entry),
-            TeleportType::Coffin => self.pending_coffin.take().map(|p| p.entry),
+        let pending = match event_type {
+            TeleportType::FogWall => self.pending_fog.take(),
+            TeleportType::Waygate => self.pending_waygate.take(),
+            TeleportType::Medal => self.pending_medal.take(),
+            TeleportType::Coffin => self.pending_coffin.take(),
             TeleportType::FastTravel => None, // Handled separately
         };
 
-        if let Some(entry) = entry {
+        if let Some(pending) = pending {
             if let Some(exit_pos) = self.game_state.read_position() {
                 println!(
                     "[{}] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
@@ -369,16 +375,24 @@ impl FogRandoTracker {
                     exit_pos.play_region_id
                 );
                 println!(
-                    "[{}] Traversal complete: {} → {}",
-                    name, entry.map_id_str, exit_pos.map_id_str
+                    "[{}] Traversal complete: {} → {} (dest_entity={})",
+                    name,
+                    pending.entry.map_id_str,
+                    exit_pos.map_id_str,
+                    pending.destination_entity_id
                 );
 
-                self.send_discovery(event_type, &entry, &exit_pos);
+                self.send_discovery(
+                    event_type,
+                    &pending.entry,
+                    &exit_pos,
+                    pending.destination_entity_id,
+                );
             } else {
                 // Exit position not readable - event lost
                 println!(
                     "[{}] WARNING: Exit position unreadable! Entry was at {}",
-                    name, entry.map_id_str
+                    name, pending.entry.map_id_str
                 );
             }
         }
@@ -432,18 +446,20 @@ impl FogRandoTracker {
         event_type: TeleportType,
         entry: &PlayerPosition,
         exit_pos: &PlayerPosition,
+        destination_entity_id: u32,
     ) {
         let name = event_type.name();
         if self.ws_client.is_connected() {
             println!(
-                "[{}] Sending to server: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?}",
+                "[{}] Sending to server: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?} dest_entity={}",
                 name,
                 entry.map_id_str,
                 entry.x, entry.y, entry.z,
                 entry.play_region_id,
                 exit_pos.map_id_str,
                 exit_pos.x, exit_pos.y, exit_pos.z,
-                exit_pos.play_region_id
+                exit_pos.play_region_id,
+                destination_entity_id
             );
             self.ws_client.send_discovery_v2(
                 entry.map_id,
@@ -453,6 +469,7 @@ impl FogRandoTracker {
                 exit_pos.pos(),
                 exit_pos.play_region_id,
                 name,
+                destination_entity_id,
             );
         } else {
             println!("[{}] Not connected to server, discovery not sent", name);

@@ -15,8 +15,13 @@ from fogvizu.config import settings
 from fogvizu.database import Game, User, get_db
 from fogvizu.game_logic import compute_discovery_stats
 from fogvizu.models import GameCreateResponse, GameListResponse, GameSummary, Zone, ZonePair
-from fogvizu.spoiler_parser import SpoilerParseError, parse_spoiler_log
+from fogvizu.spoiler_parser import (
+    SpoilerParseError,
+    enrich_connections_with_zone_keys,
+    parse_spoiler_log,
+)
 from fogvizu.websocket import manager as ws_manager
+from fogvizu.zone_resolver import get_resolver
 
 router = APIRouter(prefix="/mod", tags=["mod"])
 
@@ -132,18 +137,24 @@ async def create_game(
     if existing_game:
         return GameCreateResponse(game_id=existing_game.id, created=False)
 
+    # Enrich connections with zone_keys from fog.txt
+    resolver = get_resolver()
+    enriched_connections = enrich_connections_with_zone_keys(parsed.connections, resolver)
+
     # Convert parsed data to zone_pairs format
     zone_pairs = [
         ZonePair(
             id=conn.id,
             source=conn.source,
             destination=conn.target,
+            source_key=conn.source_key,
+            destination_key=conn.destination_key,
             type=conn.conn_type,
             source_details=conn.source_details or None,
             target_details=conn.target_details or None,
             is_inherently_one_way=conn.is_inherently_one_way,
         ).model_dump()
-        for conn in parsed.connections
+        for conn in enriched_connections
     ]
 
     # Convert zones

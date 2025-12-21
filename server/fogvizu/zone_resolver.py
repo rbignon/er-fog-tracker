@@ -60,6 +60,8 @@ class ZoneResolver:
         self.map_rules: dict[str, MapRules] = {}
         # Internal zone name -> display name
         self.zone_display_names: dict[str, str] = {}
+        # Display name -> internal zone name (reverse lookup)
+        self.display_name_to_zone: dict[str, str] = {}
         # map_id -> set of possible zone names (from foglocations2.txt)
         self.map_zones: dict[str, set[str]] = {}
         # (map_id, col) -> internal zone name (from foglocations2.txt Cols)
@@ -86,6 +88,9 @@ class ZoneResolver:
         fog_path = self.data_dir / "fog.txt"
         if fog_path.exists():
             self._load_fog(fog_path)
+            # Build reverse lookup (display_name -> zone_key)
+            for zone_key, display_name in self.zone_display_names.items():
+                self.display_name_to_zone[display_name] = zone_key
             logger.info(
                 "Loaded %d zone display names, %d detail texts from fog.txt",
                 len(self.zone_display_names),
@@ -472,6 +477,18 @@ class ZoneResolver:
             )
             return internal_name, display_name
         return None, None
+
+    def lookup_by_display_name(self, display_name: str) -> str | None:
+        """
+        Look up zone key by display name.
+
+        Args:
+            display_name: The display name (e.g., "Leyndell - Erdtree Sanctuary")
+
+        Returns:
+            Internal zone key, or None if not found.
+        """
+        return self.display_name_to_zone.get(display_name)
 
     def lookup_spoiler_name(self, spoiler_name: str) -> tuple[str | None, str | None]:
         """

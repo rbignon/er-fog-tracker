@@ -21,6 +21,7 @@ from fogvizu.zone_matching import (
     compute_discovery_stats,
     compute_zone_exits,
     expand_discovered_links,
+    find_matching_zone_pair_by_keys,
 )
 from fogvizu.zone_resolver import get_resolver
 
@@ -257,31 +258,69 @@ class ModClient(Client):
             resolved_links = []
 
             if game and game.zone_pairs:
-                # Find ALL valid combinations of candidates in the spoiler log
-                matches = find_all_matching_zone_pairs(
-                    game.zone_pairs,
-                    source_candidates[:15],
-                    target_candidates[:15],
+                # Check if zone_pairs have zone_keys (V3 enrichment)
+                has_zone_keys = any(
+                    zp.get("source_key") or zp.get("destination_key")
+                    for zp in game.zone_pairs[:5]  # Check first few
                 )
 
-                if matches:
-                    logger.info("[MOD] Found %d valid link(s) in spoiler log", len(matches))
-                    for source_display, target_display, _ in matches:
+                if has_zone_keys:
+                    # Use key-based matching (more precise)
+                    match = find_matching_zone_pair_by_keys(
+                        game.zone_pairs,
+                        source_candidates[:15],
+                        target_candidates[:15],
+                    )
+                    if match:
+                        source_display, target_display, _ = match
                         logger.info(
-                            "[MOD] Discovered: '%s' -> '%s'", source_display, target_display
+                            "[MOD] Discovered (by keys): '%s' -> '%s'",
+                            source_display,
+                            target_display,
                         )
                         resolved_links.append({"source": source_display, "target": target_display})
-
                         propagated = await propagate_discovery(
                             db, self.game_id, source_display, target_display, discovered_by="mod"
                         )
                         all_propagated.extend(propagated)
+                    else:
+                        logger.warning(
+                            "[MOD] No key-based match (tried %d x %d combinations)",
+                            len(source_candidates[:15]),
+                            len(target_candidates[:15]),
+                        )
                 else:
-                    logger.warning(
-                        "[MOD] No spoiler log match (tried %d x %d combinations)",
-                        len(source_candidates[:15]),
-                        len(target_candidates[:15]),
+                    # Fallback: use display name matching (legacy behavior)
+                    matches = find_all_matching_zone_pairs(
+                        game.zone_pairs,
+                        source_candidates[:15],
+                        target_candidates[:15],
                     )
+
+                    if matches:
+                        logger.info("[MOD] Found %d valid link(s) in spoiler log", len(matches))
+                        for source_display, target_display, _ in matches:
+                            logger.info(
+                                "[MOD] Discovered: '%s' -> '%s'", source_display, target_display
+                            )
+                            resolved_links.append(
+                                {"source": source_display, "target": target_display}
+                            )
+
+                            propagated = await propagate_discovery(
+                                db,
+                                self.game_id,
+                                source_display,
+                                target_display,
+                                discovered_by="mod",
+                            )
+                            all_propagated.extend(propagated)
+                    else:
+                        logger.warning(
+                            "[MOD] No spoiler log match (tried %d x %d combinations)",
+                            len(source_candidates[:15]),
+                            len(target_candidates[:15]),
+                        )
             else:
                 logger.warning("[MOD] Game has no zone_pairs, cannot resolve")
 

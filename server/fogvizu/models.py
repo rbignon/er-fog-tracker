@@ -16,6 +16,8 @@ class ZonePair(BaseModel):
     id: str | None = None  # Unique identifier for this link
     source: str
     destination: str
+    source_key: str | None = None  # Internal zone key (from fog.txt)
+    destination_key: str | None = None  # Internal zone key (from fog.txt)
     type: str = Field(pattern="^(random|preexisting)$")
     source_details: str | None = None
     target_details: str | None = None

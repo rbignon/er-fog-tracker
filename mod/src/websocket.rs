@@ -51,6 +51,8 @@ pub enum OutgoingMessage {
         target_play_region_id: Option<u32>,
         /// Type of warp (fog, waygate, medal, coffin)
         warp_type: String,
+        /// Destination entity ID (755890xxx for fog rando warps, enables direct lookup)
+        destination_entity_id: u32,
     },
     /// Send a debug log message
     DebugLog { message: String },
@@ -127,6 +129,8 @@ enum ServerMessage {
         #[serde(skip_serializing_if = "Option::is_none")]
         target_play_region_id: Option<u32>,
         warp_type: String,
+        /// Destination entity ID (755890xxx for fog rando warps)
+        destination_entity_id: u32,
     },
     DebugLog {
         message: String,
@@ -264,6 +268,7 @@ impl WebSocketClient {
         target_pos: (f32, f32, f32),
         target_play_region_id: Option<u32>,
         warp_type: &str,
+        destination_entity_id: u32,
     ) {
         if let Some(tx) = &self.tx {
             let _ = tx.try_send(OutgoingMessage::DiscoveryV2 {
@@ -282,6 +287,7 @@ impl WebSocketClient {
                 },
                 target_play_region_id,
                 warp_type: warp_type.to_string(),
+                destination_entity_id,
             });
         }
     }
@@ -509,14 +515,15 @@ fn message_loop(
                 ref target_pos,
                 target_play_region_id,
                 ref warp_type,
+                destination_entity_id,
             }) => {
                 let source_map_str = format_map_id(source_map_id);
                 let target_map_str = format_map_id(target_map_id);
                 println!(
-                    "[WS TX] Discovery v2: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?} [{}]",
+                    "[WS TX] Discovery v2: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?} [{}] dest_entity={}",
                     source_map_str, source_pos.x, source_pos.y, source_pos.z, source_play_region_id,
                     target_map_str, target_pos.x, target_pos.y, target_pos.z, target_play_region_id,
-                    warp_type
+                    warp_type, destination_entity_id
                 );
                 let msg = ServerMessage::DiscoveryV2 {
                     source_map_id: source_map_str,
@@ -526,6 +533,7 @@ fn message_loop(
                     target_pos: target_pos.clone(),
                     target_play_region_id,
                     warp_type: warp_type.clone(),
+                    destination_entity_id,
                 };
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket
