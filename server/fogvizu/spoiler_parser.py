@@ -382,8 +382,9 @@ def enrich_connections_with_zone_keys(
 
         # Try to resolve source_key from source_details (ASide/BSide text)
         if conn.source_details:
-            zone_key, _ = resolver.lookup_by_detail_text(conn.source_details)
-            if zone_key:
+            zone_key, display_name = resolver.lookup_by_detail_text(conn.source_details)
+            # Only use if the display_name matches the expected source
+            if zone_key and display_name and display_name == conn.source:
                 source_key = zone_key
 
         # Fallback: try display_name → zone_key
@@ -392,8 +393,9 @@ def enrich_connections_with_zone_keys(
 
         # Try to resolve destination_key from target_details
         if conn.target_details:
-            zone_key, _ = resolver.lookup_by_detail_text(conn.target_details)
-            if zone_key:
+            zone_key, display_name = resolver.lookup_by_detail_text(conn.target_details)
+            # Only use if the display_name matches the expected target
+            if zone_key and display_name and display_name == conn.target:
                 destination_key = zone_key
 
         # Fallback: try display_name → zone_key

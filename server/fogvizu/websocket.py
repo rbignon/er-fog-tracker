@@ -80,7 +80,7 @@ class Client(ABC):
             while self._running:
                 data = await self.ws.receive_json()
                 msg_type = data.get("type")
-                logger.debug("[%s:%s RX] %s", self.__class__.__name__, str(self.game_id)[:8], data)
+                # logger.debug("[%s:%s RX] %s", self.__class__.__name__, str(self.game_id)[:8], data)
 
                 handler = self._handlers.get(msg_type)
                 if handler:
@@ -155,6 +155,7 @@ class ModClient(Client):
 
     async def _handle_discovery_v2(self, data: dict):
         """Handle discovery with map_id + position (server resolves zone names)."""
+        logger.debug("[Discover] Received: %s", data)
         source_map_id = data.get("source_map_id")
         source_pos = data.get("source_pos", {})
         source_play_region_id = data.get("source_play_region_id")
@@ -284,12 +285,13 @@ class ModClient(Client):
                         )
                         all_propagated.extend(propagated)
                     else:
-                        logger.warning(
-                            "[MOD] No key-based match (tried %d x %d combinations)",
-                            len(source_candidates[:15]),
-                            len(target_candidates[:15]),
+                        logger.debug(
+                            "[MOD] No key-based match, falling back to display name matching",
                         )
-                else:
+                        # Fall through to display name matching below
+                        has_zone_keys = False
+
+                if not has_zone_keys:
                     # Fallback: use display name matching (legacy behavior)
                     matches = find_all_matching_zone_pairs(
                         game.zone_pairs,
@@ -329,6 +331,10 @@ class ModClient(Client):
             # Expire cached objects to ensure fresh data after propagate_discovery
             db.expire_all()
 
+            # Refetch game to get fresh data after expire_all()
+            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            game = result.scalar_one_or_none()
+
             # Compute exits from the destination zone
             exits = []
             destination_zone = None
@@ -345,19 +351,12 @@ class ModClient(Client):
 
                 logger.info("[MOD] Player arrived at zone: %s", destination_zone)
 
-                # Refetch game to get updated discovered_links
-                result = await db.execute(select(Game).where(Game.id == self.game_id))
-                game = result.scalar_one_or_none()
-
-                if game:
-                    exits = compute_zone_exits(
-                        game.zone_pairs or [],
-                        game.discovered_links or [],
-                        destination_zone,
-                    )
-                    logger.info(
-                        "[MOD] Computed %d exits from zone '%s'", len(exits), destination_zone
-                    )
+                exits = compute_zone_exits(
+                    game.zone_pairs or [],
+                    game.discovered_links or [],
+                    destination_zone,
+                )
+                logger.info("[MOD] Computed %d exits from zone '%s'", len(exits), destination_zone)
 
             # Compute discovery stats
             stats = {"discovered": 0, "total": 0, "percent": 0}
