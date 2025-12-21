@@ -1403,6 +1403,7 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
 
     let changed = false;
     let newlyDiscoveredTarget = null;
+    const newlyDiscoveredZones = [];  // Track all newly discovered zones
 
     // If server sent full discovered_links, use it directly (server is source of truth)
     if (discoveredLinks && Array.isArray(discoveredLinks)) {
@@ -1418,6 +1419,13 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
             // Store link UUID
             if (link.link_id) {
                 newDiscoveredLinks.add(link.link_id);
+            }
+        }
+
+        // Find newly discovered zones (zones in new state but not in old state)
+        for (const node of newDiscovered) {
+            if (!explorationState.discovered.has(node)) {
+                newlyDiscoveredZones.push(node);
             }
         }
 
@@ -1450,10 +1458,12 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
 
             if (!explorationState.discovered.has(source)) {
                 explorationState.discovered.add(source);
+                newlyDiscoveredZones.push(source);
                 changed = true;
             }
             if (!explorationState.discovered.has(target)) {
                 explorationState.discovered.add(target);
+                newlyDiscoveredZones.push(target);
                 changed = true;
                 // First newly discovered target
                 if (!newlyDiscoveredTarget) {
@@ -1490,7 +1500,11 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
 
         // Re-render graph to show newly discovered areas
         State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: newlyDiscoveredTarget });
-        Toast.show('New area discovered!');
+
+        // Show toast for each newly discovered zone
+        for (const zone of newlyDiscoveredZones) {
+            Toast.show(`Discovered: ${zone}`, { type: 'info' });
+        }
     }
 }
 
