@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::emevd::{build_entity_mapping, EntityInfo, EntityMapping};
+use super::emevd::{build_entity_mapping, EntityMapping};
 use super::spoiler_validator::{validate_spoiler_content, SpoilerHeader, ValidationError};
 
 // =============================================================================
@@ -20,7 +20,6 @@ pub enum RandoFolderError {
     MissingEventDir,
     MissingSpoilerLogsDir,
     NoSpoilerLogFound,
-    MultipleSpoilerLogs(Vec<String>),
     SpoilerValidation(ValidationError),
     EmevdParseFailed(String),
     ReadError(String),
@@ -35,9 +34,6 @@ impl std::fmt::Display for RandoFolderError {
                 write!(f, "Missing 'spoiler_logs' directory")
             }
             RandoFolderError::NoSpoilerLogFound => write!(f, "No spoiler log found"),
-            RandoFolderError::MultipleSpoilerLogs(files) => {
-                write!(f, "Multiple spoiler logs found: {}", files.join(", "))
-            }
             RandoFolderError::SpoilerValidation(e) => write!(f, "Spoiler validation: {}", e),
             RandoFolderError::EmevdParseFailed(msg) => write!(f, "EMEVD parsing: {}", msg),
             RandoFolderError::ReadError(msg) => write!(f, "Read error: {}", msg),
@@ -52,7 +48,6 @@ impl std::fmt::Display for RandoFolderError {
 /// Result of validating a randomizer folder
 #[derive(Debug, Clone)]
 pub struct ValidatedRandoFolder {
-    pub folder_path: PathBuf,
     pub spoiler_path: PathBuf,
     pub event_path: PathBuf,
     pub header: SpoilerHeader,
@@ -63,7 +58,6 @@ pub struct ValidatedRandoFolder {
 pub struct RandoFolderData {
     pub spoiler_content: String,
     pub entity_mapping: EntityMapping,
-    pub header: SpoilerHeader,
 }
 
 // =============================================================================
@@ -113,7 +107,6 @@ pub fn validate_rando_folder(folder: &Path) -> Result<ValidatedRandoFolder, Rand
     let header = validate_spoiler_content(&content).map_err(RandoFolderError::SpoilerValidation)?;
 
     Ok(ValidatedRandoFolder {
-        folder_path: folder.to_path_buf(),
         spoiler_path,
         event_path,
         header,
@@ -161,7 +154,6 @@ pub fn extract_rando_data(
     Ok(RandoFolderData {
         spoiler_content,
         entity_mapping,
-        header: validated.header.clone(),
     })
 }
 

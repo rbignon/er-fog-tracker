@@ -54,8 +54,6 @@ pub enum OutgoingMessage {
         /// Destination entity ID (755890xxx for fog rando warps, enables direct lookup)
         destination_entity_id: u32,
     },
-    /// Send a debug log message
-    DebugLog { message: String },
     /// Respond to server ping
     Pong,
     /// Shutdown the connection
@@ -131,9 +129,6 @@ enum ServerMessage {
         warp_type: String,
         /// Destination entity ID (755890xxx for fog rando warps)
         destination_entity_id: u32,
-    },
-    DebugLog {
-        message: String,
     },
     Pong,
 }
@@ -335,15 +330,6 @@ impl WebSocketClient {
     pub fn is_connected(&self) -> bool {
         self.current_status == ConnectionStatus::Connected
     }
-
-    /// Send a debug log message to the server
-    pub fn send_debug_log(&self, message: &str) {
-        if let Some(tx) = &self.tx {
-            let _ = tx.try_send(OutgoingMessage::DebugLog {
-                message: message.to_string(),
-            });
-        }
-    }
 }
 
 impl Drop for WebSocketClient {
@@ -534,16 +520,6 @@ fn message_loop(
                     target_play_region_id,
                     warp_type: warp_type.clone(),
                     destination_entity_id,
-                };
-                let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
-                socket
-                    .send(Message::Text(json))
-                    .map_err(|e| e.to_string())?;
-            }
-            Ok(OutgoingMessage::DebugLog { ref message }) => {
-                // Don't print to console, just send to server
-                let msg = ServerMessage::DebugLog {
-                    message: message.clone(),
                 };
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket

@@ -7,7 +7,7 @@
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use flate2::read::ZlibDecoder;
 use std::collections::HashMap;
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Cursor, Read};
 use thiserror::Error;
 
 // =============================================================================
@@ -236,8 +236,8 @@ pub fn parse_emevd(data: &[u8]) -> Result<Vec<FogWarp>, EmevdError> {
         });
     }
 
-    // Event header size
-    let event_header_size: u64 = if is_64bit { 48 } else { 28 };
+    // Event header size (unused but kept for documentation)
+    let _event_header_size: u64 = if is_64bit { 48 } else { 28 };
 
     // Read events and extract fog warps
     const FOGMOD_ENTITY_MIN: u32 = 755890000;

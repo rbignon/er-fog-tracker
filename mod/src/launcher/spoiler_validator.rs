@@ -1,9 +1,6 @@
 // Spoiler log header validation
 // Quick validation without full parsing (parsing is done server-side)
 
-use std::fs;
-use std::path::Path;
-
 #[derive(Debug, Clone)]
 #[allow(dead_code)] // options_line kept for potential future use
 pub struct SpoilerHeader {
@@ -13,8 +10,6 @@ pub struct SpoilerHeader {
 
 #[derive(Debug, Clone)]
 pub enum ValidationError {
-    FileNotFound,
-    ReadError(String),
     InvalidFormat(String),
     NoSeedFound,
 }
@@ -22,24 +17,10 @@ pub enum ValidationError {
 impl std::fmt::Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ValidationError::FileNotFound => write!(f, "File not found"),
-            ValidationError::ReadError(msg) => write!(f, "Failed to read file: {}", msg),
             ValidationError::InvalidFormat(msg) => write!(f, "Invalid format: {}", msg),
             ValidationError::NoSeedFound => write!(f, "No seed found in spoiler log header"),
         }
     }
-}
-
-/// Validate a spoiler log file and extract header info
-pub fn validate_spoiler_file(path: &Path) -> Result<SpoilerHeader, ValidationError> {
-    if !path.exists() {
-        return Err(ValidationError::FileNotFound);
-    }
-
-    let content =
-        fs::read_to_string(path).map_err(|e| ValidationError::ReadError(e.to_string()))?;
-
-    validate_spoiler_content(&content)
 }
 
 /// Validate spoiler log content and extract header info
@@ -93,15 +74,6 @@ fn extract_seed(line: &str) -> Option<u64> {
     }
 
     None
-}
-
-/// Read file content (for uploading to server)
-pub fn read_spoiler_file(path: &Path) -> Result<String, ValidationError> {
-    if !path.exists() {
-        return Err(ValidationError::FileNotFound);
-    }
-
-    fs::read_to_string(path).map_err(|e| ValidationError::ReadError(e.to_string()))
 }
 
 #[cfg(test)]

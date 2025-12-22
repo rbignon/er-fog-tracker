@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
+use std::time::Duration;
 
 use super::api_client::{ApiClient, ApiError, GameSummary, UserInfo};
 use super::config::LauncherConfig;
@@ -133,9 +134,9 @@ pub struct LauncherApp {
     #[nwg_events(OnWindowClose: [LauncherApp::on_exit])]
     window: nwg::Window,
 
-    #[nwg_control(parent: window, interval: 500, stopped: true)]
-    #[nwg_events(OnTimerTick: [LauncherApp::on_timer])]
-    timer: nwg::Timer,
+    #[nwg_control(parent: window, interval: Duration::from_millis(500), active: false)]
+    #[nwg_events(OnTick: [LauncherApp::on_timer])]
+    timer: nwg::AnimationTimer,
 
     // =========================================================================
     // Token Input Screen
