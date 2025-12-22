@@ -306,8 +306,9 @@ impl LauncherApp {
         // Hide New Game dialog initially
         self.newgame_window.set_visible(false);
 
-        // Disable Remove button until a game is selected
+        // Disable buttons until a game is selected
         self.games_remove_btn.set_enabled(false);
+        self.games_inject_btn.set_enabled(false);
 
         // Load saved config
         self.token_url_input.set_text(&data.config.server_url);
@@ -571,9 +572,11 @@ impl LauncherApp {
         if let Some(idx) = self.games_list.selected_item() {
             data.selected_game = data.games.get(idx).cloned();
             self.games_remove_btn.set_enabled(true);
+            self.games_inject_btn.set_enabled(true);
         } else {
             data.selected_game = None;
             self.games_remove_btn.set_enabled(false);
+            self.games_inject_btn.set_enabled(false);
         }
     }
 
