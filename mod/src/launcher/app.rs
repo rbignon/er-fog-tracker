@@ -546,6 +546,7 @@ impl LauncherApp {
         self.newgame_folder_display.set_text("No folder selected");
         self.newgame_validation.set_text("");
         self.newgame_error.set_text("");
+        self.newgame_create_btn.set_text("Create");
         self.newgame_create_btn.set_enabled(false);
 
         // Reset data
