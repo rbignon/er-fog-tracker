@@ -391,7 +391,16 @@ impl LauncherApp {
                 self.token_connect_btn.set_enabled(true);
             }
             TaskResult::GamesLoaded(Ok(games)) => {
-                // Update UI outside of borrow
+                // Update data FIRST (before UI operations that trigger on_game_selected)
+                {
+                    let mut data_ref = self.data.borrow_mut();
+                    if let Some(data) = data_ref.as_mut() {
+                        data.games = games.clone();
+                        data.selected_game = None;
+                    }
+                }
+                // Borrow released - now safe to update UI
+
                 self.games_list.clear();
 
                 for (i, game) in games.iter().enumerate() {
@@ -415,15 +424,6 @@ impl LauncherApp {
                     });
                 }
 
-                // Update data
-                {
-                    let mut data_ref = self.data.borrow_mut();
-                    if let Some(data) = data_ref.as_mut() {
-                        data.games = games;
-                        data.selected_game = None;
-                    }
-                }
-
                 self.games_remove_btn.set_enabled(false);
                 self.games_inject_btn.set_enabled(false);
                 self.games_status.set_text("");
@@ -432,11 +432,7 @@ impl LauncherApp {
                 self.games_status.set_text(&format!("Error: {}", e));
             }
             TaskResult::GameCreated(Ok((game, created))) => {
-                // Close dialog first
-                self.newgame_window.set_visible(false);
-                self.window.set_enabled(true);
-
-                // Reload games list
+                // Update data FIRST (before UI operations that might trigger events)
                 {
                     let mut data_ref = self.data.borrow_mut();
                     if let Some(data) = data_ref.as_mut() {
@@ -444,6 +440,11 @@ impl LauncherApp {
                         data.load_games();
                     }
                 }
+                // Borrow released - now safe to do UI operations
+
+                // Close dialog
+                self.newgame_window.set_visible(false);
+                self.window.set_enabled(true);
 
                 let msg = if created {
                     "Game created!"
@@ -458,7 +459,7 @@ impl LauncherApp {
                 self.newgame_create_btn.set_enabled(true);
             }
             TaskResult::GameDeleted(Ok(())) => {
-                // Reload games list
+                // Update data and trigger reload
                 {
                     let mut data_ref = self.data.borrow_mut();
                     if let Some(data) = data_ref.as_mut() {
@@ -466,6 +467,7 @@ impl LauncherApp {
                         data.load_games();
                     }
                 }
+                // Borrow released - safe to update UI
                 self.games_status.set_text("Game removed");
             }
             TaskResult::GameDeleted(Err(e)) => {
