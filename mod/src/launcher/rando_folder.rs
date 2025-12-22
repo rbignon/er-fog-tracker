@@ -89,16 +89,15 @@ pub fn validate_rando_folder(folder: &Path) -> Result<ValidatedRandoFolder, Rand
         return Err(RandoFolderError::NoSpoilerLogFound);
     }
 
-    // If multiple files, try to find the most recent or ask user
-    let spoiler_path = if spoiler_files.len() == 1 {
-        spoiler_files.into_iter().next().unwrap()
-    } else {
-        // For now, pick the first one alphabetically (usually the seed number)
-        // Could enhance this to pick by modification time
-        let mut sorted = spoiler_files;
-        sorted.sort();
-        sorted.into_iter().next().unwrap()
-    };
+    // Pick the most recently modified spoiler log
+    let spoiler_path = spoiler_files
+        .into_iter()
+        .max_by_key(|path| {
+            fs::metadata(path)
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+        })
+        .unwrap();
 
     // Validate spoiler content
     let content = fs::read_to_string(&spoiler_path)
