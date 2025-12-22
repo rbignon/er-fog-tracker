@@ -11,7 +11,9 @@
 mod api_client;
 mod app;
 mod config;
+mod emevd;
 mod process_monitor;
+mod rando_folder;
 mod spoiler_validator;
 
 fn main() {
