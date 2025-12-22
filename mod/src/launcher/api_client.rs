@@ -182,6 +182,36 @@ impl ApiClient {
 
         Self::handle_response(response)
     }
+
+    /// Delete a game
+    pub fn delete_game(&self, game_id: &str) -> Result<(), ApiError> {
+        let url = format!("{}/api/mod/games/{}", self.base_url, game_id);
+
+        let response = self
+            .agent
+            .delete(&url)
+            .set("Authorization", &format!("Bearer {}", self.token))
+            .call();
+
+        match response {
+            Ok(_) => Ok(()),
+            Err(ureq::Error::Status(status, resp)) => {
+                let detail = resp
+                    .into_json::<ErrorResponse>()
+                    .map(|e| e.detail)
+                    .unwrap_or_else(|_| "Unknown error".to_string());
+
+                match status {
+                    401 => Err(ApiError::Unauthorized),
+                    404 => Err(ApiError::NotFound),
+                    429 => Err(ApiError::RateLimited(detail)),
+                    400 => Err(ApiError::BadRequest(detail)),
+                    _ => Err(ApiError::ServerError(detail)),
+                }
+            }
+            Err(ureq::Error::Transport(e)) => Err(ApiError::Network(e.to_string())),
+        }
+    }
 }
 
 impl GameSummary {

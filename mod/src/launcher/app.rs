@@ -39,6 +39,7 @@ enum TaskResult {
     TokenValidated(Result<UserInfo, ApiError>),
     GamesLoaded(Result<Vec<GameSummary>, ApiError>),
     GameCreated(Result<(GameSummary, bool), ApiError>),
+    GameDeleted(Result<(), ApiError>),
 }
 
 // =============================================================================
@@ -122,6 +123,17 @@ impl AppData {
             let _ = sender.send(TaskResult::GameCreated(result));
         });
     }
+
+    fn delete_game(&self, game_id: String) {
+        let url = self.config.server_url.clone();
+        let token = self.config.mod_token.clone().unwrap_or_default();
+        let sender = self.task_sender.clone();
+        thread::spawn(move || {
+            let client = ApiClient::new(&url, &token);
+            let result = client.delete_game(&game_id);
+            let _ = sender.send(TaskResult::GameDeleted(result));
+        });
+    }
 }
 
 // =============================================================================
@@ -183,6 +195,10 @@ pub struct LauncherApp {
     #[nwg_control(parent: window, text: "New Game", position: (20, 290), size: (100, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_new_game_click])]
     games_new_btn: nwg::Button,
+
+    #[nwg_control(parent: window, text: "Remove", position: (130, 290), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_remove_game_click])]
+    games_remove_btn: nwg::Button,
 
     #[nwg_control(parent: window, text: "Inject", position: (200, 350), size: (100, 40))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_inject_click])]
@@ -290,6 +306,9 @@ impl LauncherApp {
         // Hide New Game dialog initially
         self.newgame_window.set_visible(false);
 
+        // Disable Remove button until a game is selected
+        self.games_remove_btn.set_enabled(false);
+
         // Load saved config
         self.token_url_input.set_text(&data.config.server_url);
         if let Some(ref token) = data.config.mod_token {
@@ -386,6 +405,19 @@ impl LauncherApp {
                     self.newgame_create_btn.set_text("Create");
                     self.newgame_create_btn.set_enabled(data.rando_valid);
                 }
+                TaskResult::GameDeleted(Ok(())) => {
+                    // Clear selection and reload list
+                    data.selected_game = None;
+                    data.config.last_game_id = None;
+                    let _ = data.config.save();
+                    self.games_remove_btn.set_enabled(false);
+                    self.games_status.set_text("");
+                    data.load_games();
+                }
+                TaskResult::GameDeleted(Err(e)) => {
+                    self.games_status.set_text(&format!("Error: {}", e));
+                    self.games_remove_btn.set_enabled(true);
+                }
             }
         }
 
@@ -460,6 +492,7 @@ impl LauncherApp {
         self.games_list_label.set_visible(show_games);
         self.games_list.set_visible(show_games);
         self.games_new_btn.set_visible(show_games);
+        self.games_remove_btn.set_visible(show_games);
         self.games_inject_btn.set_visible(show_games);
         self.games_status.set_visible(show_games);
 
@@ -537,6 +570,10 @@ impl LauncherApp {
 
         if let Some(idx) = self.games_list.selected_item() {
             data.selected_game = data.games.get(idx).cloned();
+            self.games_remove_btn.set_enabled(true);
+        } else {
+            data.selected_game = None;
+            self.games_remove_btn.set_enabled(false);
         }
     }
 
@@ -561,6 +598,50 @@ impl LauncherApp {
         self.window.set_enabled(false);
         self.newgame_window.set_visible(true);
         self.newgame_window.set_focus();
+    }
+
+    fn on_remove_game_click(&self) {
+        let data_ref = self.data.borrow();
+        let data = match data_ref.as_ref() {
+            Some(d) => d,
+            None => return,
+        };
+
+        let game = match &data.selected_game {
+            Some(g) => g,
+            None => return,
+        };
+
+        // Show confirmation dialog
+        let game_name = game.display_name();
+        let message = format!(
+            "Are you sure you want to remove \"{}\"?\n\nThis will delete all progress for this game.",
+            game_name
+        );
+
+        let result = nwg::modal_message(
+            &self.window,
+            &nwg::MessageParams {
+                title: "Confirm Removal",
+                content: &message,
+                buttons: nwg::MessageButtons::YesNo,
+                icons: nwg::MessageIcons::Warning,
+            },
+        );
+
+        if result == nwg::MessageChoice::Yes {
+            let game_id = game.id.clone();
+            drop(data_ref);
+
+            // Disable button during deletion
+            self.games_remove_btn.set_enabled(false);
+            self.games_status.set_text("Removing...");
+
+            let data_ref = self.data.borrow();
+            if let Some(data) = data_ref.as_ref() {
+                data.delete_game(game_id);
+            }
+        }
     }
 
     fn on_newgame_dialog_close(&self) {

@@ -188,3 +188,42 @@ async def create_game(
     await db.flush()
 
     return GameCreateResponse(game_id=game.id, created=True)
+
+
+@router.delete("/games/{game_id}")
+async def delete_game(
+    game_id: str,
+    user: User = Depends(get_current_user_by_mod_token),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft delete a game (called by launcher)."""
+    from uuid import UUID
+
+    try:
+        game_uuid = UUID(game_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid game ID format",
+        ) from None
+
+    result = await db.execute(
+        select(Game)
+        .where(Game.id == game_uuid)
+        .where(Game.user_id == user.id)
+        .where(Game.deleted_at.is_(None))
+    )
+    game = result.scalar_one_or_none()
+
+    if not game:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Game not found",
+        )
+
+    from datetime import UTC, datetime
+
+    game.deleted_at = datetime.now(UTC)
+    await db.flush()
+
+    return {"status": "ok"}
