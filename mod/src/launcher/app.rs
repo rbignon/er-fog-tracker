@@ -443,9 +443,10 @@ impl LauncherApp {
                 }
                 // Borrow released - now safe to do UI operations
 
-                // Close dialog
+                // Close dialog and bring main window to foreground
                 self.newgame_window.set_visible(false);
                 self.window.set_enabled(true);
+                self.window.set_focus();
 
                 let msg = if created {
                     "Game created!"
