@@ -368,20 +368,18 @@ impl LauncherApp {
                     self.games_status.set_text(&format!("Error: {}", e));
                 }
                 TaskResult::GameCreated(Ok((game, _))) => {
-                    // Close dialog first
+                    // Close dialog
                     self.newgame_window.set_visible(false);
                     self.window.set_enabled(true);
 
+                    // Save game id for pre-selection
                     data.config.last_game_id = Some(game.id.clone());
                     let _ = data.config.save();
-                    data.selected_game = Some(game.clone());
-                    self.waiting_game_label.set_text(&format!(
-                        "{} (Seed: {})",
-                        game.display_name(),
-                        game.seed
-                    ));
-                    data.current_screen = AppScreen::WaitingForGame;
-                    self.show_screen(AppScreen::WaitingForGame);
+
+                    // Return to game selection and reload list
+                    data.current_screen = AppScreen::GameSelection;
+                    self.show_screen(AppScreen::GameSelection);
+                    data.load_games(); // Will auto-select via last_game_id
                 }
                 TaskResult::GameCreated(Err(e)) => {
                     self.newgame_error.set_text(&format!("Error: {}", e));
@@ -732,7 +730,7 @@ impl LauncherApp {
                 .server_url
                 .replace("wss://", "https://")
                 .replace("ws://", "http://");
-            let game_url = format!("{}/games/{}", http_url.trim_end_matches('/'), game.id);
+            let game_url = format!("{}/play/{}", http_url.trim_end_matches('/'), game.id);
 
             // Open URL in default browser
             let _ = std::process::Command::new("cmd")
