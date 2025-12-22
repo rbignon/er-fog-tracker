@@ -340,142 +340,249 @@ impl LauncherApp {
     }
 
     fn on_timer(&self) {
-        let mut data_ref = self.data.borrow_mut();
-        let data = match data_ref.as_mut() {
-            Some(d) => d,
-            None => return,
+        // Collect all pending results first to minimize borrow duration
+        let results: Vec<TaskResult> = {
+            let data_ref = self.data.borrow();
+            let data = match data_ref.as_ref() {
+                Some(d) => d,
+                None => return,
+            };
+            data.task_receiver.try_iter().collect()
         };
 
-        // Process async task results
-        while let Ok(result) = data.task_receiver.try_recv() {
-            match result {
-                TaskResult::TokenValidated(Ok(user)) => {
+        // Process each result with fresh borrows
+        for result in results {
+            self.process_task_result(result);
+        }
+
+        // Poll process monitor (with fresh borrow)
+        self.poll_process_monitor();
+    }
+
+    fn process_task_result(&self, result: TaskResult) {
+        match result {
+            TaskResult::TokenValidated(Ok(user)) => {
+                // Save config and transition to game selection
+                {
+                    let mut data_ref = self.data.borrow_mut();
+                    let data = match data_ref.as_mut() {
+                        Some(d) => d,
+                        None => return,
+                    };
+
                     data.config.server_url = self.token_url_input.text();
                     data.config.mod_token = Some(self.token_input.text());
                     let _ = data.config.save();
+
                     data.user = Some(user.clone());
-
-                    let display = user.display_name.as_ref().unwrap_or(&user.username);
-                    self.games_user_label
-                        .set_text(&format!("Connected as: {}", display));
-
                     data.current_screen = AppScreen::GameSelection;
-                    self.show_screen(AppScreen::GameSelection);
                     data.load_games();
                 }
-                TaskResult::TokenValidated(Err(e)) => {
-                    self.token_error.set_text(&format!("Error: {}", e));
-                    self.token_connect_btn.set_text("Connect");
-                    self.token_connect_btn.set_enabled(true);
-                }
-                TaskResult::GamesLoaded(Ok(games)) => {
-                    data.games = games.clone();
-                    self.games_list.clear();
-                    for game in &games {
-                        let name = game.display_name();
-                        let seed = game.seed.to_string();
-                        let progress = game.progress_text();
-                        self.games_list.insert_items_row(
-                            None,
-                            &[name.as_str(), seed.as_str(), progress.as_str()],
-                        );
-                    }
-                    // Pre-select last game
-                    if let Some(ref last_id) = data.config.last_game_id {
-                        if let Some(idx) = games.iter().position(|g| &g.id == last_id) {
-                            self.games_list.select_item(idx, true);
-                            data.selected_game = games.get(idx).cloned();
-                        }
-                    }
-                }
-                TaskResult::GamesLoaded(Err(e)) => {
-                    self.games_status.set_text(&format!("Error: {}", e));
-                }
-                TaskResult::GameCreated(Ok((game, _))) => {
-                    // Close dialog
-                    self.newgame_window.set_visible(false);
-                    self.window.set_enabled(true);
 
-                    // Save game id for pre-selection
-                    data.config.last_game_id = Some(game.id.clone());
-                    let _ = data.config.save();
-
-                    // Return to game selection and reload list
-                    data.current_screen = AppScreen::GameSelection;
-                    self.show_screen(AppScreen::GameSelection);
-                    data.load_games(); // Will auto-select via last_game_id
-                }
-                TaskResult::GameCreated(Err(e)) => {
-                    self.newgame_error.set_text(&format!("Error: {}", e));
-                    self.newgame_create_btn.set_text("Create");
-                    self.newgame_create_btn.set_enabled(data.rando_valid);
-                }
-                TaskResult::GameDeleted(Ok(())) => {
-                    // Clear selection and reload list
-                    data.selected_game = None;
-                    data.config.last_game_id = None;
-                    let _ = data.config.save();
-                    self.games_remove_btn.set_enabled(false);
-                    self.games_status.set_text("");
-                    data.load_games();
-                }
-                TaskResult::GameDeleted(Err(e)) => {
-                    self.games_status.set_text(&format!("Error: {}", e));
-                    self.games_remove_btn.set_enabled(true);
-                }
+                self.games_user_label
+                    .set_text(&format!("Connected as: {}", user.username));
+                self.token_connect_btn.set_text("Connect");
+                self.token_connect_btn.set_enabled(true);
+                self.show_screen(AppScreen::GameSelection);
             }
-        }
+            TaskResult::TokenValidated(Err(e)) => {
+                self.token_error.set_text(&format!("Error: {}", e));
+                self.token_connect_btn.set_text("Connect");
+                self.token_connect_btn.set_enabled(true);
+            }
+            TaskResult::GamesLoaded(Ok(games)) => {
+                // Update UI outside of borrow
+                self.games_list.clear();
 
-        // Poll process monitor
-        if data.current_screen == AppScreen::WaitingForGame
-            || data.current_screen == AppScreen::Injected
-        {
-            if let Some(ref mut monitor) = data.process_monitor {
-                monitor.poll();
+                for (i, game) in games.iter().enumerate() {
+                    self.games_list.insert_item(nwg::InsertListViewItem {
+                        index: Some(i as i32),
+                        column_index: 0,
+                        text: Some(game.display_name()),
+                        image: None,
+                    });
+                    self.games_list.insert_item(nwg::InsertListViewItem {
+                        index: Some(i as i32),
+                        column_index: 1,
+                        text: Some(game.seed.to_string()),
+                        image: None,
+                    });
+                    self.games_list.insert_item(nwg::InsertListViewItem {
+                        index: Some(i as i32),
+                        column_index: 2,
+                        text: Some(game.progress_text()),
+                        image: None,
+                    });
+                }
 
-                let monitor_state = monitor.state().clone();
-                match (&data.current_screen, &monitor_state) {
-                    (AppScreen::WaitingForGame, ProcessState::Running)
-                        if monitor.ready_to_inject() =>
-                    {
-                        self.waiting_status.set_text("Injecting...");
-                        match monitor.inject() {
-                            Ok(()) => {
-                                data.current_screen = AppScreen::Injected;
-                                if let Some(ref game) = data.selected_game {
-                                    self.injected_game_label.set_text(&format!(
-                                        "{} (Seed: {})",
-                                        game.display_name(),
-                                        game.seed
-                                    ));
-                                }
-                                self.show_screen(AppScreen::Injected);
-                            }
-                            Err(e) => {
-                                self.waiting_status.set_text(&format!("Failed: {}", e));
-                            }
-                        }
+                // Update data
+                {
+                    let mut data_ref = self.data.borrow_mut();
+                    if let Some(data) = data_ref.as_mut() {
+                        data.games = games;
+                        data.selected_game = None;
                     }
-                    (AppScreen::WaitingForGame, ProcessState::Running) => {
-                        if let Some(remaining) = monitor.time_until_ready() {
-                            self.waiting_status.set_text(&format!(
-                                "Game detected! Injecting in {}s...",
-                                remaining.as_secs() + 1
-                            ));
-                        }
-                    }
-                    (AppScreen::WaitingForGame, ProcessState::NotRunning) => {
-                        self.waiting_status.set_text("Please launch the game");
-                    }
-                    (AppScreen::Injected, ProcessState::NotRunning) => {
-                        monitor.reset();
-                        data.current_screen = AppScreen::GameSelection;
-                        self.show_screen(AppScreen::GameSelection);
+                }
+
+                self.games_remove_btn.set_enabled(false);
+                self.games_inject_btn.set_enabled(false);
+                self.games_status.set_text("");
+            }
+            TaskResult::GamesLoaded(Err(e)) => {
+                self.games_status.set_text(&format!("Error: {}", e));
+            }
+            TaskResult::GameCreated(Ok((game, created))) => {
+                // Close dialog first
+                self.newgame_window.set_visible(false);
+                self.window.set_enabled(true);
+
+                // Reload games list
+                {
+                    let mut data_ref = self.data.borrow_mut();
+                    if let Some(data) = data_ref.as_mut() {
+                        data.selected_game = Some(game.clone());
                         data.load_games();
                     }
-                    _ => {}
+                }
+
+                let msg = if created {
+                    "Game created!"
+                } else {
+                    "Game already exists"
+                };
+                self.games_status.set_text(msg);
+            }
+            TaskResult::GameCreated(Err(e)) => {
+                self.newgame_error.set_text(&format!("Error: {}", e));
+                self.newgame_create_btn.set_text("Create");
+                self.newgame_create_btn.set_enabled(true);
+            }
+            TaskResult::GameDeleted(Ok(())) => {
+                // Reload games list
+                {
+                    let mut data_ref = self.data.borrow_mut();
+                    if let Some(data) = data_ref.as_mut() {
+                        data.selected_game = None;
+                        data.load_games();
+                    }
+                }
+                self.games_status.set_text("Game removed");
+            }
+            TaskResult::GameDeleted(Err(e)) => {
+                self.games_status.set_text(&format!("Error: {}", e));
+                self.games_remove_btn.set_enabled(true);
+            }
+        }
+    }
+
+    fn poll_process_monitor(&self) {
+        // Get current screen first
+        let current_screen = {
+            let data_ref = self.data.borrow();
+            match data_ref.as_ref() {
+                Some(d) => d.current_screen.clone(),
+                None => return,
+            }
+        };
+
+        if current_screen != AppScreen::WaitingForGame && current_screen != AppScreen::Injected {
+            return;
+        }
+
+        // Poll and get monitor state
+        let monitor_result = {
+            let mut data_ref = self.data.borrow_mut();
+            let data = match data_ref.as_mut() {
+                Some(d) => d,
+                None => return,
+            };
+
+            if let Some(ref mut monitor) = data.process_monitor {
+                monitor.poll();
+                let state = monitor.state().clone();
+                let ready = monitor.ready_to_inject();
+                let remaining = monitor.time_until_ready();
+                Some((state, ready, remaining))
+            } else {
+                None
+            }
+        };
+
+        let Some((monitor_state, ready_to_inject, time_remaining)) = monitor_result else {
+            return;
+        };
+
+        match (&current_screen, &monitor_state) {
+            (AppScreen::WaitingForGame, ProcessState::Running) if ready_to_inject => {
+                self.waiting_status.set_text("Injecting...");
+
+                // Try to inject
+                let inject_result = {
+                    let mut data_ref = self.data.borrow_mut();
+                    let data = match data_ref.as_mut() {
+                        Some(d) => d,
+                        None => return,
+                    };
+                    if let Some(ref mut monitor) = data.process_monitor {
+                        Some(monitor.inject())
+                    } else {
+                        None
+                    }
+                };
+
+                if let Some(Ok(())) = inject_result {
+                    // Get game info for display
+                    let game_display = {
+                        let data_ref = self.data.borrow();
+                        data_ref.as_ref().and_then(|d| {
+                            d.selected_game
+                                .as_ref()
+                                .map(|g| format!("{} (Seed: {})", g.display_name(), g.seed))
+                        })
+                    };
+
+                    if let Some(display) = game_display {
+                        self.injected_game_label.set_text(&display);
+                    }
+
+                    // Update screen
+                    {
+                        let mut data_ref = self.data.borrow_mut();
+                        if let Some(data) = data_ref.as_mut() {
+                            data.current_screen = AppScreen::Injected;
+                        }
+                    }
+                    self.show_screen(AppScreen::Injected);
+                } else if let Some(Err(e)) = inject_result {
+                    self.waiting_status.set_text(&format!("Failed: {}", e));
                 }
             }
+            (AppScreen::WaitingForGame, ProcessState::Running) => {
+                if let Some(remaining) = time_remaining {
+                    self.waiting_status.set_text(&format!(
+                        "Game detected! Injecting in {}s...",
+                        remaining.as_secs() + 1
+                    ));
+                }
+            }
+            (AppScreen::WaitingForGame, ProcessState::NotRunning) => {
+                self.waiting_status.set_text("Please launch the game");
+            }
+            (AppScreen::Injected, ProcessState::NotRunning) => {
+                // Reset monitor and go back to game selection
+                {
+                    let mut data_ref = self.data.borrow_mut();
+                    if let Some(data) = data_ref.as_mut() {
+                        if let Some(ref mut monitor) = data.process_monitor {
+                            monitor.reset();
+                        }
+                        data.current_screen = AppScreen::GameSelection;
+                        data.load_games();
+                    }
+                }
+                self.show_screen(AppScreen::GameSelection);
+            }
+            _ => {}
         }
     }
 
