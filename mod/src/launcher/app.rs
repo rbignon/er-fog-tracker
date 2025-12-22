@@ -200,6 +200,10 @@ pub struct LauncherApp {
     #[nwg_events(OnButtonClick: [LauncherApp::on_remove_game_click])]
     games_remove_btn: nwg::Button,
 
+    #[nwg_control(parent: window, text: "Dashboard", position: (380, 290), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_dashboard_click])]
+    games_dashboard_btn: nwg::Button,
+
     #[nwg_control(parent: window, text: "Inject", position: (200, 350), size: (100, 40))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_inject_click])]
     games_inject_btn: nwg::Button,
@@ -494,6 +498,7 @@ impl LauncherApp {
         self.games_list.set_visible(show_games);
         self.games_new_btn.set_visible(show_games);
         self.games_remove_btn.set_visible(show_games);
+        self.games_dashboard_btn.set_visible(show_games);
         self.games_inject_btn.set_visible(show_games);
         self.games_status.set_visible(show_games);
 
@@ -822,6 +827,27 @@ impl LauncherApp {
                 .args(["/c", "start", "", &game_url])
                 .spawn();
         }
+    }
+
+    fn on_dashboard_click(&self) {
+        let data_ref = self.data.borrow();
+        let data = match data_ref.as_ref() {
+            Some(d) => d,
+            None => return,
+        };
+
+        // Convert server URL: ws:// or wss:// -> http:// or https://
+        let http_url = data
+            .config
+            .server_url
+            .replace("wss://", "https://")
+            .replace("ws://", "http://");
+        let dashboard_url = format!("{}/dashboard", http_url.trim_end_matches('/'));
+
+        // Open URL in default browser
+        let _ = std::process::Command::new("cmd")
+            .args(["/c", "start", "", &dashboard_url])
+            .spawn();
     }
 }
 
