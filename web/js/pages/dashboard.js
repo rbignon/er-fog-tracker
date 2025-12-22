@@ -47,13 +47,8 @@ export function init() {
     if (e.target.id === 'new-game-modal') closeNewGameModal();
   });
 
-  // Mod config modal
-  document.getElementById('close-mod-config-modal').addEventListener('click', closeModConfigModal);
-  document.getElementById('close-mod-config-modal-btn').addEventListener('click', closeModConfigModal);
-  document.getElementById('copy-mod-config-btn').addEventListener('click', copyModConfig);
-  document.getElementById('mod-config-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'mod-config-modal') closeModConfigModal();
-  });
+  // Mod setup banner
+  initModSetupBanner();
 }
 
 /**
@@ -304,61 +299,141 @@ function escapeHtml(str) {
 }
 
 // =============================================================================
-// MOD CONFIG MODAL
+// MOD SETUP BANNER
 // =============================================================================
 
-/**
- * Generate the mod config TOML content for a game.
- */
-function generateModConfig(gameId) {
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const serverUrl = `${wsProtocol}//${window.location.host}`;
-  const modToken = currentUser?.modToken || '<your_mod_token>';
+const MOD_SETUP_COLLAPSED_KEY = 'modSetupCollapsed';
 
-  return `[server]
-enabled = true
-url = "${serverUrl}"
-mod_token = "${modToken}"
-game_id = "${gameId}"
-auto_reconnect = true`;
+/**
+ * Initialize the mod setup banner.
+ */
+function initModSetupBanner() {
+  const banner = document.getElementById('mod-setup-banner');
+  const toggle = document.getElementById('mod-setup-toggle');
+
+  if (!banner || !toggle) return;
+
+  // Restore collapsed state from localStorage
+  const isCollapsed = localStorage.getItem(MOD_SETUP_COLLAPSED_KEY) === 'true';
+  if (isCollapsed) {
+    banner.classList.add('collapsed');
+  }
+
+  // Toggle collapse on header click
+  toggle.addEventListener('click', () => {
+    banner.classList.toggle('collapsed');
+    const collapsed = banner.classList.contains('collapsed');
+    localStorage.setItem(MOD_SETUP_COLLAPSED_KEY, collapsed);
+  });
+
+  // Copy buttons
+  document.querySelectorAll('.btn-copy-field').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const targetId = btn.dataset.target;
+      const input = document.getElementById(targetId);
+      if (input) {
+        await copyToClipboard(input.value);
+        Toast.show('Copied to clipboard');
+      }
+    });
+  });
+
+  // Visibility toggle for token
+  document.querySelectorAll('.btn-toggle-visibility').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target;
+      const input = document.getElementById(targetId);
+      if (input) {
+        if (input.type === 'password') {
+          input.type = 'text';
+          btn.textContent = '🙈';
+        } else {
+          input.type = 'password';
+          btn.textContent = '👁';
+        }
+      }
+    });
+  });
+
+  // Regenerate token button
+  const regenerateBtn = document.getElementById('regenerate-token-btn');
+  if (regenerateBtn) {
+    regenerateBtn.addEventListener('click', regenerateModToken);
+  }
 }
 
 /**
- * Show the mod config modal for a specific game.
+ * Update the mod setup banner with user credentials.
  */
-function showModConfigModal(gameId) {
-  const modal = document.getElementById('mod-config-modal');
-  const content = document.getElementById('mod-config-content');
+function updateModSetupCredentials(user) {
+  const serverUrlInput = document.getElementById('mod-server-url');
+  const tokenInput = document.getElementById('mod-token-field');
 
-  content.textContent = generateModConfig(gameId);
-  modal.classList.remove('hidden');
+  if (serverUrlInput) {
+    // Use the current host with appropriate WebSocket protocol
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    serverUrlInput.value = `${wsProtocol}//${window.location.host}`;
+  }
+
+  if (tokenInput && user?.modToken) {
+    tokenInput.value = user.modToken;
+  }
 }
 
 /**
- * Close the mod config modal.
+ * Regenerate the mod token.
  */
-function closeModConfigModal() {
-  document.getElementById('mod-config-modal').classList.add('hidden');
-}
-
-/**
- * Copy the mod config to clipboard.
- */
-async function copyModConfig() {
-  const content = document.getElementById('mod-config-content').textContent;
+async function regenerateModToken() {
+  const btn = document.getElementById('regenerate-token-btn');
+  const originalText = btn.textContent;
 
   try {
-    await navigator.clipboard.writeText(content);
-    Toast.show('Config copied to clipboard');
+    btn.disabled = true;
+    btn.textContent = 'Regenerating...';
+
+    const response = await Api.regenerateModToken();
+
+    if (response.mod_token) {
+      // Update the token field
+      const tokenInput = document.getElementById('mod-token-field');
+      if (tokenInput) {
+        tokenInput.value = response.mod_token;
+      }
+
+      // Update cached user
+      if (currentUser) {
+        currentUser.modToken = response.mod_token;
+      }
+
+      // Update auth cache
+      Auth.updateCachedUser({ modToken: response.mod_token });
+
+      Toast.show('Token regenerated successfully');
+    }
   } catch (e) {
-    // Fallback
+    Toast.error(`Failed to regenerate token: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+/**
+ * Copy text to clipboard with fallback.
+ */
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    // Fallback for older browsers
     const textarea = document.createElement('textarea');
-    textarea.value = content;
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
     document.body.appendChild(textarea);
     textarea.select();
     document.execCommand('copy');
     document.body.removeChild(textarea);
-    Toast.show('Config copied to clipboard');
   }
 }
 
@@ -410,6 +485,9 @@ export async function handleRoute() {
   avatarEl.onerror = () => {
     avatarEl.src = defaultAvatar;
   };
+
+  // Update mod setup banner with credentials
+  updateModSetupCredentials(user);
 
   show();
   await loadGames();

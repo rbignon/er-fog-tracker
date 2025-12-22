@@ -333,42 +333,42 @@ body::before {
     color: #a0e8b0;
 }
 
-/* Mod button */
-#mod-btn {
-    background: rgba(70, 130, 180, 0.3);
-    border: 1px solid #4682b4;
-    color: #a0c8e8;
+/* Mod status indicator (non-clickable) */
+.mod-status {
+    background: rgba(90, 80, 64, 0.2);
+    border: 1px solid #5a5040;
+    color: #9a8d75;
     padding: 8px 14px;
     border-radius: 6px;
-    cursor: pointer;
     font-size: 0.85rem;
-    transition: all 0.2s;
-    position: relative;
     display: flex;
     align-items: center;
     gap: 6px;
+    cursor: default;
 }
 
-#mod-btn:hover {
-    background: rgba(70, 130, 180, 0.5);
-    border-color: #6090c0;
-    color: #c0e0ff;
-}
-
-/* Mod button connection indicator */
-.mod-btn-indicator {
+.mod-status-indicator {
     display: inline-block;
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #4a4a4a;
+    background: #4a4030;
     transition: all 0.3s;
 }
 
-.mod-btn-indicator.mod-connected {
+.mod-status.mod-connected {
+    background: rgba(74, 222, 128, 0.1);
+    border-color: #4ade80;
+}
+
+.mod-status.mod-connected .mod-status-indicator {
     background: #4ade80;
     box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
     animation: pulse 2s infinite;
+}
+
+.mod-status.mod-connected .mod-status-text {
+    color: #a0e8b0;
 }
 
 /* Stream modal */
@@ -419,7 +419,6 @@ body::before {
 .stream-modal-left > .btn-secondary {
     margin-top: auto;
     width: 100%;
-    padding: 10px 12px;
 }
 
 .stream-modal-right {
@@ -518,53 +517,6 @@ body::before {
     transition: all 0.2s;
 }
 
-/* Mod config modal */
-.mod-config-section {
-    margin-bottom: 16px;
-}
-
-.mod-config-section pre {
-    background: #0a0908;
-    border: 1px solid #3a3530;
-    border-radius: 6px;
-    padding: 16px;
-    margin: 0 0 12px 0;
-    color: #c4b998;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 0.85rem;
-    line-height: 1.5;
-    overflow-x: auto;
-    white-space: pre;
-}
-
-.mod-config-section .btn-copy {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 6px;
-    font-family: 'Cinzel', serif;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-#mod-config-modal .btn-secondary {
-    background: transparent;
-    border: 1px solid #5a5040;
-    color: #9a8d75;
-    padding: 10px 12px;
-    border-radius: 6px;
-    font-family: 'Cinzel', serif;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-#mod-config-modal .btn-secondary:hover {
-    border-color: #7a6d55;
-    color: #c4b998;
-    background: rgba(90, 80, 64, 0.2);
-}
-
 .stream-modal-content code {
     background: #0a0908;
     padding: 2px 6px;
@@ -574,9 +526,22 @@ body::before {
     color: #c9a227;
 }
 
+/* Base button styles */
+.btn-primary,
+.btn-secondary {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.1s;
+    text-decoration: none;
+    text-align: center;
+}
+
 .btn-primary {
     background: linear-gradient(135deg, #c9a227 0%, #8b7355 100%);
     border: none;
+    border-radius: 4px;
     color: #1a1a1a;
     font-weight: 600;
 }
@@ -589,12 +554,14 @@ body::before {
 .btn-secondary {
     background: transparent;
     border: 1px solid #5a5040;
+    border-radius: 2px;
     color: #9a8d75;
 }
 
 .btn-secondary:hover {
     border-color: #8a7050;
     color: #c4b998;
+    background: rgba(90, 80, 64, 0.2);
 }
 
 .btn-viewer {
@@ -1662,7 +1629,6 @@ marker path {
     padding: 10px;
     background: #0a0908;
     border: 1px solid #3a3530;
-    border-radius: 4px;
     color: #c9a227;
     font-size: 0.8rem;
     font-family: monospace;
@@ -1678,7 +1644,6 @@ marker path {
 
 .stream-url-section .btn-copy {
     width: 100%;
-    padding: 10px 12px;
 }
 
 /* OBS instructions */
@@ -1859,7 +1824,7 @@ marker path {
     #new-file-btn,
     #reset-exploration-btn,
     #stream-btn,
-    #mod-btn {
+    #mod-status {
         display: none !important;
     }
     
@@ -2180,20 +2145,13 @@ marker path {
 }
 
 .landing-actions .btn-secondary {
-    display: block;
     padding: 12px 32px;
-    font-family: 'Cinzel', serif;
     font-size: 0.95rem;
     font-weight: 500;
-    border-radius: 8px;
     letter-spacing: 0.05em;
-    text-decoration: none;
-    text-align: center;
-    transition: all 0.2s;
 }
 
 .landing-actions .btn-secondary:hover {
-    background: rgba(90, 80, 64, 0.3);
     transform: scale(1.02);
 }
 
@@ -2303,6 +2261,173 @@ marker path {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
+}
+
+/* Mod Setup Banner */
+.mod-setup-banner {
+    background: linear-gradient(145deg, #1a1815 0%, #12100d 100%);
+    border: 1px solid #4a4030;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.mod-setup-banner:hover {
+    border-color: #6a5d45;
+}
+
+.mod-setup-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.mod-setup-header:hover {
+    background: rgba(201, 162, 39, 0.08);
+}
+
+.mod-setup-icon {
+    font-size: 1.2rem;
+}
+
+.mod-setup-title {
+    flex: 1;
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    color: #c9a227;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.mod-setup-chevron {
+    color: #6a5d45;
+    font-size: 0.9rem;
+    transition: transform 0.3s;
+}
+
+.mod-setup-banner.collapsed .mod-setup-chevron {
+    transform: rotate(180deg);
+}
+
+.mod-setup-content {
+    max-height: 500px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    opacity: 1;
+    padding: 0 20px 20px 20px;
+    border-top: 1px solid #2a2520;
+}
+
+.mod-setup-banner.collapsed .mod-setup-content {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-color: transparent;
+}
+
+.mod-setup-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 16px;
+}
+
+.mod-setup-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.step-number {
+    color: #c9a227;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.step-text {
+    color: #9a8d75;
+    font-size: 0.95rem;
+}
+
+.btn-download {
+    margin-left: auto;
+}
+
+.mod-setup-credentials {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    margin-left: 28px;
+}
+
+@media (max-width: 700px) {
+    .mod-setup-credentials {
+        grid-template-columns: 1fr;
+        margin-left: 0;
+    }
+}
+
+.credential-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.credential-field label {
+    font-size: 0.85rem;
+    color: #7a6d55;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.credential-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+.credential-input-row input {
+    flex: 1;
+    padding: 10px 12px;
+    background: #0a0908;
+    border: 1px solid #3a3530;
+    color: #c9a227;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.credential-input-row input:focus {
+    outline: none;
+    border-color: #6a5d45;
+}
+
+.btn-icon {
+    background: transparent;
+    border: 1px solid #3a3530;
+    color: #9a8d75;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    border-color: #6a5d45;
+    background: rgba(90, 80, 64, 0.2);
+    color: #c4b998;
+}
+
+.btn-regenerate {
+    align-self: flex-start;
 }
 
 /* Games grid */
@@ -2527,7 +2652,6 @@ marker path {
     padding: 10px 12px;
     background: #0a0908;
     border: 1px solid #3a3530;
-    border-radius: 4px;
     color: #c4b998;
     font-family: inherit;
     font-size: 0.95rem;
@@ -2553,87 +2677,11 @@ marker path {
     margin-top: 20px;
 }
 
-.form-actions button {
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-family: 'Cinzel', serif;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
 
 .error-message {
     color: #c45a2c;
     font-size: 0.9rem;
     margin-top: 12px;
-}
-
-/* Mod settings section */
-.mod-settings-section {
-    background: linear-gradient(145deg, #1a1815 0%, #12100d 100%);
-    border: 1px solid #3a3530;
-    border-radius: 8px;
-    padding: 24px;
-    max-width: 500px;
-    margin: 30px auto 0;
-}
-
-.mod-settings-section h2 {
-    font-family: 'Cinzel', serif;
-    font-size: 1.2rem;
-    color: #c9a227;
-    margin-bottom: 12px;
-}
-
-.mod-settings-section .section-description {
-    font-size: 0.9rem;
-    color: #7a6d55;
-    margin-bottom: 20px;
-}
-
-.mod-token-container {
-    margin-bottom: 12px;
-}
-
-.mod-token-container label {
-    display: block;
-    font-size: 0.9rem;
-    color: #9a8d75;
-    margin-bottom: 8px;
-}
-
-.mod-token-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.mod-token-row input[type="text"] {
-    flex: 1;
-    padding: 10px 12px;
-    background: #0a0908;
-    border: 1px solid #3a3530;
-    border-radius: 4px;
-    color: #c4b998;
-    font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
-}
-
-.mod-token-row input[type="text"]:focus,
-.mod-token-row input[type="password"]:focus {
-    outline: none;
-    border-color: #6a5d45;
-}
-
-.mod-token-row input[type="password"] {
-    flex: 1;
-    padding: 10px 12px;
-    background: #0a0908;
-    border: 1px solid #3a3530;
-    border-radius: 4px;
-    color: #c4b998;
-    font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
 }
 
 .btn-icon {
@@ -2649,12 +2697,6 @@ marker path {
 
 .eye-icon.hidden {
     display: none;
-}
-
-.mod-token-hint {
-    font-size: 0.8rem;
-    color: #5a5040;
-    font-style: italic;
 }
 
 /* Drop zone in dashboard */
@@ -2806,7 +2848,6 @@ marker path {
     padding: 8px 12px;
     background: #0a0908;
     border: 1px solid #3a3530;
-    border-radius: 4px;
     color: #c4b998;
     font-family: inherit;
     font-size: 0.9rem;

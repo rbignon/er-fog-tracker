@@ -934,65 +934,16 @@ export function initStreamUI() {
 }
 
 /**
- * Initialize Mod UI (button and modal).
- */
-export function initModUI() {
-    const modModal = document.getElementById('mod-config-modal');
-    if (!modModal) {
-        setTimeout(initModUI, 50);
-        return;
-    }
-
-    const modBtn = document.getElementById('mod-btn');
-
-    // Open modal when clicking the Mod button
-    if (modBtn) {
-        modBtn.addEventListener('click', () => {
-            updateModConfig();
-            modModal.classList.remove('hidden');
-            modModal.classList.add('visible');
-        });
-    }
-}
-
-/**
- * Update the mod config content in the modal.
- */
-function updateModConfig() {
-    const content = document.getElementById('mod-config-content');
-    if (!content) return;
-
-    const user = Auth.getUser();
-    const gameId = State.getGameId();
-
-    if (!user || !gameId) {
-        content.textContent = '# Load a game first';
-        return;
-    }
-
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const serverUrl = `${wsProtocol}//${window.location.host}`;
-    const modToken = user.modToken || '<your_mod_token>';
-
-    content.textContent = `[server]
-enabled = true
-url = "${serverUrl}"
-mod_token = "${modToken}"
-game_id = "${gameId}"
-auto_reconnect = true`;
-}
-
-/**
- * Update the mod connection indicator on the Mod button.
+ * Update the mod connection status indicator.
  * @param {boolean} connected - Whether the mod is connected
  */
 export function updateModConnectionIndicator(connected) {
-    const indicator = document.querySelector('#mod-btn .mod-btn-indicator');
-    if (indicator) {
+    const modStatus = document.getElementById('mod-status');
+    if (modStatus) {
         if (connected) {
-            indicator.classList.add('mod-connected');
+            modStatus.classList.add('mod-connected');
         } else {
-            indicator.classList.remove('mod-connected');
+            modStatus.classList.remove('mod-connected');
         }
     }
 }

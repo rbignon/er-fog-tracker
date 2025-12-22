@@ -62,9 +62,9 @@ async function handlePlayRoute({ params, query }) {
   // Hide "Load New File" button (game already loaded from server)
   document.getElementById('new-file-btn').classList.add('hidden');
 
-  // Show Stream and Mod buttons (host can share OBS URL and configure mod)
+  // Show Stream button and Mod status indicator (host can share OBS URL)
   document.getElementById('stream-btn').classList.remove('hidden');
-  document.getElementById('mod-btn').classList.remove('hidden');
+  document.getElementById('mod-status').classList.remove('hidden');
 
   // Configure for online mode
   State.setBackendMode('online');
@@ -107,7 +107,7 @@ async function handleViewerRoute({ params, query }) {
     document.getElementById('header-back-link').classList.add('hidden');
     document.getElementById('new-file-btn').classList.add('hidden');
     document.getElementById('stream-btn').classList.add('hidden');
-    document.getElementById('mod-btn').classList.add('hidden');
+    document.getElementById('mod-status').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
     document.getElementById('seed-info').classList.add('hidden');
 
@@ -124,7 +124,7 @@ async function handleViewerRoute({ params, query }) {
     // Hide host-only controls
     document.getElementById('new-file-btn').classList.add('hidden');
     document.getElementById('stream-btn').classList.add('hidden');
-    document.getElementById('mod-btn').classList.add('hidden');
+    document.getElementById('mod-status').classList.add('hidden');
 
     // Hide viewer counter (only for overlay)
     document.getElementById('viewer-discovery-counter')?.classList.add('hidden');
@@ -162,9 +162,9 @@ function handleOfflineGraphLoaded() {
   // Show "Load New File" button
   document.getElementById('new-file-btn').classList.remove('hidden');
 
-  // Hide stream and mod buttons (no streaming/mod in offline mode)
+  // Hide stream and mod status (no streaming/mod in offline mode)
   document.getElementById('stream-btn').classList.add('hidden');
-  document.getElementById('mod-btn').classList.add('hidden');
+  document.getElementById('mod-status').classList.add('hidden');
 
   // Configure for offline mode
   State.setBackendMode('offline');
@@ -390,9 +390,6 @@ async function init() {
 
   // Initialize stream modal (OBS URL generator)
   Sync.initStreamUI();
-
-  // Initialize mod modal (configuration)
-  Sync.initModUI();
 
   // Subscribe to graph render events
   State.subscribe('graphNeedsRender', ({ preservePositions, centerOnNodeId }) => {

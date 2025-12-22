@@ -63,6 +63,50 @@
         </header>
 
         <main class="dashboard-main">
+            <!-- Mod Setup Banner -->
+            <div id="mod-setup-banner" class="mod-setup-banner">
+                <div class="mod-setup-header" id="mod-setup-toggle">
+                    <span class="mod-setup-title">Automatic Tracking with the In-Game Mod</span>
+                    <span class="mod-setup-chevron" id="mod-setup-chevron">▲</span>
+                </div>
+                <div class="mod-setup-content" id="mod-setup-content">
+                    <div class="mod-setup-steps">
+                        <div class="mod-setup-step">
+                            <span class="step-number">①</span>
+                            <span class="step-text">Download the launcher</span>
+                            <a href="https://github.com/rbignon/er-fog-tracker/releases" target="_blank" class="btn-primary btn-download">
+                                Download for Windows
+                            </a>
+                        </div>
+                        <div class="mod-setup-step">
+                            <span class="step-number">②</span>
+                            <span class="step-text">Configure the launcher with these credentials:</span>
+                        </div>
+                        <div class="mod-setup-credentials">
+                            <div class="credential-field">
+                                <label>Server URL</label>
+                                <div class="credential-input-row">
+                                    <input type="text" id="mod-server-url" readonly>
+                                    <button class="btn-icon btn-copy-field" data-target="mod-server-url" title="Copy">📋</button>
+                                </div>
+                            </div>
+                            <div class="credential-field">
+                                <label>Your Token</label>
+                                <div class="credential-input-row">
+                                    <input type="password" id="mod-token-field" readonly>
+                                    <button class="btn-icon btn-toggle-visibility" data-target="mod-token-field" title="Show/Hide">👁</button>
+                                    <button class="btn-icon btn-copy-field" data-target="mod-token-field" title="Copy">📋</button>
+                                </div>
+                                <button id="regenerate-token-btn" class="btn-secondary btn-small btn-regenerate">Regenerate token</button>
+                            </div>
+                        </div>
+                        <div class="mod-setup-step">
+                            <span class="step-number">③</span>
+                            <span class="step-text">Select or create a game in the launcher — it will sync automatically!</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div id="games-list" class="games-grid">
                 <!-- Game cards populated dynamically, including placeholder card -->
             </div>
@@ -177,9 +221,10 @@
                     <div id="search-dropdown"></div>
                 </div>
                 <div id="controls-right">
-                    <button id="mod-btn" class="hidden" title="Mod configuration">
-                        <span class="mod-btn-indicator"></span>Mod
-                    </button>
+                    <div id="mod-status" class="mod-status hidden" title="Mod connection status">
+                        <span class="mod-status-indicator"></span>
+                        <span class="mod-status-text">Mod</span>
+                    </div>
                     <button id="stream-btn" title="Share viewer URL for OBS">Stream</button>
                     <button id="new-file-btn">Load New File</button>
                 </div>
@@ -276,22 +321,6 @@
             <div class="counter-progress">
                 <div id="viewer-progress-bar" class="counter-progress-fill"></div>
             </div>
-        </div>
-    </div>
-
-    <!-- =========================================================================
-         Mod Config Modal
-         ========================================================================= -->
-    <div id="mod-config-modal" class="modal hidden">
-        <div class="stream-modal-content">
-            <button id="close-mod-config-modal" class="modal-close-btn">&times;</button>
-            <h3>Mod Configuration</h3>
-            <p>Copy this configuration to your <code>fog_rando_tracker.toml</code> file:</p>
-            <div class="mod-config-section">
-                <pre id="mod-config-content"></pre>
-                <button id="copy-mod-config-btn" class="btn-secondary btn-copy">Copy Config</button>
-            </div>
-            <button id="close-mod-config-modal-btn" class="btn-secondary" style="width: 100%; margin-top: 16px;">Close</button>
         </div>
     </div>
 
