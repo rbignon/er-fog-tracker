@@ -746,30 +746,41 @@ impl LauncherApp {
     }
 
     fn on_newgame_create_click(&self) {
-        let data_ref = self.data.borrow();
-        let data = match data_ref.as_ref() {
-            Some(d) => d,
-            None => return,
+        // Extract data and release borrow quickly to avoid conflict with timer
+        let result: Result<RandoFolderData, String> = {
+            let data_ref = self.data.borrow();
+            let data = match data_ref.as_ref() {
+                Some(d) => d,
+                None => return,
+            };
+
+            if !data.rando_valid {
+                return;
+            }
+
+            match &data.rando_folder {
+                Some(validated) => extract_rando_data(validated).map_err(|e| e.to_string()),
+                None => return,
+            }
         };
 
-        if !data.rando_valid {
-            return;
-        }
+        // Borrow released - safe to update UI and call create_game
+        match result {
+            Ok(rando_data) => {
+                let label = self.newgame_label_input.text();
+                let label_opt = if label.is_empty() { None } else { Some(label) };
 
-        if let Some(ref validated) = data.rando_folder {
-            match extract_rando_data(validated) {
-                Ok(rando_data) => {
-                    let label = self.newgame_label_input.text();
-                    let label_opt = if label.is_empty() { None } else { Some(label) };
+                self.newgame_create_btn.set_text("Creating...");
+                self.newgame_create_btn.set_enabled(false);
+                self.newgame_error.set_text("");
 
-                    self.newgame_create_btn.set_text("Creating...");
-                    self.newgame_create_btn.set_enabled(false);
-                    self.newgame_error.set_text("");
+                let data_ref = self.data.borrow();
+                if let Some(data) = data_ref.as_ref() {
                     data.create_game(rando_data, label_opt);
                 }
-                Err(e) => {
-                    self.newgame_error.set_text(&format!("Error: {}", e));
-                }
+            }
+            Err(e) => {
+                self.newgame_error.set_text(&format!("Error: {}", e));
             }
         }
     }
