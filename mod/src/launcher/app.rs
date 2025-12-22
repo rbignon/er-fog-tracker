@@ -231,35 +231,43 @@ pub struct LauncherApp {
     // =========================================================================
     // Waiting Screen
     // =========================================================================
-    #[nwg_control(parent: window, text: "Waiting for Elden Ring...", position: (20, 100), size: (460, 30))]
+    #[nwg_control(parent: window, text: "Waiting for Elden Ring...", position: (20, 60), size: (460, 30))]
     waiting_title: nwg::Label,
 
-    #[nwg_control(parent: window, text: "", position: (20, 140), size: (460, 25))]
+    #[nwg_control(parent: window, text: "", position: (20, 110), size: (460, 25))]
     waiting_game_label: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Please launch the game", position: (20, 180), size: (460, 25))]
+    #[nwg_control(parent: window, text: "Please launch the game", position: (20, 150), size: (460, 25))]
     waiting_status: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Cancel", position: (200, 250), size: (100, 35))]
+    #[nwg_control(parent: window, text: "Open in Browser", position: (20, 200), size: (140, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_open_game_browser_click])]
+    waiting_open_browser_btn: nwg::Button,
+
+    #[nwg_control(parent: window, text: "Cancel", position: (340, 200), size: (140, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_waiting_cancel_click])]
     waiting_cancel_btn: nwg::Button,
 
     // =========================================================================
     // Injected Screen
     // =========================================================================
-    #[nwg_control(parent: window, text: "Mod Active", position: (20, 80), size: (460, 30))]
+    #[nwg_control(parent: window, text: "Mod Active", position: (20, 50), size: (460, 30))]
     injected_title: nwg::Label,
 
-    #[nwg_control(parent: window, text: "", position: (20, 130), size: (460, 25))]
+    #[nwg_control(parent: window, text: "", position: (20, 95), size: (460, 25))]
     injected_game_label: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Press F9 in-game to toggle the overlay", position: (20, 180), size: (460, 25))]
+    #[nwg_control(parent: window, text: "Press F9 in-game to toggle the overlay", position: (20, 135), size: (460, 25))]
     injected_hint: nwg::Label,
 
-    #[nwg_control(parent: window, text: "", position: (20, 220), size: (460, 25))]
+    #[nwg_control(parent: window, text: "", position: (20, 175), size: (460, 25))]
     injected_status: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Back to Games", position: (200, 280), size: (100, 35))]
+    #[nwg_control(parent: window, text: "Open in Browser", position: (20, 220), size: (140, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_open_game_browser_click])]
+    injected_open_browser_btn: nwg::Button,
+
+    #[nwg_control(parent: window, text: "Back to Games", position: (340, 220), size: (140, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_injected_back_click])]
     injected_back_btn: nwg::Button,
 
@@ -462,6 +470,7 @@ impl LauncherApp {
         self.waiting_title.set_visible(show_waiting);
         self.waiting_game_label.set_visible(show_waiting);
         self.waiting_status.set_visible(show_waiting);
+        self.waiting_open_browser_btn.set_visible(show_waiting);
         self.waiting_cancel_btn.set_visible(show_waiting);
 
         // Injected screen controls
@@ -470,6 +479,7 @@ impl LauncherApp {
         self.injected_game_label.set_visible(show_injected);
         self.injected_hint.set_visible(show_injected);
         self.injected_status.set_visible(show_injected);
+        self.injected_open_browser_btn.set_visible(show_injected);
         self.injected_back_btn.set_visible(show_injected);
     }
 
@@ -706,6 +716,29 @@ impl LauncherApp {
         data.current_screen = AppScreen::GameSelection;
         self.show_screen(AppScreen::GameSelection);
         data.load_games();
+    }
+
+    fn on_open_game_browser_click(&self) {
+        let data_ref = self.data.borrow();
+        let data = match data_ref.as_ref() {
+            Some(d) => d,
+            None => return,
+        };
+
+        if let Some(ref game) = data.selected_game {
+            // Convert server URL: ws:// or wss:// -> http:// or https://
+            let http_url = data
+                .config
+                .server_url
+                .replace("wss://", "https://")
+                .replace("ws://", "http://");
+            let game_url = format!("{}/games/{}", http_url.trim_end_matches('/'), game.id);
+
+            // Open URL in default browser
+            let _ = std::process::Command::new("cmd")
+                .args(["/c", "start", "", &game_url])
+                .spawn();
+        }
     }
 }
 
