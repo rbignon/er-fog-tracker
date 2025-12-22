@@ -72,24 +72,10 @@ async def create_game(
             detail=f"Maximum games per user ({settings.max_games_per_user}) reached",
         )
 
-    # Check if game already exists
-    result = await db.execute(
-        select(Game)
-        .where(Game.user_id == user.id)
-        .where(Game.seed == data.seed)
-        .where(Game.run_id == data.run_id)
-        .where(Game.deleted_at.is_(None))
-    )
-    existing_game = result.scalar_one_or_none()
-
-    if existing_game:
-        return GameCreateResponse(game_id=existing_game.id, created=False)
-
     # Create new game
     game = Game(
         user_id=user.id,
         seed=data.seed,
-        run_id=data.run_id,
         label=data.label,
         zone_pairs=[zp.model_dump() for zp in data.zone_pairs],
         zones=[z.model_dump() for z in data.zones] if data.zones else None,
@@ -158,7 +144,6 @@ async def get_game(
     return GameFull(
         id=game.id,
         seed=game.seed,
-        run_id=game.run_id,
         label=game.label,
         zone_pairs=zone_pairs,
         zones=zones,
@@ -195,7 +180,6 @@ async def get_my_games(
             GameSummary(
                 id=game.id,
                 seed=game.seed,
-                run_id=game.run_id,
                 label=game.label,
                 discovery_count=stats["discovered"],
                 total_zones=stats["total"],
@@ -268,7 +252,6 @@ async def update_game(
     return GameSummary(
         id=game.id,
         seed=game.seed,
-        run_id=game.run_id,
         label=game.label,
         discovery_count=stats["discovered"],
         total_zones=stats["total"],

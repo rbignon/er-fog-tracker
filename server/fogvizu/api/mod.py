@@ -87,7 +87,6 @@ async def list_games(
             GameSummary(
                 id=game.id,
                 seed=game.seed,
-                run_id=game.run_id,
                 label=game.label,
                 discovery_count=stats["discovered"],
                 total_zones=stats["total"],
@@ -128,19 +127,6 @@ async def create_game(
             detail=f"Invalid spoiler log: {e}",
         ) from None
 
-    # Check if game already exists
-    result = await db.execute(
-        select(Game)
-        .where(Game.user_id == user.id)
-        .where(Game.seed == parsed.seed)
-        .where(Game.run_id == parsed.run_id)
-        .where(Game.deleted_at.is_(None))
-    )
-    existing_game = result.scalar_one_or_none()
-
-    if existing_game:
-        return GameCreateResponse(game_id=existing_game.id, created=False)
-
     # Enrich connections with zone_keys from fog.txt
     resolver = get_resolver()
     enriched_connections = enrich_connections_with_zone_keys(parsed.connections, resolver)
@@ -175,7 +161,6 @@ async def create_game(
     game = Game(
         user_id=user.id,
         seed=parsed.seed,
-        run_id=parsed.run_id,
         label=data.label,
         zone_pairs=zone_pairs,
         zones=zones,

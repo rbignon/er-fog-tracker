@@ -138,7 +138,6 @@ class ParseResult:
     """Result of parsing a spoiler log."""
 
     seed: int
-    run_id: str
     zones: list[ZoneInfo] = field(default_factory=list)
     connections: list[ConnectionInfo] = field(default_factory=list)
     options: str = ""
@@ -262,7 +261,7 @@ def parse_spoiler_log(text: str) -> ParseResult:
         text: The full spoiler log text content.
 
     Returns:
-        ParseResult containing seed, run_id, zones, and connections.
+        ParseResult containing seed, zones, and connections.
 
     Raises:
         SpoilerParseError: If the log format is invalid.
@@ -272,7 +271,7 @@ def parse_spoiler_log(text: str) -> ParseResult:
     if not lines:
         raise SpoilerParseError("Empty spoiler log")
 
-    # Extract seed and run_id from first line
+    # Extract seed from first line
     # Format: "Options and seed:12345 ..."
     first_line = lines[0].strip()
     seed_match = re.search(r"seed:(\d+)", first_line)
@@ -281,10 +280,6 @@ def parse_spoiler_log(text: str) -> ParseResult:
 
     seed = int(seed_match.group(1))
     options = first_line
-
-    # Generate run_id from options line (hash for uniqueness)
-    # This ensures different randomizer settings produce different run_ids
-    run_id = f"{seed}_{hash(options) & 0xFFFFFFFF:08x}"
 
     zones: dict[str, ZoneInfo] = {}
     connections: list[ConnectionInfo] = []
@@ -327,17 +322,16 @@ def parse_spoiler_log(text: str) -> ParseResult:
 
     return ParseResult(
         seed=seed,
-        run_id=run_id,
         zones=list(zones.values()),
         connections=connections,
         options=options,
     )
 
 
-def validate_spoiler_header(text: str) -> tuple[int, str]:
+def validate_spoiler_header(text: str) -> int:
     """
     Quick validation of spoiler log header only.
-    Returns (seed, run_id) if valid.
+    Returns seed if valid.
 
     Raises:
         SpoilerParseError: If the header is invalid.
@@ -351,10 +345,7 @@ def validate_spoiler_header(text: str) -> tuple[int, str]:
     if not seed_match:
         raise SpoilerParseError("Could not find seed in spoiler log header")
 
-    seed = int(seed_match.group(1))
-    run_id = f"{seed}_{hash(first_line) & 0xFFFFFFFF:08x}"
-
-    return seed, run_id
+    return int(seed_match.group(1))
 
 
 def enrich_connections_with_zone_keys(

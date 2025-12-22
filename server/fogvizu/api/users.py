@@ -63,7 +63,6 @@ async def get_user_games_public(
             GameSummary(
                 id=game.id,
                 seed=game.seed,
-                run_id=game.run_id,
                 label=game.label,
                 discovery_count=stats["discovered"],
                 total_zones=stats["total"],

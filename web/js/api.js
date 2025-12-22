@@ -42,15 +42,14 @@ async function apiFetch(path, options = {}) {
 
 /**
  * Create a new game.
- * @param {Object} data - { seed, runId, label?, zonePairs, zones? }
+ * @param {Object} data - { seed, label?, zonePairs, zones? }
  * @returns {Promise<{ gameId: string, created: boolean }>}
  */
-export async function createGame({ seed, runId, label, zonePairs, zones }) {
+export async function createGame({ seed, label, zonePairs, zones }) {
   return apiFetch('/api/games', {
     method: 'POST',
     body: JSON.stringify({
       seed,
-      run_id: runId,
       label: label || null,
       zone_pairs: zonePairs,
       zones: zones || null,

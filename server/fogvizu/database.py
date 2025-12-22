@@ -52,7 +52,6 @@ class Game(Base):
     id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     seed: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    run_id: Mapped[str] = mapped_column(String(100), nullable=False)
     label: Mapped[str | None] = mapped_column(String(200))
     zone_pairs: Mapped[list] = mapped_column(JSONB, nullable=False)
     zones: Mapped[list | None] = mapped_column(JSONB)  # Zone metadata (isBoss, scaling)
@@ -79,7 +78,6 @@ class Game(Base):
             "user_id",
             postgresql_where=(deleted_at.is_(None)),
         ),
-        Index("idx_games_unique_run", "user_id", "seed", "run_id", unique=True),
     )
 
 

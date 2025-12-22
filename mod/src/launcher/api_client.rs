@@ -51,7 +51,6 @@ pub struct UserInfo {
 pub struct GameSummary {
     pub id: String,
     pub seed: i64,
-    pub run_id: String,
     pub label: Option<String>,
     pub discovery_count: i32,
     pub total_zones: i32,

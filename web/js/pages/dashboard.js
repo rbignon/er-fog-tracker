@@ -132,7 +132,6 @@ async function createGame() {
   try {
     const response = await Api.createGame({
       seed: parsedData.seed,
-      runId: `web_${Date.now()}`,
       label: label || null,
       zonePairs,
       zones,

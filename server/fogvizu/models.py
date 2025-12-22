@@ -61,10 +61,9 @@ class UserMe(BaseModel):
 
 
 class GameCreate(BaseModel):
-    """Request body for creating a game (from mod)."""
+    """Request body for creating a game (from web dashboard)."""
 
     seed: int
-    run_id: str = Field(max_length=100)
     label: str | None = Field(default=None, max_length=200)
     zone_pairs: list[ZonePair]
     zones: list[Zone] | None = None
@@ -82,7 +81,6 @@ class GameSummary(BaseModel):
 
     id: UUID
     seed: int
-    run_id: str
     label: str | None
     discovery_count: int
     total_zones: int
@@ -113,7 +111,6 @@ class GameFull(BaseModel):
 
     id: UUID
     seed: int
-    run_id: str
     label: str | None
     zone_pairs: list[ZonePair]
     zones: list[Zone] | None = None
