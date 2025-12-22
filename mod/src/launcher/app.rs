@@ -379,8 +379,9 @@ impl LauncherApp {
                     data.load_games();
                 }
 
+                let display = user.display_name.as_ref().unwrap_or(&user.username);
                 self.games_user_label
-                    .set_text(&format!("Connected as: {}", user.username));
+                    .set_text(&format!("Connected as: {}", display));
                 self.token_connect_btn.set_text("Connect");
                 self.token_connect_btn.set_enabled(true);
                 self.show_screen(AppScreen::GameSelection);
