@@ -135,7 +135,7 @@ pub struct LauncherApp {
     window: nwg::Window,
 
     #[nwg_control(parent: window, interval: Duration::from_millis(500), active: false)]
-    #[nwg_events(OnTick: [LauncherApp::on_timer])]
+    #[nwg_events(OnTimerTick: [LauncherApp::on_timer])]
     timer: nwg::AnimationTimer,
 
     // =========================================================================
