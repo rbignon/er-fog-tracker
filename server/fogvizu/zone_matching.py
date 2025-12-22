@@ -307,6 +307,51 @@ def find_matching_zone_pair_by_keys(
     return None
 
 
+def find_all_matching_zone_pairs_by_keys(
+    zone_pairs: list[dict],
+    source_candidates: list[tuple[str, str]],
+    target_candidates: list[tuple[str, str]],
+    source_details: str | None = None,
+) -> list[tuple[str, str, dict]]:
+    """
+    Find ALL matching zone pairs using zone_keys from candidate lists.
+
+    Unlike find_matching_zone_pair_by_keys which returns the first match,
+    this returns all valid combinations. Used when we want to find all possible
+    matches and then pick the best one based on additional criteria.
+
+    Args:
+        zone_pairs: List of zone pairs from the spoiler log
+        source_candidates: List of (internal_key, display_name) for source
+        target_candidates: List of (internal_key, display_name) for target
+        source_details: Optional ASide/BSide text for disambiguation
+
+    Returns:
+        List of (source_display, target_display, zone_pair) tuples for all matches.
+        Deduplicated by zone_pair ID.
+    """
+    matches = []
+    seen_pair_ids = set()
+
+    for source_key, _source_display in source_candidates:
+        for target_key, _target_display in target_candidates:
+            pair = find_zone_pair_by_keys(zone_pairs, source_key, target_key, source_details)
+            if pair:
+                pair_id = pair.get("id")
+                if pair_id and pair_id not in seen_pair_ids:
+                    seen_pair_ids.add(pair_id)
+                    matches.append((pair["source"], pair["destination"], pair))
+                    logger.debug(
+                        "[MATCH] Found pair by keys: '%s' -> '%s' (keys: %s -> %s)",
+                        pair["source"],
+                        pair["destination"],
+                        source_key,
+                        target_key,
+                    )
+
+    return matches
+
+
 def find_matching_zone_pair(
     zone_pairs: list[dict],
     source_candidates: list[tuple[str, str]],
@@ -614,6 +659,54 @@ def find_path_prioritizing_discovered(
                 queue.append((dest, new_path))
 
     return []  # No path found
+
+
+def compute_backprop_cost(
+    zone_pairs: list[dict],
+    discovered_links: list[dict],
+    source_node: str,
+) -> int:
+    """
+    Compute the back-propagation cost to make source_node accessible from START.
+
+    The cost is the number of RANDOM (not preexisting) links that would need to be
+    back-propagated to create a path from START to source_node.
+
+    Preexisting links don't count because they represent vanilla connections that
+    are automatically discovered when reaching a zone.
+
+    Args:
+        zone_pairs: List of zone pairs from the spoiler log
+        discovered_links: Currently discovered links
+        source_node: The node we want to reach
+
+    Returns:
+        Number of random links needed. 0 if already accessible. -1 if unreachable.
+    """
+    # If already accessible, no back-propagation needed
+    if is_accessible_from_start(discovered_links, source_node, zone_pairs):
+        return 0
+
+    # Find path from START to source
+    path = find_path_prioritizing_discovered(zone_pairs, discovered_links, source_node)
+    if not path:
+        return -1  # Unreachable
+
+    # Build index to look up link type
+    zp_by_endpoints: dict[tuple[str, str], str] = {}
+    for zp in zone_pairs:
+        zp_by_endpoints[(zp["source"], zp["destination"])] = zp["type"]
+        # Also index reverse for bidirectional lookup
+        zp_by_endpoints[(zp["destination"], zp["source"])] = zp["type"]
+
+    # Count random links in path
+    random_count = 0
+    for src, dst in path:
+        link_type = zp_by_endpoints.get((src, dst))
+        if link_type == "random":
+            random_count += 1
+
+    return random_count
 
 
 def find_reachable_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -> set[str]:

@@ -18,10 +18,11 @@ from fogvizu.config import settings
 from fogvizu.database import Game, User, async_session
 from fogvizu.game_logic import find_all_matching_zone_pairs, propagate_discovery
 from fogvizu.zone_matching import (
+    compute_backprop_cost,
     compute_discovery_stats,
     compute_zone_exits,
     expand_discovered_links,
-    find_matching_zone_pair_by_keys,
+    find_all_matching_zone_pairs_by_keys,
 )
 from fogvizu.zone_resolver import get_resolver
 
@@ -347,23 +348,72 @@ class ModClient(Client):
 
                 if has_zone_keys:
                     # Use key-based matching (more precise)
-                    match = find_matching_zone_pair_by_keys(
+                    # Find ALL matches, then pick those with lowest back-propagation cost
+                    all_matches = find_all_matching_zone_pairs_by_keys(
                         game.zone_pairs,
                         source_candidates[:15],
                         target_candidates[:15],
                     )
-                    if match:
-                        source_display, target_display, _ = match
-                        logger.info(
-                            "[MOD] Discovered (by keys): '%s' -> '%s'",
-                            source_display,
-                            target_display,
-                        )
-                        resolved_links.append({"source": source_display, "target": target_display})
-                        propagated = await propagate_discovery(
-                            db, self.game_id, source_display, target_display, discovered_by="mod"
-                        )
-                        all_propagated.extend(propagated)
+                    if all_matches:
+                        logger.info("[MOD] Found %d candidate match(es) by keys", len(all_matches))
+
+                        # Calculate back-propagation cost for each match
+                        # Cost = number of random links needed to reach source from START
+                        matches_with_cost = []
+                        for source_display, target_display, pair in all_matches:
+                            cost = compute_backprop_cost(
+                                game.zone_pairs,
+                                game.discovered_links or [],
+                                source_display,
+                            )
+                            matches_with_cost.append((source_display, target_display, pair, cost))
+                            logger.debug(
+                                "[MOD] Match '%s' -> '%s': backprop cost = %d",
+                                source_display,
+                                target_display,
+                                cost,
+                            )
+
+                        # Sort by cost (ascending), -1 (unreachable) goes last
+                        matches_with_cost.sort(key=lambda x: (x[3] == -1, x[3]))
+
+                        # Get minimum cost (excluding unreachable)
+                        reachable = [m for m in matches_with_cost if m[3] >= 0]
+                        if reachable:
+                            min_cost = reachable[0][3]
+                            # Select all matches with minimum cost
+                            best_matches = [m for m in reachable if m[3] == min_cost]
+
+                            if len(best_matches) > 1:
+                                logger.info(
+                                    "[MOD] %d matches tied with cost %d, discovering all",
+                                    len(best_matches),
+                                    min_cost,
+                                )
+
+                            for source_display, target_display, _, cost in best_matches:
+                                logger.info(
+                                    "[MOD] Discovered (by keys, cost=%d): '%s' -> '%s'",
+                                    cost,
+                                    source_display,
+                                    target_display,
+                                )
+                                resolved_links.append(
+                                    {"source": source_display, "target": target_display}
+                                )
+                                propagated = await propagate_discovery(
+                                    db,
+                                    self.game_id,
+                                    source_display,
+                                    target_display,
+                                    discovered_by="mod",
+                                )
+                                all_propagated.extend(propagated)
+                        else:
+                            logger.warning(
+                                "[MOD] All %d matches are unreachable from START",
+                                len(all_matches),
+                            )
                     else:
                         logger.debug(
                             "[MOD] No key-based match, falling back to display name matching",
