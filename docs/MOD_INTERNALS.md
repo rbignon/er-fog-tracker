@@ -220,11 +220,46 @@ State transitions per teleport type:
                             └─────────────────────────┘
 ```
 
+## Entity IDs in FogMod
+
+FogMod uses entity IDs in range `755890000-755899999` for its spawn points. Each fog gate transition involves two entity IDs:
+
+### Destination Entity (dest_entity)
+
+The spawn point on the **destination side** of the fog gate. This is the entity ID used by the `WarpPlayer` instruction (2003:14) to teleport the player.
+
+- **Captured from**: `GameMan.initial_area_entity_id` when `warp_requested` becomes true
+- **Used for**: Zone resolution (map lookup via entity_mapping)
+
+### Source Entity (source_entity)
+
+The spawn point on the **source side** of the fog gate. This is the entity ID used by the `RotateCharacter` instruction (2004:14) to orient the player after teleportation, making them face back toward where they came from.
+
+- **Extracted from**: EMEVD files during launcher parsing
+- **Purpose**: The game uses this to know what direction the player was facing when entering the fog
+- **Relation to dest_entity**: For bidirectional fog gates, `source_entity` from map A is the `dest_entity` when warping FROM map A, while `dest_entity` from map A is the `source_entity` when warping TO map A
+
+```
+        Map A                           Map B
+    ┌───────────┐                   ┌───────────┐
+    │           │                   │           │
+    │  source_  │    fog gate       │  dest_    │
+    │  entity   │◄─────────────────►│  entity   │
+    │  (orient  │                   │  (warp    │
+    │   point)  │                   │   point)  │
+    │           │                   │           │
+    └───────────┘                   └───────────┘
+
+    When warping A→B:
+    - WarpPlayer uses dest_entity (in Map B)
+    - RotateCharacter uses source_entity (in Map A) to orient player
+
+    The reverse warp B→A would use the opposite entities.
+```
+
 ## Destination Entity Capture
 
-FogMod uses entity IDs in range `755890000-755899999` for warp destinations.
-
-The entity ID is captured when `warp_requested` transitions from false to true:
+The destination entity ID is captured when `warp_requested` transitions from false to true:
 
 ```rust
 if warp_requested && !self.was_warp_requested {

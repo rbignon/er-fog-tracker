@@ -283,6 +283,50 @@ The entity mapping from EMEVD parsing improves precision by providing exact map 
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Potential Uses for source_entity (Not Yet Implemented)
+
+The `source_entity` field is stored but not currently used server-side. It could enable:
+
+**1. Bidirectional Link Verification**
+
+Build a reverse index: `source_entity → dest_entity`. For bidirectional fog gates:
+- Entry A→B: `dest_entity=X, source_entity=Y`
+- Entry B→A: `dest_entity=Y, source_entity=X`
+
+If we find that X's source_entity (Y) appears as another entry's dest_entity, and that entry's source_entity is X, we've confirmed bidirectionality.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Entity Mapping (indexed by dest_entity)                     │
+├─────────────────────────────────────────────────────────────┤
+│ 755890100 → {source_map: A, dest_map: B, source_entity: 200}│
+│ 755890200 → {source_map: B, dest_map: A, source_entity: 100}│
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Reverse Index (source_entity → dest_entity)                 │
+├─────────────────────────────────────────────────────────────┤
+│ 755890200 → 755890100  (entry 1: source_entity points back) │
+│ 755890100 → 755890200  (entry 2: source_entity points back) │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Conclusion: 100 ↔ 200 are a bidirectional pair              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**2. Spoiler Log Validation**
+
+Cross-reference spoiler log zone pairs against entity_mapping pairs:
+- For each zone_pair (A → B), check if there's a matching (B → A) in entity_mapping
+- Flag inconsistencies between spoiler log and EMEVD data
+
+**3. One-Way Link Detection**
+
+If a dest_entity has no corresponding reverse entry (where its source_entity is another entry's dest_entity), the connection is likely one-way.
+
 ## Precision Summary
 
 | Strategy | Precision | When Available |
