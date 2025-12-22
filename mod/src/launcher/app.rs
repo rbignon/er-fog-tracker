@@ -26,7 +26,6 @@ use super::rando_folder::{
 pub enum AppScreen {
     TokenInput,
     GameSelection,
-    NewGame,
     WaitingForGame,
     Injected,
 }
@@ -192,40 +191,41 @@ pub struct LauncherApp {
     games_status: nwg::Label,
 
     // =========================================================================
-    // New Game Screen
+    // New Game Dialog (separate popup window)
     // =========================================================================
-    #[nwg_control(parent: window, text: "New Game", position: (20, 20), size: (460, 25))]
-    newgame_title: nwg::Label,
+    #[nwg_control(size: (420, 320), position: (350, 250), title: "New Game", flags: "WINDOW")]
+    #[nwg_events(OnWindowClose: [LauncherApp::on_newgame_dialog_close])]
+    newgame_window: nwg::Window,
 
-    #[nwg_control(parent: window, text: "Label (optional):", position: (20, 60), size: (460, 20))]
+    #[nwg_control(parent: newgame_window, text: "Label (optional):", position: (20, 20), size: (380, 20))]
     newgame_label_label: nwg::Label,
 
-    #[nwg_control(parent: window, text: "", position: (20, 85), size: (460, 25))]
+    #[nwg_control(parent: newgame_window, text: "", position: (20, 45), size: (380, 25))]
     newgame_label_input: nwg::TextInput,
 
-    #[nwg_control(parent: window, text: "Randomizer Folder:", position: (20, 125), size: (460, 20))]
+    #[nwg_control(parent: newgame_window, text: "Randomizer Folder:", position: (20, 90), size: (380, 20))]
     newgame_folder_label: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Browse...", position: (20, 150), size: (100, 30))]
+    #[nwg_control(parent: newgame_window, text: "Browse...", position: (20, 115), size: (100, 30))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_browse_folder_click])]
     newgame_browse_btn: nwg::Button,
 
-    #[nwg_control(parent: window, text: "No folder selected", position: (130, 157), size: (350, 20))]
+    #[nwg_control(parent: newgame_window, text: "No folder selected", position: (130, 122), size: (270, 20))]
     newgame_folder_display: nwg::Label,
 
-    #[nwg_control(parent: window, text: "", position: (20, 190), size: (460, 40))]
+    #[nwg_control(parent: newgame_window, text: "", position: (20, 160), size: (380, 40))]
     newgame_validation: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Cancel", position: (130, 270), size: (100, 35))]
+    #[nwg_control(parent: newgame_window, text: "", position: (20, 200), size: (380, 40))]
+    newgame_error: nwg::Label,
+
+    #[nwg_control(parent: newgame_window, text: "Cancel", position: (100, 250), size: (100, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_newgame_cancel_click])]
     newgame_cancel_btn: nwg::Button,
 
-    #[nwg_control(parent: window, text: "Create", position: (270, 270), size: (100, 35))]
+    #[nwg_control(parent: newgame_window, text: "Create", position: (220, 250), size: (100, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_newgame_create_click])]
     newgame_create_btn: nwg::Button,
-
-    #[nwg_control(parent: window, text: "", position: (20, 320), size: (460, 40))]
-    newgame_error: nwg::Label,
 
     // =========================================================================
     // Waiting Screen
@@ -277,6 +277,9 @@ impl LauncherApp {
         self.games_list.set_column_width(0, 180);
         self.games_list.set_column_width(1, 120);
         self.games_list.set_column_width(2, 120);
+
+        // Hide New Game dialog initially
+        self.newgame_window.set_visible(false);
 
         // Load saved config
         self.token_url_input.set_text(&data.config.server_url);
@@ -356,6 +359,10 @@ impl LauncherApp {
                     self.games_status.set_text(&format!("Error: {}", e));
                 }
                 TaskResult::GameCreated(Ok((game, _))) => {
+                    // Close dialog first
+                    self.newgame_window.set_visible(false);
+                    self.window.set_enabled(true);
+
                     data.config.last_game_id = Some(game.id.clone());
                     let _ = data.config.save();
                     data.selected_game = Some(game.clone());
@@ -449,19 +456,6 @@ impl LauncherApp {
         self.games_inject_btn.set_visible(show_games);
         self.games_status.set_visible(show_games);
 
-        // New game screen controls
-        let show_new = screen == AppScreen::NewGame;
-        self.newgame_title.set_visible(show_new);
-        self.newgame_label_label.set_visible(show_new);
-        self.newgame_label_input.set_visible(show_new);
-        self.newgame_folder_label.set_visible(show_new);
-        self.newgame_browse_btn.set_visible(show_new);
-        self.newgame_folder_display.set_visible(show_new);
-        self.newgame_validation.set_visible(show_new);
-        self.newgame_cancel_btn.set_visible(show_new);
-        self.newgame_create_btn.set_visible(show_new);
-        self.newgame_error.set_visible(show_new);
-
         // Waiting screen controls
         let show_waiting = screen == AppScreen::WaitingForGame;
         self.waiting_title.set_visible(show_waiting);
@@ -538,22 +532,35 @@ impl LauncherApp {
     }
 
     fn on_new_game_click(&self) {
-        let mut data_ref = self.data.borrow_mut();
-        let data = match data_ref.as_mut() {
-            Some(d) => d,
-            None => return,
-        };
-
-        data.rando_folder = None;
-        data.rando_valid = false;
-        data.current_screen = AppScreen::NewGame;
-
+        // Reset dialog state
         self.newgame_label_input.set_text("");
         self.newgame_folder_display.set_text("No folder selected");
         self.newgame_validation.set_text("");
         self.newgame_error.set_text("");
         self.newgame_create_btn.set_enabled(false);
-        self.show_screen(AppScreen::NewGame);
+
+        // Reset data
+        let mut data_ref = self.data.borrow_mut();
+        if let Some(data) = data_ref.as_mut() {
+            data.rando_folder = None;
+            data.rando_valid = false;
+        }
+        drop(data_ref);
+
+        // Show dialog modally (disable main window)
+        self.window.set_enabled(false);
+        self.newgame_window.set_visible(true);
+        self.newgame_window.set_focus();
+    }
+
+    fn on_newgame_dialog_close(&self) {
+        self.close_newgame_dialog();
+    }
+
+    fn close_newgame_dialog(&self) {
+        self.newgame_window.set_visible(false);
+        self.window.set_enabled(true);
+        self.window.set_focus();
     }
 
     fn on_inject_click(&self) {
@@ -594,7 +601,7 @@ impl LauncherApp {
             return;
         }
 
-        if folder_dialog.run(Some(&self.window)) {
+        if folder_dialog.run(Some(&self.newgame_window)) {
             if let Ok(path_str) = folder_dialog.get_selected_item() {
                 let path = PathBuf::from(path_str);
                 let validation = validate_rando_folder(&path);
@@ -637,14 +644,7 @@ impl LauncherApp {
     }
 
     fn on_newgame_cancel_click(&self) {
-        let mut data_ref = self.data.borrow_mut();
-        let data = match data_ref.as_mut() {
-            Some(d) => d,
-            None => return,
-        };
-
-        data.current_screen = AppScreen::GameSelection;
-        self.show_screen(AppScreen::GameSelection);
+        self.close_newgame_dialog();
     }
 
     fn on_newgame_create_click(&self) {
