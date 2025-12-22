@@ -609,19 +609,21 @@ impl LauncherApp {
     }
 
     fn on_remove_game_click(&self) {
-        let data_ref = self.data.borrow();
-        let data = match data_ref.as_ref() {
-            Some(d) => d,
-            None => return,
+        // Extract game info and release borrow BEFORE showing modal dialog
+        // (modal_message runs an event loop that may trigger on_timer which also borrows data)
+        let (game_id, game_name) = {
+            let data_ref = self.data.borrow();
+            let data = match data_ref.as_ref() {
+                Some(d) => d,
+                None => return,
+            };
+            match &data.selected_game {
+                Some(g) => (g.id.clone(), g.display_name()),
+                None => return,
+            }
         };
 
-        let game = match &data.selected_game {
-            Some(g) => g,
-            None => return,
-        };
-
-        // Show confirmation dialog
-        let game_name = game.display_name();
+        // Show confirmation dialog (borrow is released here)
         let message = format!(
             "Are you sure you want to remove \"{}\"?\n\nThis will delete all progress for this game.",
             game_name
@@ -638,9 +640,6 @@ impl LauncherApp {
         );
 
         if result == nwg::MessageChoice::Yes {
-            let game_id = game.id.clone();
-            drop(data_ref);
-
             // Disable button during deletion
             self.games_remove_btn.set_enabled(false);
             self.games_status.set_text("Removing...");
