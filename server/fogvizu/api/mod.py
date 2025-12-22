@@ -43,6 +43,10 @@ class ModGameCreate(BaseModel):
 
     spoiler_log: str = Field(description="Full spoiler log content")
     label: str | None = Field(default=None, max_length=200)
+    entity_mapping: dict | None = Field(
+        default=None,
+        description="Optional EMEVD entity mapping from launcher (dest_entity -> {source_map, dest_map, source_entity})",
+    )
 
 
 # =============================================================================
@@ -175,6 +179,7 @@ async def create_game(
         label=data.label,
         zone_pairs=zone_pairs,
         zones=zones,
+        entity_mapping=data.entity_mapping,
         discovered_links=[],
         node_positions={},
         tags={},

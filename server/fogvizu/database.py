@@ -56,6 +56,7 @@ class Game(Base):
     label: Mapped[str | None] = mapped_column(String(200))
     zone_pairs: Mapped[list] = mapped_column(JSONB, nullable=False)
     zones: Mapped[list | None] = mapped_column(JSONB)  # Zone metadata (isBoss, scaling)
+    entity_mapping: Mapped[dict | None] = mapped_column(JSONB)  # EMEVD entity -> zone mapping
 
     # JSONB state columns
     discovered_links: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)

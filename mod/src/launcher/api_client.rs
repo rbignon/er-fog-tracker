@@ -76,6 +76,8 @@ struct CreateGameRequest {
     spoiler_log: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    entity_mapping: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -161,12 +163,14 @@ impl ApiClient {
         &self,
         spoiler_log: &str,
         label: Option<&str>,
+        entity_mapping: Option<std::collections::HashMap<String, serde_json::Value>>,
     ) -> Result<GameCreateResponse, ApiError> {
         let url = format!("{}/api/mod/games", self.base_url);
 
         let request = CreateGameRequest {
             spoiler_log: spoiler_log.to_string(),
             label: label.map(|s| s.to_string()),
+            entity_mapping,
         };
 
         let response = self

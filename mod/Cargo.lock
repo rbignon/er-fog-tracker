@@ -253,9 +253,11 @@ dependencies = [
 name = "fog-rando-tracker"
 version = "0.1.0"
 dependencies = [
+ "byteorder",
  "crossbeam-channel",
  "dirs",
  "embed-resource",
+ "flate2",
  "hudhook",
  "libeldenring",
  "native-windows-derive",
@@ -264,6 +266,7 @@ dependencies = [
  "parking_lot",
  "serde",
  "serde_json",
+ "thiserror",
  "toml 0.8.23",
  "tracing",
  "tracing-subscriber",

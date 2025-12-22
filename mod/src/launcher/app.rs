@@ -13,7 +13,10 @@ use std::thread;
 use super::api_client::{ApiClient, ApiError, GameSummary, UserInfo};
 use super::config::LauncherConfig;
 use super::process_monitor::{find_dll_path, ProcessMonitor, ProcessState};
-use super::spoiler_validator::{read_spoiler_file, validate_spoiler_file};
+use super::rando_folder::{
+    entity_mapping_to_json, extract_rando_data, validate_rando_folder, RandoFolderData,
+    ValidatedRandoFolder,
+};
 
 // =============================================================================
 // Application State
@@ -48,8 +51,8 @@ struct AppData {
     user: Option<UserInfo>,
     games: Vec<GameSummary>,
     selected_game: Option<GameSummary>,
-    spoiler_path: Option<PathBuf>,
-    spoiler_valid: bool,
+    rando_folder: Option<ValidatedRandoFolder>,
+    rando_valid: bool,
     process_monitor: Option<ProcessMonitor>,
     task_sender: Sender<TaskResult>,
     task_receiver: Receiver<TaskResult>,
@@ -68,8 +71,8 @@ impl AppData {
             user: None,
             games: vec![],
             selected_game: None,
-            spoiler_path: None,
-            spoiler_valid: false,
+            rando_folder: None,
+            rando_valid: false,
             process_monitor,
             task_sender,
             task_receiver,
@@ -96,13 +99,18 @@ impl AppData {
         });
     }
 
-    fn create_game(&self, spoiler_content: String, label: Option<String>) {
+    fn create_game(&self, rando_data: RandoFolderData, label: Option<String>) {
         let url = self.config.server_url.clone();
         let token = self.config.mod_token.clone().unwrap_or_default();
         let sender = self.task_sender.clone();
         thread::spawn(move || {
             let client = ApiClient::new(&url, &token);
-            let result = client.create_game(&spoiler_content, label.as_deref());
+            let entity_mapping = Some(entity_mapping_to_json(&rando_data.entity_mapping));
+            let result = client.create_game(
+                &rando_data.spoiler_content,
+                label.as_deref(),
+                entity_mapping,
+            );
             let result = result.and_then(|resp| {
                 let games = client.list_games()?;
                 let game = games
@@ -195,28 +203,28 @@ pub struct LauncherApp {
     #[nwg_control(parent: window, text: "", position: (20, 85), size: (460, 25))]
     newgame_label_input: nwg::TextInput,
 
-    #[nwg_control(parent: window, text: "Spoiler Log:", position: (20, 125), size: (460, 20))]
-    newgame_spoiler_label: nwg::Label,
+    #[nwg_control(parent: window, text: "Randomizer Folder:", position: (20, 125), size: (460, 20))]
+    newgame_folder_label: nwg::Label,
 
     #[nwg_control(parent: window, text: "Browse...", position: (20, 150), size: (100, 30))]
-    #[nwg_events(OnButtonClick: [LauncherApp::on_browse_spoiler_click])]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_browse_folder_click])]
     newgame_browse_btn: nwg::Button,
 
-    #[nwg_control(parent: window, text: "No file selected", position: (130, 157), size: (350, 20))]
-    newgame_file_label: nwg::Label,
+    #[nwg_control(parent: window, text: "No folder selected", position: (130, 157), size: (350, 20))]
+    newgame_folder_display: nwg::Label,
 
-    #[nwg_control(parent: window, text: "", position: (20, 190), size: (460, 25))]
+    #[nwg_control(parent: window, text: "", position: (20, 190), size: (460, 40))]
     newgame_validation: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Cancel", position: (130, 250), size: (100, 35))]
+    #[nwg_control(parent: window, text: "Cancel", position: (130, 270), size: (100, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_newgame_cancel_click])]
     newgame_cancel_btn: nwg::Button,
 
-    #[nwg_control(parent: window, text: "Create", position: (270, 250), size: (100, 35))]
+    #[nwg_control(parent: window, text: "Create", position: (270, 270), size: (100, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_newgame_create_click])]
     newgame_create_btn: nwg::Button,
 
-    #[nwg_control(parent: window, text: "", position: (20, 300), size: (460, 25))]
+    #[nwg_control(parent: window, text: "", position: (20, 320), size: (460, 40))]
     newgame_error: nwg::Label,
 
     // =========================================================================
@@ -362,7 +370,7 @@ impl LauncherApp {
                 TaskResult::GameCreated(Err(e)) => {
                     self.newgame_error.set_text(&format!("Error: {}", e));
                     self.newgame_create_btn.set_text("Create");
-                    self.newgame_create_btn.set_enabled(data.spoiler_valid);
+                    self.newgame_create_btn.set_enabled(data.rando_valid);
                 }
             }
         }
@@ -446,9 +454,9 @@ impl LauncherApp {
         self.newgame_title.set_visible(show_new);
         self.newgame_label_label.set_visible(show_new);
         self.newgame_label_input.set_visible(show_new);
-        self.newgame_spoiler_label.set_visible(show_new);
+        self.newgame_folder_label.set_visible(show_new);
         self.newgame_browse_btn.set_visible(show_new);
-        self.newgame_file_label.set_visible(show_new);
+        self.newgame_folder_display.set_visible(show_new);
         self.newgame_validation.set_visible(show_new);
         self.newgame_cancel_btn.set_visible(show_new);
         self.newgame_create_btn.set_visible(show_new);
@@ -536,12 +544,12 @@ impl LauncherApp {
             None => return,
         };
 
-        data.spoiler_path = None;
-        data.spoiler_valid = false;
+        data.rando_folder = None;
+        data.rando_valid = false;
         data.current_screen = AppScreen::NewGame;
 
         self.newgame_label_input.set_text("");
-        self.newgame_file_label.set_text("No file selected");
+        self.newgame_folder_display.set_text("No folder selected");
         self.newgame_validation.set_text("");
         self.newgame_error.set_text("");
         self.newgame_create_btn.set_enabled(false);
@@ -574,23 +582,22 @@ impl LauncherApp {
         }
     }
 
-    fn on_browse_spoiler_click(&self) {
-        let mut file_dialog = nwg::FileDialog::default();
+    fn on_browse_folder_click(&self) {
+        let mut folder_dialog = nwg::FileDialog::default();
 
         if nwg::FileDialog::builder()
-            .title("Select Spoiler Log")
-            .action(nwg::FileDialogAction::Open)
-            .filters("Text Files (*.txt)")
-            .build(&mut file_dialog)
+            .title("Select Randomizer Folder")
+            .action(nwg::FileDialogAction::OpenDirectory)
+            .build(&mut folder_dialog)
             .is_err()
         {
             return;
         }
 
-        if file_dialog.run(Some(&self.window)) {
-            if let Ok(path_str) = file_dialog.get_selected_item() {
+        if folder_dialog.run(Some(&self.window)) {
+            if let Ok(path_str) = folder_dialog.get_selected_item() {
                 let path = PathBuf::from(path_str);
-                let validation = validate_spoiler_file(&path);
+                let validation = validate_rando_folder(&path);
 
                 let mut data_ref = self.data.borrow_mut();
                 let data = match data_ref.as_mut() {
@@ -598,24 +605,30 @@ impl LauncherApp {
                     None => return,
                 };
 
-                let filename = path
+                let folder_name = path
                     .file_name()
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_else(|| path.display().to_string());
-                self.newgame_file_label.set_text(&filename);
+                self.newgame_folder_display.set_text(&folder_name);
 
                 match validation {
-                    Ok(header) => {
-                        self.newgame_validation
-                            .set_text(&format!("Valid (Seed: {})", header.seed));
-                        data.spoiler_path = Some(path);
-                        data.spoiler_valid = true;
+                    Ok(validated) => {
+                        let entity_count = match extract_rando_data(&validated) {
+                            Ok(data) => data.entity_mapping.len(),
+                            Err(_) => 0,
+                        };
+                        self.newgame_validation.set_text(&format!(
+                            "Valid (Seed: {}, {} entity mappings)",
+                            validated.header.seed, entity_count
+                        ));
+                        data.rando_folder = Some(validated);
+                        data.rando_valid = true;
                         self.newgame_create_btn.set_enabled(true);
                     }
                     Err(e) => {
                         self.newgame_validation.set_text(&format!("Error: {}", e));
-                        data.spoiler_path = Some(path);
-                        data.spoiler_valid = false;
+                        data.rando_folder = None;
+                        data.rando_valid = false;
                         self.newgame_create_btn.set_enabled(false);
                     }
                 }
@@ -641,20 +654,20 @@ impl LauncherApp {
             None => return,
         };
 
-        if !data.spoiler_valid {
+        if !data.rando_valid {
             return;
         }
 
-        if let Some(ref path) = data.spoiler_path {
-            match read_spoiler_file(path) {
-                Ok(content) => {
+        if let Some(ref validated) = data.rando_folder {
+            match extract_rando_data(validated) {
+                Ok(rando_data) => {
                     let label = self.newgame_label_input.text();
                     let label_opt = if label.is_empty() { None } else { Some(label) };
 
                     self.newgame_create_btn.set_text("Creating...");
                     self.newgame_create_btn.set_enabled(false);
                     self.newgame_error.set_text("");
-                    data.create_game(content, label_opt);
+                    data.create_game(rando_data, label_opt);
                 }
                 Err(e) => {
                     self.newgame_error.set_text(&format!("Error: {}", e));

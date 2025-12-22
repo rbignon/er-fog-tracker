@@ -295,6 +295,50 @@ class ModClient(Client):
             resolved_links = []
 
             if game and game.zone_pairs:
+                # If entity_mapping is available, use it to improve zone candidate ordering
+                if destination_entity_id and game.entity_mapping:
+                    entity_info = game.entity_mapping.get(str(destination_entity_id))
+                    if entity_info:
+                        emevd_source_map = entity_info.get("source_map")
+                        emevd_dest_map = entity_info.get("dest_map")
+                        logger.info(
+                            "[MOD] Entity mapping found for %d: source=%s, dest=%s",
+                            destination_entity_id,
+                            emevd_source_map,
+                            emevd_dest_map,
+                        )
+
+                        # Prioritize candidates that match the EMEVD maps
+                        if emevd_source_map:
+                            # Get zones for this map and prioritize them
+                            emevd_source_zones = resolver.resolve_from_map_id(emevd_source_map)
+                            if emevd_source_zones:
+                                # Move matching candidates to the front
+                                emevd_keys = {z[0] for z in emevd_source_zones}
+                                prioritized = [c for c in source_candidates if c[0] in emevd_keys]
+                                others = [c for c in source_candidates if c[0] not in emevd_keys]
+                                if prioritized:
+                                    source_candidates = prioritized + others
+                                    logger.debug(
+                                        "[MOD] Prioritized source candidates from entity_mapping: %s",
+                                        [c[1] for c in prioritized[:3]],
+                                    )
+
+                        if emevd_dest_map:
+                            # Get zones for this map and prioritize them
+                            emevd_dest_zones = resolver.resolve_from_map_id(emevd_dest_map)
+                            if emevd_dest_zones:
+                                # Move matching candidates to the front
+                                emevd_keys = {z[0] for z in emevd_dest_zones}
+                                prioritized = [c for c in target_candidates if c[0] in emevd_keys]
+                                others = [c for c in target_candidates if c[0] not in emevd_keys]
+                                if prioritized:
+                                    target_candidates = prioritized + others
+                                    logger.debug(
+                                        "[MOD] Prioritized target candidates from entity_mapping: %s",
+                                        [c[1] for c in prioritized[:3]],
+                                    )
+
                 # Check if zone_pairs have zone_keys (V3 enrichment)
                 has_zone_keys = any(
                     zp.get("source_key") or zp.get("destination_key")

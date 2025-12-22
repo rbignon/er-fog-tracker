@@ -48,6 +48,11 @@ native-windows-derive = { version = "1.0.5", optional = true }
 ureq = { version = "2.10", features = ["json", "tls"], optional = true }
 dirs = { version = "5.0", optional = true }
 
+# --- EMEVD parsing for launcher (DCX decompression + binary parsing) ---
+flate2 = { version = "1.0", optional = true }
+byteorder = { version = "1.5", optional = true }
+thiserror = { version = "1.0", optional = true }
+
 # --- Windows API ---
 [dependencies.windows]
 version = "0.54.0"
@@ -73,7 +78,7 @@ features = [
 embed-resource = "2.4"
 
 [features]
-launcher = ["native-windows-gui", "native-windows-derive", "ureq", "dirs"]
+launcher = ["native-windows-gui", "native-windows-derive", "ureq", "dirs", "flate2", "byteorder", "thiserror"]
 
 [profile.release]
 strip = "symbols"
