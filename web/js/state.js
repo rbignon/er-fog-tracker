@@ -549,49 +549,6 @@ function getStorageKey(seed) {
     return STORAGE_KEY_PREFIX + seed;
 }
 
-/**
- * Check if a string looks like an old-format link ID ("source|target")
- * vs a UUID (contains dashes, 36 chars)
- */
-function isOldFormatLinkId(str) {
-    // UUIDs are 36 chars with dashes (e.g., "550e8400-e29b-41d4-a716-446655440000")
-    // Old format is "NodeName|OtherNodeName" which contains a pipe
-    return str.includes('|');
-}
-
-/**
- * Migrate old-format discoveredLinks ("source|target") to UUIDs
- * Requires linkIndex to be built (call after setGraphData)
- */
-export function migrateDiscoveredLinksToUUIDs(discoveredLinks) {
-    if (!state.linkIndex || !discoveredLinks) return discoveredLinks;
-
-    const migrated = new Set();
-    let hadOldFormat = false;
-
-    for (const linkId of discoveredLinks) {
-        if (isOldFormatLinkId(linkId)) {
-            // Old format: "source|target"
-            hadOldFormat = true;
-            const [source, target] = linkId.split('|');
-            // Find all link UUIDs for this source/target pair
-            const uuids = getLinkIdsByEndpoints(source, target);
-            for (const uuid of uuids) {
-                migrated.add(uuid);
-            }
-        } else {
-            // Already a UUID
-            migrated.add(linkId);
-        }
-    }
-
-    if (hadOldFormat) {
-        console.log(`Migrated ${discoveredLinks.size} old-format links to ${migrated.size} UUIDs`);
-    }
-
-    return migrated;
-}
-
 export function saveExplorationToStorage() {
     if (!state.seed || !state.explorationState) return;
 
@@ -599,7 +556,6 @@ export function saveExplorationToStorage() {
         discovered: Array.from(state.explorationState.discovered),
         discoveredLinks: Array.from(state.explorationState.discoveredLinks),
         tags: Object.fromEntries(state.explorationState.tags),
-        version: 2, // Mark as new UUID format
     };
 
     try {
@@ -619,7 +575,6 @@ export function loadExplorationFromStorage(seed) {
             discovered: new Set(parsed.discovered || []),
             discoveredLinks: new Set(parsed.discoveredLinks || []),
             tags: new Map(Object.entries(parsed.tags || {})),
-            version: parsed.version || 1, // v1 = old format, v2 = UUID format
         };
     } catch (err) {
         console.error('Failed to load exploration state:', err);

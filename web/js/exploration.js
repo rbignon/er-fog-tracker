@@ -35,10 +35,7 @@ export function resetExplorationState() {
 
 /**
  * Load existing exploration state from storage.
- * Handles all migrations:
- * - Format migration: old "source|target" links to UUIDs
- * - Data migration: legacy saves without discoveredLinks
- * Note: Call after setGraphData() so link index is available for migration
+ * Note: Call after setGraphData() so link index is available.
  *
  * @param {string} seed - The game seed to load
  * @returns {boolean} True if save was loaded, false if no save exists
@@ -46,51 +43,10 @@ export function resetExplorationState() {
 export function loadExplorationState(seed) {
     const saved = State.loadExplorationFromStorage(seed);
     if (saved) {
-        // Format migration: old-format discoveredLinks to UUIDs
-        if (saved.version !== 2) {
-            saved.discoveredLinks = State.migrateDiscoveredLinksToUUIDs(saved.discoveredLinks);
-        }
         State.setExplorationState(saved);
-
-        // Data migration: legacy saves that don't have discoveredLinks
-        migrateDiscoveredLinks();
-
         return true;
     }
     return false;
-}
-
-/**
- * Migrate legacy saves that don't have discoveredLinks.
- * For backwards compatibility, all links between discovered nodes are marked as discovered.
- * Should be called after graphData is loaded.
- */
-export function migrateDiscoveredLinks() {
-    const graphData = State.getGraphData();
-    const explorationState = State.getExplorationState();
-    if (!graphData || !explorationState) return;
-
-    // If discoveredLinks already has entries, no migration needed
-    if (explorationState.discoveredLinks && explorationState.discoveredLinks.size > 0) return;
-
-    // Mark all links between discovered nodes as discovered (using link UUIDs)
-    let migrated = false;
-    graphData.links.forEach(link => {
-        const { sourceId, targetId } = State.getLinkEndpoints(link);
-
-        if (explorationState.discovered.has(sourceId) && explorationState.discovered.has(targetId)) {
-            // Both nodes discovered - mark this specific link as discovered
-            if (link.id) {
-                State.discoverLinkById(link.id);
-                migrated = true;
-            }
-        }
-    });
-
-    if (migrated) {
-        State.saveExplorationToStorage();
-        console.log('Migrated legacy save: marked existing links as discovered');
-    }
 }
 
 /**
