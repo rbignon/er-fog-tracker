@@ -572,7 +572,7 @@ Areas:
   Maps: m12_08_00_00
 - Name: ainsel_start
   Text: Ainsel River Downstream
-  Maps: m12_01_00_00
+  Maps: m12_01_00_00 m60_38_46_00
 - Name: ainsel_abovestart
   Text: Above Ainsel River Downstream
   Maps: m12_01_00_00
