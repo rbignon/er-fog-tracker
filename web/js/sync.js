@@ -1440,17 +1440,19 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
             graphData.metadata.discoveryCount = explorationState.discovered.size;
         }
 
-        // On host, select the newly discovered node (if not already selected)
+        // On host, select the newly discovered node and show its tooltip
         // But don't auto-select if frontier mode is active (to preserve frontier view)
-        if (State.isStreamerHost() && newlyDiscoveredTarget && !State.isFrontierHighlightActive()) {
-            const currentSelected = State.getSelectedNodeId();
-            if (currentSelected !== newlyDiscoveredTarget) {
-                State.setSelectedNodeId(newlyDiscoveredTarget);
-            }
+        const shouldShowTooltip = State.isStreamerHost() && newlyDiscoveredTarget && !State.isFrontierHighlightActive();
+        if (shouldShowTooltip) {
+            State.setSelectedNodeId(newlyDiscoveredTarget);
         }
 
         // Re-render graph to show newly discovered areas
-        State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: newlyDiscoveredTarget });
+        State.emit('graphNeedsRender', {
+            preservePositions: true,
+            centerOnNodeId: newlyDiscoveredTarget,
+            showTooltipForNodeId: shouldShowTooltip ? newlyDiscoveredTarget : null
+        });
 
         // Show toast for each newly discovered zone
         for (const zone of newlyDiscoveredZones) {

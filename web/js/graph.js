@@ -727,7 +727,16 @@ function dragended(event, simulation) {
 // TOOLTIP
 // ============================================================
 
+// Track tooltip subscription for cleanup between renders
+let tooltipSubscriptionCleanup = null;
+
 function setupTooltip(node, nodeConnections, explorationMode, explorationState, placeholderMap, nodeMap, visibleLinks) {
+    // Cleanup previous subscription to avoid duplicates
+    if (tooltipSubscriptionCleanup) {
+        tooltipSubscriptionCleanup();
+        tooltipSubscriptionCleanup = null;
+    }
+
     const tooltip = d3.select("#tooltip");
     // Check if tooltip was already pinned (survives re-render)
     let tooltipPinned = tooltip.classed("pinned");
@@ -879,9 +888,17 @@ function setupTooltip(node, nodeConnections, explorationMode, explorationState, 
         }
         showTooltip(event, d, true);
     };
-    
+
     node.hideTooltip = hideTooltip;
     node.isTooltipPinned = () => tooltipPinned;
+
+    // Listen for programmatic tooltip requests (e.g., after discovery from mod)
+    tooltipSubscriptionCleanup = State.subscribe('showTooltipForNode', ({ nodeId }) => {
+        const targetNodeData = node.data().find(n => n.id === nodeId);
+        if (targetNodeData) {
+            node.showTooltipPinned(null, targetNodeData);
+        }
+    });
 }
 
 function buildTooltipContent(d, nodeConnections, explorationMode, explorationState, pinned, placeholderMap, nodeMap, visibleLinks) {

@@ -392,7 +392,7 @@ async function init() {
   Sync.initStreamUI();
 
   // Subscribe to graph render events
-  State.subscribe('graphNeedsRender', ({ preservePositions, centerOnNodeId }) => {
+  State.subscribe('graphNeedsRender', ({ preservePositions, centerOnNodeId, showTooltipForNodeId }) => {
     Graph.renderGraph(preservePositions);
 
     // Center on discovered node after render stabilizes
@@ -401,6 +401,13 @@ async function init() {
       setTimeout(() => {
         Graph.centerOnNode(centerOnNodeId);
       }, 300);
+    }
+
+    // Show tooltip for newly discovered node (host only)
+    if (showTooltipForNodeId && !State.isViewerMode()) {
+      setTimeout(() => {
+        State.emit('showTooltipForNode', { nodeId: showTooltipForNodeId });
+      }, 350); // After centering animation starts
     }
   });
 
