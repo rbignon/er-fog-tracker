@@ -33,6 +33,28 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
+# Helper Functions
+# =============================================================================
+
+
+def build_game_state(game: Game) -> dict:
+    """Build game state dict from database game object."""
+    zone_pairs = game.zone_pairs or []
+    zp_index = {zp["id"]: zp for zp in zone_pairs if zp.get("id")}
+    expanded_links = []
+    for dl in game.discovered_links or []:
+        zp = zp_index.get(dl["link_id"])
+        if zp:
+            expanded_links.append({"source": zp["source"], "target": zp["destination"]})
+
+    return {
+        "discovered_links": expanded_links,
+        "node_positions": game.node_positions or {},
+        "tags": game.tags or {},
+    }
+
+
+# =============================================================================
 # Client Base Class
 # =============================================================================
 
@@ -774,19 +796,7 @@ class HostClient(Client):
                 return
 
             # Send current game state
-            zone_pairs = game.zone_pairs or []
-            zp_index = {zp["id"]: zp for zp in zone_pairs if zp.get("id")}
-            expanded_links = []
-            for dl in game.discovered_links or []:
-                zp = zp_index.get(dl["link_id"])
-                if zp:
-                    expanded_links.append({"source": zp["source"], "target": zp["destination"]})
-
-            game_state = {
-                "discovered_links": expanded_links,
-                "node_positions": game.node_positions or {},
-                "tags": game.tags or {},
-            }
+            game_state = build_game_state(game)
             await websocket.send_json({"type": "game_state", "state": game_state})
 
         # Register in room
@@ -862,6 +872,9 @@ class ViewerClient(Client):
                 await websocket.close()
                 return
 
+            # Build game state from DB (source of truth for discoveries)
+            game_state = build_game_state(game)
+
         room = manager.get_or_create_room(game_id)
         if len(room.viewers) >= settings.max_viewers_per_game:
             await websocket.send_json(
@@ -883,10 +896,13 @@ class ViewerClient(Client):
             len(room.viewers),
         )
 
-        # Send current state
+        # Send game state from DB (discoveries are source of truth)
+        await client.send({"type": "game_state", "state": game_state})
+
+        # Send visual state from host (viewport, highlights, etc.)
         if room.last_visual_state:
             await client.send(room.last_visual_state)
-        else:
+        elif not room.host:
             await client.send({"type": "waiting", "message": "Waiting for host to connect"})
 
         try:

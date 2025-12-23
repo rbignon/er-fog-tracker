@@ -1084,9 +1084,12 @@ export async function connectAsHost(gameId) {
                 return;
             }
 
-            // Game state received after auth
+            // Game state received after auth (or reconnection)
             if (data.type === 'game_state') {
-                // Game state already loaded via API, this is for confirmation
+                // Apply discoveries from server (source of truth, may have changed during disconnect)
+                if (data.state?.discovered_links) {
+                    handleDiscoveryFromServer([], data.state.discovered_links);
+                }
                 authResolved = true;
                 State.setSyncState(true, true, gameId);
                 resolve();
@@ -1189,6 +1192,14 @@ export async function connectAsViewer(gameId) {
             // Waiting for host
             if (data.type === 'waiting') {
                 // Host not connected yet
+                return;
+            }
+
+            // Game state from server (source of truth for discoveries)
+            if (data.type === 'game_state') {
+                if (data.state?.discovered_links) {
+                    handleDiscoveryFromServer([], data.state.discovered_links);
+                }
                 return;
             }
 
