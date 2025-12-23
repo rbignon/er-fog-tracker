@@ -2925,7 +2925,7 @@ Areas:
 - Name: rauhruins_limited
   Text: Ancient Ruins of Rauh - Belfry Area
   Comment: There is an tricky dropdown to here, and a stake skip from here
-  Maps: m61_46_46_00 m61_46_47_00
+  Maps: m61_46_46_00 m61_46_46_16 m61_46_47_00
   Tags: dlc overworld trivial crawlclosed
 - Name: scaduview_gaius
   Text: Scaduview - Commander Gaius
