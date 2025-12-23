@@ -2635,7 +2635,7 @@ Areas:
   Tags: dlc overworld trivial
 - Name: ensis
   Text: Castle Ensis
-  Maps: m61_47_44_00 m61_48_44_00
+  Maps: m61_47_44_00 m61_47_44_16 m61_48_44_00
   Tags: dlc
 - Name: ensis_room
   Text: Castle Ensis - Spelldrake Talisman Room
@@ -2797,7 +2797,7 @@ Areas:
   Tags: dlc remembrance
 - Name: storehouse_back
   Text: Specimen Storehouse - Back Section
-  Maps: m21_01_00_00
+  Maps: m21_01_00_00 m61_49_48_00
   To:
   - Area: storehouse
     Text: dropping down
