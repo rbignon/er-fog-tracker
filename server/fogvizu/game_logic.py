@@ -155,17 +155,20 @@ async def propagate_discovery(
             logger.debug("[DISCOVERY] Back-propagation path: %s", path_to_source)
             for src, dst in path_to_source:
                 if not link_exists(discovered_links, src, dst, zone_pairs):
-                    link_id = find_link_id(src, dst)
-                    if link_id:
+                    backprop_link_id = find_link_id(src, dst)
+                    if backprop_link_id:
                         new_link = {
-                            "link_id": link_id,
+                            "link_id": backprop_link_id,
                             "discovered_at": now,
                             "discovered_by": f"{discovered_by} (backprop)",
                         }
                         discovered_links.append(new_link)
                         newly_discovered.append({"source": src, "target": dst})
                         logger.debug(
-                            "[DISCOVERY] Back-propagated link: %s → %s (id=%s)", src, dst, link_id
+                            "[DISCOVERY] Back-propagated link: %s → %s (id=%s)",
+                            src,
+                            dst,
+                            backprop_link_id,
                         )
                     else:
                         logger.warning("[DISCOVERY] No link_id found for %s → %s", src, dst)
