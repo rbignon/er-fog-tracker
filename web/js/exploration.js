@@ -34,17 +34,27 @@ export function resetExplorationState() {
 }
 
 /**
- * Load existing exploration state from storage
+ * Load existing exploration state from storage.
+ * Handles all migrations:
+ * - Format migration: old "source|target" links to UUIDs
+ * - Data migration: legacy saves without discoveredLinks
  * Note: Call after setGraphData() so link index is available for migration
+ *
+ * @param {string} seed - The game seed to load
+ * @returns {boolean} True if save was loaded, false if no save exists
  */
 export function loadExplorationState(seed) {
     const saved = State.loadExplorationFromStorage(seed);
     if (saved) {
-        // Migrate old-format discoveredLinks if needed
+        // Format migration: old-format discoveredLinks to UUIDs
         if (saved.version !== 2) {
             saved.discoveredLinks = State.migrateDiscoveredLinksToUUIDs(saved.discoveredLinks);
         }
         State.setExplorationState(saved);
+
+        // Data migration: legacy saves that don't have discoveredLinks
+        migrateDiscoveredLinks();
+
         return true;
     }
     return false;

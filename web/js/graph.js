@@ -5,6 +5,7 @@
 import { extractRequiredItemFromDescription, parseRequiredItemZones } from './parser.js';
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
+import * as PositionManager from './positionManager.js';
 
 // Track which tags are selected for filtering
 const selectedTagFilters = new Set();
@@ -76,65 +77,8 @@ export function renderGraph(preservePositions = false) {
     // Build connections map
     const nodeConnections = Exploration.buildNodeConnectionsMap({ nodes, links });
 
-    // Update stats
-    document.getElementById('area-count').textContent = nodes.length;
-    document.getElementById('random-count').textContent = links.filter(l => l.type === 'random').length;
-    document.getElementById('preexisting-count').textContent = links.filter(l => l.type === 'preexisting').length;
-
-    // Update discovered stats (exploration mode only)
-    // Use server-calculated stats if available, otherwise calculate locally
-    const discoveredStat = document.getElementById('discovered-stat');
-    if (explorationMode && explorationState) {
-        let discoveredCount, totalAreas;
-
-        if (graphData.metadata?.discoveryCount !== undefined && graphData.metadata?.totalZones !== undefined) {
-            // Use server-calculated stats (most accurate)
-            discoveredCount = graphData.metadata.discoveryCount;
-            totalAreas = graphData.metadata.totalZones;
-        } else {
-            // Fallback: calculate locally from discovered links (using link UUIDs)
-            totalAreas = nodes.length;
-            const nodeIds = new Set(nodes.map(n => n.id));
-            const linkIndex = State.getLinkIndex();
-            const discoveredFromLinks = new Set();
-            for (const linkUUID of explorationState.discoveredLinks || []) {
-                // Use link index to get source/target from UUID
-                const link = linkIndex?.byId.get(linkUUID);
-                if (link) {
-                    const { sourceId, targetId } = State.getLinkEndpoints(link);
-                    if (nodeIds.has(sourceId)) discoveredFromLinks.add(sourceId);
-                    if (nodeIds.has(targetId)) discoveredFromLinks.add(targetId);
-                }
-            }
-            discoveredCount = discoveredFromLinks.size;
-        }
-
-        const percent = totalAreas > 0 ? Math.round((discoveredCount / totalAreas) * 100) : 0;
-
-        document.getElementById('discovered-count').textContent = discoveredCount;
-        document.getElementById('total-areas').textContent = totalAreas;
-        document.getElementById('discovered-percent').textContent = percent;
-        discoveredStat.classList.remove('hidden');
-    } else {
-        discoveredStat.classList.add('hidden');
-    }
-
-    // Show/hide "Requires Key Item" legend
-    const hasRequiredItems = links.some(l => l.requiredItemFrom);
-    document.getElementById('legend-requires-item').classList.toggle('hidden', !hasRequiredItems);
-
-    // Update seed display
-    if (graphData.metadata && graphData.metadata.seed) {
-        const label = graphData.metadata.label;
-        document.getElementById('seed-info').textContent = label
-            ? `${label} — Seed: ${graphData.metadata.seed}`
-            : `Seed: ${graphData.metadata.seed}`;
-    } else {
-        document.getElementById('seed-info').textContent = 'Spoiler Log Visualizer';
-    }
-
-    // Update button visibility
-    updateButtonVisibility(explorationMode);
+    // Update stats display
+    updateStatsDisplay(nodes, links, graphData, explorationMode, explorationState);
 
     // Mark hub nodes (3+ distinct links - bidirectional links count as 1)
     nodes.forEach(n => {
@@ -149,183 +93,22 @@ export function renderGraph(preservePositions = false) {
         d.explorationStatus = Exploration.getNodeExplorationStatus(d.id, links);
     });
 
-    // In exploration mode, create placeholder nodes for undiscovered areas
-    // Each link to an undiscovered node gets its own "???" placeholder
-    let visibleNodes, visibleLinks;
-    const placeholderMap = new Map(); // Maps placeholder ID to real node ID
-
-    if (explorationMode && explorationState) {
-        const discoveredNodes = nodes.filter(d => explorationState.discovered.has(d.id));
-        const placeholderNodes = [];
-        const processedLinks = [];
-
-        links.forEach(link => {
-            const { sourceId, targetId } = State.getLinkEndpoints(link);
-            const sourceDiscovered = explorationState.discovered.has(sourceId);
-            const targetDiscovered = explorationState.discovered.has(targetId);
-
-            if (sourceDiscovered && targetDiscovered) {
-                // Both nodes discovered - but is THIS SPECIFIC link discovered?
-                // We must check the link's UUID directly, not just if any link between
-                // endpoints is discovered. Otherwise, parallel links (e.g., a preexisting
-                // link AND a random link between same nodes) would all show as discovered
-                // when only one of them was actually traversed.
-                const isThisLinkDiscovered = link.id && explorationState.discoveredLinks.has(link.id);
-
-                if (isThisLinkDiscovered) {
-                    // Link is discovered: show normal link
-                    processedLinks.push({ ...link });
-                } else {
-                    // Link NOT discovered: create placeholder(s) for undiscovered link
-                    // Forward direction: source -> target (always possible)
-                    const placeholderIdForward = `???_${sourceId}_${targetId}`;
-                    placeholderMap.set(placeholderIdForward, targetId);
-
-                    if (!placeholderNodes.find(n => n.id === placeholderIdForward)) {
-                        const realNode = nodeMap.get(targetId);
-                        placeholderNodes.push({
-                            id: placeholderIdForward,
-                            realId: targetId,
-                            isPlaceholder: true,
-                            isUndiscoveredLink: true, // Mark as undiscovered link to existing node
-                            isBoss: realNode?.isBoss || false,
-                            scaling: realNode?.scaling || null,
-                            sourceNodeId: sourceId,
-                        });
-                    }
-
-                    processedLinks.push({
-                        ...link,
-                        target: placeholderIdForward,
-                        originalTarget: targetId,
-                    });
-
-                    // Backward direction: target -> source (only if bidirectional)
-                    if (!link.oneWay) {
-                        const placeholderIdBackward = `???_${targetId}_${sourceId}`;
-                        placeholderMap.set(placeholderIdBackward, sourceId);
-
-                        if (!placeholderNodes.find(n => n.id === placeholderIdBackward)) {
-                            const realNode = nodeMap.get(sourceId);
-                            placeholderNodes.push({
-                                id: placeholderIdBackward,
-                                realId: sourceId,
-                                isPlaceholder: true,
-                                isUndiscoveredLink: true,
-                                isBoss: realNode?.isBoss || false,
-                                scaling: realNode?.scaling || null,
-                                sourceNodeId: targetId,
-                            });
-                        }
-
-                        processedLinks.push({
-                            ...link,
-                            source: placeholderIdBackward,
-                            originalSource: sourceId,
-                        });
-                    }
-                }
-            } else if (sourceDiscovered && !targetDiscovered) {
-                // Source discovered, target not: create placeholder for target
-                const placeholderId = `???_${sourceId}_${targetId}`;
-                placeholderMap.set(placeholderId, targetId);
-
-                // Create placeholder node if not exists
-                if (!placeholderNodes.find(n => n.id === placeholderId)) {
-                    const realNode = nodeMap.get(targetId);
-                    placeholderNodes.push({
-                        id: placeholderId,
-                        realId: targetId,
-                        isPlaceholder: true,
-                        isBoss: realNode?.isBoss || false,
-                        scaling: realNode?.scaling || null,
-                        // Position near the source node
-                        sourceNodeId: sourceId,
-                    });
-                }
-
-                // Create link to placeholder
-                processedLinks.push({
-                    ...link,
-                    target: placeholderId,
-                    originalTarget: targetId,
-                });
-            } else if (!sourceDiscovered && targetDiscovered && !link.oneWay) {
-                // Target discovered, source not (bidirectional): create placeholder for source
-                const placeholderId = `???_${targetId}_${sourceId}`;
-                placeholderMap.set(placeholderId, sourceId);
-
-                if (!placeholderNodes.find(n => n.id === placeholderId)) {
-                    const realNode = nodeMap.get(sourceId);
-                    placeholderNodes.push({
-                        id: placeholderId,
-                        realId: sourceId,
-                        isPlaceholder: true,
-                        isBoss: realNode?.isBoss || false,
-                        scaling: realNode?.scaling || null,
-                        sourceNodeId: targetId,
-                    });
-                }
-
-                processedLinks.push({
-                    ...link,
-                    source: placeholderId,
-                    originalSource: sourceId,
-                });
-            }
-            // If neither is discovered, don't show the link
-        });
-
-        visibleNodes = [...discoveredNodes, ...placeholderNodes];
-        visibleLinks = processedLinks;
-
-        // Mark discovered nodes with their status
-        visibleNodes.forEach(d => {
-            if (!d.isPlaceholder) {
-                d.explorationStatus = { visible: true, discovered: true, accessible: true };
-            } else {
-                d.explorationStatus = { visible: true, discovered: false, accessible: true };
-            }
-        });
-    } else {
-        visibleNodes = nodes;
-        visibleLinks = links;
-    }
-
-    const visibleNodeIds = new Set(visibleNodes.map(d => d.id));
-
-    // Stop previous simulation
-    const oldSimulation = State.getSimulation();
-    if (oldSimulation) oldSimulation.stop();
+    // Build visible graph (with placeholders in exploration mode)
+    const { visibleNodes, visibleLinks, placeholderMap } = buildVisibleGraph(
+        nodes,
+        links,
+        nodeMap,
+        explorationMode,
+        explorationState
+    );
 
     // Restore node positions if preserving layout
     if (preservePositions) {
-        restoreNodePositions(visibleNodes, visibleLinks);
+        PositionManager.restore(visibleNodes, visibleLinks);
     }
 
     // Create force simulation
-    const simulation = d3
-        .forceSimulation(visibleNodes)
-        .force(
-            'link',
-            d3
-                .forceLink(visibleLinks)
-                .id(d => d.id)
-                .distance(100)
-                .strength(0.5)
-        )
-        .force('charge', d3.forceManyBody().strength(-300).distanceMax(500))
-        .force('center', preservePositions ? null : d3.forceCenter(width / 2, height / 2))
-        .force('collision', d3.forceCollide().radius(30))
-        .force('x', preservePositions ? null : d3.forceX(width / 2).strength(0.03))
-        .force('y', preservePositions ? null : d3.forceY(height / 2).strength(0.03));
-
-    State.setSimulation(simulation);
-
-    // Unfreeze nodes after layout stabilizes
-    if (preservePositions) {
-        unfreezeNodesAfterDelay(simulation);
-    }
+    const simulation = createForceSimulation(visibleNodes, visibleLinks, width, height, preservePositions);
 
     // Draw links (path 'd' attribute will be set by tick handler)
     const link = container
@@ -433,6 +216,244 @@ export function renderGraph(preservePositions = false) {
 // ============================================================
 // HELPER FUNCTIONS
 // ============================================================
+
+/**
+ * Create and configure the D3 force simulation.
+ * @returns {d3.Simulation} The configured simulation
+ */
+function createForceSimulation(visibleNodes, visibleLinks, width, height, preservePositions) {
+    // Stop previous simulation
+    const oldSimulation = State.getSimulation();
+    if (oldSimulation) oldSimulation.stop();
+
+    // Create force simulation
+    const simulation = d3
+        .forceSimulation(visibleNodes)
+        .force(
+            'link',
+            d3
+                .forceLink(visibleLinks)
+                .id(d => d.id)
+                .distance(100)
+                .strength(0.5)
+        )
+        .force('charge', d3.forceManyBody().strength(-300).distanceMax(500))
+        .force('center', preservePositions ? null : d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(30))
+        .force('x', preservePositions ? null : d3.forceX(width / 2).strength(0.03))
+        .force('y', preservePositions ? null : d3.forceY(height / 2).strength(0.03));
+
+    State.setSimulation(simulation);
+
+    // Unfreeze nodes after layout stabilizes
+    if (preservePositions) {
+        unfreezeNodesAfterDelay(simulation);
+    }
+
+    return simulation;
+}
+
+/**
+ * Build the visible graph (nodes and links) based on exploration state.
+ * In exploration mode, creates placeholder nodes for undiscovered areas.
+ * @returns {{ visibleNodes: Array, visibleLinks: Array, placeholderMap: Map }}
+ */
+function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationState) {
+    const placeholderMap = new Map(); // Maps placeholder ID to real node ID
+
+    if (!explorationMode || !explorationState) {
+        return { visibleNodes: nodes, visibleLinks: links, placeholderMap };
+    }
+
+    const discoveredNodes = nodes.filter(d => explorationState.discovered.has(d.id));
+    const placeholderNodes = [];
+    const processedLinks = [];
+
+    links.forEach(link => {
+        const { sourceId, targetId } = State.getLinkEndpoints(link);
+        const sourceDiscovered = explorationState.discovered.has(sourceId);
+        const targetDiscovered = explorationState.discovered.has(targetId);
+
+        if (sourceDiscovered && targetDiscovered) {
+            // Both nodes discovered - check if THIS SPECIFIC link is discovered
+            const isThisLinkDiscovered = link.id && explorationState.discoveredLinks.has(link.id);
+
+            if (isThisLinkDiscovered) {
+                processedLinks.push({ ...link });
+            } else {
+                // Create placeholder(s) for undiscovered link between discovered nodes
+                // Forward direction
+                const placeholderIdForward = `???_${sourceId}_${targetId}`;
+                placeholderMap.set(placeholderIdForward, targetId);
+
+                if (!placeholderNodes.find(n => n.id === placeholderIdForward)) {
+                    const realNode = nodeMap.get(targetId);
+                    placeholderNodes.push({
+                        id: placeholderIdForward,
+                        realId: targetId,
+                        isPlaceholder: true,
+                        isUndiscoveredLink: true,
+                        isBoss: realNode?.isBoss || false,
+                        scaling: realNode?.scaling || null,
+                        sourceNodeId: sourceId,
+                    });
+                }
+
+                processedLinks.push({
+                    ...link,
+                    target: placeholderIdForward,
+                    originalTarget: targetId,
+                });
+
+                // Backward direction (only if bidirectional)
+                if (!link.oneWay) {
+                    const placeholderIdBackward = `???_${targetId}_${sourceId}`;
+                    placeholderMap.set(placeholderIdBackward, sourceId);
+
+                    if (!placeholderNodes.find(n => n.id === placeholderIdBackward)) {
+                        const realNode = nodeMap.get(sourceId);
+                        placeholderNodes.push({
+                            id: placeholderIdBackward,
+                            realId: sourceId,
+                            isPlaceholder: true,
+                            isUndiscoveredLink: true,
+                            isBoss: realNode?.isBoss || false,
+                            scaling: realNode?.scaling || null,
+                            sourceNodeId: targetId,
+                        });
+                    }
+
+                    processedLinks.push({
+                        ...link,
+                        source: placeholderIdBackward,
+                        originalSource: sourceId,
+                    });
+                }
+            }
+        } else if (sourceDiscovered && !targetDiscovered) {
+            // Source discovered, target not: create placeholder for target
+            const placeholderId = `???_${sourceId}_${targetId}`;
+            placeholderMap.set(placeholderId, targetId);
+
+            if (!placeholderNodes.find(n => n.id === placeholderId)) {
+                const realNode = nodeMap.get(targetId);
+                placeholderNodes.push({
+                    id: placeholderId,
+                    realId: targetId,
+                    isPlaceholder: true,
+                    isBoss: realNode?.isBoss || false,
+                    scaling: realNode?.scaling || null,
+                    sourceNodeId: sourceId,
+                });
+            }
+
+            processedLinks.push({
+                ...link,
+                target: placeholderId,
+                originalTarget: targetId,
+            });
+        } else if (!sourceDiscovered && targetDiscovered && !link.oneWay) {
+            // Target discovered, source not (bidirectional): create placeholder for source
+            const placeholderId = `???_${targetId}_${sourceId}`;
+            placeholderMap.set(placeholderId, sourceId);
+
+            if (!placeholderNodes.find(n => n.id === placeholderId)) {
+                const realNode = nodeMap.get(sourceId);
+                placeholderNodes.push({
+                    id: placeholderId,
+                    realId: sourceId,
+                    isPlaceholder: true,
+                    isBoss: realNode?.isBoss || false,
+                    scaling: realNode?.scaling || null,
+                    sourceNodeId: targetId,
+                });
+            }
+
+            processedLinks.push({
+                ...link,
+                source: placeholderId,
+                originalSource: sourceId,
+            });
+        }
+        // If neither is discovered, don't show the link
+    });
+
+    const visibleNodes = [...discoveredNodes, ...placeholderNodes];
+    const visibleLinks = processedLinks;
+
+    // Mark nodes with their exploration status
+    visibleNodes.forEach(d => {
+        if (!d.isPlaceholder) {
+            d.explorationStatus = { visible: true, discovered: true, accessible: true };
+        } else {
+            d.explorationStatus = { visible: true, discovered: false, accessible: true };
+        }
+    });
+
+    return { visibleNodes, visibleLinks, placeholderMap };
+}
+
+/**
+ * Update all stats displays in the UI header.
+ */
+function updateStatsDisplay(nodes, links, graphData, explorationMode, explorationState) {
+    // Basic counts
+    document.getElementById('area-count').textContent = nodes.length;
+    document.getElementById('random-count').textContent = links.filter(l => l.type === 'random').length;
+    document.getElementById('preexisting-count').textContent = links.filter(l => l.type === 'preexisting').length;
+
+    // Discovered stats (exploration mode only)
+    const discoveredStat = document.getElementById('discovered-stat');
+    if (explorationMode && explorationState) {
+        let discoveredCount, totalAreas;
+
+        if (graphData.metadata?.discoveryCount !== undefined && graphData.metadata?.totalZones !== undefined) {
+            // Use server-calculated stats (most accurate)
+            discoveredCount = graphData.metadata.discoveryCount;
+            totalAreas = graphData.metadata.totalZones;
+        } else {
+            // Fallback: calculate locally from discovered links
+            totalAreas = nodes.length;
+            const nodeIds = new Set(nodes.map(n => n.id));
+            const linkIndex = State.getLinkIndex();
+            const discoveredFromLinks = new Set();
+            for (const linkUUID of explorationState.discoveredLinks || []) {
+                const link = linkIndex?.byId.get(linkUUID);
+                if (link) {
+                    const { sourceId, targetId } = State.getLinkEndpoints(link);
+                    if (nodeIds.has(sourceId)) discoveredFromLinks.add(sourceId);
+                    if (nodeIds.has(targetId)) discoveredFromLinks.add(targetId);
+                }
+            }
+            discoveredCount = discoveredFromLinks.size;
+        }
+
+        const percent = totalAreas > 0 ? Math.round((discoveredCount / totalAreas) * 100) : 0;
+        document.getElementById('discovered-count').textContent = discoveredCount;
+        document.getElementById('total-areas').textContent = totalAreas;
+        document.getElementById('discovered-percent').textContent = percent;
+        discoveredStat.classList.remove('hidden');
+    } else {
+        discoveredStat.classList.add('hidden');
+    }
+
+    // Requires Key Item legend
+    const hasRequiredItems = links.some(l => l.requiredItemFrom);
+    document.getElementById('legend-requires-item').classList.toggle('hidden', !hasRequiredItems);
+
+    // Seed display
+    if (graphData.metadata?.seed) {
+        const label = graphData.metadata.label;
+        document.getElementById('seed-info').textContent = label
+            ? `${label} — Seed: ${graphData.metadata.seed}`
+            : `Seed: ${graphData.metadata.seed}`;
+    } else {
+        document.getElementById('seed-info').textContent = 'Spoiler Log Visualizer';
+    }
+
+    // Button visibility
+    updateButtonVisibility(explorationMode);
+}
 
 function updateButtonVisibility(explorationMode) {
     const resetBtn = document.getElementById('reset-exploration-btn');
@@ -608,101 +629,6 @@ function getNodeLabel(d, explorationMode, explorationState) {
     }
 
     return label;
-}
-
-function restoreNodePositions(nodes, links) {
-    const nodePositions = State.getNodePositions();
-
-    // First pass: restore known positions for non-placeholder nodes
-    nodes.forEach(node => {
-        if (node.isPlaceholder) return; // Handle placeholders separately
-
-        const savedPos = nodePositions.get(node.id);
-        if (
-            savedPos &&
-            typeof savedPos.x === 'number' &&
-            typeof savedPos.y === 'number' &&
-            !isNaN(savedPos.x) &&
-            !isNaN(savedPos.y) &&
-            isFinite(savedPos.x) &&
-            isFinite(savedPos.y)
-        ) {
-            node.x = savedPos.x;
-            node.y = savedPos.y;
-            node.fx = savedPos.x;
-            node.fy = savedPos.y;
-        }
-    });
-
-    // Second pass: position placeholder nodes near their source node with deterministic offset
-    nodes.forEach(node => {
-        if (!node.isPlaceholder) return;
-
-        const sourceNode = nodes.find(n => n.id === node.sourceNodeId);
-        if (
-            sourceNode &&
-            typeof sourceNode.x === 'number' &&
-            typeof sourceNode.y === 'number' &&
-            !isNaN(sourceNode.x) &&
-            !isNaN(sourceNode.y)
-        ) {
-            // Use a hash of the placeholder ID for deterministic positioning
-            const hash = hashString(node.id);
-            const angle = (hash % 360) * (Math.PI / 180);
-            const distance = 80 + (hash % 40); // 80-120 pixels away
-
-            node.x = sourceNode.x + Math.cos(angle) * distance;
-            node.y = sourceNode.y + Math.sin(angle) * distance;
-        } else {
-            // Fallback: random position
-            node.x = window.innerWidth / 2 + (Math.random() - 0.5) * 200;
-            node.y = window.innerHeight / 2 + (Math.random() - 0.5) * 200;
-        }
-    });
-
-    // Third pass: initialize other new nodes near neighbors
-    nodes.forEach(node => {
-        if (node.isPlaceholder) return;
-        if (node.x !== undefined && !isNaN(node.x) && !isNaN(node.y)) return;
-
-        const connectedLink = links?.find(l => {
-            const { sourceId, targetId } = State.getLinkEndpoints(l);
-            return sourceId === node.id || targetId === node.id;
-        });
-
-        if (connectedLink) {
-            const { sourceId, targetId } = State.getLinkEndpoints(connectedLink);
-            const neighborId = sourceId === node.id ? targetId : sourceId;
-            const neighborNode = nodes.find(n => n.id === neighborId);
-
-            if (
-                neighborNode &&
-                typeof neighborNode.x === 'number' &&
-                typeof neighborNode.y === 'number' &&
-                !isNaN(neighborNode.x) &&
-                !isNaN(neighborNode.y)
-            ) {
-                node.x = neighborNode.x + (Math.random() - 0.5) * 100;
-                node.y = neighborNode.y + (Math.random() - 0.5) * 100;
-            }
-        }
-
-        if (node.x === undefined || isNaN(node.x) || isNaN(node.y)) {
-            node.x = window.innerWidth / 2 + (Math.random() - 0.5) * 200;
-            node.y = window.innerHeight / 2 + (Math.random() - 0.5) * 200;
-        }
-    });
-}
-
-// Simple hash function for deterministic positioning
-function hashString(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = (hash << 5) - hash + char;
-        hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash);
 }
 
 function unfreezeNodesAfterDelay(simulation) {

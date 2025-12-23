@@ -5,6 +5,7 @@
 import * as State from './state.js';
 import * as Toast from './toast.js';
 import * as Auth from './auth.js';
+import * as PositionManager from './positionManager.js';
 
 // =============================================================================
 // Configuration
@@ -559,7 +560,7 @@ function applyPositionsAndDiscoveryOnly(data) {
 
     // Apply position changes to DOM
     if (positionsChanged) {
-        updatePositionsInDOM(d3Nodes);
+        PositionManager.updatePositionsInDOM(d3Nodes);
     }
 
     // Re-render if discovery changed
@@ -707,7 +708,7 @@ function applyVisualState(data) {
     applyVisualClasses(data);
 
     if (positionsChanged) {
-        updatePositionsInDOM(d3Nodes);
+        PositionManager.updatePositionsInDOM(d3Nodes);
     }
 
     if (data.selectedNodeId !== undefined) {
@@ -840,40 +841,6 @@ function updateViewerDiscoveryCounter(data) {
             counter.classList.add('updated');
         }
     }
-}
-
-function updatePositionsInDOM(d3Nodes) {
-    d3.selectAll('.node')
-        .transition()
-        .duration(300)
-        .attr('transform', d => {
-            const x = typeof d.x === 'number' && !isNaN(d.x) && isFinite(d.x) ? d.x : 0;
-            const y = typeof d.y === 'number' && !isNaN(d.y) && isFinite(d.y) ? d.y : 0;
-            return `translate(${x},${y})`;
-        });
-
-    d3.selectAll('.link')
-        .transition()
-        .duration(300)
-        .attr('d', d => {
-            const sourceX = typeof d.source.x === 'number' && !isNaN(d.source.x) ? d.source.x : 0;
-            const sourceY = typeof d.source.y === 'number' && !isNaN(d.source.y) ? d.source.y : 0;
-            const targetX = typeof d.target.x === 'number' && !isNaN(d.target.x) ? d.target.x : 0;
-            const targetY = typeof d.target.y === 'number' && !isNaN(d.target.y) ? d.target.y : 0;
-            const dx = targetX - sourceX;
-            const dy = targetY - sourceY;
-            const dr = Math.sqrt(dx * dx + dy * dy) * 2;
-            return `M${sourceX},${sourceY}A${dr},${dr} 0 0,1 ${targetX},${targetY}`;
-        });
-
-    setTimeout(() => {
-        d3Nodes.forEach(n => {
-            if (typeof n.x === 'number' && typeof n.y === 'number' && !isNaN(n.x) && !isNaN(n.y)) {
-                n.fx = null;
-                n.fy = null;
-            }
-        });
-    }, 500);
 }
 
 // =============================================================================
@@ -1240,7 +1207,7 @@ export async function connectAsViewer(gameId) {
             // Positions update from host
             if (data.type === 'positions_update') {
                 // All viewers sync positions
-                applyPositionsFromServer(data.positions);
+                PositionManager.applyFromServer(data.positions);
                 return;
             }
 
@@ -1492,33 +1459,6 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
         for (const zone of newlyDiscoveredZones) {
             Toast.show(`Discovered: ${zone}`, { type: 'info' });
         }
-    }
-}
-
-/**
- * Apply positions update from server (viewer side).
- */
-function applyPositionsFromServer(positions) {
-    if (!positions) return;
-
-    for (const [nodeId, pos] of Object.entries(positions)) {
-        State.saveNodePosition(nodeId, pos.x, pos.y);
-    }
-
-    // Update positions in DOM
-    const simulation = State.getSimulation();
-    if (simulation) {
-        const d3Nodes = simulation.nodes();
-        for (const node of d3Nodes) {
-            const pos = positions[node.id];
-            if (pos) {
-                node.x = pos.x;
-                node.y = pos.y;
-                node.fx = pos.x;
-                node.fy = pos.y;
-            }
-        }
-        updatePositionsInDOM(d3Nodes);
     }
 }
 

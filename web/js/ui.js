@@ -77,13 +77,7 @@ function processSpoilerLogText(text) {
 
     // Load exploration state BEFORE render (if saved), or initialize
     if (State.isExplorationMode()) {
-        const existingSave = State.loadExplorationFromStorage(newSeed);
-        if (existingSave) {
-            State.setExplorationState(existingSave);
-            // Migrate legacy saves that don't have discoveredLinks
-            Exploration.migrateDiscoveredLinks();
-            // Don't show banner - progression is already loaded
-        } else {
+        if (!Exploration.loadExplorationState(newSeed)) {
             Exploration.initExplorationState();
         }
     }
@@ -246,18 +240,10 @@ function switchToExplorerMode() {
     State.setExplorationMode(true);
     updateModeButtons();
 
-    // Check for existing save
+    // Load existing save or initialize
     const seed = State.getSeed();
-    if (seed) {
-        const existingSave = State.loadExplorationFromStorage(seed);
-        if (existingSave) {
-            State.setExplorationState(existingSave);
-            // Migrate legacy saves that don't have discoveredLinks
-            Exploration.migrateDiscoveredLinks();
-            // Progression loaded automatically
-        } else {
-            Exploration.initExplorationState();
-        }
+    if (seed && !Exploration.loadExplorationState(seed)) {
+        Exploration.initExplorationState();
     }
 
     State.emit('graphNeedsRender', { preservePositions: true });
