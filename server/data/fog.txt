@@ -1008,7 +1008,7 @@ Areas:
 - Name: leyndell_tower_start
   Text: Divine Tower of East Altus Start
   Comment: Also Morgott gate is here, via leyndell_erdtree
-  Maps: m34_14_00_00
+  Maps: m34_14_00_00 m11_05_00_00
   Tags: trivial
 - Name: leyndell_tower
   Text: Divine Tower of East Altus
