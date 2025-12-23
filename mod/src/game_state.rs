@@ -134,11 +134,11 @@ const MEDAL_ITEM_ID: u32 = 0x40000870; // Base ID 2160
 // TELEPORT TYPE ENUM
 // =============================================================================
 
-/// Types of teleportation events tracked by the mod
+/// Types of teleportation events (kept for logging/debugging)
 ///
-/// Each variant represents a different way the player can be teleported
-/// in the Fog Gate Randomizer. The enum encapsulates the detection logic
-/// (animation IDs and SpEffect IDs) for each type.
+/// Note: Detection is now based on dest_entity_id range, not animation/SpEffect.
+/// This enum is kept for potential debugging and transport type inference.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TeleportType {
     /// Fog wall traversal - walking through a fog gate
@@ -154,12 +154,13 @@ pub enum TeleportType {
     FastTravel,
 }
 
+#[allow(dead_code)]
 impl TeleportType {
     /// Animation ID that triggers this event type
     ///
     /// Returns None for event types detected via SpEffect only (e.g., Coffin)
     /// or via GameMan (e.g., FastTravel)
-    pub fn animation_id(&self) -> Option<u32> {
+    fn animation_id(&self) -> Option<u32> {
         match self {
             Self::FogWall => Some(60060),
             Self::Waygate => Some(60490),
@@ -173,7 +174,7 @@ impl TeleportType {
     ///
     /// Returns empty slice for event types detected via animation or item ID only.
     /// For Coffin: SpEffect IDs for secondary verification (primary is exclusion-based).
-    pub fn speffect_ids(&self) -> &'static [u32] {
+    fn speffect_ids(&self) -> &'static [u32] {
         match self {
             Self::FogWall => &[],
             Self::Waygate => &[],
@@ -184,7 +185,7 @@ impl TeleportType {
     }
 
     /// Log prefix for this event type
-    pub fn name(&self) -> &'static str {
+    fn name(&self) -> &'static str {
         match self {
             Self::FogWall => "FOG",
             Self::Waygate => "WAYGATE",
@@ -300,6 +301,7 @@ impl GameState {
     /// Check if player is currently in the animation for a given teleport type
     ///
     /// Returns false for teleport types that don't have an animation (e.g., Coffin)
+    #[allow(dead_code)]
     pub fn is_in_animation(&self, event_type: TeleportType) -> bool {
         match event_type.animation_id() {
             Some(expected_anim) => self
@@ -415,6 +417,7 @@ impl SpEffectReader {
     ///
     /// Returns true if any of the event's SpEffect IDs are active.
     /// Returns false for event types that don't require SpEffect checks.
+    #[allow(dead_code)]
     pub fn has_event_effect(&self, event_type: TeleportType) -> bool {
         let ids = event_type.speffect_ids();
         if ids.is_empty() {

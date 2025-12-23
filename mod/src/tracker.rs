@@ -7,32 +7,37 @@ use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
 use crate::game_state::{
-    GameManReader, GameState, PlayerPosition, SpEffectDebugInfo, SpEffectReader, TeleportType,
+    GameManReader, GameState, PlayerPosition, SpEffectDebugInfo, SpEffectReader,
 };
 use crate::websocket::{
     ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient,
 };
 
 // =============================================================================
-// PENDING EVENT
+// FOG GATE RANDOMIZER ENTITY RANGE
 // =============================================================================
 
-/// Pending teleport event (entry position recorded, waiting for exit)
+/// Fog Gate Randomizer generates sequential entity IDs in this range
+const FOG_RANDO_ENTITY_MIN: u32 = 755890000;
+const FOG_RANDO_ENTITY_MAX: u32 = 755899999;
+
+/// Check if an entity ID is from Fog Gate Randomizer
+fn is_fog_rando_entity(entity_id: u32) -> bool {
+    entity_id >= FOG_RANDO_ENTITY_MIN && entity_id <= FOG_RANDO_ENTITY_MAX
+}
+
+// =============================================================================
+// PENDING WARP
+// =============================================================================
+
+/// Pending warp event (entry position recorded, waiting for exit)
 #[derive(Clone, Debug)]
-pub(crate) struct PendingEvent {
+pub(crate) struct PendingWarp {
     entry: PlayerPosition,
     /// Entity ID of the warp destination (755890xxx for fog rando warps)
     destination_entity_id: u32,
-}
-
-/// Pending fast travel event (includes destination entity ID)
-#[derive(Clone, Debug)]
-pub(crate) struct PendingFastTravel {
-    entry: PlayerPosition,
-    /// Entity ID of the destination grace
-    destination_entity_id: u32,
-    /// Map ID of the destination
-    destination_map_id: u32,
+    /// Inferred transport type (for logging only)
+    transport_type: &'static str,
 }
 
 // =============================================================================
@@ -44,18 +49,10 @@ pub struct FogRandoTracker {
     game_state: GameState,
     sp_effect_reader: SpEffectReader,
     game_man_reader: GameManReader,
-    // Teleport event state tracking (per TeleportType)
-    pub(crate) was_in_fog: bool,
-    pub(crate) pending_fog: Option<PendingEvent>,
-    was_in_waygate: bool,
-    pending_waygate: Option<PendingEvent>,
-    was_using_medal: bool,
-    pending_medal: Option<PendingEvent>,
-    was_in_coffin: bool,
-    pending_coffin: Option<PendingEvent>,
-    /// Fast travel state tracking
+    /// Pending fog rando warp (entry recorded, waiting for exit)
+    pending_warp: Option<PendingWarp>,
+    /// Previous warp_requested state (edge detection)
     was_warp_requested: bool,
-    pending_fast_travel: Option<PendingFastTravel>,
     pub(crate) show_ui: bool,
     pub(crate) show_debug: bool,
     pub(crate) config: Config,
@@ -142,18 +139,8 @@ impl FogRandoTracker {
             game_state,
             sp_effect_reader,
             game_man_reader,
-            // Teleport event state tracking
-            was_in_fog: false,
-            pending_fog: None,
-            was_in_waygate: false,
-            pending_waygate: None,
-            was_using_medal: false,
-            pending_medal: None,
-            was_in_coffin: false,
-            pending_coffin: None,
-            // Fast travel state tracking
+            pending_warp: None,
             was_warp_requested: false,
-            pending_fast_travel: None,
             show_ui: true,
             show_debug: false,
             config,
@@ -172,7 +159,11 @@ impl FogRandoTracker {
         })
     }
 
-    /// Check for fog wall and teleporter traversals each frame
+    /// Check for fog gate randomizer warps each frame
+    ///
+    /// Simplified detection: a warp is relevant if dest_entity_id is in the
+    /// Fog Gate Randomizer range (755890000-755899999). This avoids complex
+    /// animation/SpEffect detection and eliminates false positives from deaths.
     pub fn check_fog_traversal(&mut self) {
         // Log SpEffect debug info (with deduplication)
         self.log_speffect_debug();
@@ -185,8 +176,6 @@ impl FogRandoTracker {
 
         // Track loading screens - clear zone info when exiting a loading screen
         // (position goes from None to Some). This handles teleportation, death, fast travel, etc.
-        // We don't clear on map_id change alone because walking between map tiles doesn't
-        // change the zone from the fog randomizer's perspective.
         let position_now_readable = self.game_state.read_position().is_some();
         if position_now_readable && !self.was_position_readable {
             // Just exited a loading screen - clear current zone until we get new info from server
@@ -196,330 +185,96 @@ impl FogRandoTracker {
         self.was_position_readable = position_now_readable;
 
         // =========================================================================
-        // Check if position is readable (used for exit detection)
-        // During loading screens, position is unreadable - we must wait
-        // =========================================================================
-        let position_readable = self.game_state.read_position().is_some();
-
-        // =========================================================================
-        // FOG WALL DETECTION
+        // FOG GATE RANDOMIZER WARP DETECTION
         //
-        // Timing is critical: WarpPlayer (which sets initial_area_entity_id) is
-        // called ~1 second AFTER the fog animation starts. So we:
-        // 1. Detect animation start → store entry position (dest_entity_id = 0)
-        // 2. Detect warp_requested = true → capture destination_entity_id now
-        // 3. Detect animation end + position readable → send discovery
+        // Simple logic: when warp_requested becomes true and dest_entity_id is
+        // in the fog rando range (755890000-755899999), record entry position.
+        // When warp completes (warp_requested = false + position readable), send.
         // =========================================================================
-        let is_fog = self.game_state.is_in_animation(TeleportType::FogWall);
-
-        if is_fog && !self.was_in_fog {
-            self.on_event_entry(TeleportType::FogWall);
-        } else if self.pending_fog.is_some() && !is_fog && position_readable {
-            // Only trigger exit when position is readable (not during loading)
-            self.on_event_exit(TeleportType::FogWall);
-        }
-        self.was_in_fog = is_fog;
-
-        // =========================================================================
-        // WAYGATE / SENDING GATE DETECTION
-        // =========================================================================
-        let is_waygate = self.game_state.is_in_animation(TeleportType::Waygate);
-
-        if is_waygate && !self.was_in_waygate {
-            self.on_event_entry(TeleportType::Waygate);
-        } else if self.pending_waygate.is_some() && !is_waygate && position_readable {
-            // Only trigger exit when position is readable (not during loading)
-            self.on_event_exit(TeleportType::Waygate);
-        }
-        self.was_in_waygate = is_waygate;
-
-        // =========================================================================
-        // MEDAL DETECTION (animation + item ID check)
-        // Using tae_queued_use_item is more reliable than SpEffect detection
-        // =========================================================================
-        let is_medal = self.game_state.is_in_animation(TeleportType::Medal)
-            && self.sp_effect_reader.is_using_medal();
-
-        if is_medal && !self.was_using_medal {
-            self.on_event_entry(TeleportType::Medal);
-        } else if self.pending_medal.is_some() && !is_medal && position_readable {
-            // Only trigger exit when position is readable (not during loading)
-            self.on_event_exit(TeleportType::Medal);
-        }
-        self.was_using_medal = is_medal;
-
-        // =========================================================================
-        // COFFIN DETECTION (exclusion-based with SpEffect verification)
-        //
-        // Primary detection: warp_requested + no animation + no medal
-        // Secondary verification: SpEffect IDs (4190/4010/4510)
-        //
-        // A coffin is detected when:
-        // - warp_requested is true (GameMan confirms a warp is happening)
-        // - No fog wall animation (60060)
-        // - No waygate animation (60490)
-        // - No medal use (item ID check)
-        // - Not a fast travel (destination_entity_id == 0, no grace selected)
-        //
-        // The SpEffect check provides additional confidence but is not required,
-        // allowing detection of modded coffins with different SpEffect IDs.
-        // =========================================================================
-        let has_coffin_speffect = self.sp_effect_reader.has_event_effect(TeleportType::Coffin);
-
-        // Exclusion-based detection: warp without animation and not fast travel
         let warp_requested = self.game_man_reader.is_warp_requested();
-        let no_animation = !is_fog && !is_waygate && !is_medal;
         let dest_entity_id = self.game_man_reader.get_destination_entity_id();
-        // Fast travel sets destination_entity_id to the grace entity ID (non-zero)
-        // Coffin typically has destination_entity_id == 0
-        let not_fast_travel = dest_entity_id == 0;
 
-        // Coffin detected by exclusion: warp + no animation + not fast travel
-        let is_coffin_by_exclusion = warp_requested && no_animation && not_fast_travel;
-
-        // Final coffin detection: exclusion-based OR SpEffect-based
-        // This ensures we catch both known coffins (SpEffect) and potential new ones (exclusion)
-        let is_coffin = is_coffin_by_exclusion || has_coffin_speffect;
-
-        // Log warnings for detection mismatches (helps discover new coffin types)
-        if is_coffin_by_exclusion && !has_coffin_speffect && !self.was_in_coffin {
-            println!(
-                "[COFFIN] WARNING: Detected by exclusion but no known SpEffect! dest_entity={} - possible new coffin type",
-                dest_entity_id
-            );
-        } else if has_coffin_speffect && !is_coffin_by_exclusion && !self.was_in_coffin {
-            println!(
-                "[COFFIN] INFO: SpEffect detected but exclusion check failed (warp={}, no_anim={}, not_ft={})",
-                warp_requested, no_animation, not_fast_travel
-            );
-        }
-
-        if is_coffin && !self.was_in_coffin {
-            self.on_event_entry(TeleportType::Coffin);
-        } else if self.pending_coffin.is_some() && !is_coffin && position_readable {
-            // Only trigger exit when position is readable (not during loading)
-            self.on_event_exit(TeleportType::Coffin);
-        }
-        self.was_in_coffin = is_coffin;
-
-        // =========================================================================
-        // DESTINATION ENTITY CAPTURE (when warp_requested becomes true)
-        //
-        // WarpPlayer instruction sets initial_area_entity_id and warp_requested.
-        // For fog gates, this happens ~1 second AFTER the animation starts.
-        // We capture destination_entity_id here to update pending events.
-        // =========================================================================
         if warp_requested && !self.was_warp_requested {
-            // Capture destination_entity_id for pending animation-based events
-            // WarpPlayer has just been executed, initial_area_entity_id is now set
-            let current_dest = self.game_man_reader.get_destination_entity_id();
-
-            if let Some(ref mut pending) = self.pending_fog {
-                if pending.destination_entity_id == 0 && current_dest != 0 {
-                    pending.destination_entity_id = current_dest;
+            // Warp just started - check if it's a fog rando warp
+            if is_fog_rando_entity(dest_entity_id) {
+                if let Some(pos) = self.game_state.read_position() {
+                    let transport_type = self.infer_transport_type();
                     println!(
-                        "[FOG] Captured destination_entity_id on warp_requested: {}",
-                        current_dest
+                        "[WARP] Fog rando warp detected! type={} dest_entity={} entry=[{}] pos=({:.1}, {:.1}, {:.1})",
+                        transport_type, dest_entity_id, pos.map_id_str, pos.x, pos.y, pos.z
+                    );
+                    self.pending_warp = Some(PendingWarp {
+                        entry: pos,
+                        destination_entity_id: dest_entity_id,
+                        transport_type,
+                    });
+                } else {
+                    println!(
+                        "[WARP] WARNING: Fog rando warp detected but position unreadable! dest_entity={}",
+                        dest_entity_id
                     );
                 }
             }
-            if let Some(ref mut pending) = self.pending_waygate {
-                if pending.destination_entity_id == 0 && current_dest != 0 {
-                    pending.destination_entity_id = current_dest;
+        } else if !warp_requested && self.was_warp_requested {
+            // Warp just completed - send discovery if we have a pending warp
+            if let Some(pending) = self.pending_warp.take() {
+                if let Some(exit_pos) = self.game_state.read_position() {
                     println!(
-                        "[WAYGATE] Captured destination_entity_id on warp_requested: {}",
-                        current_dest
+                        "[WARP] Complete: {} → {} (type={}, dest_entity={})",
+                        pending.entry.map_id_str,
+                        exit_pos.map_id_str,
+                        pending.transport_type,
+                        pending.destination_entity_id
                     );
-                }
-            }
-            if let Some(ref mut pending) = self.pending_medal {
-                if pending.destination_entity_id == 0 && current_dest != 0 {
-                    pending.destination_entity_id = current_dest;
+                    self.send_discovery(&pending, &exit_pos);
+                } else {
                     println!(
-                        "[MEDAL] Captured destination_entity_id on warp_requested: {}",
-                        current_dest
+                        "[WARP] WARNING: Warp completed but exit position unreadable! Entry was at {}",
+                        pending.entry.map_id_str
                     );
                 }
             }
         }
 
-        // =========================================================================
-        // FAST TRAVEL DETECTION (GameMan.warp_requested with destination_entity_id)
-        //
-        // Fast travel is detected when:
-        // - warp_requested is true
-        // - destination_entity_id != 0 (grace entity ID is set)
-        // - No animation-based event is active (fog/waygate/medal)
-        //
-        // Note: warp_requested is already computed above for coffin detection
-        // =========================================================================
-        if warp_requested && !self.was_warp_requested {
-            // Warp was just requested - check if it's a fast travel
-            // Fast travel has a non-zero destination_entity_id (grace ID)
-            // and no animation-based events active
-            let is_fast_travel = dest_entity_id != 0 && no_animation;
-
-            if is_fast_travel {
-                self.on_fast_travel_entry();
-            }
-        } else if self.pending_fast_travel.is_some() && !warp_requested {
-            // Warp completed - check for exit position
-            self.on_fast_travel_exit();
-        }
         self.was_warp_requested = warp_requested;
     }
 
-    /// Handle teleport event entry (start of animation/SpEffect)
-    fn on_event_entry(&mut self, event_type: TeleportType) {
-        let name = event_type.name();
-        if let Some(pos) = self.game_state.read_position() {
-            let dest_entity_id = self.game_man_reader.get_destination_entity_id();
-            println!(
-                "[{}] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?} dest_entity={}",
-                name, pos.map_id_str, pos.x, pos.y, pos.z, pos.play_region_id, dest_entity_id
-            );
-
-            let pending = PendingEvent {
-                entry: pos,
-                destination_entity_id: dest_entity_id,
-            };
-            match event_type {
-                TeleportType::FogWall => self.pending_fog = Some(pending),
-                TeleportType::Waygate => self.pending_waygate = Some(pending),
-                TeleportType::Medal => self.pending_medal = Some(pending),
-                TeleportType::Coffin => self.pending_coffin = Some(pending),
-                TeleportType::FastTravel => {} // Handled separately via on_fast_travel_entry
-            }
-        } else {
-            // Position not readable - this can happen during state transitions
-            println!(
-                "[{}] WARNING: Entry detected but position unreadable! Event may be missed.",
-                name
-            );
+    /// Infer transport type from current animation (best-effort, for logging only)
+    fn infer_transport_type(&self) -> &'static str {
+        match self.game_state.read_animation() {
+            Some(60060) => "FOG",
+            Some(60490) => "WAYGATE",
+            Some(60470) | Some(60472) => "SENDING_GATE",
+            Some(50340) => "MEDAL",
+            _ => "OTHER", // coffin, scripted events, etc.
         }
     }
 
-    /// Handle teleport event exit (end of animation/SpEffect, position available)
-    fn on_event_exit(&mut self, event_type: TeleportType) {
-        let name = event_type.name();
-        let pending = match event_type {
-            TeleportType::FogWall => self.pending_fog.take(),
-            TeleportType::Waygate => self.pending_waygate.take(),
-            TeleportType::Medal => self.pending_medal.take(),
-            TeleportType::Coffin => self.pending_coffin.take(),
-            TeleportType::FastTravel => None, // Handled separately
-        };
-
-        if let Some(pending) = pending {
-            if let Some(exit_pos) = self.game_state.read_position() {
-                println!(
-                    "[{}] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
-                    name,
-                    exit_pos.map_id_str,
-                    exit_pos.x,
-                    exit_pos.y,
-                    exit_pos.z,
-                    exit_pos.play_region_id
-                );
-                println!(
-                    "[{}] Traversal complete: {} → {} (dest_entity={})",
-                    name,
-                    pending.entry.map_id_str,
-                    exit_pos.map_id_str,
-                    pending.destination_entity_id
-                );
-
-                self.send_discovery(
-                    event_type,
-                    &pending.entry,
-                    &exit_pos,
-                    pending.destination_entity_id,
-                );
-            } else {
-                // Exit position not readable - event lost
-                println!(
-                    "[{}] WARNING: Exit position unreadable! Entry was at {}",
-                    name, pending.entry.map_id_str
-                );
-            }
-        }
-    }
-
-    /// Handle fast travel entry (warp_requested becomes true without other events)
-    fn on_fast_travel_entry(&mut self) {
-        if let Some(pos) = self.game_state.read_position() {
-            let dest_entity_id = self.game_man_reader.get_destination_entity_id();
-            let dest_map_id = self.game_man_reader.get_destination_map_id();
-
-            println!(
-                "[FAST_TRAVEL] Entry detected [{}] pos=({:.1}, {:.1}, {:.1}) → dest_entity={} dest_map={}",
-                pos.map_id_str, pos.x, pos.y, pos.z, dest_entity_id, dest_map_id
-            );
-
-            self.pending_fast_travel = Some(PendingFastTravel {
-                entry: pos,
-                destination_entity_id: dest_entity_id,
-                destination_map_id: dest_map_id,
-            });
-        }
-    }
-
-    /// Handle fast travel exit (warp_requested becomes false, position available)
-    fn on_fast_travel_exit(&mut self) {
-        if let Some(exit_pos) = self.game_state.read_position() {
-            if let Some(pending) = self.pending_fast_travel.take() {
-                println!(
-                    "[FAST_TRAVEL] Exit detected [{}] pos=({:.1}, {:.1}, {:.1}) region={:?}",
-                    exit_pos.map_id_str,
-                    exit_pos.x,
-                    exit_pos.y,
-                    exit_pos.z,
-                    exit_pos.play_region_id
-                );
-                println!(
-                    "[FAST_TRAVEL] Travel complete: {} → {} (dest_entity={}, dest_map={})",
-                    pending.entry.map_id_str,
-                    exit_pos.map_id_str,
-                    pending.destination_entity_id,
-                    pending.destination_map_id
-                );
-            }
-        }
-    }
-
-    /// Send discovery event to server (shared logic for all teleport types)
-    fn send_discovery(
-        &mut self,
-        event_type: TeleportType,
-        entry: &PlayerPosition,
-        exit_pos: &PlayerPosition,
-        destination_entity_id: u32,
-    ) {
-        let name = event_type.name();
+    /// Send discovery event to server
+    fn send_discovery(&mut self, pending: &PendingWarp, exit_pos: &PlayerPosition) {
         if self.ws_client.is_connected() {
             println!(
-                "[{}] Sending to server: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?} dest_entity={}",
-                name,
-                entry.map_id_str,
-                entry.x, entry.y, entry.z,
-                entry.play_region_id,
+                "[WARP] Sending to server: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?} dest_entity={}",
+                pending.entry.map_id_str,
+                pending.entry.x, pending.entry.y, pending.entry.z,
+                pending.entry.play_region_id,
                 exit_pos.map_id_str,
                 exit_pos.x, exit_pos.y, exit_pos.z,
                 exit_pos.play_region_id,
-                destination_entity_id
+                pending.destination_entity_id
             );
             self.ws_client.send_discovery_v2(
-                entry.map_id,
-                entry.pos(),
-                entry.play_region_id,
+                pending.entry.map_id,
+                pending.entry.pos(),
+                pending.entry.play_region_id,
                 exit_pos.map_id,
                 exit_pos.pos(),
                 exit_pos.play_region_id,
-                name,
-                destination_entity_id,
+                pending.transport_type,
+                pending.destination_entity_id,
             );
         } else {
-            println!("[{}] Not connected to server, discovery not sent", name);
+            println!("[WARP] Not connected to server, discovery not sent");
         }
     }
 
