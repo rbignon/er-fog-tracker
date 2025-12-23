@@ -158,7 +158,6 @@ class ModClient(Client):
 
     async def _handle_pong(self, data: dict):
         """Handle pong response."""
-        logger.debug("[MOD] Pong received")
 
     async def _handle_debug_log(self, data: dict):
         """Handle debug log from mod."""
@@ -423,30 +422,74 @@ class ModClient(Client):
 
                 if not has_zone_keys:
                     # Fallback: use display name matching (legacy behavior)
-                    matches = find_all_matching_zone_pairs(
+                    # Also apply backprop cost tie-breaking
+                    all_matches = find_all_matching_zone_pairs(
                         game.zone_pairs,
                         source_candidates[:15],
                         target_candidates[:15],
                     )
 
-                    if matches:
-                        logger.info("[MOD] Found %d valid link(s) in spoiler log", len(matches))
-                        for source_display, target_display, _ in matches:
-                            logger.info(
-                                "[MOD] Discovered: '%s' -> '%s'", source_display, target_display
-                            )
-                            resolved_links.append(
-                                {"source": source_display, "target": target_display}
-                            )
+                    if all_matches:
+                        logger.info(
+                            "[MOD] Found %d candidate match(es) by display name", len(all_matches)
+                        )
 
-                            propagated = await propagate_discovery(
-                                db,
-                                self.game_id,
+                        # Calculate back-propagation cost for each match
+                        matches_with_cost = []
+                        for source_display, target_display, pair in all_matches:
+                            cost = compute_backprop_cost(
+                                game.zone_pairs,
+                                game.discovered_links or [],
+                                source_display,
+                            )
+                            matches_with_cost.append((source_display, target_display, pair, cost))
+                            logger.debug(
+                                "[MOD] Match '%s' -> '%s': backprop cost = %d",
                                 source_display,
                                 target_display,
-                                discovered_by="mod",
+                                cost,
                             )
-                            all_propagated.extend(propagated)
+
+                        # Sort by cost (ascending), -1 (unreachable) goes last
+                        matches_with_cost.sort(key=lambda x: (x[3] == -1, x[3]))
+
+                        # Get minimum cost (excluding unreachable)
+                        reachable = [m for m in matches_with_cost if m[3] >= 0]
+                        if reachable:
+                            min_cost = reachable[0][3]
+                            best_matches = [m for m in reachable if m[3] == min_cost]
+
+                            if len(best_matches) > 1:
+                                logger.info(
+                                    "[MOD] %d matches tied with cost %d, discovering all",
+                                    len(best_matches),
+                                    min_cost,
+                                )
+
+                            for source_display, target_display, _, cost in best_matches:
+                                logger.info(
+                                    "[MOD] Discovered (by display name, cost=%d): '%s' -> '%s'",
+                                    cost,
+                                    source_display,
+                                    target_display,
+                                )
+                                resolved_links.append(
+                                    {"source": source_display, "target": target_display}
+                                )
+
+                                propagated = await propagate_discovery(
+                                    db,
+                                    self.game_id,
+                                    source_display,
+                                    target_display,
+                                    discovered_by="mod",
+                                )
+                                all_propagated.extend(propagated)
+                        else:
+                            logger.warning(
+                                "[MOD] All %d matches are unreachable from START",
+                                len(all_matches),
+                            )
                     else:
                         logger.warning(
                             "[MOD] No spoiler log match (tried %d x %d combinations)",
@@ -637,7 +680,6 @@ class HostClient(Client):
 
     async def _handle_pong(self, data: dict):
         """Handle pong response."""
-        logger.debug("[HOST] Pong received")
 
     async def _handle_visual_state(self, data: dict):
         """Handle visual state update from host."""
@@ -807,7 +849,6 @@ class ViewerClient(Client):
 
     async def _handle_pong(self, data: dict):
         """Handle pong response."""
-        pass
 
     @classmethod
     async def handle_connection(cls, websocket: WebSocket, game_id: UUID):
