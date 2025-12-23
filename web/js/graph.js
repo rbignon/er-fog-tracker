@@ -465,7 +465,8 @@ function updateButtonVisibility(explorationMode) {
         frontierLabel.classList.toggle('hidden', !explorationMode);
     }
     if (frontierCheckbox) {
-        frontierCheckbox.checked = false;
+        // Sync checkbox with current state (don't reset to false on every render)
+        frontierCheckbox.checked = State.isFrontierHighlightActive();
     }
 }
 
