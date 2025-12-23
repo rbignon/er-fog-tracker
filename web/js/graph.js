@@ -7,7 +7,7 @@ import * as State from './state.js';
 import * as Exploration from './exploration.js';
 
 // Track which tags are selected for filtering
-let selectedTagFilters = new Set();
+const selectedTagFilters = new Set();
 
 // ============================================================
 // RENDER GRAPH
@@ -27,25 +27,25 @@ export function renderGraph(preservePositions = false) {
     }
 
     // Clear previous graph
-    d3.select("#graph-container svg").selectAll("*").remove();
+    d3.select('#graph-container svg').selectAll('*').remove();
 
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    const svg = d3.select("#graph-container svg")
-        .attr("viewBox", [0, 0, width, height]);
+    const svg = d3.select('#graph-container svg').attr('viewBox', [0, 0, width, height]);
 
     // Create container for zoom
-    const container = svg.append("g");
+    const container = svg.append('g');
 
     // Save current transform BEFORE setting up zoom (svg.call(zoom) triggers the handler with identity)
     const savedTransform = preservePositions ? State.getCurrentZoomTransform() : null;
 
     // Zoom behavior
-    const zoom = d3.zoom()
+    const zoom = d3
+        .zoom()
         .scaleExtent([0.1, 4])
-        .on("zoom", (event) => {
-            container.attr("transform", event.transform);
+        .on('zoom', event => {
+            container.attr('transform', event.transform);
             State.setCurrentZoomTransform(event.transform);
             State.emit('viewportChanged', event.transform);
         });
@@ -53,17 +53,22 @@ export function renderGraph(preservePositions = false) {
     svg.call(zoom);
 
     // Restore zoom if preserving positions (use savedTransform captured before svg.call(zoom))
-    if (preservePositions && savedTransform &&
-        isFinite(savedTransform.x) && isFinite(savedTransform.y) && isFinite(savedTransform.k)) {
+    if (
+        preservePositions &&
+        savedTransform &&
+        isFinite(savedTransform.x) &&
+        isFinite(savedTransform.y) &&
+        isFinite(savedTransform.k)
+    ) {
         svg.call(zoom.transform, savedTransform);
     }
-    
+
     // Arrow markers (defs)
-    svg.append("defs");
-    
+    svg.append('defs');
+
     // Process data (deep clone to avoid mutation)
-    const nodes = graphData.nodes.map(d => ({...d}));
-    const links = graphData.links.map(d => ({...d}));
+    const nodes = graphData.nodes.map(d => ({ ...d }));
+    const links = graphData.links.map(d => ({ ...d }));
 
     // Create node map
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
@@ -72,13 +77,13 @@ export function renderGraph(preservePositions = false) {
     const nodeConnections = Exploration.buildNodeConnectionsMap({ nodes, links });
 
     // Update stats
-    document.getElementById("area-count").textContent = nodes.length;
-    document.getElementById("random-count").textContent = links.filter(l => l.type === "random").length;
-    document.getElementById("preexisting-count").textContent = links.filter(l => l.type === "preexisting").length;
+    document.getElementById('area-count').textContent = nodes.length;
+    document.getElementById('random-count').textContent = links.filter(l => l.type === 'random').length;
+    document.getElementById('preexisting-count').textContent = links.filter(l => l.type === 'preexisting').length;
 
     // Update discovered stats (exploration mode only)
     // Use server-calculated stats if available, otherwise calculate locally
-    const discoveredStat = document.getElementById("discovered-stat");
+    const discoveredStat = document.getElementById('discovered-stat');
     if (explorationMode && explorationState) {
         let discoveredCount, totalAreas;
 
@@ -96,10 +101,9 @@ export function renderGraph(preservePositions = false) {
                 // Use link index to get source/target from UUID
                 const link = linkIndex?.byId.get(linkUUID);
                 if (link) {
-                    const source = typeof link.source === 'object' ? link.source.id : link.source;
-                    const target = typeof link.target === 'object' ? link.target.id : link.target;
-                    if (nodeIds.has(source)) discoveredFromLinks.add(source);
-                    if (nodeIds.has(target)) discoveredFromLinks.add(target);
+                    const { sourceId, targetId } = State.getLinkEndpoints(link);
+                    if (nodeIds.has(sourceId)) discoveredFromLinks.add(sourceId);
+                    if (nodeIds.has(targetId)) discoveredFromLinks.add(targetId);
                 }
             }
             discoveredCount = discoveredFromLinks.size;
@@ -107,26 +111,26 @@ export function renderGraph(preservePositions = false) {
 
         const percent = totalAreas > 0 ? Math.round((discoveredCount / totalAreas) * 100) : 0;
 
-        document.getElementById("discovered-count").textContent = discoveredCount;
-        document.getElementById("total-areas").textContent = totalAreas;
-        document.getElementById("discovered-percent").textContent = percent;
-        discoveredStat.classList.remove("hidden");
+        document.getElementById('discovered-count').textContent = discoveredCount;
+        document.getElementById('total-areas').textContent = totalAreas;
+        document.getElementById('discovered-percent').textContent = percent;
+        discoveredStat.classList.remove('hidden');
     } else {
-        discoveredStat.classList.add("hidden");
+        discoveredStat.classList.add('hidden');
     }
 
     // Show/hide "Requires Key Item" legend
     const hasRequiredItems = links.some(l => l.requiredItemFrom);
-    document.getElementById("legend-requires-item").classList.toggle('hidden', !hasRequiredItems);
+    document.getElementById('legend-requires-item').classList.toggle('hidden', !hasRequiredItems);
 
     // Update seed display
     if (graphData.metadata && graphData.metadata.seed) {
         const label = graphData.metadata.label;
-        document.getElementById("seed-info").textContent = label
+        document.getElementById('seed-info').textContent = label
             ? `${label} — Seed: ${graphData.metadata.seed}`
             : `Seed: ${graphData.metadata.seed}`;
     } else {
-        document.getElementById("seed-info").textContent = 'Spoiler Log Visualizer';
+        document.getElementById('seed-info').textContent = 'Spoiler Log Visualizer';
     }
 
     // Update button visibility
@@ -138,7 +142,7 @@ export function renderGraph(preservePositions = false) {
         n.isHub = conns && conns.distinctLinks >= 3;
     });
 
-    document.getElementById("hub-count").textContent = nodes.filter(n => n.isHub).length;
+    document.getElementById('hub-count').textContent = nodes.filter(n => n.isHub).length;
 
     // Compute exploration status for each node
     nodes.forEach(d => {
@@ -156,8 +160,7 @@ export function renderGraph(preservePositions = false) {
         const processedLinks = [];
 
         links.forEach(link => {
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+            const { sourceId, targetId } = State.getLinkEndpoints(link);
             const sourceDiscovered = explorationState.discovered.has(sourceId);
             const targetDiscovered = explorationState.discovered.has(targetId);
 
@@ -171,7 +174,7 @@ export function renderGraph(preservePositions = false) {
 
                 if (isThisLinkDiscovered) {
                     // Link is discovered: show normal link
-                    processedLinks.push({...link});
+                    processedLinks.push({ ...link });
                 } else {
                     // Link NOT discovered: create placeholder(s) for undiscovered link
                     // Forward direction: source -> target (always possible)
@@ -187,14 +190,14 @@ export function renderGraph(preservePositions = false) {
                             isUndiscoveredLink: true, // Mark as undiscovered link to existing node
                             isBoss: realNode?.isBoss || false,
                             scaling: realNode?.scaling || null,
-                            sourceNodeId: sourceId
+                            sourceNodeId: sourceId,
                         });
                     }
 
                     processedLinks.push({
                         ...link,
                         target: placeholderIdForward,
-                        originalTarget: targetId
+                        originalTarget: targetId,
                     });
 
                     // Backward direction: target -> source (only if bidirectional)
@@ -211,14 +214,14 @@ export function renderGraph(preservePositions = false) {
                                 isUndiscoveredLink: true,
                                 isBoss: realNode?.isBoss || false,
                                 scaling: realNode?.scaling || null,
-                                sourceNodeId: targetId
+                                sourceNodeId: targetId,
                             });
                         }
 
                         processedLinks.push({
                             ...link,
                             source: placeholderIdBackward,
-                            originalSource: sourceId
+                            originalSource: sourceId,
                         });
                     }
                 }
@@ -237,7 +240,7 @@ export function renderGraph(preservePositions = false) {
                         isBoss: realNode?.isBoss || false,
                         scaling: realNode?.scaling || null,
                         // Position near the source node
-                        sourceNodeId: sourceId
+                        sourceNodeId: sourceId,
                     });
                 }
 
@@ -245,7 +248,7 @@ export function renderGraph(preservePositions = false) {
                 processedLinks.push({
                     ...link,
                     target: placeholderId,
-                    originalTarget: targetId
+                    originalTarget: targetId,
                 });
             } else if (!sourceDiscovered && targetDiscovered && !link.oneWay) {
                 // Target discovered, source not (bidirectional): create placeholder for source
@@ -260,14 +263,14 @@ export function renderGraph(preservePositions = false) {
                         isPlaceholder: true,
                         isBoss: realNode?.isBoss || false,
                         scaling: realNode?.scaling || null,
-                        sourceNodeId: targetId
+                        sourceNodeId: targetId,
                     });
                 }
 
                 processedLinks.push({
                     ...link,
                     source: placeholderId,
-                    originalSource: sourceId
+                    originalSource: sourceId,
                 });
             }
             // If neither is discovered, don't show the link
@@ -290,116 +293,123 @@ export function renderGraph(preservePositions = false) {
     }
 
     const visibleNodeIds = new Set(visibleNodes.map(d => d.id));
-    
+
     // Stop previous simulation
     const oldSimulation = State.getSimulation();
     if (oldSimulation) oldSimulation.stop();
-    
+
     // Restore node positions if preserving layout
     if (preservePositions) {
         restoreNodePositions(visibleNodes, visibleLinks);
     }
-    
+
     // Create force simulation
-    const simulation = d3.forceSimulation(visibleNodes)
-        .force("link", d3.forceLink(visibleLinks)
-            .id(d => d.id)
-            .distance(100)
-            .strength(0.5))
-        .force("charge", d3.forceManyBody()
-            .strength(-300)
-            .distanceMax(500))
-        .force("center", preservePositions ? null : d3.forceCenter(width / 2, height / 2))
-        .force("collision", d3.forceCollide().radius(30))
-        .force("x", preservePositions ? null : d3.forceX(width / 2).strength(0.03))
-        .force("y", preservePositions ? null : d3.forceY(height / 2).strength(0.03));
-    
+    const simulation = d3
+        .forceSimulation(visibleNodes)
+        .force(
+            'link',
+            d3
+                .forceLink(visibleLinks)
+                .id(d => d.id)
+                .distance(100)
+                .strength(0.5)
+        )
+        .force('charge', d3.forceManyBody().strength(-300).distanceMax(500))
+        .force('center', preservePositions ? null : d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(30))
+        .force('x', preservePositions ? null : d3.forceX(width / 2).strength(0.03))
+        .force('y', preservePositions ? null : d3.forceY(height / 2).strength(0.03));
+
     State.setSimulation(simulation);
-    
+
     // Unfreeze nodes after layout stabilizes
     if (preservePositions) {
         unfreezeNodesAfterDelay(simulation);
     }
-    
+
     // Draw links (path 'd' attribute will be set by tick handler)
-    const link = container.append("g")
-        .attr("class", "links")
-        .selectAll("path")
+    const link = container
+        .append('g')
+        .attr('class', 'links')
+        .selectAll('path')
         .data(visibleLinks)
-        .join("path")
-        .attr("class", d => {
+        .join('path')
+        .attr('class', d => {
             let cls = `link ${d.type}`;
             if (d.requiredItemFrom) cls += ' requires-item';
             return cls;
         });
-    
+
     // Draw nodes
-    const node = container.append("g")
-        .attr("class", "nodes")
-        .selectAll("g")
+    const node = container
+        .append('g')
+        .attr('class', 'nodes')
+        .selectAll('g')
         .data(visibleNodes)
-        .join("g")
-        .attr("class", d => getNodeClass(d, explorationMode))
-        .call(d3.drag()
-            .on("start", (event) => dragstarted(event, simulation))
-            .on("drag", dragged)
-            .on("end", (event) => dragended(event, simulation)));
-    
-    node.append("circle")
-        .attr("r", d => {
-            if (explorationMode && !d.explorationStatus.discovered) return 7;
-            return d.isBoss ? 10 : 7;
-        });
-    
-    node.append("text")
-        .attr("dx", 12)
-        .attr("dy", 4)
+        .join('g')
+        .attr('class', d => getNodeClass(d, explorationMode))
+        .call(
+            d3
+                .drag()
+                .on('start', event => dragstarted(event, simulation))
+                .on('drag', dragged)
+                .on('end', event => dragended(event, simulation))
+        );
+
+    node.append('circle').attr('r', d => {
+        if (explorationMode && !d.explorationStatus.discovered) return 7;
+        return d.isBoss ? 10 : 7;
+    });
+
+    node.append('text')
+        .attr('dx', 12)
+        .attr('dy', 4)
         .text(d => getNodeLabel(d, explorationMode, explorationState));
 
     // Setup interactions
     setupTooltip(node, nodeConnections, explorationMode, explorationState, placeholderMap, nodeMap, visibleLinks);
     setupNodeClick(node, svg, nodeConnections, explorationMode, explorationState, placeholderMap, visibleLinks);
     setupSearch(node, link, nodes);
-    
+
     // Simulation tick handler
-    simulation.on("tick", () => {
-        link.attr("d", d => {
-            const sx = d.source.x ?? 0, sy = d.source.y ?? 0;
-            const tx = d.target.x ?? 0, ty = d.target.y ?? 0;
+    simulation.on('tick', () => {
+        link.attr('d', d => {
+            const sx = d.source.x ?? 0,
+                sy = d.source.y ?? 0;
+            const tx = d.target.x ?? 0,
+                ty = d.target.y ?? 0;
             const dx = tx - sx;
             const dy = ty - sy;
             const dr = Math.sqrt(dx * dx + dy * dy) * 2;
             return `M${sx},${sy}A${dr},${dr} 0 0,1 ${tx},${ty}`;
         });
-        
-        node.attr("transform", d => `translate(${d.x ?? 0},${d.y ?? 0})`);
+
+        node.attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`);
     });
-    
+
     // Initial zoom to fit (only on first render)
     if (!preservePositions) {
         setTimeout(() => {
             const bounds = container.node()?.getBBox();
             if (!bounds || bounds.width === 0 || bounds.height === 0) return;
-            
+
             const fullWidth = bounds.width;
             const fullHeight = bounds.height;
             const midX = bounds.x + fullWidth / 2;
             const midY = bounds.y + fullHeight / 2;
-            
+
             const scale = 0.8 / Math.max(fullWidth / width, fullHeight / height);
             if (!isFinite(scale) || scale <= 0) return;
-            
+
             const translate = [width / 2 - scale * midX, height / 2 - scale * midY];
             if (!isFinite(translate[0]) || !isFinite(translate[1])) return;
-            
+
             svg.transition()
                 .duration(750)
-                .call(zoom.transform, d3.zoomIdentity
-                    .translate(translate[0], translate[1])
-                    .scale(scale));
+                .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
         }, 2000);
     }
-    
+
     // Re-apply frontier highlight if active AND no node is selected
     // (if a node is selected, applySelectionHighlights already handled it)
     if (State.isFrontierHighlightActive() && !State.getSelectedNodeId()) {
@@ -458,7 +468,7 @@ function updateTagStats() {
 
     // Count occurrences of each tag
     const tagCounts = new Map();
-    explorationState.tags.forEach((tags) => {
+    explorationState.tags.forEach(tags => {
         tags.forEach(tagId => {
             tagCounts.set(tagId, (tagCounts.get(tagId) || 0) + 1);
         });
@@ -479,7 +489,7 @@ function updateTagStats() {
         if (count === 0) return;
 
         const tagEl = document.createElement('div');
-        tagEl.className = 'stats-tag' + (selectedTagFilters.has(tag.id) ? ' active' : '');
+        tagEl.className = `stats-tag${selectedTagFilters.has(tag.id) ? ' active' : ''}`;
         tagEl.setAttribute('data-tag-id', tag.id);
         tagEl.innerHTML = `<span class="tag-emoji">${tag.emoji}</span><span class="tag-count">${count}</span>`;
         tagEl.title = `Click to highlight areas with this tag`;
@@ -510,15 +520,15 @@ function toggleTagFilter(tagId) {
 }
 
 function applyTagHighlight() {
-    const svg = d3.select("#graph-container svg");
-    const nodes = svg.selectAll(".node");
-    const links = svg.selectAll(".link");
+    const svg = d3.select('#graph-container svg');
+    const nodes = svg.selectAll('.node');
+    const links = svg.selectAll('.link');
     const explorationState = State.getExplorationState();
 
     if (selectedTagFilters.size === 0) {
         // Clear tag highlight
-        nodes.classed("tag-highlighted", false).classed("dimmed", false);
-        links.classed("dimmed", false);
+        nodes.classed('tag-highlighted', false).classed('dimmed', false);
+        links.classed('dimmed', false);
 
         // Restore frontier highlight if active
         if (State.isFrontierHighlightActive()) {
@@ -542,40 +552,31 @@ function applyTagHighlight() {
     }
 
     // Apply highlight
-    nodes.classed("tag-highlighted", d => matchingNodeIds.has(d.id))
-         .classed("dimmed", d => !matchingNodeIds.has(d.id));
+    nodes.classed('tag-highlighted', d => matchingNodeIds.has(d.id)).classed('dimmed', d => !matchingNodeIds.has(d.id));
 
-    links.classed("dimmed", true);
+    links.classed('dimmed', true);
 
     State.emit('tagFilterChanged');
 }
 
-export function clearTagFilters() {
-    selectedTagFilters.clear();
-    document.querySelectorAll('.stats-tag').forEach(el => {
-        el.classList.remove('active');
-    });
-    applyTagHighlight();
-}
-
 function getNodeClass(d, explorationMode) {
-    let cls = "node";
+    let cls = 'node';
 
     // Placeholder nodes (???)
     if (d.isPlaceholder) {
-        cls += " undiscovered accessible";
+        cls += ' undiscovered accessible';
         return cls;
     }
 
     if (explorationMode && !d.explorationStatus.discovered) {
-        cls += " undiscovered";
-        if (d.explorationStatus.accessible) cls += " accessible";
+        cls += ' undiscovered';
+        if (d.explorationStatus.accessible) cls += ' accessible';
     } else {
-        if (d.id === State.START_NODE) cls += " start";
-        else if (d.id === "Stone Platform") cls += " end";
-        else if (d.isBoss) cls += " boss";
-        else cls += " normal";
-        if (d.isHub) cls += " hub";
+        if (d.id === State.START_NODE) cls += ' start';
+        else if (d.id === 'Stone Platform') cls += ' end';
+        else if (d.isBoss) cls += ' boss';
+        else cls += ' normal';
+        if (d.isHub) cls += ' hub';
     }
 
     return cls;
@@ -584,22 +585,25 @@ function getNodeClass(d, explorationMode) {
 function getNodeLabel(d, explorationMode, explorationState) {
     // Placeholder nodes always show "???"
     if (d.isPlaceholder) {
-        return "???";
+        return '???';
     }
 
     if (explorationMode && !d.explorationStatus.discovered) {
-        return "???";
+        return '???';
     }
 
     let label = d.id;
     if (explorationMode && explorationState && explorationState.tags) {
         const tags = explorationState.tags.get(d.id);
         if (tags && tags.length > 0) {
-            const emojis = tags.map(tagId => {
-                const tag = State.AVAILABLE_TAGS.find(t => t.id === tagId);
-                return tag ? tag.emoji : '';
-            }).filter(e => e).join('');
-            label += ' ' + emojis;
+            const emojis = tags
+                .map(tagId => {
+                    const tag = State.AVAILABLE_TAGS.find(t => t.id === tagId);
+                    return tag ? tag.emoji : '';
+                })
+                .filter(e => e)
+                .join('');
+            label += ` ${emojis}`;
         }
     }
 
@@ -614,8 +618,15 @@ function restoreNodePositions(nodes, links) {
         if (node.isPlaceholder) return; // Handle placeholders separately
 
         const savedPos = nodePositions.get(node.id);
-        if (savedPos && typeof savedPos.x === 'number' && typeof savedPos.y === 'number' &&
-            !isNaN(savedPos.x) && !isNaN(savedPos.y) && isFinite(savedPos.x) && isFinite(savedPos.y)) {
+        if (
+            savedPos &&
+            typeof savedPos.x === 'number' &&
+            typeof savedPos.y === 'number' &&
+            !isNaN(savedPos.x) &&
+            !isNaN(savedPos.y) &&
+            isFinite(savedPos.x) &&
+            isFinite(savedPos.y)
+        ) {
             node.x = savedPos.x;
             node.y = savedPos.y;
             node.fx = savedPos.x;
@@ -628,8 +639,13 @@ function restoreNodePositions(nodes, links) {
         if (!node.isPlaceholder) return;
 
         const sourceNode = nodes.find(n => n.id === node.sourceNodeId);
-        if (sourceNode && typeof sourceNode.x === 'number' && typeof sourceNode.y === 'number' &&
-            !isNaN(sourceNode.x) && !isNaN(sourceNode.y)) {
+        if (
+            sourceNode &&
+            typeof sourceNode.x === 'number' &&
+            typeof sourceNode.y === 'number' &&
+            !isNaN(sourceNode.x) &&
+            !isNaN(sourceNode.y)
+        ) {
             // Use a hash of the placeholder ID for deterministic positioning
             const hash = hashString(node.id);
             const angle = (hash % 360) * (Math.PI / 180);
@@ -650,19 +666,22 @@ function restoreNodePositions(nodes, links) {
         if (node.x !== undefined && !isNaN(node.x) && !isNaN(node.y)) return;
 
         const connectedLink = links?.find(l => {
-            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+            const { sourceId, targetId } = State.getLinkEndpoints(l);
             return sourceId === node.id || targetId === node.id;
         });
 
         if (connectedLink) {
-            const sourceId = typeof connectedLink.source === 'object' ? connectedLink.source.id : connectedLink.source;
-            const targetId = typeof connectedLink.target === 'object' ? connectedLink.target.id : connectedLink.target;
+            const { sourceId, targetId } = State.getLinkEndpoints(connectedLink);
             const neighborId = sourceId === node.id ? targetId : sourceId;
             const neighborNode = nodes.find(n => n.id === neighborId);
 
-            if (neighborNode && typeof neighborNode.x === 'number' && typeof neighborNode.y === 'number' &&
-                !isNaN(neighborNode.x) && !isNaN(neighborNode.y)) {
+            if (
+                neighborNode &&
+                typeof neighborNode.x === 'number' &&
+                typeof neighborNode.y === 'number' &&
+                !isNaN(neighborNode.x) &&
+                !isNaN(neighborNode.y)
+            ) {
                 node.x = neighborNode.x + (Math.random() - 0.5) * 100;
                 node.y = neighborNode.y + (Math.random() - 0.5) * 100;
             }
@@ -680,7 +699,7 @@ function hashString(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
+        hash = (hash << 5) - hash + char;
         hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash);
@@ -718,7 +737,7 @@ function dragended(event, simulation) {
     if (!event.active) simulation.alphaTarget(0);
     event.subject.fx = null;
     event.subject.fy = null;
-    
+
     State.saveAllNodePositions();
     State.emit('nodePositionsSaved');
 }
@@ -737,14 +756,14 @@ function setupTooltip(node, nodeConnections, explorationMode, explorationState, 
         tooltipSubscriptionCleanup = null;
     }
 
-    const tooltip = d3.select("#tooltip");
+    const tooltip = d3.select('#tooltip');
     // Check if tooltip was already pinned (survives re-render)
-    let tooltipPinned = tooltip.classed("pinned");
+    let tooltipPinned = tooltip.classed('pinned');
     let isDraggingTooltip = false;
-    let tooltipDragOffset = { x: 0, y: 0 };
+    const tooltipDragOffset = { x: 0, y: 0 };
 
     // Tooltip drag
-    tooltip.on("mousedown", function(event) {
+    tooltip.on('mousedown', function (event) {
         if (event.target.tagName === 'H3' && tooltipPinned) {
             isDraggingTooltip = true;
             const rect = this.getBoundingClientRect();
@@ -754,14 +773,15 @@ function setupTooltip(node, nodeConnections, explorationMode, explorationState, 
         }
     });
 
-    d3.select(document).on("mousemove.tooltip", function(event) {
+    d3.select(document).on('mousemove.tooltip', event => {
         if (isDraggingTooltip) {
-            tooltip.style("left", (event.clientX - tooltipDragOffset.x) + "px")
-                   .style("top", (event.clientY - tooltipDragOffset.y) + "px");
+            tooltip
+                .style('left', `${event.clientX - tooltipDragOffset.x}px`)
+                .style('top', `${event.clientY - tooltipDragOffset.y}px`);
         }
     });
 
-    d3.select(document).on("mouseup.tooltip", function() {
+    d3.select(document).on('mouseup.tooltip', () => {
         isDraggingTooltip = false;
     });
 
@@ -772,23 +792,32 @@ function setupTooltip(node, nodeConnections, explorationMode, explorationState, 
     function refreshTooltip() {
         if (currentTooltipNode && currentTooltipPosition) {
             // Refresh with updated exploration state
-            const content = buildTooltipContent(currentTooltipNode, nodeConnections, explorationMode, State.getExplorationState(), true, placeholderMap, nodeMap, visibleLinks);
+            const content = buildTooltipContent(
+                currentTooltipNode,
+                nodeConnections,
+                explorationMode,
+                State.getExplorationState(),
+                true,
+                placeholderMap,
+                nodeMap,
+                visibleLinks
+            );
             tooltip.html(`<span class="close-btn">&times;</span>${content}`);
             setupTooltipHandlers();
         }
     }
-    
+
     function setupTooltipHandlers() {
-        tooltip.select(".close-btn").on("click", () => {
+        tooltip.select('.close-btn').on('click', () => {
             hideTooltip();
             State.emit('tooltipClosed');
         });
 
         // Discover/undiscover buttons
-        tooltip.select(".discover-btn").on("click", function() {
-            const nodeId = this.getAttribute("data-node-id");
-            const sourceNodeId = this.getAttribute("data-source-node-id");
-            const isOneWay = this.getAttribute("data-one-way") === 'true';
+        tooltip.select('.discover-btn').on('click', function () {
+            const nodeId = this.getAttribute('data-node-id');
+            const sourceNodeId = this.getAttribute('data-source-node-id');
+            const isOneWay = this.getAttribute('data-one-way') === 'true';
 
             if (nodeId) {
                 // If discovering from a placeholder, set the real node as selected
@@ -802,8 +831,8 @@ function setupTooltip(node, nodeConnections, explorationMode, explorationState, 
             }
         });
 
-        tooltip.select(".undiscover-btn").on("click", function() {
-            const nodeId = this.getAttribute("data-node-id");
+        tooltip.select('.undiscover-btn').on('click', function () {
+            const nodeId = this.getAttribute('data-node-id');
             if (nodeId) {
                 hideTooltip();
                 // Store the nodeId to select placeholder after re-render (if unique)
@@ -811,34 +840,44 @@ function setupTooltip(node, nodeConnections, explorationMode, explorationState, 
                 Exploration.undiscoverArea(nodeId);
             }
         });
-        
+
         // Tag toggles
-        tooltip.selectAll(".node-tag.clickable").on("click", function() {
-            const tagId = this.getAttribute("data-tag-id");
-            const nodeId = this.getAttribute("data-node-id");
+        tooltip.selectAll('.node-tag.clickable').on('click', function () {
+            const tagId = this.getAttribute('data-tag-id');
+            const nodeId = this.getAttribute('data-node-id');
             if (tagId && nodeId) {
                 Exploration.toggleTag(nodeId, tagId);
-                d3.select(this).classed("inactive", !d3.select(this).classed("inactive"));
+                d3.select(this).classed('inactive', !d3.select(this).classed('inactive'));
             }
         });
     }
-    
+
     function showTooltip(event, d, pinned = false) {
         currentTooltipNode = d;
         currentTooltipPosition = { x: event.pageX, y: event.pageY };
 
-        const content = buildTooltipContent(d, nodeConnections, explorationMode, explorationState, pinned, placeholderMap, nodeMap, visibleLinks);
-        tooltip.html(`<span class="close-btn">&times;</span>${content}`)
-            .style("left", (event.pageX + 15) + "px")
-            .style("top", Math.min(event.pageY - 10, window.innerHeight - 400) + "px")
-            .classed("visible", true)
-            .classed("pinned", pinned);
+        const content = buildTooltipContent(
+            d,
+            nodeConnections,
+            explorationMode,
+            explorationState,
+            pinned,
+            placeholderMap,
+            nodeMap,
+            visibleLinks
+        );
+        tooltip
+            .html(`<span class="close-btn">&times;</span>${content}`)
+            .style('left', `${event.pageX + 15}px`)
+            .style('top', `${Math.min(event.pageY - 10, window.innerHeight - 400)}px`)
+            .classed('visible', true)
+            .classed('pinned', pinned);
 
         setupTooltipHandlers();
     }
-    
+
     function hideTooltip() {
-        tooltip.classed("visible", false).classed("pinned", false);
+        tooltip.classed('visible', false).classed('pinned', false);
         tooltipPinned = false;
         currentTooltipNode = null;
         currentTooltipPosition = null;
@@ -853,7 +892,16 @@ function setupTooltip(node, nodeConnections, explorationMode, explorationState, 
             if (selectedNodeData) {
                 currentTooltipNode = selectedNodeData;
                 // Rebuild tooltip content with the new node data
-                const content = buildTooltipContent(selectedNodeData, nodeConnections, explorationMode, State.getExplorationState(), true, placeholderMap, nodeMap, visibleLinks);
+                const content = buildTooltipContent(
+                    selectedNodeData,
+                    nodeConnections,
+                    explorationMode,
+                    State.getExplorationState(),
+                    true,
+                    placeholderMap,
+                    nodeMap,
+                    visibleLinks
+                );
                 tooltip.html(`<span class="close-btn">&times;</span>${content}`);
                 setupTooltipHandlers();
             } else {
@@ -863,19 +911,20 @@ function setupTooltip(node, nodeConnections, explorationMode, explorationState, 
         }
     }
 
-    node.on("mouseenter", (event, d) => {
+    node.on('mouseenter', (event, d) => {
         if (!tooltipPinned) showTooltip(event, d, false);
     })
-    .on("mousemove", (event) => {
-        if (!tooltipPinned) {
-            tooltip.style("left", (event.pageX + 15) + "px")
-                .style("top", Math.min(event.pageY - 10, window.innerHeight - 400) + "px");
-        }
-    })
-    .on("mouseleave", () => {
-        if (!tooltipPinned) tooltip.classed("visible", false);
-    });
-    
+        .on('mousemove', event => {
+            if (!tooltipPinned) {
+                tooltip
+                    .style('left', `${event.pageX + 15}px`)
+                    .style('top', `${Math.min(event.pageY - 10, window.innerHeight - 400)}px`);
+            }
+        })
+        .on('mouseleave', () => {
+            if (!tooltipPinned) tooltip.classed('visible', false);
+        });
+
     // Expose for click handler
     node.showTooltipPinned = (event, d) => {
         tooltipPinned = true;
@@ -901,7 +950,16 @@ function setupTooltip(node, nodeConnections, explorationMode, explorationState, 
     });
 }
 
-function buildTooltipContent(d, nodeConnections, explorationMode, explorationState, pinned, placeholderMap, nodeMap, visibleLinks) {
+function buildTooltipContent(
+    d,
+    nodeConnections,
+    explorationMode,
+    explorationState,
+    pinned,
+    placeholderMap,
+    nodeMap,
+    visibleLinks
+) {
     // Handle placeholder nodes
     if (d.isPlaceholder) {
         const realId = d.realId;
@@ -915,14 +973,12 @@ function buildTooltipContent(d, nodeConnections, explorationMode, explorationSta
 
         // Find the link connecting to this placeholder
         const relevantLink = visibleLinks?.find(l => {
-            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
-            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+            const { sourceId, targetId } = State.getLinkEndpoints(l);
             return targetId === d.id || sourceId === d.id;
         });
 
         if (relevantLink) {
-            const linkSourceId = typeof relevantLink.source === 'object' ? relevantLink.source.id : relevantLink.source;
-            const linkTargetId = typeof relevantLink.target === 'object' ? relevantLink.target.id : relevantLink.target;
+            const { sourceId: linkSourceId, targetId: linkTargetId } = State.getLinkEndpoints(relevantLink);
 
             // Determine if we're using the link in reverse direction
             // The placeholder's sourceNodeId tells us where we came from
@@ -934,8 +990,8 @@ function buildTooltipContent(d, nodeConnections, explorationMode, explorationSta
             // Details depend on direction:
             // - Normal direction: fromDetails = sourceDetails, toDetails = targetDetails
             // - Reversed direction: fromDetails = targetDetails, toDetails = sourceDetails
-            const fromDetails = isReversed ? (relevantLink.targetDetails || '') : (relevantLink.sourceDetails || '');
-            const toDetails = isReversed ? (relevantLink.sourceDetails || '') : (relevantLink.targetDetails || '');
+            const fromDetails = isReversed ? relevantLink.targetDetails || '' : relevantLink.sourceDetails || '';
+            const toDetails = isReversed ? relevantLink.sourceDetails || '' : relevantLink.targetDetails || '';
 
             html += `<div class="conn-item ${relevantLink.type}${relevantLink.requiredItemFrom ? ' has-requirement' : ''}">`;
             html += `← ${fromNodeId}`;
@@ -1010,7 +1066,6 @@ function buildTooltipContent(d, nodeConnections, explorationMode, explorationSta
                 html += '</div>';
             }
         }
-
     }
 
     // Connections
@@ -1019,22 +1074,37 @@ function buildTooltipContent(d, nodeConnections, explorationMode, explorationSta
 
         const incomingToShow = isUndiscovered
             ? conns.incoming.filter(({ link, reversed }) => {
-                // Determine actual source based on whether link is reversed
-                const linkSource = typeof link.source === 'object' ? link.source.id : link.source;
-                const linkTarget = typeof link.target === 'object' ? link.target.id : link.target;
-                const actualSource = reversed ? linkTarget : linkSource;
-                return explorationState && explorationState.discovered.has(actualSource);
-            })
+                  // Determine actual source based on whether link is reversed
+                  const { sourceId: linkSourceId, targetId: linkTargetId } = State.getLinkEndpoints(link);
+                  const actualSource = reversed ? linkTargetId : linkSourceId;
+                  return explorationState && explorationState.discovered.has(actualSource);
+              })
             : conns.incoming;
 
         if (incomingToShow.length > 0) {
             html += `<div class="conn-title">${isUndiscovered ? 'How to reach' : 'Entrances'}</div>`;
-            html += buildConnectionsList(incomingToShow, 'incoming', isUndiscovered, explorationMode, explorationState, pinned, d.id);
+            html += buildConnectionsList(
+                incomingToShow,
+                'incoming',
+                isUndiscovered,
+                explorationMode,
+                explorationState,
+                pinned,
+                d.id
+            );
         }
 
         if (!isUndiscovered && conns.outgoing.length > 0) {
             html += '<div class="conn-title" style="margin-top: 8px;">Exits</div>';
-            html += buildConnectionsList(conns.outgoing, 'outgoing', false, explorationMode, explorationState, pinned, d.id);
+            html += buildConnectionsList(
+                conns.outgoing,
+                'outgoing',
+                false,
+                explorationMode,
+                explorationState,
+                pinned,
+                d.id
+            );
         }
 
         html += '</div>';
@@ -1052,34 +1122,41 @@ function buildTooltipContent(d, nodeConnections, explorationMode, explorationSta
     return html;
 }
 
-function buildConnectionsList(connections, direction, isUndiscovered, explorationMode, explorationState, pinned, currentNodeId) {
+function buildConnectionsList(
+    connections,
+    direction,
+    isUndiscovered,
+    explorationMode,
+    explorationState,
+    pinned,
+    currentNodeId
+) {
     let html = '';
     const maxShow = pinned ? connections.length : 5;
 
     connections.slice(0, maxShow).forEach(({ link, reversed }) => {
-        const linkSource = typeof link.source === 'object' ? link.source.id : link.source;
-        const linkTarget = typeof link.target === 'object' ? link.target.id : link.target;
+        const { sourceId: linkSourceId, targetId: linkTargetId } = State.getLinkEndpoints(link);
 
         // Determine actual source/target based on whether link is reversed
         // For a normal link: source -> target
         // For a reversed link (bidirectional): target -> source
-        const actualSource = reversed ? linkTarget : linkSource;
-        const actualTarget = reversed ? linkSource : linkTarget;
+        const actualSource = reversed ? linkTargetId : linkSourceId;
+        const actualTarget = reversed ? linkSourceId : linkTargetId;
 
         // The neighbor is the node we're connecting to (not the current node)
         const neighborName = direction === 'incoming' ? actualSource : actualTarget;
 
         // Details also need to be swapped for reversed links
-        const fromDetails = reversed ? (link.targetDetails || '') : (link.sourceDetails || '');
-        const toDetails = reversed ? (link.sourceDetails || '') : (link.targetDetails || '');
+        const fromDetails = reversed ? link.targetDetails || '' : link.sourceDetails || '';
+        const toDetails = reversed ? link.sourceDetails || '' : link.targetDetails || '';
 
         const hasReq = link.requiredItemFrom;
 
         // Check if THIS SPECIFIC link is discovered (not just any link between endpoints)
         // This prevents parallel links (e.g., preexisting + random) from all showing as
         // discovered when only one was traversed
-        const isLinkDiscovered = !explorationMode || !explorationState ||
-            (link.id && explorationState.discoveredLinks.has(link.id));
+        const isLinkDiscovered =
+            !explorationMode || !explorationState || (link.id && explorationState.discoveredLinks.has(link.id));
 
         // For outgoing: hide if target not discovered OR link not discovered
         // For incoming: hide if source not discovered OR link not discovered
@@ -1087,7 +1164,10 @@ function buildConnectionsList(connections, direction, isUndiscovered, exploratio
         if (explorationMode && explorationState) {
             if (direction === 'outgoing' && (!explorationState.discovered.has(actualTarget) || !isLinkDiscovered)) {
                 displayName = '???';
-            } else if (direction === 'incoming' && (!explorationState.discovered.has(actualSource) || !isLinkDiscovered)) {
+            } else if (
+                direction === 'incoming' &&
+                (!explorationState.discovered.has(actualSource) || !isLinkDiscovered)
+            ) {
                 displayName = '???';
             }
         }
@@ -1178,7 +1258,7 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
 
         // Find placeholders for the undiscovered node
         const placeholders = [];
-        node.each(function(d) {
+        node.each(d => {
             if (d.isPlaceholder && d.realId === pendingUndiscoveredNodeId) {
                 placeholders.push(d);
             }
@@ -1225,8 +1305,7 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
                 // Add direct neighbors of selected node
                 connectedNodes.add(nodeId);
                 visibleLinks.forEach(link => {
-                    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-                    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                    const { sourceId, targetId } = State.getLinkEndpoints(link);
                     if (sourceId === nodeId) connectedNodes.add(targetId);
                     if (targetId === nodeId) connectedNodes.add(sourceId);
                 });
@@ -1237,7 +1316,7 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
             }
 
             // Also include placeholder nodes connected to any node in connectedNodes
-            node.each(function(n) {
+            node.each(n => {
                 if (n.isPlaceholder && n.sourceNodeId && connectedNodes.has(n.sourceNodeId)) {
                     connectedNodes.add(n.id);
                 }
@@ -1245,19 +1324,16 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
         }
 
         // Highlight nodes
-        node.classed("highlighted", n => connectedNodes.has(n.id))
-            .classed("dimmed", n => !connectedNodes.has(n.id));
+        node.classed('highlighted', n => connectedNodes.has(n.id)).classed('dimmed', n => !connectedNodes.has(n.id));
 
         // Highlight links: a link is highlighted if both its endpoints are in connectedNodes
-        svg.selectAll(".link")
-            .classed("highlighted", l => {
-                const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        svg.selectAll('.link')
+            .classed('highlighted', l => {
+                const { sourceId, targetId } = State.getLinkEndpoints(l);
                 return connectedNodes.has(sourceId) && connectedNodes.has(targetId);
             })
-            .classed("dimmed", l => {
-                const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+            .classed('dimmed', l => {
+                const { sourceId, targetId } = State.getLinkEndpoints(l);
                 return !(connectedNodes.has(sourceId) && connectedNodes.has(targetId));
             });
     }
@@ -1273,7 +1349,7 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
         }
     }
 
-    node.on("click", (event, d) => {
+    node.on('click', (event, d) => {
         event.stopPropagation();
 
         if (selectedNode === d.id && node.isTooltipPinned()) {
@@ -1291,7 +1367,7 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
         State.emit('nodeSelected', { nodeId: d.id });
     });
 
-    svg.on("click", () => clearSelection());
+    svg.on('click', () => clearSelection());
 
     // Listen for restore selection highlight event (e.g., after clearing frontier)
     State.subscribe('restoreSelectionHighlight', () => {
@@ -1306,7 +1382,7 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
         const currentSelected = State.getSelectedNodeId();
         if (currentSelected) {
             // Re-select current nodes from DOM (in case graph was re-rendered)
-            const currentNodes = d3.selectAll(".node");
+            const currentNodes = d3.selectAll('.node');
             const selectedNodeData = currentNodes.data().find(n => n.id === currentSelected);
             if (selectedNodeData) {
                 // Re-apply highlights using current DOM elements
@@ -1331,25 +1407,24 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
                         pathResult.nodes.forEach(n => connectedNodes.add(n));
                     }
                     // Include connected placeholders
-                    currentNodes.each(function(n) {
+                    currentNodes.each(n => {
                         if (n.isPlaceholder && n.sourceNodeId && connectedNodes.has(n.sourceNodeId)) {
                             connectedNodes.add(n.id);
                         }
                     });
                 }
 
-                currentNodes.classed("highlighted", n => connectedNodes.has(n.id))
-                    .classed("dimmed", n => !connectedNodes.has(n.id));
+                currentNodes
+                    .classed('highlighted', n => connectedNodes.has(n.id))
+                    .classed('dimmed', n => !connectedNodes.has(n.id));
 
-                d3.selectAll(".link")
-                    .classed("highlighted", l => {
-                        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+                d3.selectAll('.link')
+                    .classed('highlighted', l => {
+                        const { sourceId, targetId } = State.getLinkEndpoints(l);
                         return connectedNodes.has(sourceId) && connectedNodes.has(targetId);
                     })
-                    .classed("dimmed", l => {
-                        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+                    .classed('dimmed', l => {
+                        const { sourceId, targetId } = State.getLinkEndpoints(l);
                         return !(connectedNodes.has(sourceId) && connectedNodes.has(targetId));
                     });
             }
@@ -1358,9 +1433,9 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
 }
 
 function resetHighlight(node, svg) {
-    node.classed("highlighted", false).classed("dimmed", false);
-    svg.selectAll(".link").classed("highlighted", false).classed("dimmed", false);
-    
+    node.classed('highlighted', false).classed('dimmed', false);
+    svg.selectAll('.link').classed('highlighted', false).classed('dimmed', false);
+
     if (State.isFrontierHighlightActive()) {
         State.emit('frontierHighlightChanged', true);
     }
@@ -1372,14 +1447,13 @@ function resetHighlight(node, svg) {
 
 function setupSearch(node, link, allNodes) {
     State.subscribe('searchMatched', ({ matchingIds }) => {
-        node.classed("highlighted", n => matchingIds.has(n.id))
-            .classed("dimmed", n => !matchingIds.has(n.id));
-        link.classed("dimmed", true).classed("highlighted", false);
+        node.classed('highlighted', n => matchingIds.has(n.id)).classed('dimmed', n => !matchingIds.has(n.id));
+        link.classed('dimmed', true).classed('highlighted', false);
     });
-    
+
     State.subscribe('searchCleared', () => {
-        node.classed("highlighted", false).classed("dimmed", false);
-        link.classed("dimmed", false).classed("highlighted", false);
+        node.classed('highlighted', false).classed('dimmed', false);
+        link.classed('dimmed', false).classed('highlighted', false);
     });
 }
 
@@ -1393,13 +1467,13 @@ function setupSearch(node, link, allNodes) {
  * @param {number} duration - Animation duration in ms (default 500)
  */
 export function centerOnNode(nodeId, duration = 500) {
-    const svg = d3.select("#graph-container svg");
-    const container = svg.select("g");
-    const nodes = container.selectAll(".node");
+    const svg = d3.select('#graph-container svg');
+    const container = svg.select('g');
+    const nodes = container.selectAll('.node');
 
     // Find the node data
     let targetNode = null;
-    nodes.each(function(d) {
+    nodes.each(d => {
         if (d.id === nodeId) {
             targetNode = d;
         }
@@ -1426,18 +1500,17 @@ export function centerOnNode(nodeId, duration = 500) {
     const targetY = height / 2 - targetNode.y * scale;
 
     // Create zoom behavior reference
-    const zoom = d3.zoom()
+    const zoom = d3
+        .zoom()
         .scaleExtent([0.1, 4])
-        .on("zoom", (event) => {
-            container.attr("transform", event.transform);
+        .on('zoom', event => {
+            container.attr('transform', event.transform);
             State.setCurrentZoomTransform(event.transform);
             State.emit('viewportChanged', event.transform);
         });
 
     // Animate to center
-    svg.transition()
-        .duration(duration)
-        .call(zoom.transform, d3.zoomIdentity.translate(targetX, targetY).scale(scale));
+    svg.transition().duration(duration).call(zoom.transform, d3.zoomIdentity.translate(targetX, targetY).scale(scale));
 }
 
 // ============================================================
@@ -1446,20 +1519,23 @@ export function centerOnNode(nodeId, duration = 500) {
 
 State.subscribe('nodeTagsUpdated', ({ nodeId, tags }) => {
     // Update node label in graph
-    const svg = d3.select("#graph-container svg");
+    const svg = d3.select('#graph-container svg');
     const explorationState = State.getExplorationState();
 
-    svg.selectAll(".node")
+    svg.selectAll('.node')
         .filter(d => d.id === nodeId)
-        .select("text")
+        .select('text')
         .text(d => {
             let label = d.id;
             if (tags && tags.length > 0) {
-                const emojis = tags.map(tagId => {
-                    const tag = State.AVAILABLE_TAGS.find(t => t.id === tagId);
-                    return tag ? tag.emoji : '';
-                }).filter(e => e).join('');
-                label += ' ' + emojis;
+                const emojis = tags
+                    .map(tagId => {
+                        const tag = State.AVAILABLE_TAGS.find(t => t.id === tagId);
+                        return tag ? tag.emoji : '';
+                    })
+                    .filter(e => e)
+                    .join('');
+                label += ` ${emojis}`;
             }
             return label;
         });

@@ -16,7 +16,7 @@ export function initExplorationState() {
     State.setExplorationState({
         discovered: new Set(),
         discoveredLinks: new Set(),
-        tags: new Map()
+        tags: new Map(),
     });
 
     // Discover starting area and propagate through pre-existing connections
@@ -66,8 +66,7 @@ export function migrateDiscoveredLinks() {
     // Mark all links between discovered nodes as discovered (using link UUIDs)
     let migrated = false;
     graphData.links.forEach(link => {
-        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        const { sourceId, targetId } = State.getLinkEndpoints(link);
 
         if (explorationState.discovered.has(sourceId) && explorationState.discovered.has(targetId)) {
             // Both nodes discovered - mark this specific link as discovered
@@ -133,7 +132,10 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
         console.log(`[DISCOVERY] Source '${fromNodeId}' not accessible from START, back-propagating`);
         const pathToSource = findPathPrioritizingDiscovered(fromNodeId);
         if (pathToSource.length > 0) {
-            console.log(`[DISCOVERY] Back-propagation path:`, pathToSource.map(s => `${s.fromNodeId} → ${s.toNodeId}`));
+            console.log(
+                `[DISCOVERY] Back-propagation path:`,
+                pathToSource.map(s => `${s.fromNodeId} → ${s.toNodeId}`)
+            );
             for (const step of pathToSource) {
                 discoverWithPreexisting(step.toNodeId, step.fromNodeId, step.link);
             }
@@ -172,7 +174,8 @@ function applyServerDiscoveryState(discoveredLinks) {
     }
 
     // Check if state actually changed
-    const changed = newDiscovered.size !== explorationState.discovered.size ||
+    const changed =
+        newDiscovered.size !== explorationState.discovered.size ||
         newDiscoveredLinks.size !== explorationState.discoveredLinks.size;
 
     if (changed) {
@@ -260,13 +263,13 @@ function findReachableNodes(startNodeId, links, discoveredSet) {
         const currentId = queue.shift();
 
         links.forEach(link => {
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+            const { sourceId, targetId } = State.getLinkEndpoints(link);
 
             // Can go FROM currentId TO target (following link direction)
             // BUT only if the link is discovered (or it's a preexisting link from a discovered node)
             if (sourceId === currentId && discoveredSet.has(targetId) && !reachable.has(targetId)) {
-                const linkDiscovered = State.isLinkDiscovered(sourceId, targetId) || State.isLinkDiscovered(targetId, sourceId);
+                const linkDiscovered =
+                    State.isLinkDiscovered(sourceId, targetId) || State.isLinkDiscovered(targetId, sourceId);
                 if (linkDiscovered) {
                     reachable.add(targetId);
                     queue.push(targetId);
@@ -274,7 +277,8 @@ function findReachableNodes(startNodeId, links, discoveredSet) {
             }
             // Can go FROM target TO currentId only if link is NOT one-way AND link is discovered
             if (targetId === currentId && !link.oneWay && discoveredSet.has(sourceId) && !reachable.has(sourceId)) {
-                const linkDiscovered = State.isLinkDiscovered(sourceId, targetId) || State.isLinkDiscovered(targetId, sourceId);
+                const linkDiscovered =
+                    State.isLinkDiscovered(sourceId, targetId) || State.isLinkDiscovered(targetId, sourceId);
                 if (linkDiscovered) {
                     reachable.add(sourceId);
                     queue.push(sourceId);
@@ -316,8 +320,7 @@ function discoverWithPreexisting(areaId, fromNodeId, viaLink) {
     graphData.links.forEach(link => {
         if (link.type !== 'preexisting') return;
 
-        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        const { sourceId, targetId } = State.getLinkEndpoints(link);
 
         // Can go FROM areaId TO target (following link direction)
         if (sourceId === areaId) {
@@ -356,8 +359,7 @@ export function propagatePreexistingDiscoveries() {
         graphData.links.forEach(link => {
             if (link.type !== 'preexisting') return;
 
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+            const { sourceId, targetId } = State.getLinkEndpoints(link);
 
             if (sourceId === areaId) {
                 if (!explorationState.discovered.has(targetId)) {
@@ -404,15 +406,14 @@ function isAccessibleFromStart(nodeId) {
             const link = linkIndex.byId.get(linkUUID);
             if (!link) continue;
 
-            const src = typeof link.source === 'object' ? link.source.id : link.source;
-            const tgt = typeof link.target === 'object' ? link.target.id : link.target;
+            const { sourceId, targetId } = State.getLinkEndpoints(link);
             let neighbor = null;
 
             // Can traverse in either direction (bidirectional links already have both indexed)
-            if (src === current && !visited.has(tgt)) {
-                neighbor = tgt;
-            } else if (tgt === current && !visited.has(src)) {
-                neighbor = src;
+            if (sourceId === current && !visited.has(targetId)) {
+                neighbor = targetId;
+            } else if (targetId === current && !visited.has(sourceId)) {
+                neighbor = sourceId;
             }
 
             if (neighbor) {
@@ -441,10 +442,10 @@ function findPathPrioritizingDiscovered(targetId) {
 
     // BFS with priority for discovered nodes
     const visited = new Set([State.START_NODE]);
-    const queue = [{nodeId: State.START_NODE, path: []}];
+    const queue = [{ nodeId: State.START_NODE, path: [] }];
 
     while (queue.length > 0) {
-        const {nodeId: current, path} = queue.shift();
+        const { nodeId: current, path } = queue.shift();
         const conns = nodeConnections.get(current);
         if (!conns) continue;
 
@@ -452,24 +453,23 @@ function findPathPrioritizingDiscovered(targetId) {
         const discoveredNeighbors = [];
         const undiscoveredNeighbors = [];
 
-        for (const {link, reversed} of conns.outgoing) {
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-            const targetNodeId = typeof link.target === 'object' ? link.target.id : link.target;
-            const neighborId = reversed ? sourceId : targetNodeId;
+        for (const { link, reversed } of conns.outgoing) {
+            const { sourceId: linkSourceId, targetId: linkTargetId } = State.getLinkEndpoints(link);
+            const neighborId = reversed ? linkSourceId : linkTargetId;
 
             if (visited.has(neighborId)) continue;
 
-            const step = {fromNodeId: current, toNodeId: neighborId, link};
+            const step = { fromNodeId: current, toNodeId: neighborId, link };
 
             if (explorationState.discovered.has(neighborId)) {
-                discoveredNeighbors.push({neighborId, step});
+                discoveredNeighbors.push({ neighborId, step });
             } else {
-                undiscoveredNeighbors.push({neighborId, step});
+                undiscoveredNeighbors.push({ neighborId, step });
             }
         }
 
         // Process discovered first, then undiscovered
-        for (const {neighborId, step} of [...discoveredNeighbors, ...undiscoveredNeighbors]) {
+        for (const { neighborId, step } of [...discoveredNeighbors, ...undiscoveredNeighbors]) {
             const newPath = [...path, step];
 
             if (neighborId === targetId) {
@@ -479,9 +479,9 @@ function findPathPrioritizingDiscovered(targetId) {
             visited.add(neighborId);
             // Insert discovered at front for priority
             if (explorationState.discovered.has(neighborId)) {
-                queue.unshift({nodeId: neighborId, path: newPath});
+                queue.unshift({ nodeId: neighborId, path: newPath });
             } else {
-                queue.push({nodeId: neighborId, path: newPath});
+                queue.push({ nodeId: neighborId, path: newPath });
             }
         }
     }
@@ -535,7 +535,11 @@ export function discoverPathTo(targetId) {
                     showDiscoveryNotification(discoveredCount, targetId);
 
                     // Send to server - server will back-propagate
-                    Api.createDiscovery(gameId, { source: lastStep.fromNodeId, target: targetId, link_id: lastStep.viaLink?.id })
+                    Api.createDiscovery(gameId, {
+                        source: lastStep.fromNodeId,
+                        target: targetId,
+                        link_id: lastStep.viaLink?.id,
+                    })
                         .then(response => {
                             if (response && response.discovered_links) {
                                 applyServerDiscoveryState(response.discovered_links);
@@ -570,17 +574,16 @@ export function discoverPathTo(targetId) {
 
         // Find all neighbors (respecting one-way links)
         graphData.links.forEach(link => {
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-            const targetNodeId = typeof link.target === 'object' ? link.target.id : link.target;
+            const { sourceId: linkSourceId, targetId: linkTargetId } = State.getLinkEndpoints(link);
 
             let neighborId = null;
             // Can always follow link direction
-            if (sourceId === currentId) {
-                neighborId = targetNodeId;
+            if (linkSourceId === currentId) {
+                neighborId = linkTargetId;
             }
             // Can go backwards only if link is NOT one-way
-            else if (targetNodeId === currentId && !link.oneWay) {
-                neighborId = sourceId;
+            else if (linkTargetId === currentId && !link.oneWay) {
+                neighborId = linkSourceId;
             }
 
             if (neighborId && !visited.has(neighborId)) {
@@ -600,17 +603,17 @@ export function findPathFromStart(targetNodeId) {
     if (targetNodeId === State.START_NODE) {
         return { nodes: new Set([State.START_NODE]), links: new Set() };
     }
-    
+
     const graphData = State.getGraphData();
     if (!graphData) return { nodes: new Set(), links: new Set() };
-    
+
     // Build node connections map
     const nodeConnections = buildNodeConnectionsMap(graphData);
-    
+
     // In exploration mode, only traverse through discovered nodes AND discovered links
     const explorationMode = State.isExplorationMode();
     const explorationState = State.getExplorationState();
-    const canTraverseNode = (nodeId) => {
+    const canTraverseNode = nodeId => {
         if (!explorationMode) return true;
         return explorationState.discovered.has(nodeId);
     };
@@ -630,9 +633,8 @@ export function findPathFromStart(targetNodeId) {
         // Follow outgoing links (includes reverse direction for bidirectional links)
         for (const { link, reversed } of conns.outgoing) {
             // Determine the actual target based on whether this is a reversed link
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
-            const neighborId = reversed ? sourceId : targetId;
+            const { sourceId: linkSourceId, targetId: linkTargetId } = State.getLinkEndpoints(link);
+            const neighborId = reversed ? linkSourceId : linkTargetId;
 
             if (visited.has(neighborId)) continue;
             // Must be able to traverse both the link AND the node (unless it's the target)
@@ -646,7 +648,7 @@ export function findPathFromStart(targetNodeId) {
             if (neighborId === targetNodeId) {
                 return {
                     nodes: new Set([...newPathNodes, neighborId]),
-                    links: new Set(newPathLinks)
+                    links: new Set(newPathLinks),
                 };
             }
 
@@ -668,7 +670,7 @@ export function followLinearPath(startNodeId) {
     // In exploration mode, only traverse through discovered nodes AND discovered links
     const explorationMode = State.isExplorationMode();
     const explorationState = State.getExplorationState();
-    const canTraverseNode = (nodeId) => {
+    const canTraverseNode = nodeId => {
         if (!explorationMode) return true;
         return explorationState.discovered.has(nodeId);
     };
@@ -689,8 +691,7 @@ export function followLinearPath(startNodeId) {
 
         // Only need to check outgoing - bidirectional links are included in both directions
         for (const { link, reversed } of conns.outgoing) {
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+            const { sourceId, targetId } = State.getLinkEndpoints(link);
             const neighborId = reversed ? sourceId : targetId;
 
             if (visitedNodes.has(neighborId)) continue;
@@ -724,19 +725,18 @@ export function getNodeExplorationStatus(nodeId, links) {
     if (!State.isExplorationMode()) {
         return { visible: true, discovered: true, accessible: true };
     }
-    
+
     const explorationState = State.getExplorationState();
     const isDiscovered = explorationState.discovered.has(nodeId);
-    
+
     if (isDiscovered) {
         return { visible: true, discovered: true, accessible: true };
     }
-    
+
     // Check if accessible (can reach from a discovered node)
     const isAccessible = links.some(link => {
-        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
-        
+        const { sourceId, targetId } = State.getLinkEndpoints(link);
+
         // Link goes FROM discovered TO nodeId
         if (sourceId !== nodeId && targetId === nodeId && explorationState.discovered.has(sourceId)) {
             return true;
@@ -745,10 +745,10 @@ export function getNodeExplorationStatus(nodeId, links) {
         if (sourceId === nodeId && targetId !== nodeId && explorationState.discovered.has(targetId) && !link.oneWay) {
             return true;
         }
-        
+
         return false;
     });
-    
+
     return { visible: isAccessible, discovered: false, accessible: isAccessible };
 }
 
@@ -777,14 +777,12 @@ export function buildNodeConnectionsMap(graphData) {
     // when both directions are already present in the data
     const explicitLinkPairs = new Set();
     graphData.links.forEach(l => {
-        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        const { sourceId, targetId } = State.getLinkEndpoints(l);
         explicitLinkPairs.add(`${sourceId}|${targetId}`);
     });
 
     graphData.links.forEach(l => {
-        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        const { sourceId, targetId } = State.getLinkEndpoints(l);
         const isSelfLoop = sourceId === targetId;
 
         const sourceConns = nodeConnections.get(sourceId);
@@ -794,12 +792,12 @@ export function buildNodeConnectionsMap(graphData) {
         if (sourceConns) {
             sourceConns.outgoing.push({ link: l, reversed: false });
             sourceConns.degree++;
-            sourceConns.distinctLinks++;  // Each link counts once for source
+            sourceConns.distinctLinks++; // Each link counts once for source
         }
         if (targetConns && !isSelfLoop) {
             targetConns.incoming.push({ link: l, reversed: false });
             targetConns.degree++;
-            targetConns.distinctLinks++;  // Each link counts once for target
+            targetConns.distinctLinks++; // Each link counts once for target
         }
 
         // Reverse direction for bidirectional links: target -> source
@@ -832,10 +830,10 @@ function showDiscoveryNotification(count, targetName) {
         notification.id = 'discovery-notification';
         document.body.appendChild(notification);
     }
-    
+
     notification.textContent = `✓ ${count} area${count > 1 ? 's' : ''} discovered on path to "${targetName}"`;
     notification.classList.add('visible');
-    
+
     setTimeout(() => {
         notification.classList.remove('visible');
     }, 3000);

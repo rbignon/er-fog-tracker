@@ -15,16 +15,16 @@ const state = {
 
     // Backend mode: 'offline' (localStorage) or 'online' (server)
     backendMode: 'offline',
-    gameId: null,  // UUID when in online mode
-    isViewer: false,  // true when viewing someone else's game (read-only)
-    isOverlayMode: false,  // true for OBS overlay (sync viewport, transparent bg)
+    gameId: null, // UUID when in online mode
+    isViewer: false, // true when viewing someone else's game (read-only)
+    isOverlayMode: false, // true for OBS overlay (sync viewport, transparent bg)
 
     // Exploration mode
-    explorationMode: true,  // true = Explorer, false = Full Spoiler
+    explorationMode: true, // true = Explorer, false = Full Spoiler
     explorationState: {
-        discovered: new Set(['Chapel of Anticipation']),  // Start with starting area discovered
-        discoveredLinks: new Set(),  // Link UUIDs that have been traversed
-        tags: new Map()
+        discovered: new Set(['Chapel of Anticipation']), // Start with starting area discovered
+        discoveredLinks: new Set(), // Link UUIDs that have been traversed
+        tags: new Map(),
     },
     frontierHighlightActive: false,
 
@@ -40,7 +40,7 @@ const state = {
     sessionCode: null,
 
     // Pending undiscover (to select placeholder after re-render)
-    pendingUndiscoveredNodeId: null
+    pendingUndiscoveredNodeId: null,
 };
 
 // Event bus for inter-module communication
@@ -57,7 +57,7 @@ export function subscribe(event, callback) {
         listeners.set(event, new Set());
     }
     listeners.get(event).add(callback);
-    
+
     // Return unsubscribe function
     return () => listeners.get(event).delete(callback);
 }
@@ -165,14 +165,12 @@ function computeOneWayLinks(links) {
     // Build set of all link pairs for reverse lookup
     const linkPairs = new Set();
     links.forEach(l => {
-        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        const { sourceId, targetId } = getLinkEndpoints(l);
         linkPairs.add(`${sourceId}|${targetId}`);
     });
 
     links.forEach(l => {
-        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        const { sourceId, targetId } = getLinkEndpoints(l);
         const hasReverse = linkPairs.has(`${targetId}|${sourceId}`);
 
         if (l.type === 'random') {
@@ -203,8 +201,7 @@ function buildLinkIndex(links) {
         }
 
         // Index by endpoints (supports parallel links)
-        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        const { sourceId, targetId } = getLinkEndpoints(link);
         const key = `${sourceId}|${targetId}`;
 
         if (!byEndpoints.has(key)) {
@@ -355,6 +352,19 @@ export function undiscoverNode(nodeId) {
 // ============================================================
 
 /**
+ * Extract source and target IDs from a link object.
+ * Handles both D3 simulation format (objects with .id) and raw format (strings).
+ * @param {Object} link - Link object with source/target properties
+ * @returns {{sourceId: string, targetId: string}}
+ */
+export function getLinkEndpoints(link) {
+    return {
+        sourceId: typeof link.source === 'object' ? link.source.id : link.source,
+        targetId: typeof link.target === 'object' ? link.target.id : link.target,
+    };
+}
+
+/**
  * Create an endpoint key from source and target (for index lookups)
  * Format: "sourceId|targetId"
  */
@@ -466,9 +476,8 @@ export function undiscoverLinksForNode(nodeId) {
     state.explorationState.discoveredLinks.forEach(linkId => {
         const link = state.linkIndex.byId.get(linkId);
         if (link) {
-            const source = typeof link.source === 'object' ? link.source.id : link.source;
-            const target = typeof link.target === 'object' ? link.target.id : link.target;
-            if (source === nodeId || target === nodeId) {
+            const { sourceId, targetId } = getLinkEndpoints(link);
+            if (sourceId === nodeId || targetId === nodeId) {
                 toRemove.push(linkId);
             }
         }
@@ -493,13 +502,13 @@ export function setNodeTags(nodeId, tags) {
 export function toggleNodeTag(nodeId, tagId) {
     const currentTags = getNodeTags(nodeId);
     const tagIndex = currentTags.indexOf(tagId);
-    
+
     if (tagIndex >= 0) {
         currentTags.splice(tagIndex, 1);
     } else {
         currentTags.push(tagId);
     }
-    
+
     setNodeTags(nodeId, currentTags);
     return currentTags;
 }
@@ -509,8 +518,7 @@ export function toggleNodeTag(nodeId, tagId) {
 // ============================================================
 
 export function saveNodePosition(nodeId, x, y) {
-    if (typeof x === 'number' && typeof y === 'number' && 
-        !isNaN(x) && !isNaN(y) && isFinite(x) && isFinite(y)) {
+    if (typeof x === 'number' && typeof y === 'number' && !isNaN(x) && !isNaN(y) && isFinite(x) && isFinite(y)) {
         state.nodePositions.set(nodeId, { x, y });
     }
 }
@@ -521,18 +529,14 @@ export function getNodePosition(nodeId) {
 
 export function saveAllNodePositions() {
     if (!state.simulation) return;
-    
+
     state.simulation.nodes().forEach(node => {
         if (node.x !== undefined && node.y !== undefined) {
             saveNodePosition(node.id, node.x, node.y);
         }
     });
-    
-    emit('nodePositionsSaved');
-}
 
-export function clearNodePositions() {
-    state.nodePositions.clear();
+    emit('nodePositionsSaved');
 }
 
 // ============================================================
@@ -595,7 +599,7 @@ export function saveExplorationToStorage() {
         discovered: Array.from(state.explorationState.discovered),
         discoveredLinks: Array.from(state.explorationState.discoveredLinks),
         tags: Object.fromEntries(state.explorationState.tags),
-        version: 2  // Mark as new UUID format
+        version: 2, // Mark as new UUID format
     };
 
     try {
@@ -615,7 +619,7 @@ export function loadExplorationFromStorage(seed) {
             discovered: new Set(parsed.discovered || []),
             discoveredLinks: new Set(parsed.discoveredLinks || []),
             tags: new Map(Object.entries(parsed.tags || {})),
-            version: parsed.version || 1  // v1 = old format, v2 = UUID format
+            version: parsed.version || 1, // v1 = old format, v2 = UUID format
         };
     } catch (err) {
         console.error('Failed to load exploration state:', err);
@@ -625,10 +629,6 @@ export function loadExplorationFromStorage(seed) {
 
 export function clearExplorationStorage(seed) {
     localStorage.removeItem(getStorageKey(seed || state.seed));
-}
-
-export function hasExplorationSave(seed) {
-    return localStorage.getItem(getStorageKey(seed)) !== null;
 }
 
 // ============================================================
@@ -644,5 +644,5 @@ export const AVAILABLE_TAGS = [
     { id: 'done', emoji: '✅' },
     { id: 'star', emoji: '⭐' },
     { id: 'blocked', emoji: '❌' },
-    { id: 'key', emoji: '🔑' }
+    { id: 'key', emoji: '🔑' },
 ];

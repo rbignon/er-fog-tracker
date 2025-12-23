@@ -30,3 +30,7 @@ env/
 
 # Rust mod
 mod/target/
+
+# Node.js (web/)
+node_modules/
+package-lock.json

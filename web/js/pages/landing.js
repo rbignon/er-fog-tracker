@@ -9,57 +9,57 @@ import { navigate } from '../router.js';
  * Show the landing page.
  */
 export function show() {
-  // Hide all pages, show landing
-  document.querySelectorAll('.page').forEach((p) => p.classList.add('hidden'));
-  document.getElementById('landing-page').classList.remove('hidden');
+    // Hide all pages, show landing
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    document.getElementById('landing-page').classList.remove('hidden');
 }
 
 /**
  * Initialize landing page event handlers.
  */
 export function init() {
-  const loginBtn = document.getElementById('login-twitch-btn');
+    const loginBtn = document.getElementById('login-twitch-btn');
 
-  loginBtn.addEventListener('click', () => {
-    Auth.login();
-  });
+    loginBtn.addEventListener('click', () => {
+        Auth.login();
+    });
 }
 
 /**
  * Route handler for landing page.
  */
 export async function handleRoute({ query }) {
-  // Check for OAuth callback token
-  if (query.token) {
-    const user = await Auth.handleCallback(query.token);
-    if (user) {
-      // Check for stored return URL
-      const returnUrl = sessionStorage.getItem('auth_return_url');
-      sessionStorage.removeItem('auth_return_url');
-      navigate(returnUrl || '/dashboard', { replace: true });
-      return;
+    // Check for OAuth callback token
+    if (query.token) {
+        const user = await Auth.handleCallback(query.token);
+        if (user) {
+            // Check for stored return URL
+            const returnUrl = sessionStorage.getItem('auth_return_url');
+            sessionStorage.removeItem('auth_return_url');
+            navigate(returnUrl || '/dashboard', { replace: true });
+            return;
+        }
     }
-  }
 
-  // If already authenticated and no pending error, redirect to dashboard
-  if (Auth.isAuthenticated() && !Auth.getLastFetchError()) {
-    navigate('/dashboard', { replace: true });
-    return;
-  }
+    // If already authenticated and no pending error, redirect to dashboard
+    if (Auth.isAuthenticated() && !Auth.getLastFetchError()) {
+        navigate('/dashboard', { replace: true });
+        return;
+    }
 
-  // Check for offline mode
-  if (query.offline === 'true') {
-    // Show offline upload screen instead
-    document.querySelectorAll('.page').forEach((p) => p.classList.add('hidden'));
-    document.getElementById('upload-screen').classList.remove('hidden');
-    return;
-  }
+    // Check for offline mode
+    if (query.offline === 'true') {
+        // Show offline upload screen instead
+        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+        document.getElementById('upload-screen').classList.remove('hidden');
+        return;
+    }
 
-  show();
+    show();
 }
 
 export default {
-  show,
-  init,
-  handleRoute,
+    show,
+    init,
+    handleRoute,
 };

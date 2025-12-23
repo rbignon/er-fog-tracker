@@ -16,15 +16,15 @@ function getWsUrl() {
     return `${protocol}//${window.location.host}`;
 }
 
-const MAX_RECONNECT_DURATION = 5 * 60 * 1000;  // 5 minutes total
+const MAX_RECONNECT_DURATION = 5 * 60 * 1000; // 5 minutes total
 const RECONNECT_BASE_DELAY = 1000;
-const RECONNECT_MAX_DELAY = 30000;  // Cap at 30 seconds between attempts
+const RECONNECT_MAX_DELAY = 30000; // Cap at 30 seconds between attempts
 
 let syncThrottle = null;
 let lastSyncedViewport = null;
 let isRenderingGraph = false;
 let isSyncing = false;
-let lastReceivedVisualState = null;  // Store last visual state from host for viewer restoration
+let lastReceivedVisualState = null; // Store last visual state from host for viewer restoration
 
 // Game WebSocket variables
 let gameWs = null;
@@ -32,11 +32,11 @@ let currentGameId = null;
 let gameWsReconnectAttempts = 0;
 let gameWsReconnectStartTime = null;
 let gameWsIsReconnecting = false;
-let gameWsIsHost = false;  // Track if we connected as host or viewer
+let gameWsIsHost = false; // Track if we connected as host or viewer
 
 // Client-side heartbeat monitoring (detect if server stops sending pings)
-const HEARTBEAT_EXPECTED_INTERVAL = 15000;  // Server sends ping every 15s
-const HEARTBEAT_GRACE_PERIOD = 15000;       // Allow 15s extra before considering dead
+const HEARTBEAT_EXPECTED_INTERVAL = 15000; // Server sends ping every 15s
+const HEARTBEAT_GRACE_PERIOD = 15000; // Allow 15s extra before considering dead
 let lastGameWsPing = null;
 let gameWsHeartbeatCheckInterval = null;
 
@@ -53,7 +53,7 @@ const counterSize = urlParams.get('size') || 'md';
 
 function startGameWsHeartbeatMonitoring() {
     lastGameWsPing = Date.now();
-    stopGameWsHeartbeatMonitoring();  // Clear any existing interval
+    stopGameWsHeartbeatMonitoring(); // Clear any existing interval
 
     gameWsHeartbeatCheckInterval = setInterval(() => {
         if (!gameWs || gameWs.readyState !== WebSocket.OPEN) {
@@ -65,12 +65,14 @@ function startGameWsHeartbeatMonitoring() {
         const timeout = HEARTBEAT_EXPECTED_INTERVAL + HEARTBEAT_GRACE_PERIOD;
 
         if (timeSinceLastPing > timeout) {
-            console.log(`No server ping for game WS in ${Math.round(timeSinceLastPing / 1000)}s, connection likely dead`);
+            console.log(
+                `No server ping for game WS in ${Math.round(timeSinceLastPing / 1000)}s, connection likely dead`
+            );
             // Force close to trigger reconnection
             gameWs.close();
             stopGameWsHeartbeatMonitoring();
         }
-    }, 5000);  // Check every 5 seconds
+    }, 5000); // Check every 5 seconds
 }
 
 function stopGameWsHeartbeatMonitoring() {
@@ -106,10 +108,12 @@ function syncState() {
         try {
             const state = getFullSyncState();
 
-            gameWs.send(JSON.stringify({
-                type: 'visual_state',
-                state
-            }));
+            gameWs.send(
+                JSON.stringify({
+                    type: 'visual_state',
+                    state,
+                })
+            );
         } finally {
             isSyncing = false;
         }
@@ -139,8 +143,8 @@ function getFullSyncState() {
         });
     }
 
-    const nodeElements = d3.selectAll(".node");
-    const linkElements = d3.selectAll(".link");
+    const nodeElements = d3.selectAll('.node');
+    const linkElements = d3.selectAll('.link');
 
     const graphData = State.getGraphData();
     const nodePositions = State.getNodePositions();
@@ -148,54 +152,53 @@ function getFullSyncState() {
 
     // Build nodes state from DOM (includes placeholders)
     const nodesState = {};
-    nodeElements.each(function(d) {
+    nodeElements.each(function (d) {
         const nodeEl = d3.select(this);
         const pos = nodePositions.get(d.id);
 
         // For placeholders, get position from simulation data
-        const x = d.x !== undefined ? d.x : (pos ? pos.x : 0);
-        const y = d.y !== undefined ? d.y : (pos ? pos.y : 0);
+        const x = d.x !== undefined ? d.x : pos ? pos.x : 0;
+        const y = d.y !== undefined ? d.y : pos ? pos.y : 0;
 
         const tags = explorationState?.tags?.get(d.id) || [];
-        const discovered = d.isPlaceholder ? false : (explorationState?.discovered?.has(d.id) || false);
+        const discovered = d.isPlaceholder ? false : explorationState?.discovered?.has(d.id) || false;
 
         nodesState[d.id] = {
             x: x,
             y: y,
-            visible: nodeEl.style("display") !== "none",
-            highlighted: nodeEl.classed("highlighted"),
-            dimmed: nodeEl.classed("dimmed"),
-            frontierHighlight: nodeEl.classed("frontier-highlight"),
-            accessHighlight: nodeEl.classed("access-highlight"),
-            tagHighlighted: nodeEl.classed("tag-highlighted"),
+            visible: nodeEl.style('display') !== 'none',
+            highlighted: nodeEl.classed('highlighted'),
+            dimmed: nodeEl.classed('dimmed'),
+            frontierHighlight: nodeEl.classed('frontier-highlight'),
+            accessHighlight: nodeEl.classed('access-highlight'),
+            tagHighlighted: nodeEl.classed('tag-highlighted'),
             discovered: discovered,
             tags: tags,
             isBoss: d.isBoss || false,
             scaling: d.scaling || null,
             isPlaceholder: d.isPlaceholder || false,
             realId: d.realId || null,
-            sourceNodeId: d.sourceNodeId || null
+            sourceNodeId: d.sourceNodeId || null,
         };
     });
 
     // Build links state from DOM (includes links to placeholders)
     const linksState = {};
-    linkElements.each(function(d) {
+    linkElements.each(function (d) {
         const linkEl = d3.select(this);
-        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+        const { sourceId, targetId } = State.getLinkEndpoints(d);
 
         linksState[`${sourceId}->${targetId}`] = {
             id: d.id || null,
-            visible: linkEl.style("display") !== "none",
-            highlighted: linkEl.classed("highlighted"),
-            dimmed: linkEl.classed("dimmed"),
-            frontierHighlight: linkEl.classed("frontier-highlight"),
+            visible: linkEl.style('display') !== 'none',
+            highlighted: linkEl.classed('highlighted'),
+            dimmed: linkEl.classed('dimmed'),
+            frontierHighlight: linkEl.classed('frontier-highlight'),
             type: d.type || null,
             oneWay: d.oneWay || false,
             // Store original target for placeholder links
             originalTarget: d.originalTarget || null,
-            originalSource: d.originalSource || null
+            originalSource: d.originalSource || null,
         };
     });
 
@@ -217,7 +220,7 @@ function getFullSyncState() {
                     isBoss: n.isBoss || false,
                     scaling: n.scaling || null,
                     isPlaceholder: false,
-                    isOriginalNode: true
+                    isOriginalNode: true,
                 };
             }
         });
@@ -226,8 +229,7 @@ function getFullSyncState() {
     // Also include original graph links for viewer to rebuild the graph
     if (graphData && graphData.links) {
         graphData.links.forEach(l => {
-            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+            const { sourceId, targetId } = State.getLinkEndpoints(l);
             const key = `${sourceId}->${targetId}`;
             // Only add if not already present (don't overwrite visual state)
             if (!linksState[key]) {
@@ -239,7 +241,7 @@ function getFullSyncState() {
                     frontierHighlight: false,
                     type: l.type || null,
                     oneWay: l.oneWay || false,
-                    isOriginalLink: true
+                    isOriginalLink: true,
                 };
             }
         });
@@ -248,9 +250,7 @@ function getFullSyncState() {
     const transform = State.getCurrentZoomTransform();
 
     // Include discovered links for proper link visibility on viewer
-    const discoveredLinks = explorationState?.discoveredLinks
-        ? Array.from(explorationState.discoveredLinks)
-        : [];
+    const discoveredLinks = explorationState?.discoveredLinks ? Array.from(explorationState.discoveredLinks) : [];
 
     // Use server-calculated stats if available, otherwise calculate locally
     let discoveredCount, totalAreas;
@@ -268,10 +268,9 @@ function getFullSyncState() {
                 // Use link index to get source/target from UUID
                 const link = linkIndex?.byId.get(linkUUID);
                 if (link) {
-                    const source = typeof link.source === 'object' ? link.source.id : link.source;
-                    const target = typeof link.target === 'object' ? link.target.id : link.target;
-                    if (nodeIds.has(source)) discoveredFromLinks.add(source);
-                    if (nodeIds.has(target)) discoveredFromLinks.add(target);
+                    const { sourceId, targetId } = State.getLinkEndpoints(link);
+                    if (nodeIds.has(sourceId)) discoveredFromLinks.add(sourceId);
+                    if (nodeIds.has(targetId)) discoveredFromLinks.add(targetId);
                 }
             }
             discoveredCount = discoveredFromLinks.size;
@@ -286,7 +285,7 @@ function getFullSyncState() {
             y: transform?.y || 0,
             k: transform?.k || 1,
             hostWidth: window.innerWidth,
-            hostHeight: window.innerHeight
+            hostHeight: window.innerHeight,
         },
         selectedNodeId: State.getSelectedNodeId() || null,
         frontierHighlightActive: State.isFrontierHighlightActive(),
@@ -294,7 +293,7 @@ function getFullSyncState() {
         links: linksState,
         discoveredLinks: discoveredLinks,
         discoveredCount: discoveredCount,
-        totalAreas: totalAreas
+        totalAreas: totalAreas,
     };
 }
 
@@ -321,7 +320,7 @@ function applySessionData(data) {
 }
 
 function buildGraphFromSessionData(data) {
-    console.log("Building graph from session data...");
+    console.log('Building graph from session data...');
 
     // Set exploration mode FIRST so renderGraph creates placeholders correctly
     if (data.explorationMode !== undefined) {
@@ -342,7 +341,7 @@ function buildGraphFromSessionData(data) {
             isBoss: nodeState.isBoss || false,
             scaling: nodeState.scaling || null,
             x: nodeState.x,
-            y: nodeState.y
+            y: nodeState.y,
         });
 
         if (nodeState.x !== undefined && nodeState.y !== undefined) {
@@ -375,7 +374,7 @@ function buildGraphFromSessionData(data) {
                 source: source,
                 target: target,
                 type: linkState.type || 'fog',
-                oneWay: linkState.oneWay || false
+                oneWay: linkState.oneWay || false,
             });
         }
     }
@@ -423,26 +422,39 @@ function applyViewport(vp) {
     // Interactive viewers control their own viewport
     if (!State.isOverlayMode()) return;
 
-    const svg = d3.select("#graph-container svg");
-    const g = svg.select("g");
+    const svg = d3.select('#graph-container svg');
+    const g = svg.select('g');
 
     if (!svg.node() || !g.node()) {
         setTimeout(() => applyViewport(vp), 200);
         return;
     }
 
-    if (lastSyncedViewport &&
+    if (
+        lastSyncedViewport &&
         Math.abs(vp.x - lastSyncedViewport.x) <= 1 &&
         Math.abs(vp.y - lastSyncedViewport.y) <= 1 &&
-        Math.abs(vp.k - lastSyncedViewport.k) <= 0.01) {
+        Math.abs(vp.k - lastSyncedViewport.k) <= 0.01
+    ) {
         return;
     }
 
     lastSyncedViewport = { x: vp.x, y: vp.y, k: vp.k };
 
-    if (!vp || typeof vp.x !== 'number' || typeof vp.y !== 'number' || typeof vp.k !== 'number' ||
-        isNaN(vp.x) || isNaN(vp.y) || isNaN(vp.k) || !isFinite(vp.x) || !isFinite(vp.y) || !isFinite(vp.k) || vp.k <= 0) {
-        console.warn("Invalid viewport data:", vp);
+    if (
+        !vp ||
+        typeof vp.x !== 'number' ||
+        typeof vp.y !== 'number' ||
+        typeof vp.k !== 'number' ||
+        isNaN(vp.x) ||
+        isNaN(vp.y) ||
+        isNaN(vp.k) ||
+        !isFinite(vp.x) ||
+        !isFinite(vp.y) ||
+        !isFinite(vp.k) ||
+        vp.k <= 0
+    ) {
+        console.warn('Invalid viewport data:', vp);
         return;
     }
 
@@ -457,16 +469,14 @@ function applyViewport(vp) {
     const y = viewerHeight / 2 - hostCenterY * vp.k;
 
     if (isNaN(x) || isNaN(y) || !isFinite(x) || !isFinite(y) || !isFinite(vp.k) || vp.k <= 0) {
-        console.warn("Invalid calculated viewport transform:", { x, y, vp });
+        console.warn('Invalid calculated viewport transform:', { x, y, vp });
         return;
     }
 
     const transform = d3.zoomIdentity.translate(x, y).scale(vp.k);
     State.setCurrentZoomTransform(transform);
 
-    g.transition()
-        .duration(300)
-        .attr("transform", `translate(${x},${y}) scale(${vp.k})`);
+    g.transition().duration(300).attr('transform', `translate(${x},${y}) scale(${vp.k})`);
 }
 
 /**
@@ -489,8 +499,14 @@ function applyPositionsAndDiscoveryOnly(data) {
 
     // Save and apply node positions
     for (const [id, nodeState] of Object.entries(data.nodes)) {
-        if (nodeState.x !== undefined && nodeState.y !== undefined &&
-            !isNaN(nodeState.x) && !isNaN(nodeState.y) && isFinite(nodeState.x) && isFinite(nodeState.y)) {
+        if (
+            nodeState.x !== undefined &&
+            nodeState.y !== undefined &&
+            !isNaN(nodeState.x) &&
+            !isNaN(nodeState.y) &&
+            isFinite(nodeState.x) &&
+            isFinite(nodeState.y)
+        ) {
             State.saveNodePosition(id, nodeState.x, nodeState.y);
 
             const simNode = d3Nodes.find(n => n.id === id);
@@ -535,8 +551,7 @@ function applyPositionsAndDiscoveryOnly(data) {
         const newDiscoveredLinks = new Set(data.discoveredLinks);
         const currentLinks = explorationState.discoveredLinks || new Set();
 
-        if (newDiscoveredLinks.size !== currentLinks.size ||
-            [...newDiscoveredLinks].some(l => !currentLinks.has(l))) {
+        if (newDiscoveredLinks.size !== currentLinks.size || [...newDiscoveredLinks].some(l => !currentLinks.has(l))) {
             explorationChanged = true;
             explorationState.discoveredLinks = newDiscoveredLinks;
         }
@@ -585,8 +600,14 @@ function applyVisualState(data) {
 
     // First pass: save ALL node positions
     for (const [id, nodeState] of Object.entries(data.nodes)) {
-        if (nodeState.x !== undefined && nodeState.y !== undefined &&
-            !isNaN(nodeState.x) && !isNaN(nodeState.y) && isFinite(nodeState.x) && isFinite(nodeState.y)) {
+        if (
+            nodeState.x !== undefined &&
+            nodeState.y !== undefined &&
+            !isNaN(nodeState.x) &&
+            !isNaN(nodeState.y) &&
+            isFinite(nodeState.x) &&
+            isFinite(nodeState.y)
+        ) {
             State.saveNodePosition(id, nodeState.x, nodeState.y);
         }
     }
@@ -602,8 +623,15 @@ function applyVisualState(data) {
             hasMissingNodes = true;
         }
 
-        if (simNode && nodeState.x !== undefined && nodeState.y !== undefined &&
-            !isNaN(nodeState.x) && !isNaN(nodeState.y) && isFinite(nodeState.x) && isFinite(nodeState.y)) {
+        if (
+            simNode &&
+            nodeState.x !== undefined &&
+            nodeState.y !== undefined &&
+            !isNaN(nodeState.x) &&
+            !isNaN(nodeState.y) &&
+            isFinite(nodeState.x) &&
+            isFinite(nodeState.y)
+        ) {
             if (Math.abs(simNode.x - nodeState.x) > 1 || Math.abs(simNode.y - nodeState.y) > 1) {
                 simNode.x = nodeState.x;
                 simNode.y = nodeState.y;
@@ -644,8 +672,7 @@ function applyVisualState(data) {
         const currentLinks = explorationState.discoveredLinks || new Set();
 
         // Check if links changed
-        if (newDiscoveredLinks.size !== currentLinks.size ||
-            [...newDiscoveredLinks].some(l => !currentLinks.has(l))) {
+        if (newDiscoveredLinks.size !== currentLinks.size || [...newDiscoveredLinks].some(l => !currentLinks.has(l))) {
             explorationChanged = true;
             explorationState.discoveredLinks = newDiscoveredLinks;
         }
@@ -693,46 +720,45 @@ function applyVisualState(data) {
 function applyVisualClasses(data) {
     const selectedId = data.selectedNodeId || null;
 
-    d3.selectAll(".node").each(function(d) {
+    d3.selectAll('.node').each(function (d) {
         const nodeState = data.nodes?.[d.id];
         const node = d3.select(this);
 
         if (nodeState) {
-            node.classed("highlighted", nodeState.highlighted || false)
-                .classed("dimmed", nodeState.dimmed || false)
-                .classed("frontier-highlight", nodeState.frontierHighlight || false)
-                .classed("access-highlight", nodeState.accessHighlight || false)
-                .classed("tag-highlighted", nodeState.tagHighlighted || false);
+            node.classed('highlighted', nodeState.highlighted || false)
+                .classed('dimmed', nodeState.dimmed || false)
+                .classed('frontier-highlight', nodeState.frontierHighlight || false)
+                .classed('access-highlight', nodeState.accessHighlight || false)
+                .classed('tag-highlighted', nodeState.tagHighlighted || false);
         }
 
         // Handle selection separately - apply even if nodeState doesn't exist
-        node.classed("viewer-selected", d.id === selectedId);
+        node.classed('viewer-selected', d.id === selectedId);
 
         // Show selection ring in viewer modes (overlay or interactive)
         if (d.id === selectedId && State.isViewerMode()) {
-            if (node.select(".selection-ring").empty()) {
-                const circle = node.select("circle");
-                const r = parseFloat(circle.attr("r")) || 7;
-                node.insert("circle", "circle")
-                    .attr("class", "selection-ring")
-                    .attr("r", r + 8);
+            if (node.select('.selection-ring').empty()) {
+                const circle = node.select('circle');
+                const r = parseFloat(circle.attr('r')) || 7;
+                node.insert('circle', 'circle')
+                    .attr('class', 'selection-ring')
+                    .attr('r', r + 8);
             }
         } else {
-            node.select(".selection-ring").remove();
+            node.select('.selection-ring').remove();
         }
     });
 
     if (data.links) {
-        d3.selectAll(".link").each(function(d) {
-            const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+        d3.selectAll('.link').each(function (d) {
+            const { sourceId, targetId } = State.getLinkEndpoints(d);
             const linkKey = `${sourceId}->${targetId}`;
             const linkState = data.links[linkKey];
             if (linkState) {
                 d3.select(this)
-                    .classed("highlighted", linkState.highlighted || false)
-                    .classed("dimmed", linkState.dimmed || false)
-                    .classed("frontier-highlight", linkState.frontierHighlight || false);
+                    .classed('highlighted', linkState.highlighted || false)
+                    .classed('dimmed', linkState.dimmed || false)
+                    .classed('frontier-highlight', linkState.frontierHighlight || false);
             }
         });
     }
@@ -817,23 +843,23 @@ function updateViewerDiscoveryCounter(data) {
 }
 
 function updatePositionsInDOM(d3Nodes) {
-    d3.selectAll(".node")
+    d3.selectAll('.node')
         .transition()
         .duration(300)
-        .attr("transform", d => {
-            const x = (typeof d.x === 'number' && !isNaN(d.x) && isFinite(d.x)) ? d.x : 0;
-            const y = (typeof d.y === 'number' && !isNaN(d.y) && isFinite(d.y)) ? d.y : 0;
+        .attr('transform', d => {
+            const x = typeof d.x === 'number' && !isNaN(d.x) && isFinite(d.x) ? d.x : 0;
+            const y = typeof d.y === 'number' && !isNaN(d.y) && isFinite(d.y) ? d.y : 0;
             return `translate(${x},${y})`;
         });
 
-    d3.selectAll(".link")
+    d3.selectAll('.link')
         .transition()
         .duration(300)
-        .attr("d", d => {
-            const sourceX = (typeof d.source.x === 'number' && !isNaN(d.source.x)) ? d.source.x : 0;
-            const sourceY = (typeof d.source.y === 'number' && !isNaN(d.source.y)) ? d.source.y : 0;
-            const targetX = (typeof d.target.x === 'number' && !isNaN(d.target.x)) ? d.target.x : 0;
-            const targetY = (typeof d.target.y === 'number' && !isNaN(d.target.y)) ? d.target.y : 0;
+        .attr('d', d => {
+            const sourceX = typeof d.source.x === 'number' && !isNaN(d.source.x) ? d.source.x : 0;
+            const sourceY = typeof d.source.y === 'number' && !isNaN(d.source.y) ? d.source.y : 0;
+            const targetX = typeof d.target.x === 'number' && !isNaN(d.target.x) ? d.target.x : 0;
+            const targetY = typeof d.target.y === 'number' && !isNaN(d.target.y) ? d.target.y : 0;
             const dx = targetX - sourceX;
             const dy = targetY - sourceY;
             const dr = Math.sqrt(dx * dx + dy * dy) * 2;
@@ -883,7 +909,7 @@ export function initStreamUI() {
         const params = new URLSearchParams({
             overlay: 'true',
             counter: position,
-            size: size
+            size: size,
         });
 
         if (urlInput) urlInput.value = `${baseUrl}?${params.toString()}`;
@@ -919,14 +945,16 @@ export function initStreamUI() {
                 navigator.clipboard.writeText(urlInput.value).then(() => {
                     const originalText = copyUrlBtn.textContent;
                     copyUrlBtn.textContent = 'Copied!';
-                    setTimeout(() => { copyUrlBtn.textContent = originalText; }, 2000);
+                    setTimeout(() => {
+                        copyUrlBtn.textContent = originalText;
+                    }, 2000);
                 });
             }
         });
     }
 
     // Close on backdrop click
-    streamModal.addEventListener('click', (e) => {
+    streamModal.addEventListener('click', e => {
         if (e.target.id === 'stream-modal') {
             closeModal();
         }
@@ -984,11 +1012,13 @@ State.subscribe('nodeTagsChanged', ({ nodeId, tags }) => {
     if (State.isSyncConnected() && State.isStreamerHost()) {
         // Send tag_update to persist on server and broadcast to mod/viewers
         if (gameWs && gameWs.readyState === WebSocket.OPEN) {
-            gameWs.send(JSON.stringify({
-                type: 'tag_update',
-                zone: nodeId,
-                tags: tags || []
-            }));
+            gameWs.send(
+                JSON.stringify({
+                    type: 'tag_update',
+                    zone: nodeId,
+                    tags: tags || [],
+                })
+            );
         }
         // Also sync visual state
         syncState();
@@ -1064,7 +1094,7 @@ export async function connectAsHost(gameId) {
             gameWs.send(JSON.stringify({ type: 'auth', token }));
         };
 
-        gameWs.onmessage = (event) => {
+        gameWs.onmessage = event => {
             const data = JSON.parse(event.data);
 
             // Handle ping/pong
@@ -1168,7 +1198,7 @@ export async function connectAsViewer(gameId) {
             resolve();
         };
 
-        gameWs.onmessage = (event) => {
+        gameWs.onmessage = event => {
             const data = JSON.parse(event.data);
 
             // Handle ping/pong
@@ -1269,7 +1299,7 @@ async function handleGameWsDisconnect() {
     // Check if we've exceeded the max reconnection duration
     const elapsed = Date.now() - gameWsReconnectStartTime;
     if (elapsed >= MAX_RECONNECT_DURATION) {
-        console.log("Max reconnect duration reached (5 minutes)");
+        console.log('Max reconnect duration reached (5 minutes)');
         gameWsReconnectStartTime = null;
         gameWsReconnectAttempts = 0;
         State.setSyncState(false, false, null);
@@ -1281,7 +1311,9 @@ async function handleGameWsDisconnect() {
     // Exponential backoff with cap
     const delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, gameWsReconnectAttempts - 1), RECONNECT_MAX_DELAY);
     const remainingTime = Math.round((MAX_RECONNECT_DURATION - elapsed) / 1000);
-    console.log(`Attempting game WS reconnect ${gameWsReconnectAttempts} in ${delay}ms (${remainingTime}s remaining)...`);
+    console.log(
+        `Attempting game WS reconnect ${gameWsReconnectAttempts} in ${delay}ms (${remainingTime}s remaining)...`
+    );
     Toast.warning(`Reconnecting... (${remainingTime}s remaining)`);
 
     gameWsIsReconnecting = true;
@@ -1354,7 +1386,7 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
 
     let changed = false;
     let newlyDiscoveredTarget = null;
-    const newlyDiscoveredZones = [];  // Track all newly discovered zones
+    const newlyDiscoveredZones = []; // Track all newly discovered zones
 
     // If server sent full discovered_links, use it directly (server is source of truth)
     if (discoveredLinks && Array.isArray(discoveredLinks)) {
@@ -1381,8 +1413,10 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
         }
 
         // Check if anything changed
-        if (newDiscovered.size !== explorationState.discovered.size ||
-            newDiscoveredLinks.size !== explorationState.discoveredLinks.size) {
+        if (
+            newDiscovered.size !== explorationState.discovered.size ||
+            newDiscoveredLinks.size !== explorationState.discoveredLinks.size
+        ) {
             changed = true;
         } else {
             // Size same, check contents
@@ -1451,7 +1485,7 @@ function handleDiscoveryFromServer(propagated, discoveredLinks) {
         State.emit('graphNeedsRender', {
             preservePositions: true,
             centerOnNodeId: newlyDiscoveredTarget,
-            showTooltipForNodeId: shouldShowTooltip ? newlyDiscoveredTarget : null
+            showTooltipForNodeId: shouldShowTooltip ? newlyDiscoveredTarget : null,
         });
 
         // Show toast for each newly discovered zone

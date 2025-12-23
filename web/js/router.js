@@ -12,14 +12,14 @@ let currentCleanup = null;
  * @param {Object} options - { auth: boolean } - requires authentication
  */
 export function addRoute(path, handler, options = {}) {
-  const paramNames = [];
-  const pattern = path.replace(/:(\w+)/g, (_, name) => {
-    paramNames.push(name);
-    return '([^/]+)';
-  });
-  const regex = new RegExp(`^${pattern}$`);
+    const paramNames = [];
+    const pattern = path.replace(/:(\w+)/g, (_, name) => {
+        paramNames.push(name);
+        return '([^/]+)';
+    });
+    const regex = new RegExp(`^${pattern}$`);
 
-  routes.push({ path, regex, paramNames, handler, ...options });
+    routes.push({ path, regex, paramNames, handler, ...options });
 }
 
 /**
@@ -28,81 +28,81 @@ export function addRoute(path, handler, options = {}) {
  * @param {Object} options - { replace: boolean } - use replaceState instead of pushState
  */
 export function navigate(path, options = {}) {
-  if (options.replace) {
-    history.replaceState(null, '', path);
-  } else {
-    history.pushState(null, '', path);
-  }
-  handleRoute();
+    if (options.replace) {
+        history.replaceState(null, '', path);
+    } else {
+        history.pushState(null, '', path);
+    }
+    handleRoute();
 }
 
 /**
  * Get current path.
  */
 export function getCurrentPath() {
-  return window.location.pathname;
+    return window.location.pathname;
 }
 
 /**
  * Get query parameters.
  */
 export function getQueryParams() {
-  return Object.fromEntries(new URLSearchParams(window.location.search));
+    return Object.fromEntries(new URLSearchParams(window.location.search));
 }
 
 /**
  * Match current path against registered routes and execute handler.
  */
 async function handleRoute() {
-  const path = getCurrentPath();
-  const query = getQueryParams();
+    const path = getCurrentPath();
+    const query = getQueryParams();
 
-  // Run cleanup from previous route if any
-  if (currentCleanup) {
-    try {
-      await currentCleanup();
-    } catch (e) {
-      console.error('Route cleanup error:', e);
-    }
-    currentCleanup = null;
-  }
-
-  for (const route of routes) {
-    const match = path.match(route.regex);
-    if (match) {
-      // Extract params
-      const params = {};
-      route.paramNames.forEach((name, i) => {
-        params[name] = decodeURIComponent(match[i + 1]);
-      });
-
-      // Check auth requirement
-      if (route.auth) {
-        const { isAuthenticated } = await import('./auth.js');
-        if (!isAuthenticated()) {
-          // Store return URL and redirect to landing
-          sessionStorage.setItem('auth_return_url', path);
-          navigate('/', { replace: true });
-          return;
+    // Run cleanup from previous route if any
+    if (currentCleanup) {
+        try {
+            await currentCleanup();
+        } catch (e) {
+            console.error('Route cleanup error:', e);
         }
-      }
-
-      // Execute handler
-      try {
-        const cleanup = await route.handler({ params, query });
-        if (typeof cleanup === 'function') {
-          currentCleanup = cleanup;
-        }
-      } catch (e) {
-        console.error('Route handler error:', e);
-      }
-      return;
+        currentCleanup = null;
     }
-  }
 
-  // No route matched - show 404 or redirect to home
-  console.warn(`No route matched for path: ${path}`);
-  navigate('/', { replace: true });
+    for (const route of routes) {
+        const match = path.match(route.regex);
+        if (match) {
+            // Extract params
+            const params = {};
+            route.paramNames.forEach((name, i) => {
+                params[name] = decodeURIComponent(match[i + 1]);
+            });
+
+            // Check auth requirement
+            if (route.auth) {
+                const { isAuthenticated } = await import('./auth.js');
+                if (!isAuthenticated()) {
+                    // Store return URL and redirect to landing
+                    sessionStorage.setItem('auth_return_url', path);
+                    navigate('/', { replace: true });
+                    return;
+                }
+            }
+
+            // Execute handler
+            try {
+                const cleanup = await route.handler({ params, query });
+                if (typeof cleanup === 'function') {
+                    currentCleanup = cleanup;
+                }
+            } catch (e) {
+                console.error('Route handler error:', e);
+            }
+            return;
+        }
+    }
+
+    // No route matched - show 404 or redirect to home
+    console.warn(`No route matched for path: ${path}`);
+    navigate('/', { replace: true });
 }
 
 /**
@@ -110,40 +110,40 @@ async function handleRoute() {
  * Call this after all routes are registered.
  */
 export function init() {
-  // Handle browser back/forward
-  window.addEventListener('popstate', handleRoute);
+    // Handle browser back/forward
+    window.addEventListener('popstate', handleRoute);
 
-  // Intercept link clicks for SPA navigation
-  document.addEventListener('click', (e) => {
-    const link = e.target.closest('a[href]');
-    if (!link) return;
+    // Intercept link clicks for SPA navigation
+    document.addEventListener('click', e => {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
 
-    const href = link.getAttribute('href');
+        const href = link.getAttribute('href');
 
-    // Skip external links, hash links, and links with target
-    if (
-      !href ||
-      href.startsWith('http') ||
-      href.startsWith('#') ||
-      link.hasAttribute('target') ||
-      link.hasAttribute('download')
-    ) {
-      return;
-    }
+        // Skip external links, hash links, and links with target
+        if (
+            !href ||
+            href.startsWith('http') ||
+            href.startsWith('#') ||
+            link.hasAttribute('target') ||
+            link.hasAttribute('download')
+        ) {
+            return;
+        }
 
-    // Handle internal navigation
-    e.preventDefault();
-    navigate(href);
-  });
+        // Handle internal navigation
+        e.preventDefault();
+        navigate(href);
+    });
 
-  // Initial route
-  handleRoute();
+    // Initial route
+    handleRoute();
 }
 
 export default {
-  addRoute,
-  navigate,
-  getCurrentPath,
-  getQueryParams,
-  init,
+    addRoute,
+    navigate,
+    getCurrentPath,
+    getQueryParams,
+    init,
 };

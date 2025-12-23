@@ -1,4 +1,5 @@
 repos:
+  # Python (server/)
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.4
     hooks:
@@ -8,6 +9,24 @@ repos:
       - id: ruff-format
         files: server/
 
+  # JavaScript (web/)
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd web && npx eslint --fix "${@//web\//}"' --
+        language: system
+        types: [javascript]
+        files: ^web/js/
+
+      - id: prettier
+        name: prettier
+        entry: bash -c 'cd web && npx prettier --write "${@//web\//}"' --
+        language: system
+        types: [javascript]
+        files: ^web/js/
+
+  # Rust (mod/)
   - repo: local
     hooks:
       - id: rustfmt

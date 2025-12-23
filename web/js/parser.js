@@ -9,7 +9,7 @@ function generateUUID() {
     }
     // Fallback using crypto.getRandomValues
     return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
-        (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+        (+c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (+c / 4)))).toString(16)
     );
 }
 
@@ -72,7 +72,7 @@ export const SpoilerLogParser = {
         /^Done$/,
         /^C:\\/,
     ],
-    
+
     // Patterns that indicate details in connection descriptions
     detailPatterns: [
         /\s*\(before\s/i,
@@ -110,25 +110,25 @@ export const SpoilerLogParser = {
         /\s*\(down\s/i,
         /\s*\(backwards\s/i,
     ],
-    
+
     shouldSkipLine(line) {
         const trimmed = line.trim();
         if (!trimmed) return true;
         return this.skipPatterns.some(pattern => pattern.test(trimmed));
     },
-    
+
     parseAreaLine(line) {
         // Area lines are not indented
         if (line.startsWith('  ') || line.startsWith('\t')) return null;
         if (this.shouldSkipLine(line)) return null;
-        
+
         const isBoss = line.includes('<<<<<');
-        let lineClean = line.replace(/<<<<</, '').trim();
-        
+        const lineClean = line.replace(/<<<<</, '').trim();
+
         // Extract scaling info
         const scalingMatch = lineClean.match(/\(scaling:\s*([^)]+)\)/);
         const scaling = scalingMatch ? scalingMatch[1].trim() : null;
-        
+
         // Extract area name (everything before the parenthesis)
         const nameMatch = lineClean.match(/^([^(]+)/);
         if (nameMatch) {
@@ -139,7 +139,7 @@ export const SpoilerLogParser = {
         }
         return null;
     },
-    
+
     extractAreaAndDetails(text) {
         for (const pattern of this.detailPatterns) {
             const match = text.match(pattern);
@@ -153,11 +153,11 @@ export const SpoilerLogParser = {
         }
         return { areaName: text.trim(), details: '' };
     },
-    
+
     parseConnectionLine(line) {
         const trimmed = line.trim();
         let connType, content;
-        
+
         if (trimmed.startsWith('Random:')) {
             connType = 'random';
             content = trimmed.substring(7).trim();
@@ -167,17 +167,17 @@ export const SpoilerLogParser = {
         } else {
             return null;
         }
-        
+
         if (!content.includes(' --> ')) return null;
-        
+
         const parts = content.split(' --> ');
         if (parts.length !== 2) return null;
-        
+
         const [sourcePart, targetPart] = parts;
-        
+
         const { areaName: source, details: sourceDetails } = this.extractAreaAndDetails(sourcePart);
         const { areaName: target, details: targetDetails } = this.extractAreaAndDetails(targetPart);
-        
+
         // Extract "using an item from..." or "using items from..." before cleaning
         let requiredItemFrom = null;
         const usingMatch = content.match(/,\s*using (?:an )?items? from\s+(.+?)$/i);
@@ -212,18 +212,18 @@ export const SpoilerLogParser = {
             sourceDetails,
             targetDetails,
             requiredItemFrom,
-            isInherentlyOneWay
+            isInherentlyOneWay,
         };
     },
-    
+
     parse(text) {
         const lines = text.split('\n');
         const areas = new Map();
         const connections = [];
         let areaOrder = 0;
         let inOptionalSection = false;
-        let metadata = {};
-        
+        const metadata = {};
+
         // Extract seed from first line
         const firstLine = lines[0] || '';
         const seedMatch = firstLine.match(/seed:(\d+)/);
@@ -231,14 +231,14 @@ export const SpoilerLogParser = {
             metadata.seed = seedMatch[1];
         }
         metadata.options = firstLine.trim();
-        
+
         for (const line of lines) {
             // Stop at optional areas section
             if (line.trim() === 'Optional areas:') {
                 inOptionalSection = true;
                 break;
             }
-            
+
             // Try to parse as area
             const areaInfo = this.parseAreaLine(line);
             if (areaInfo) {
@@ -247,7 +247,7 @@ export const SpoilerLogParser = {
                         id: areaInfo.name,
                         isBoss: areaInfo.isBoss,
                         scaling: areaInfo.scaling,
-                        order: areaOrder++
+                        order: areaOrder++,
                     });
                 } else {
                     // Update existing area with boss/scaling info if we have it
@@ -258,7 +258,7 @@ export const SpoilerLogParser = {
                 }
                 continue;
             }
-            
+
             // Try to parse as connection
             if (line.startsWith('  ') || line.startsWith('\t')) {
                 const conn = this.parseConnectionLine(line);
@@ -269,7 +269,7 @@ export const SpoilerLogParser = {
                             id: conn.source,
                             isBoss: false,
                             scaling: null,
-                            order: areaOrder++
+                            order: areaOrder++,
                         });
                     }
                     if (!areas.has(conn.target)) {
@@ -277,20 +277,20 @@ export const SpoilerLogParser = {
                             id: conn.target,
                             isBoss: false,
                             scaling: null,
-                            order: areaOrder++
+                            order: areaOrder++,
                         });
                     }
                     connections.push(conn);
                 }
             }
         }
-        
+
         return {
             nodes: Array.from(areas.values()),
             links: connections,
-            metadata
+            metadata,
         };
-    }
+    },
 };
 
 // ============================================================
@@ -303,7 +303,7 @@ const KNOWN_KEY_ITEMS = [
     'Discarded Palace Key',
     'Carian Inverted Statue',
     'Drawing-Room Key',
-    'Pureblood Knight\'s Medal',
+    "Pureblood Knight's Medal",
     'O Mother',
     'Rusty Key',
     'Academy Glintstone Key',
@@ -316,10 +316,7 @@ const KNOWN_KEY_ITEMS = [
 ];
 
 // Known actions that require items (not items themselves but indicate item requirements)
-const KNOWN_ACTIONS = [
-    'burning the Sealing Tree',
-    'acquiring enough Great Runes',
-];
+const KNOWN_ACTIONS = ['burning the Sealing Tree', 'acquiring enough Great Runes'];
 
 /**
  * Extract key item or action name from link description text
@@ -354,5 +351,8 @@ export function extractRequiredItemFromDescription(sourceDetails, targetDetails)
  */
 export function parseRequiredItemZones(zonesText) {
     if (!zonesText) return [];
-    return zonesText.split('; ').map(z => z.trim()).filter(z => z.length > 0);
+    return zonesText
+        .split('; ')
+        .map(z => z.trim())
+        .filter(z => z.length > 0);
 }

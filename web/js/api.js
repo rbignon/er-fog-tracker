@@ -8,32 +8,32 @@ import { getAuthHeaders } from './auth.js';
  * Base fetch wrapper with error handling.
  */
 async function apiFetch(path, options = {}) {
-  const response = await fetch(path, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-      ...options.headers,
-    },
-  });
+    const response = await fetch(path, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+            ...options.headers,
+        },
+    });
 
-  if (!response.ok) {
-    const error = new Error(`API error: ${response.status}`);
-    error.status = response.status;
-    try {
-      error.detail = (await response.json()).detail;
-    } catch {
-      error.detail = response.statusText;
+    if (!response.ok) {
+        const error = new Error(`API error: ${response.status}`);
+        error.status = response.status;
+        try {
+            error.detail = (await response.json()).detail;
+        } catch {
+            error.detail = response.statusText;
+        }
+        throw error;
     }
-    throw error;
-  }
 
-  // Handle 204 No Content
-  if (response.status === 204) {
-    return null;
-  }
+    // Handle 204 No Content
+    if (response.status === 204) {
+        return null;
+    }
 
-  return response.json();
+    return response.json();
 }
 
 // =============================================================================
@@ -46,15 +46,15 @@ async function apiFetch(path, options = {}) {
  * @returns {Promise<{ gameId: string, created: boolean }>}
  */
 export async function createGame({ seed, label, zonePairs, zones }) {
-  return apiFetch('/api/games', {
-    method: 'POST',
-    body: JSON.stringify({
-      seed,
-      label: label || null,
-      zone_pairs: zonePairs,
-      zones: zones || null,
-    }),
-  });
+    return apiFetch('/api/games', {
+        method: 'POST',
+        body: JSON.stringify({
+            seed,
+            label: label || null,
+            zone_pairs: zonePairs,
+            zones: zones || null,
+        }),
+    });
 }
 
 /**
@@ -63,7 +63,7 @@ export async function createGame({ seed, label, zonePairs, zones }) {
  * @returns {Promise<Object>} - Full game object
  */
 export async function getGame(gameId) {
-  return apiFetch(`/api/games/${gameId}`);
+    return apiFetch(`/api/games/${gameId}`);
 }
 
 /**
@@ -71,7 +71,7 @@ export async function getGame(gameId) {
  * @returns {Promise<{ games: Array }>}
  */
 export async function getMyGames() {
-  return apiFetch('/api/me/games');
+    return apiFetch('/api/me/games');
 }
 
 /**
@@ -79,9 +79,9 @@ export async function getMyGames() {
  * @param {string} gameId - Game UUID
  */
 export async function deleteGame(gameId) {
-  return apiFetch(`/api/games/${gameId}`, {
-    method: 'DELETE',
-  });
+    return apiFetch(`/api/games/${gameId}`, {
+        method: 'DELETE',
+    });
 }
 
 /**
@@ -91,10 +91,10 @@ export async function deleteGame(gameId) {
  * @returns {Promise<Object>} - Updated game summary
  */
 export async function updateGame(gameId, { label }) {
-  return apiFetch(`/api/games/${gameId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ label }),
-  });
+    return apiFetch(`/api/games/${gameId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ label }),
+    });
 }
 
 // =============================================================================
@@ -107,11 +107,11 @@ export async function updateGame(gameId, { label }) {
  * @returns {Promise<{ username: string, displayName: string }>}
  */
 export async function getUser(username) {
-  const data = await apiFetch(`/api/users/${username}`);
-  return {
-    username: data.username,
-    displayName: data.display_name || data.username,
-  };
+    const data = await apiFetch(`/api/users/${username}`);
+    return {
+        username: data.username,
+        displayName: data.display_name || data.username,
+    };
 }
 
 /**
@@ -120,7 +120,7 @@ export async function getUser(username) {
  * @returns {Promise<{ games: Array }>}
  */
 export async function getUserGames(username) {
-  return apiFetch(`/api/users/${username}/games`);
+    return apiFetch(`/api/users/${username}/games`);
 }
 
 // =============================================================================
@@ -132,9 +132,9 @@ export async function getUserGames(username) {
  * @returns {Promise<{ mod_token: string }>}
  */
 export async function regenerateModToken() {
-  return apiFetch('/auth/regenerate-mod-token', {
-    method: 'POST',
-  });
+    return apiFetch('/auth/regenerate-mod-token', {
+        method: 'POST',
+    });
 }
 
 // =============================================================================
@@ -148,14 +148,14 @@ export async function regenerateModToken() {
  * @returns {Promise<{ propagated: Array<{ source, target }>, discovered_links: Array }>}
  */
 export async function createDiscovery(gameId, { source, target, link_id }) {
-  const body = { source, target };
-  if (link_id) {
-    body.link_id = link_id;
-  }
-  return apiFetch(`/api/games/${gameId}/discoveries`, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+    const body = { source, target };
+    if (link_id) {
+        body.link_id = link_id;
+    }
+    return apiFetch(`/api/games/${gameId}/discoveries`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+    });
 }
 
 /**
@@ -165,21 +165,21 @@ export async function createDiscovery(gameId, { source, target, link_id }) {
  * @returns {Promise<{ removed: string[], discovered_links: Array }>}
  */
 export async function undiscoverZone(gameId, zone) {
-  return apiFetch(`/api/games/${gameId}/undiscoveries`, {
-    method: 'POST',
-    body: JSON.stringify({ zone }),
-  });
+    return apiFetch(`/api/games/${gameId}/undiscoveries`, {
+        method: 'POST',
+        body: JSON.stringify({ zone }),
+    });
 }
 
 export default {
-  createGame,
-  getGame,
-  getMyGames,
-  deleteGame,
-  updateGame,
-  getUser,
-  getUserGames,
-  regenerateModToken,
-  createDiscovery,
-  undiscoverZone,
+    createGame,
+    getGame,
+    getMyGames,
+    deleteGame,
+    updateGame,
+    getUser,
+    getUserGames,
+    regenerateModToken,
+    createDiscovery,
+    undiscoverZone,
 };
