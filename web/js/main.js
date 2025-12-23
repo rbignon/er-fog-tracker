@@ -7,7 +7,7 @@ import * as Auth from './auth.js';
 import * as State from './state.js';
 import * as UI from './ui.js';
 import * as Graph from './graph.js';
-import * as Sync from './sync.js';
+import * as Sync from './sync/index.js';
 
 // Pages
 import * as LandingPage from './pages/landing.js';

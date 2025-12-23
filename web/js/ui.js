@@ -6,7 +6,7 @@ import { SpoilerLogParser } from './parser.js';
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
 import * as Toast from './toast.js';
-import { restoreLastVisualState } from './sync.js';
+import { restoreLastVisualState } from './sync/index.js';
 
 // ============================================================
 // DOM ELEMENTS
