@@ -226,12 +226,12 @@ async def propagate_discovery(
             discovered_nodes.add(dst)
             logger.debug("[DISCOVERY] New node discovered: %s", dst)
 
-            # Find preexisting links from dst to already-discovered nodes
+            # Propagate through ALL preexisting links from dst
+            # (recursive discovery of zones connected via vanilla links)
             for next_dst, _is_bidir in preexisting_adj.get(dst, []):
-                if next_dst in discovered_nodes:
-                    # Preexisting link to already-discovered node
-                    queue.append((dst, next_dst, None))  # No provided link_id for propagated links
-                    logger.debug("[DISCOVERY] Queuing preexisting: %s → %s", dst, next_dst)
+                # Queue for recursive discovery - will be skipped if already visited
+                queue.append((dst, next_dst, None))
+                logger.debug("[DISCOVERY] Queuing preexisting: %s → %s", dst, next_dst)
         else:
             # Both nodes already discovered - check for preexisting links between them
             # that haven't been discovered yet (parallel links scenario)
