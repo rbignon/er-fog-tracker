@@ -2884,7 +2884,7 @@ Areas:
 - Name: rauhruins_east
   Text: Ancient Ruins of Rauh - East
   Comment: crawlclosed is conditional but it's the default option in any case
-  Maps: m61_45_46_00 m61_45_46_10 m61_45_47_00 m61_46_46_00 m61_46_47_00 m61_46_48_00 m61_47_46_00 m61_47_46_10 m61_47_47_00 m61_47_48_00
+  Maps: m61_45_46_00 m61_45_46_10 m61_45_47_00 m61_46_46_00 m61_46_47_00 m61_46_48_00 m61_47_46_00 m61_47_46_10 m61_47_47_00 m61_47_47_16 m61_47_48_00
   To:
   - Area: rauhruins_west
     Text: dropping down
