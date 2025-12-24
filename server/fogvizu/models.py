@@ -16,15 +16,15 @@ class ZoneLink(BaseModel):
     """A link between two zones (fog gate connection)."""
 
     id: str | None = None  # Unique identifier for this link
-    source: str  # Source zone name (for display)
+    source: str = Field(..., max_length=255)  # Source zone name (for display)
     source_id: str | None = None  # Source zone UUID
-    source_key: str | None = None  # Internal zone key (from fog.txt)
-    target: str  # Target zone name (for display)
+    source_key: str | None = Field(default=None, max_length=255)  # Internal zone key
+    target: str = Field(..., max_length=255)  # Target zone name (for display)
     target_id: str | None = None  # Target zone UUID
-    target_key: str | None = None  # Internal zone key (from fog.txt)
+    target_key: str | None = Field(default=None, max_length=255)  # Internal zone key
     type: str = Field(pattern="^(random|preexisting)$")
-    source_details: str | None = None
-    target_details: str | None = None
+    source_details: str | None = Field(default=None, max_length=500)
+    target_details: str | None = Field(default=None, max_length=500)
     is_inherently_one_way: bool = False
 
 

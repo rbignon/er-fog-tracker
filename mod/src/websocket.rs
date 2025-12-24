@@ -219,9 +219,9 @@ impl WebSocketClient {
             return;
         }
 
-        // Create channels
-        let (outgoing_tx, outgoing_rx) = bounded::<OutgoingMessage>(32);
-        let (incoming_tx, incoming_rx) = bounded::<IncomingMessage>(32);
+        // Create channels (128 capacity to handle bursts without dropping messages)
+        let (outgoing_tx, outgoing_rx) = bounded::<OutgoingMessage>(128);
+        let (incoming_tx, incoming_rx) = bounded::<IncomingMessage>(128);
 
         self.tx = Some(outgoing_tx);
         self.rx = Some(incoming_rx);
@@ -490,8 +490,17 @@ fn message_loop(
     shutdown_flag: &Arc<AtomicBool>,
 ) -> Result<(), String> {
     // Set socket to non-blocking for polling
-    if let MaybeTlsStream::Plain(ref tcp) = socket.get_ref() {
-        let _ = tcp.set_nonblocking(true);
+    // Note: For TLS streams, we access the underlying TCP socket
+    match socket.get_ref() {
+        MaybeTlsStream::Plain(tcp) => {
+            let _ = tcp.set_nonblocking(true);
+        }
+        MaybeTlsStream::NativeTls(tls_stream) => {
+            let _ = tls_stream.get_ref().set_nonblocking(true);
+        }
+        _ => {
+            // Other TLS backends not currently supported
+        }
     }
 
     let mut last_ping_response = Instant::now();

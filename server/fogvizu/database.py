@@ -78,6 +78,12 @@ class Game(Base):
             "user_id",
             postgresql_where=(deleted_at.is_(None)),
         ),
+        Index("idx_games_seed", "seed"),
+        Index(
+            "idx_games_user_updated",
+            "user_id",
+            updated_at.desc(),
+        ),
     )
 
 

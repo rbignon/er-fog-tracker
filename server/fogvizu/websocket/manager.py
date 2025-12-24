@@ -3,6 +3,8 @@ WebSocket connection manager and game rooms.
 """
 
 import logging
+import time
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -15,6 +17,10 @@ if TYPE_CHECKING:
     from fogvizu.websocket.viewer import ViewerClient
 
 logger = logging.getLogger(__name__)
+
+# Rate limiting settings
+RATE_LIMIT_WINDOW_SECONDS = 60
+RATE_LIMIT_MAX_CONNECTIONS = 10
 
 
 @dataclass
@@ -33,6 +39,24 @@ class ConnectionManager:
 
     def __init__(self):
         self.rooms: dict[UUID, GameRoom] = {}
+        # Rate limiting: track connection timestamps per IP
+        self._connection_timestamps: dict[str, list[float]] = defaultdict(list)
+
+    def check_rate_limit(self, ip: str) -> bool:
+        """Check if IP is within rate limit. Returns True if allowed, False if blocked."""
+        now = time.time()
+        cutoff = now - RATE_LIMIT_WINDOW_SECONDS
+
+        # Clean up old timestamps
+        timestamps = self._connection_timestamps[ip]
+        timestamps[:] = [t for t in timestamps if t > cutoff]
+
+        if len(timestamps) >= RATE_LIMIT_MAX_CONNECTIONS:
+            logger.warning("[RATE_LIMIT] IP %s exceeded connection limit", ip)
+            return False
+
+        timestamps.append(now)
+        return True
 
     def get_or_create_room(self, game_id: UUID) -> GameRoom:
         """Get or create a room for a game."""

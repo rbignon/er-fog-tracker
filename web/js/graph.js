@@ -276,6 +276,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
 
     const discoveredNodes = nodes.filter(d => explorationState.discovered.has(d.id));
     const placeholderNodes = [];
+    const placeholderIds = new Set(); // O(1) lookup for deduplication
     const processedLinks = [];
 
     links.forEach(link => {
@@ -295,7 +296,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
                 const placeholderIdForward = `???_${sourceId}_${targetId}`;
                 placeholderMap.set(placeholderIdForward, targetId);
 
-                if (!placeholderNodes.find(n => n.id === placeholderIdForward)) {
+                if (!placeholderIds.has(placeholderIdForward)) {
                     const realNode = nodeMap.get(targetId);
                     placeholderNodes.push({
                         id: placeholderIdForward,
@@ -306,6 +307,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
                         scaling: realNode?.scaling || null,
                         sourceNodeId: sourceId,
                     });
+                    placeholderIds.add(placeholderIdForward);
                 }
 
                 processedLinks.push({
@@ -319,7 +321,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
                     const placeholderIdBackward = `???_${targetId}_${sourceId}`;
                     placeholderMap.set(placeholderIdBackward, sourceId);
 
-                    if (!placeholderNodes.find(n => n.id === placeholderIdBackward)) {
+                    if (!placeholderIds.has(placeholderIdBackward)) {
                         const realNode = nodeMap.get(sourceId);
                         placeholderNodes.push({
                             id: placeholderIdBackward,
@@ -330,6 +332,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
                             scaling: realNode?.scaling || null,
                             sourceNodeId: targetId,
                         });
+                        placeholderIds.add(placeholderIdBackward);
                     }
 
                     processedLinks.push({
@@ -344,7 +347,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
             const placeholderId = `???_${sourceId}_${targetId}`;
             placeholderMap.set(placeholderId, targetId);
 
-            if (!placeholderNodes.find(n => n.id === placeholderId)) {
+            if (!placeholderIds.has(placeholderId)) {
                 const realNode = nodeMap.get(targetId);
                 placeholderNodes.push({
                     id: placeholderId,
@@ -354,6 +357,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
                     scaling: realNode?.scaling || null,
                     sourceNodeId: sourceId,
                 });
+                placeholderIds.add(placeholderId);
             }
 
             processedLinks.push({
@@ -366,7 +370,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
             const placeholderId = `???_${targetId}_${sourceId}`;
             placeholderMap.set(placeholderId, sourceId);
 
-            if (!placeholderNodes.find(n => n.id === placeholderId)) {
+            if (!placeholderIds.has(placeholderId)) {
                 const realNode = nodeMap.get(sourceId);
                 placeholderNodes.push({
                     id: placeholderId,
@@ -376,6 +380,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
                     scaling: realNode?.scaling || null,
                     sourceNodeId: targetId,
                 });
+                placeholderIds.add(placeholderId);
             }
 
             processedLinks.push({

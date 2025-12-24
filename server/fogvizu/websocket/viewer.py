@@ -30,6 +30,16 @@ class ViewerClient(Client):
     @classmethod
     async def handle_connection(cls, websocket: WebSocket, game_id: UUID):
         """Handle viewer WebSocket connection (no auth required)."""
+        # Rate limiting check before accepting connection
+        client_ip = websocket.client.host if websocket.client else "unknown"
+        if not manager.check_rate_limit(client_ip):
+            await websocket.accept()
+            await websocket.send_json(
+                {"type": "error", "message": "Too many connections, try again later"}
+            )
+            await websocket.close(code=1008)  # Policy violation
+            return
+
         await websocket.accept()
 
         async with async_session() as db:
