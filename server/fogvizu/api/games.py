@@ -317,6 +317,23 @@ async def create_discovery(
     # Compute discovery stats
     stats = compute_discovery_stats(zone_pairs, all_links)
 
+    # Broadcast to viewers via WebSocket (host already has the response)
+    if propagated:
+        # Convert to dict format for WebSocket broadcast
+        expanded_links_ws = [
+            {"link_id": dl.link_id, "source": dl.source, "target": dl.target}
+            for dl in expanded_links
+        ]
+        await ws_manager.broadcast_to_viewers(
+            game_id,
+            {
+                "type": "discovery",
+                "propagated": propagated,
+                "discovered_links": expanded_links_ws,
+                "stats": stats,
+            },
+        )
+
     return DiscoveryResponse(
         propagated=[PropagatedLink(source=p["source"], target=p["target"]) for p in propagated],
         discovered_links=expanded_links,
@@ -373,6 +390,23 @@ async def create_undiscovery(
                     discovered_by=dl.get("discovered_by"),
                 )
             )
+
+    # Broadcast to viewers via WebSocket
+    if removed_zones:
+        stats = compute_discovery_stats(zone_pairs, new_links)
+        expanded_links_ws = [
+            {"link_id": dl.link_id, "source": dl.source, "target": dl.target}
+            for dl in expanded_links
+        ]
+        await ws_manager.broadcast_to_viewers(
+            game_id,
+            {
+                "type": "discovery",  # Reuse discovery type - sends full state
+                "propagated": [],
+                "discovered_links": expanded_links_ws,
+                "stats": stats,
+            },
+        )
 
     return UndiscoveryResponse(
         removed=removed_zones,

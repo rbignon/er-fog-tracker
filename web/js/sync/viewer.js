@@ -282,16 +282,9 @@ function applyPositionsAndDiscoveryOnly(data) {
         }
     }
 
-    // Sync discovered links
-    if (data.discoveredLinks && Array.isArray(data.discoveredLinks) && explorationState) {
-        const newDiscoveredLinks = new Set(data.discoveredLinks);
-        const currentLinks = explorationState.discoveredLinks || new Set();
-
-        if (newDiscoveredLinks.size !== currentLinks.size || [...newDiscoveredLinks].some(l => !currentLinks.has(l))) {
-            explorationChanged = true;
-            explorationState.discoveredLinks = newDiscoveredLinks;
-        }
-    }
+    // NOTE: We do NOT sync discoveredLinks from host's visual_state.
+    // Server is the source of truth for discoveries. Discoveries are synced via
+    // handleDiscoveryFromServer when the server sends 'discovery' or 'game_state' messages.
 
     // Apply position changes to DOM
     if (positionsChanged) {
@@ -402,17 +395,9 @@ function applyVisualState(data) {
         }
     }
 
-    // Sync discovered links
-    if (data.discoveredLinks && Array.isArray(data.discoveredLinks) && explorationState) {
-        const newDiscoveredLinks = new Set(data.discoveredLinks);
-        const currentLinks = explorationState.discoveredLinks || new Set();
-
-        // Check if links changed
-        if (newDiscoveredLinks.size !== currentLinks.size || [...newDiscoveredLinks].some(l => !currentLinks.has(l))) {
-            explorationChanged = true;
-            explorationState.discoveredLinks = newDiscoveredLinks;
-        }
-    }
+    // NOTE: We do NOT sync discoveredLinks from host's visual_state.
+    // Server is the source of truth for discoveries. Discoveries are synced via
+    // handleDiscoveryFromServer when the server sends 'discovery' or 'game_state' messages.
 
     // If we have missing highlighted nodes, force a re-render
     if (hasMissingNodes && !explorationChanged) {

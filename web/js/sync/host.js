@@ -193,9 +193,6 @@ function getFullSyncState() {
 
     const transform = State.getCurrentZoomTransform();
 
-    // Include discovered links for proper link visibility on viewer
-    const discoveredLinks = explorationState?.discoveredLinks ? Array.from(explorationState.discoveredLinks) : [];
-
     // Use server-calculated stats if available, otherwise calculate locally
     let discoveredCount, totalAreas;
     if (graphData?.metadata?.discoveryCount !== undefined && graphData?.metadata?.totalZones !== undefined) {
@@ -235,7 +232,8 @@ function getFullSyncState() {
         frontierHighlightActive: State.isFrontierHighlightActive(),
         nodes: nodesState,
         links: linksState,
-        discoveredLinks: discoveredLinks,
+        // Note: discoveredLinks are NOT included here - server is source of truth
+        // Discoveries are synced via 'discovery' messages from server/mod
         discoveredCount: discoveredCount,
         totalAreas: totalAreas,
     };

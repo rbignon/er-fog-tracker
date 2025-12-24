@@ -21,9 +21,16 @@ def build_game_state(game: Game) -> dict:
     zp_index = {zp["id"]: zp for zp in zone_pairs if zp.get("id")}
     expanded_links = []
     for dl in game.discovered_links or []:
-        zp = zp_index.get(dl["link_id"])
+        link_id = dl.get("link_id")
+        zp = zp_index.get(link_id)
         if zp:
-            expanded_links.append({"source": zp["source"], "target": zp["destination"]})
+            expanded_links.append(
+                {
+                    "link_id": link_id,
+                    "source": zp["source"],
+                    "target": zp["destination"],
+                }
+            )
 
     return {
         "discovered_links": expanded_links,
