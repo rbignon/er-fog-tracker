@@ -229,14 +229,18 @@ export function handleTagUpdateFromServer(zone, tags) {
 /**
  * Handle discovery messages from server (mod or other source).
  * Server is the source of truth - apply the full state it sends.
- * Server sends links with {zone_link_id, source, target} format.
- * @param {Array} propagated - Propagated links
- * @param {Array} discoveredZoneLinks - All discovered zone links
+ * Server sends links with {zone_link_id} format - we resolve source/target via linkIndex.
+ * @param {Array} propagated - Propagated links (with source/target already resolved)
+ * @param {Array} discoveredZoneLinks - All discovered zone links (may only have zone_link_id)
  * @param {Object} [stats] - Discovery stats from server {discovered, total}
+ * @param {boolean} [isInitialSync=false] - True for initial sync (don't show toasts)
  */
-export function handleDiscoveryFromServer(propagated, discoveredZoneLinks, stats) {
+export function handleDiscoveryFromServer(propagated, discoveredZoneLinks, stats, isInitialSync = false) {
     const explorationState = State.getExplorationState();
     if (!explorationState) return;
+
+    // Use linkIndex to resolve zone_link_id → source/target
+    const linkIndex = State.getLinkIndex();
 
     let changed = false;
     let newlyDiscoveredTarget = null;
@@ -250,13 +254,17 @@ export function handleDiscoveryFromServer(propagated, discoveredZoneLinks, stats
         const newDiscoveredLinks = new Set();
 
         for (const link of discoveredZoneLinks) {
-            // Server expands zone_link_id to include source/target
-            newDiscovered.add(link.source);
-            newDiscovered.add(link.target);
-            // Store link UUID (support both zone_link_id and legacy link_id)
             const linkId = link.zone_link_id || link.link_id;
             if (linkId) {
                 newDiscoveredLinks.add(linkId);
+
+                // Resolve source/target from linkIndex
+                const linkData = linkIndex?.byId.get(linkId);
+                if (linkData) {
+                    const { sourceId, targetId } = State.getLinkEndpoints(linkData);
+                    newDiscovered.add(sourceId);
+                    newDiscovered.add(targetId);
+                }
             }
         }
 
@@ -349,9 +357,11 @@ export function handleDiscoveryFromServer(propagated, discoveredZoneLinks, stats
             showTooltipForNodeId: shouldShowTooltip ? newlyDiscoveredTarget : null,
         });
 
-        // Show toast for each newly discovered zone
-        for (const zone of newlyDiscoveredZones) {
-            Toast.show(`Discovered: ${zone}`, { type: 'info' });
+        // Show toast for each newly discovered zone (skip on initial sync)
+        if (!isInitialSync) {
+            for (const zone of newlyDiscoveredZones) {
+                Toast.show(`Discovered: ${zone}`, { type: 'info' });
+            }
         }
     }
 }

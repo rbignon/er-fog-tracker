@@ -249,13 +249,15 @@ Undiscover B → Also undiscovers C, D, E (unreachable from START)
 
 ```sql
 -- games table
-zone_links           JSONB  -- array of zone_link objects
+zone_links           JSONB  -- array of {id, source, target, type, ...}
 zones                JSONB  -- array of zone metadata (with UUIDs)
-discovered_zone_links JSONB  -- array of discovered zone_link objects
+discovered_zone_links JSONB  -- array of {zone_link_id, discovered_at, discovered_by}
 node_positions       JSONB  -- {zone_id: {x, y}}
 tags                 JSONB  -- {zone_id: [tag_ids]}
 entity_mapping       JSONB  -- {dest_entity: {source_map, dest_map}}
 ```
+
+**Note**: `discovered_zone_links` stores only `zone_link_id` references. The client resolves `source`/`target` from its local `linkIndex` (built from `zone_links`).
 
 ### Client (localStorage)
 

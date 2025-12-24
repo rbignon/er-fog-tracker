@@ -121,7 +121,7 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
 
 /**
  * Apply discovery state from server response (server is source of truth).
- * Server sends links with {zone_link_id, source, target} format.
+ * Server sends links with {zone_link_id} format - we resolve source/target via linkIndex.
  * @param {Array} discoveredZoneLinks - List of discovered zone links from server
  * @param {number} [discoveryCount] - Discovery count from server (optional)
  * @param {number} [totalZones] - Total zones from server (optional)
@@ -132,18 +132,25 @@ function applyServerDiscoveryState(discoveredZoneLinks, discoveryCount, totalZon
     const explorationState = State.getExplorationState();
     if (!explorationState) return;
 
+    // Use linkIndex to resolve zone_link_id → source/target
+    const linkIndex = State.getLinkIndex();
+
     // Rebuild state from server data
-    const newDiscovered = new Set();
+    const newDiscovered = new Set([State.START_NODE]);
     const newDiscoveredLinks = new Set();
 
     for (const link of discoveredZoneLinks) {
-        // Add nodes from source/target (server expands zone_link_id to include these)
-        newDiscovered.add(link.source);
-        newDiscovered.add(link.target);
-        // Store link UUID (support both zone_link_id and legacy link_id)
         const linkId = link.zone_link_id || link.link_id;
         if (linkId) {
             newDiscoveredLinks.add(linkId);
+
+            // Resolve source/target from linkIndex
+            const linkData = linkIndex?.byId.get(linkId);
+            if (linkData) {
+                const { sourceId, targetId } = State.getLinkEndpoints(linkData);
+                newDiscovered.add(sourceId);
+                newDiscovered.add(targetId);
+            }
         }
     }
 

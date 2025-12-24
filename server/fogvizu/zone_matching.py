@@ -95,30 +95,21 @@ def build_zone_pairs_index(zone_pairs: list[dict]) -> dict[str, dict]:
 
 def expand_discovered_links(discovered_links: list[dict], zone_pairs: list[dict]) -> list[dict]:
     """
-    Expand discovered_links to include source and target from zone_pairs.
-    Returns list of {link_id, source, target, discovered_at, discovered_by}.
+    Filter discovered_links to only include valid zone_link_ids.
+    Returns list of {zone_link_id} - client resolves source/target from its linkIndex.
     """
     import logging
 
     logger = logging.getLogger(__name__)
 
     zp_index = build_zone_pairs_index(zone_pairs)
-    expanded = []
+    valid_links = []
     skipped = []
 
     for link in discovered_links:
         link_id = link.get("link_id") or link.get("zone_link_id")
-        zp = zp_index.get(link_id) if link_id else None
-        if zp:
-            expanded.append(
-                {
-                    "zone_link_id": link_id,
-                    "source": zp["source"],
-                    "target": zp["target"],
-                    "discovered_at": link.get("discovered_at"),
-                    "discovered_by": link.get("discovered_by"),
-                }
-            )
+        if link_id and link_id in zp_index:
+            valid_links.append({"zone_link_id": link_id})
         else:
             skipped.append(link_id)
 
@@ -129,7 +120,7 @@ def expand_discovered_links(discovered_links: list[dict], zone_pairs: list[dict]
             skipped[:10],  # Show first 10
         )
 
-    return expanded
+    return valid_links
 
 
 def get_discovered_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -> set[str]:

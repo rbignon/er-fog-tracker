@@ -448,11 +448,17 @@ Broadcast when a discovery is made (from mod or manual).
     {"source": "Zone A", "target": "Zone B"}
   ],
   "discovered_zone_links": [
-    {"zone_link_id": "uuid", "source": "Zone A", "target": "Zone B"}
+    {"zone_link_id": "uuid"}
   ],
   "stats": {"discovered": 15, "total": 100}
 }
 ```
+
+| Field | Description |
+|-------|-------------|
+| `propagated` | Links discovered in this event (with source/target for display) |
+| `discovered_zone_links` | All discovered links (zone_link_id only, client resolves source/target from its linkIndex) |
+| `stats` | Discovery progress |
 
 #### `mod_connected` / `mod_disconnected`
 
@@ -465,20 +471,22 @@ Sent to host when mod connects/disconnects.
 
 #### `game_state`
 
-Sent to host on initial connection.
+Sent to host/viewer on initial connection.
 
 ```json
 {
   "type": "game_state",
   "state": {
     "discovered_zone_links": [
-      {"zone_link_id": "uuid", "source": "Zone A", "target": "Zone B"}
+      {"zone_link_id": "uuid"}
     ],
     "node_positions": {...},
     "tags": {...}
   }
 }
 ```
+
+**Note**: `discovered_zone_links` contains only `zone_link_id`. Client resolves `source`/`target` from its `linkIndex` (built from `zone_links` loaded via REST API).
 
 #### `error`
 

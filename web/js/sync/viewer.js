@@ -619,9 +619,10 @@ export async function connectAsViewer(gameId) {
             }
 
             // Game state from server (source of truth for discoveries)
+            // Pass isInitialSync=true to skip showing toasts for already-discovered zones
             if (data.type === 'game_state') {
                 if (data.state?.discovered_zone_links) {
-                    handleDiscoveryFromServer([], data.state.discovered_zone_links);
+                    handleDiscoveryFromServer([], data.state.discovered_zone_links, null, true);
                 }
                 return;
             }

@@ -488,8 +488,9 @@ export async function connectAsHost(gameId) {
             // Game state received after auth (or reconnection)
             if (data.type === 'game_state') {
                 // Apply discoveries from server (source of truth, may have changed during disconnect)
+                // Pass isInitialSync=true to skip showing toasts for already-discovered zones
                 if (data.state?.discovered_zone_links) {
-                    handleDiscoveryFromServer([], data.state.discovered_zone_links);
+                    handleDiscoveryFromServer([], data.state.discovered_zone_links, null, true);
                 }
                 authResolved = true;
                 State.setSyncState(true, true, gameId);

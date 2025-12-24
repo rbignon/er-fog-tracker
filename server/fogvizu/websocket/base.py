@@ -16,24 +16,23 @@ logger = logging.getLogger(__name__)
 
 
 def build_game_state(game: Game) -> dict:
-    """Build game state dict from database game object."""
+    """Build game state dict from database game object.
+
+    Returns discovered_zone_links with only zone_link_id (no source/target).
+    Client resolves source/target from its linkIndex for consistency with REST API.
+    """
     zone_links = game.zone_links or []
-    zl_index = {zl["id"]: zl for zl in zone_links if zl.get("id")}
-    expanded_links = []
+    zl_ids = {zl["id"] for zl in zone_links if zl.get("id")}
+
+    # Only include zone_link_id (client resolves source/target from linkIndex)
+    discovered_links = []
     for dl in game.discovered_zone_links or []:
         zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
-        zl = zl_index.get(zone_link_id)
-        if zl:
-            expanded_links.append(
-                {
-                    "zone_link_id": zone_link_id,
-                    "source": zl["source"],
-                    "target": zl["target"],
-                }
-            )
+        if zone_link_id and zone_link_id in zl_ids:
+            discovered_links.append({"zone_link_id": zone_link_id})
 
     return {
-        "discovered_zone_links": expanded_links,
+        "discovered_zone_links": discovered_links,
         "node_positions": game.node_positions or {},
         "tags": game.tags or {},
     }

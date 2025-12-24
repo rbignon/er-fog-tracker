@@ -306,20 +306,28 @@ async function convertServerDataToGraph(game) {
 
 /**
  * Load exploration state from server response.
- * Server sends links with {zone_link_id, source, target} format.
+ * Server sends links with {zone_link_id} format - we resolve source/target via linkIndex.
  */
 function loadExplorationFromServer(game) {
     // Build discovered nodes from discovered zone links
     const discovered = new Set(['Chapel of Anticipation']);
     const discoveredLinks = new Set();
 
+    // Use linkIndex (already built by setGraphData) to resolve zone_link_id → source/target
+    const linkIndex = State.getLinkIndex();
+
     for (const link of game.discovered_zone_links || []) {
-        discovered.add(link.source);
-        discovered.add(link.target);
-        // Store link UUID (server sends zone_link_id, support legacy link_id)
         const linkId = link.zone_link_id || link.link_id;
         if (linkId) {
             discoveredLinks.add(linkId);
+
+            // Resolve source/target from linkIndex
+            const linkData = linkIndex?.byId.get(linkId);
+            if (linkData) {
+                const { sourceId, targetId } = State.getLinkEndpoints(linkData);
+                discovered.add(sourceId);
+                discovered.add(targetId);
+            }
         }
     }
 
