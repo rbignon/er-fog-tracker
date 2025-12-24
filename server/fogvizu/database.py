@@ -53,12 +53,12 @@ class Game(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     seed: Mapped[int] = mapped_column(BigInteger, nullable=False)
     label: Mapped[str | None] = mapped_column(String(200))
-    zone_pairs: Mapped[list] = mapped_column(JSONB, nullable=False)
-    zones: Mapped[list | None] = mapped_column(JSONB)  # Zone metadata (isBoss, scaling)
+    zone_links: Mapped[list] = mapped_column(JSONB, nullable=False)
+    zones: Mapped[list | None] = mapped_column(JSONB)  # Zone metadata (id, name, isBoss, scaling)
     entity_mapping: Mapped[dict | None] = mapped_column(JSONB)  # EMEVD entity -> zone mapping
 
     # JSONB state columns
-    discovered_links: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    discovered_zone_links: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     node_positions: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     tags: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 

@@ -163,10 +163,11 @@ Get full game state (public, for viewers).
   "seed": 12345,
   "run_id": "12345_abc123",
   "label": "My Run",
-  "zone_pairs": [...],
+  "zone_links": [...],
   "zones": [...],
-  "discovered_links": [...],
-  "discovered_nodes": ["Chapel of Anticipation", ...],
+  "discovered_zone_links": [
+    {"zone_link_id": "uuid", "discovered_at": "...", "discovered_by": "mod"}
+  ],
   "node_positions": {"zone_name": {"x": 100, "y": 200}},
   "tags": {"zone_name": ["tag1", "tag2"]},
   "discovery_count": 15,
@@ -310,13 +311,13 @@ Acknowledgment with resolved zone info.
   "exits": [
     {
       "id": "link-uuid",
-      "destination": "Zone C",
+      "target": "Zone C",
       "description": "after the boss",
       "from_zone": null
     },
     {
       "id": "link-uuid-2",
-      "destination": "???",
+      "target": "???",
       "description": "near the elevator",
       "from_zone": "Zone B - Interior"
     }
@@ -438,9 +439,10 @@ Broadcast when a discovery is made (from mod or manual).
   "propagated": [
     {"source": "Zone A", "target": "Zone B"}
   ],
-  "discovered_links": [
-    {"link_id": "uuid", "source": "Zone A", "target": "Zone B"}
-  ]
+  "discovered_zone_links": [
+    {"zone_link_id": "uuid", "source": "Zone A", "target": "Zone B"}
+  ],
+  "stats": {"discovered": 15, "total": 100}
 }
 ```
 
@@ -461,7 +463,9 @@ Sent to host on initial connection.
 {
   "type": "game_state",
   "state": {
-    "discovered_links": [...],
+    "discovered_zone_links": [
+      {"zone_link_id": "uuid", "source": "Zone A", "target": "Zone B"}
+    ],
     "node_positions": {...},
     "tags": {...}
   }

@@ -257,38 +257,38 @@ async function convertServerDataToGraph(game) {
     const nodes = new Map();
     const links = [];
 
-    for (const pair of game.zone_pairs) {
+    for (const link of game.zone_links) {
         // Add nodes with metadata if available
-        if (!nodes.has(pair.source)) {
-            const meta = zoneMetadata.get(pair.source) || {};
-            nodes.set(pair.source, {
-                id: pair.source,
+        if (!nodes.has(link.source)) {
+            const meta = zoneMetadata.get(link.source) || {};
+            nodes.set(link.source, {
+                id: link.source,
                 isBoss: meta.isBoss || false,
                 scaling: meta.scaling || null,
             });
         }
-        if (!nodes.has(pair.destination)) {
-            const meta = zoneMetadata.get(pair.destination) || {};
-            nodes.set(pair.destination, {
-                id: pair.destination,
+        if (!nodes.has(link.target)) {
+            const meta = zoneMetadata.get(link.target) || {};
+            nodes.set(link.target, {
+                id: link.target,
                 isBoss: meta.isBoss || false,
                 scaling: meta.scaling || null,
             });
         }
 
         // Check for required key items
-        const requiredItemFrom = extractRequiredItemFromDescription(pair.source_details, pair.target_details);
+        const requiredItemFrom = extractRequiredItemFromDescription(link.source_details, link.target_details);
 
         // Add link
         links.push({
-            id: pair.id,
-            source: pair.source,
-            target: pair.destination,
-            type: pair.type,
-            sourceDetails: pair.source_details,
-            targetDetails: pair.target_details,
+            id: link.id,
+            source: link.source,
+            target: link.target,
+            type: link.type,
+            sourceDetails: link.source_details,
+            targetDetails: link.target_details,
             requiredItemFrom,
-            isInherentlyOneWay: pair.is_inherently_one_way || false,
+            isInherentlyOneWay: link.is_inherently_one_way || false,
         });
     }
 
@@ -306,19 +306,20 @@ async function convertServerDataToGraph(game) {
 
 /**
  * Load exploration state from server response.
- * Server sends links with {link_id, source, target} format.
+ * Server sends links with {zone_link_id, source, target} format.
  */
 function loadExplorationFromServer(game) {
-    // Build discovered nodes from discovered links
+    // Build discovered nodes from discovered zone links
     const discovered = new Set(['Chapel of Anticipation']);
     const discoveredLinks = new Set();
 
-    for (const link of game.discovered_links || []) {
+    for (const link of game.discovered_zone_links || []) {
         discovered.add(link.source);
         discovered.add(link.target);
-        // Store link UUID (server sends link_id)
-        if (link.link_id) {
-            discoveredLinks.add(link.link_id);
+        // Store link UUID (server sends zone_link_id, support legacy link_id)
+        const linkId = link.zone_link_id || link.link_id;
+        if (linkId) {
+            discoveredLinks.add(linkId);
         }
     }
 

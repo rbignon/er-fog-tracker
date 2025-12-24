@@ -31,7 +31,7 @@ def names_match(a: str, b: str) -> bool:
 def is_one_way(link: dict, all_links: list[dict]) -> bool:
     """A link is one-way if no reverse link exists."""
     return not any(
-        other["source"] == link["destination"] and other["destination"] == link["source"]
+        other["source"] == link["target"] and other["target"] == link["source"]
         for other in all_links
     )
 
@@ -48,9 +48,9 @@ def build_preexisting_adjacency(
     for pair in zone_pairs:
         if pair["type"] == "preexisting":
             is_bidir = not is_one_way(pair, zone_pairs)
-            adj[pair["source"]].append((pair["destination"], is_bidir))
+            adj[pair["source"]].append((pair["target"], is_bidir))
             if is_bidir:
-                adj[pair["destination"]].append((pair["source"], True))
+                adj[pair["target"]].append((pair["source"], True))
 
     return adj
 
@@ -70,7 +70,7 @@ def build_full_adjacency(
 
     for pair in zone_pairs:
         source = pair["source"]
-        dest = pair["destination"]
+        dest = pair["target"]
 
         if pair["type"] == "random":
             # Random links are bidirectional UNLESS marked as inherently one-way
@@ -107,14 +107,14 @@ def expand_discovered_links(discovered_links: list[dict], zone_pairs: list[dict]
     skipped = []
 
     for link in discovered_links:
-        link_id = link.get("link_id")
+        link_id = link.get("link_id") or link.get("zone_link_id")
         zp = zp_index.get(link_id) if link_id else None
         if zp:
             expanded.append(
                 {
-                    "link_id": link["link_id"],
+                    "zone_link_id": link_id,
                     "source": zp["source"],
-                    "target": zp["destination"],
+                    "target": zp["target"],
                     "discovered_at": link.get("discovered_at"),
                     "discovered_by": link.get("discovered_by"),
                 }
@@ -142,10 +142,11 @@ def get_discovered_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -
     zp_index = build_zone_pairs_index(zone_pairs)
 
     for link in discovered_links:
-        zp = zp_index.get(link["link_id"])
+        link_id = link.get("link_id") or link.get("zone_link_id")
+        zp = zp_index.get(link_id)
         if zp:
             discovered.add(zp["source"])
-            discovered.add(zp["destination"])
+            discovered.add(zp["target"])
 
     return discovered
 
@@ -160,8 +161,9 @@ def link_exists(
     zp_index = build_zone_pairs_index(zone_pairs)
 
     for dl in discovered_links:
-        zp = zp_index.get(dl["link_id"])
-        if zp and zp["source"] == source and zp["destination"] == target:
+        link_id = dl.get("link_id") or dl.get("zone_link_id")
+        zp = zp_index.get(link_id)
+        if zp and zp["source"] == source and zp["target"] == target:
             return True
 
     return False
@@ -174,7 +176,7 @@ def find_zone_pair(zone_pairs: list[dict], source: str, target: str) -> dict | N
     """
     for pair in zone_pairs:
         pair_source = pair["source"]
-        pair_target = pair["destination"]
+        pair_target = pair["target"]
 
         # Check direct match (exact or normalized)
         source_matches = names_match(pair_source, source)
@@ -202,7 +204,7 @@ def find_zone_pair_by_keys(
     Find a zone pair by matching on zone_keys (internal names from fog.txt).
 
     More precise than display name matching. Uses source_details to disambiguate
-    when multiple zone pairs have the same source_key and destination_key.
+    when multiple zone pairs have the same source_key and target_key.
 
     Args:
         zone_pairs: List of zone pairs from the spoiler log
@@ -217,13 +219,13 @@ def find_zone_pair_by_keys(
 
     for pair in zone_pairs:
         pair_source_key = pair.get("source_key")
-        pair_dest_key = pair.get("destination_key")
+        pair_target_key = pair.get("target_key")
 
-        if not pair_source_key or not pair_dest_key:
+        if not pair_source_key or not pair_target_key:
             continue
 
         # Check direct match
-        if pair_source_key == source_key and pair_dest_key == target_key:
+        if pair_source_key == source_key and pair_target_key == target_key:
             matches.append((pair, "direct"))
             continue
 
@@ -232,7 +234,7 @@ def find_zone_pair_by_keys(
             pair["type"] == "random"
             and not pair.get("is_inherently_one_way", False)
             and pair_source_key == target_key
-            and pair_dest_key == source_key
+            and pair_target_key == source_key
         ):
             matches.append((pair, "reverse"))
 
@@ -249,14 +251,14 @@ def find_zone_pair_by_keys(
                 logger.debug(
                     "[MATCH] Disambiguated by source_details: %s -> %s",
                     pair["source"],
-                    pair["destination"],
+                    pair["target"],
                 )
                 return pair
             if direction == "reverse" and pair.get("target_details") == source_details:
                 logger.debug(
                     "[MATCH] Disambiguated by target_details (reverse): %s -> %s",
                     pair["source"],
-                    pair["destination"],
+                    pair["target"],
                 )
                 return pair
 
@@ -298,11 +300,11 @@ def find_matching_zone_pair_by_keys(
                 logger.debug(
                     "[MATCH] Found pair by keys: '%s' -> '%s' (keys: %s -> %s)",
                     pair["source"],
-                    pair["destination"],
+                    pair["target"],
                     source_key,
                     target_key,
                 )
-                return pair["source"], pair["destination"], pair
+                return pair["source"], pair["target"], pair
 
     return None
 
@@ -340,11 +342,11 @@ def find_all_matching_zone_pairs_by_keys(
                 pair_id = pair.get("id")
                 if pair_id and pair_id not in seen_pair_ids:
                     seen_pair_ids.add(pair_id)
-                    matches.append((pair["source"], pair["destination"], pair))
+                    matches.append((pair["source"], pair["target"], pair))
                     logger.debug(
                         "[MATCH] Found pair by keys: '%s' -> '%s' (keys: %s -> %s)",
                         pair["source"],
-                        pair["destination"],
+                        pair["target"],
                         source_key,
                         target_key,
                     )
@@ -416,15 +418,15 @@ def find_all_matching_zone_pairs(
             pair = find_zone_pair(zone_pairs, source_display, target_display)
             if pair and pair["type"] == "random":
                 # Use frozenset to deduplicate bidirectional links
-                link_key = frozenset([pair["source"], pair["destination"]])
+                link_key = frozenset([pair["source"], pair["target"]])
                 if link_key not in seen_links:
                     seen_links.add(link_key)
                     # Return the actual names from the spoiler log pair
-                    matches.append((pair["source"], pair["destination"], pair))
+                    matches.append((pair["source"], pair["target"], pair))
                     logger.debug(
                         "[MATCH] Found pair: '%s' → '%s'",
                         pair["source"],
-                        pair["destination"],
+                        pair["target"],
                     )
 
     return matches
@@ -434,7 +436,7 @@ def find_candidate_zones(zone_pairs: list[dict], zone_name: str) -> list[dict]:
     """Find all zone pairs that contain a zone name (for debugging)."""
     candidates = []
     for pair in zone_pairs:
-        if pair["source"] == zone_name or pair["destination"] == zone_name:
+        if pair["source"] == zone_name or pair["target"] == zone_name:
             candidates.append(pair)
     return candidates
 
@@ -444,7 +446,7 @@ def find_similar_zones(zone_pairs: list[dict], zone_name: str, limit: int = 5) -
     all_zones = set()
     for pair in zone_pairs:
         all_zones.add(pair["source"])
-        all_zones.add(pair["destination"])
+        all_zones.add(pair["target"])
 
     # Simple substring matching
     zone_lower = zone_name.lower()
@@ -465,7 +467,7 @@ def compute_total_zones(zone_pairs: list[dict]) -> int:
     zones = set()
     for pair in zone_pairs:
         zones.add(pair["source"])
-        zones.add(pair["destination"])
+        zones.add(pair["target"])
     return len(zones)
 
 
@@ -483,7 +485,7 @@ def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]
     all_zones = set()
     for pair in zone_pairs:
         all_zones.add(pair["source"])
-        all_zones.add(pair["destination"])
+        all_zones.add(pair["target"])
     total = len(all_zones)
 
     zp_index = build_zone_pairs_index(zone_pairs)
@@ -491,10 +493,11 @@ def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]
     # Collect discovered zones (appear in any discovered link)
     discovered_zones = set()
     for link in discovered_links:
-        zp = zp_index.get(link["link_id"])
+        link_id = link.get("link_id") or link.get("zone_link_id")
+        zp = zp_index.get(link_id)
         if zp:
             discovered_zones.add(zp["source"])
-            discovered_zones.add(zp["destination"])
+            discovered_zones.add(zp["target"])
 
     # Only count zones that exist in the zone_pairs
     discovered_count = len(discovered_zones & all_zones)
@@ -540,10 +543,11 @@ def is_link_discovered(
     zp_index = build_zone_pairs_index(zone_pairs)
 
     for dl in discovered_links:
-        zp = zp_index.get(dl["link_id"])
+        link_id = dl.get("link_id") or dl.get("zone_link_id")
+        zp = zp_index.get(link_id)
         if zp:
             dl_src = zp["source"]
-            dl_tgt = zp["destination"]
+            dl_tgt = zp["target"]
             # Check both directions (random links are bidirectional)
             if (names_match(dl_src, source) and names_match(dl_tgt, target)) or (
                 names_match(dl_src, target) and names_match(dl_tgt, source)
@@ -563,12 +567,13 @@ def is_accessible_from_start(
 
     zp_index = build_zone_pairs_index(zone_pairs)
 
-    # Expand links to (source, destination) tuples
+    # Expand links to (source, target) tuples
     expanded_links = []
     for dl in discovered_links:
-        zp = zp_index.get(dl["link_id"])
+        link_id = dl.get("link_id") or dl.get("zone_link_id")
+        zp = zp_index.get(link_id)
         if zp:
-            expanded_links.append((zp["source"], zp["destination"]))
+            expanded_links.append((zp["source"], zp["target"]))
 
     # BFS through discovered links
     visited = {START_NODE}
@@ -635,7 +640,7 @@ def find_path_prioritizing_discovered(
 
             # Determine the link direction for recording
             if pair["source"] == current:
-                link = (current, pair["destination"])
+                link = (current, pair["target"])
             else:
                 link = (current, pair["source"])
 
@@ -695,9 +700,9 @@ def compute_backprop_cost(
     # Build index to look up link type
     zp_by_endpoints: dict[tuple[str, str], str] = {}
     for zp in zone_pairs:
-        zp_by_endpoints[(zp["source"], zp["destination"])] = zp["type"]
+        zp_by_endpoints[(zp["source"], zp["target"])] = zp["type"]
         # Also index reverse for bidirectional lookup
-        zp_by_endpoints[(zp["destination"], zp["source"])] = zp["type"]
+        zp_by_endpoints[(zp["target"], zp["source"])] = zp["type"]
 
     # Count random links in path
     random_count = 0
@@ -719,12 +724,13 @@ def find_reachable_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -
 
     zp_index = build_zone_pairs_index(zone_pairs)
 
-    # Expand links to (source, destination) tuples
+    # Expand links to (source, target) tuples
     expanded_links = []
     for dl in discovered_links:
-        zp = zp_index.get(dl["link_id"])
+        link_id = dl.get("link_id") or dl.get("zone_link_id")
+        zp = zp_index.get(link_id)
         if zp:
-            expanded_links.append((zp["source"], zp["destination"]))
+            expanded_links.append((zp["source"], zp["target"]))
 
     while queue:
         current = queue.pop(0)
@@ -766,10 +772,11 @@ def undiscover_zone(
     zp_index = build_zone_pairs_index(zone_pairs)
 
     def get_link_endpoints(dl: dict) -> tuple[str, str]:
-        """Get source and destination from a discovered link."""
-        zp = zp_index.get(dl["link_id"])
+        """Get source and target from a discovered link."""
+        link_id = dl.get("link_id") or dl.get("zone_link_id")
+        zp = zp_index.get(link_id)
         if zp:
-            return zp["source"], zp["destination"]
+            return zp["source"], zp["target"]
         return "", ""
 
     # First, remove all links involving the zone to remove
@@ -816,7 +823,7 @@ def compute_zone_exits(
 
     Returns:
         List of exits, each with:
-        - destination: zone name if discovered, "???" otherwise
+        - target: zone name if discovered, "???" otherwise
         - description: how to get there (from source_details or target_details)
         - from_zone: which zone (in the preexisting group) this exit is from
     """
@@ -831,7 +838,7 @@ def compute_zone_exits(
             continue
 
         pair_source = pair["source"]
-        pair_target = pair["destination"]
+        pair_target = pair["target"]
         pair_id = pair.get("id")
 
         # Check if this link exits from one of our merged zones
@@ -861,7 +868,7 @@ def compute_zone_exits(
                 continue
             seen_link_ids.add(pair_id)
 
-        # Check if destination is in the same merged group (skip internal links)
+        # Check if target is in the same merged group (skip internal links)
         if to_zone in merged_zones:
             continue
 
@@ -871,7 +878,7 @@ def compute_zone_exits(
         exits.append(
             {
                 "id": pair_id,  # Include link ID in response
-                "destination": to_zone if discovered else "???",
+                "target": to_zone if discovered else "???",
                 "description": description,
                 "from_zone": from_zone if from_zone != current_zone else None,
             }

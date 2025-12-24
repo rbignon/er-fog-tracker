@@ -10,7 +10,7 @@ Elden Ring Fog Gate Randomizer Tracker - a web-based tool to visualize and track
 - `docs/ARCHITECTURE.md` - System overview, components, data flows
 - `docs/PROTOCOL.md` - REST API and WebSocket protocol
 - `docs/MOD_INTERNALS.md` - Memory reading and warp detection
-- `docs/GRAPH_MODEL.md` - Zone pairs, links, discovery logic
+- `docs/GRAPH_MODEL.md` - Zone links, discovery logic
 - `docs/ZONE_MATCHING.md` - Zone resolution strategies
 
 ## Project Structure
@@ -60,7 +60,7 @@ Open `http://localhost:8001` in browser.
 
 ### Graph Model
 - **Zone**: Node in the graph (area in Elden Ring)
-- **Zone Pair**: Link between zones (fog gate connection)
+- **Zone Link**: Link between zones (fog gate connection)
 - **Types**: `random` (randomized) vs `preexisting` (vanilla connection)
 - **One-way**: Some links can only be traversed in one direction
 

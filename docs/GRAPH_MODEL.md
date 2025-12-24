@@ -24,21 +24,23 @@ A zone represents an area in Elden Ring. It's a node in the graph.
 | `scaling` | Enemy scaling level (higher = harder) |
 | `isHub` | True if this is a hub node (3+ connections) |
 
-### Zone Pair (Link)
+### Zone Link
 
-A zone pair represents a fog gate connection between two zones.
+A zone link represents a fog gate connection between two zones.
 
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "source": "Limgrave - Church of Elleh",
-  "destination": "Liurnia - Academy Gate Town",
+  "source_id": "uuid-of-source-zone",
+  "target": "Liurnia - Academy Gate Town",
+  "target_id": "uuid-of-target-zone",
   "type": "random",
   "oneWay": false,
   "source_details": "After the boss room",
   "target_details": "Near the Site of Grace",
   "source_key": "1101_ChurchOfElleh_Exit1",
-  "destination_key": "1205_AcademyGateTown_Entry1"
+  "target_key": "1205_AcademyGateTown_Entry1"
 }
 ```
 
@@ -46,22 +48,24 @@ A zone pair represents a fog gate connection between two zones.
 |-------|-------------|
 | `id` | UUID for this specific link |
 | `source` | Source zone display name |
-| `destination` | Target zone display name |
+| `source_id` | UUID of the source zone |
+| `target` | Target zone display name |
+| `target_id` | UUID of the target zone |
 | `type` | `random` (randomized gate) or `preexisting` (always there) |
 | `oneWay` | True if link can only be traversed in one direction |
 | `source_details` | Description of exit location (from spoiler log) |
 | `target_details` | Description of entry location (from spoiler log) |
 | `source_key` | Internal zone key for source (from fog.txt) |
-| `destination_key` | Internal zone key for destination (from fog.txt) |
+| `target_key` | Internal zone key for target (from fog.txt) |
 
 ## Link Types
 
 ### Random Links
 
-Fog gates that have been randomized by FogMod. The destination is different from vanilla.
+Fog gates that have been randomized by FogMod. The target is different from vanilla.
 
 - **Source**: Where the fog gate is located
-- **Destination**: Where it leads (randomized)
+- **Target**: Where it leads (randomized)
 - Drawn as **orange** lines in the graph
 
 ### Preexisting Links
@@ -111,13 +115,13 @@ Zone A ──────────► Zone B
 - Path finding: Can only go forward on one-way links
 - Placeholder: Only created in traversable direction
 
-## Discovered Links
+## Discovered Zone Links
 
 When a player traverses a fog gate, the specific link is marked as discovered.
 
 ```json
 {
-  "link_id": "550e8400-e29b-41d4-a716-446655440000",
+  "zone_link_id": "550e8400-e29b-41d4-a716-446655440000",
   "discovered_at": "2024-01-15T10:30:00Z",
   "discovered_by": "mod"
 }
@@ -125,7 +129,7 @@ When a player traverses a fog gate, the specific link is marked as discovered.
 
 | Field | Description |
 |-------|-------------|
-| `link_id` | UUID of the zone_pair |
+| `zone_link_id` | UUID of the zone_link |
 | `discovered_at` | ISO timestamp of discovery |
 | `discovered_by` | `mod` (in-game) or `web` (manual) |
 
@@ -245,12 +249,12 @@ Undiscover B → Also undiscovers C, D, E (unreachable from START)
 
 ```sql
 -- games table
-zone_pairs     JSONB  -- array of zone_pair objects
-zones          JSONB  -- array of zone metadata
-discovered_links JSONB  -- array of discovered_link objects
-node_positions JSONB  -- {zone_id: {x, y}}
-tags           JSONB  -- {zone_id: [tag_ids]}
-entity_mapping JSONB  -- {dest_entity: {source_map, dest_map}}
+zone_links           JSONB  -- array of zone_link objects
+zones                JSONB  -- array of zone metadata (with UUIDs)
+discovered_zone_links JSONB  -- array of discovered zone_link objects
+node_positions       JSONB  -- {zone_id: {x, y}}
+tags                 JSONB  -- {zone_id: [tag_ids]}
+entity_mapping       JSONB  -- {dest_entity: {source_map, dest_map}}
 ```
 
 ### Client (localStorage)

@@ -56,8 +56,8 @@ async def get_user_games_public(
 
     games = []
     for game in result.scalars().all():
-        discovered_links = game.discovered_links or []
-        stats = compute_discovery_stats(game.zone_pairs, discovered_links)
+        discovered_zone_links = game.discovered_zone_links or []
+        stats = compute_discovery_stats(game.zone_links, discovered_zone_links)
 
         games.append(
             GameSummary(

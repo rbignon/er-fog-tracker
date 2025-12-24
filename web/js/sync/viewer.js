@@ -620,8 +620,8 @@ export async function connectAsViewer(gameId) {
 
             // Game state from server (source of truth for discoveries)
             if (data.type === 'game_state') {
-                if (data.state?.discovered_links) {
-                    handleDiscoveryFromServer([], data.state.discovered_links);
+                if (data.state?.discovered_zone_links) {
+                    handleDiscoveryFromServer([], data.state.discovered_zone_links);
                 }
                 return;
             }
@@ -647,7 +647,7 @@ export async function connectAsViewer(gameId) {
 
             // Discovery from server
             if (data.type === 'discovery') {
-                handleDiscoveryFromServer(data.propagated, data.discovered_links, data.stats);
+                handleDiscoveryFromServer(data.propagated, data.discovered_zone_links, data.stats);
                 return;
             }
 

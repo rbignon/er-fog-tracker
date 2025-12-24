@@ -8,26 +8,35 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 # =============================================================================
-# Zone Pair (from spoiler log)
+# Zone Link (from spoiler log)
 # =============================================================================
 
 
-class ZonePair(BaseModel):
+class ZoneLink(BaseModel):
+    """A link between two zones (fog gate connection)."""
+
     id: str | None = None  # Unique identifier for this link
-    source: str
-    destination: str
+    source: str  # Source zone name (for display)
+    source_id: str | None = None  # Source zone UUID
     source_key: str | None = None  # Internal zone key (from fog.txt)
-    destination_key: str | None = None  # Internal zone key (from fog.txt)
+    target: str  # Target zone name (for display)
+    target_id: str | None = None  # Target zone UUID
+    target_key: str | None = None  # Internal zone key (from fog.txt)
     type: str = Field(pattern="^(random|preexisting)$")
     source_details: str | None = None
     target_details: str | None = None
     is_inherently_one_way: bool = False
 
 
+# Keep ZonePair as alias for backward compatibility during transition
+ZonePair = ZoneLink
+
+
 class Zone(BaseModel):
     """Zone metadata (node info from spoiler log)."""
 
-    id: str
+    id: str  # UUID
+    name: str | None = None  # Zone display name (optional for backward compat during migration)
     is_boss: bool = False
     scaling: str | None = None
 
@@ -65,7 +74,7 @@ class GameCreate(BaseModel):
 
     seed: int
     label: str | None = Field(default=None, max_length=200)
-    zone_pairs: list[ZonePair]
+    zone_links: list[ZoneLink]
     zones: list[Zone] | None = None
 
 
@@ -89,14 +98,16 @@ class GameSummary(BaseModel):
     updated_at: datetime
 
 
-class DiscoveredLinkResponse(BaseModel):
-    """A discovered link."""
+class DiscoveredZoneLinkResponse(BaseModel):
+    """A discovered zone link (for API responses)."""
 
-    link_id: str | None = None  # Unique link identifier (new format)
-    source: str
-    target: str
+    zone_link_id: str  # Unique link identifier
     discovered_at: datetime | str | None = None  # Can be datetime or ISO string from JSONB
     discovered_by: str | None = None
+
+
+# Keep old name as alias for backward compatibility
+DiscoveredLinkResponse = DiscoveredZoneLinkResponse
 
 
 class NodePositionResponse(BaseModel):
@@ -112,10 +123,10 @@ class GameFull(BaseModel):
     id: UUID
     seed: int
     label: str | None
-    zone_pairs: list[ZonePair]
+    zone_links: list[ZoneLink]
     zones: list[Zone] | None = None
-    discovered_links: list[DiscoveredLinkResponse]
-    discovered_nodes: list[str]
+    discovered_zone_links: list[DiscoveredZoneLinkResponse]
+    # discovered_nodes removed - client deduces from discovered_zone_links + zone_links
     node_positions: dict[str, NodePositionResponse]
     tags: dict[str, list[str]]
     discovery_count: int
@@ -156,21 +167,23 @@ class PropagatedLink(BaseModel):
     target: str
 
 
-class DiscoveredLink(BaseModel):
-    """A discovered link with metadata."""
+class DiscoveredZoneLink(BaseModel):
+    """A discovered zone link with metadata."""
 
-    link_id: str | None = None  # Unique link identifier (new format)
-    source: str
-    target: str
+    zone_link_id: str  # Unique link identifier
     discovered_at: str | None = None
     discovered_by: str | None = None
+
+
+# Keep old name as alias
+DiscoveredLink = DiscoveredZoneLink
 
 
 class DiscoveryResponse(BaseModel):
     """Response after creating a discovery."""
 
     propagated: list[PropagatedLink]
-    discovered_links: list[DiscoveredLink]
+    discovered_zone_links: list[DiscoveredZoneLink]
     discovery_count: int
     total_zones: int
 
@@ -185,7 +198,7 @@ class UndiscoveryResponse(BaseModel):
     """Response after undiscovering a zone."""
 
     removed: list[str]  # Zones that were undiscovered
-    discovered_links: list[DiscoveredLink]
+    discovered_zone_links: list[DiscoveredZoneLink]
 
 
 # =============================================================================

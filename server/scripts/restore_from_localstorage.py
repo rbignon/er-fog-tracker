@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Restore discovered_links from localStorage data.
+Restore discovered_zone_links from localStorage data.
 
 This script:
-1. Adds UUIDs to zone_pairs that don't have them
-2. Matches localStorage discoveredLinks ("source|target") to zone_pairs
-3. Creates proper discovered_links with link_id format
+1. Adds UUIDs to zone_links that don't have them
+2. Matches localStorage discoveredLinks ("source|target") to zone_links
+3. Creates proper discovered_zone_links with zone_link_id format
 
 Usage:
     python -m scripts.restore_from_localstorage <game_id>
@@ -109,7 +109,7 @@ LOCALSTORAGE_DATA = {
 
 
 async def restore_game(game_id: str, dry_run: bool = False):
-    """Restore a game's discovered_links from localStorage data."""
+    """Restore a game's discovered_zone_links from localStorage data."""
     print(f"Restoring game {game_id} (dry_run={dry_run})...")
 
     engine = create_async_engine(settings.database_url)
@@ -126,31 +126,31 @@ async def restore_game(game_id: str, dry_run: bool = False):
 
         print(f"Found game: seed={game.seed}")
 
-        zone_pairs = game.zone_pairs or []
-        print(f"Zone pairs: {len(zone_pairs)}")
+        zone_links = game.zone_links or []
+        print(f"Zone links: {len(zone_links)}")
 
-        # Step 1: Add UUIDs to zone_pairs
-        zp_updated = 0
-        for zp in zone_pairs:
-            if not zp.get("id"):
-                zp["id"] = str(uuid4())
-                zp_updated += 1
-        print(f"Added UUIDs to {zp_updated} zone_pairs")
+        # Step 1: Add UUIDs to zone_links
+        zl_updated = 0
+        for zl in zone_links:
+            if not zl.get("id"):
+                zl["id"] = str(uuid4())
+                zl_updated += 1
+        print(f"Added UUIDs to {zl_updated} zone_links")
 
         # Step 2: Build index by endpoints (both directions for bidirectional links)
-        zp_by_endpoints: dict[tuple[str, str], list[dict]] = {}
-        for zp in zone_pairs:
-            src = zp.get("source", "")
-            dst = zp.get("destination", "")
-            # Index by (source, destination)
+        zl_by_endpoints: dict[tuple[str, str], list[dict]] = {}
+        for zl in zone_links:
+            src = zl.get("source", "")
+            dst = zl.get("target", "")
+            # Index by (source, target)
             key = (src, dst)
-            if key not in zp_by_endpoints:
-                zp_by_endpoints[key] = []
-            zp_by_endpoints[key].append(zp)
+            if key not in zl_by_endpoints:
+                zl_by_endpoints[key] = []
+            zl_by_endpoints[key].append(zl)
 
-        # Step 3: Match localStorage discoveredLinks to zone_pairs
+        # Step 3: Match localStorage discoveredLinks to zone_links
         now = datetime.now(UTC).isoformat()
-        new_discovered_links = []
+        new_discovered_zone_links = []
         seen_link_ids = set()
         not_found = []
 
@@ -163,30 +163,30 @@ async def restore_game(game_id: str, dry_run: bool = False):
             source, target = parts
 
             # Try both directions
-            matching_zps = zp_by_endpoints.get((source, target), [])
-            if not matching_zps:
-                matching_zps = zp_by_endpoints.get((target, source), [])
+            matching_zls = zl_by_endpoints.get((source, target), [])
+            if not matching_zls:
+                matching_zls = zl_by_endpoints.get((target, source), [])
 
-            if not matching_zps:
+            if not matching_zls:
                 not_found.append(link_str)
                 continue
 
-            # Add all matching zone_pairs (handles parallel links)
-            for zp in matching_zps:
-                link_id = zp.get("id")
+            # Add all matching zone_links (handles parallel links)
+            for zl in matching_zls:
+                link_id = zl.get("id")
                 if link_id and link_id not in seen_link_ids:
-                    new_discovered_links.append(
+                    new_discovered_zone_links.append(
                         {
-                            "link_id": link_id,
+                            "zone_link_id": link_id,
                             "discovered_at": now,
                             "discovered_by": "restored",
                         }
                     )
                     seen_link_ids.add(link_id)
 
-        print(f"Matched {len(new_discovered_links)} links from localStorage")
+        print(f"Matched {len(new_discovered_zone_links)} links from localStorage")
         if not_found:
-            print(f"Links not found in zone_pairs ({len(not_found)}):")
+            print(f"Links not found in zone_links ({len(not_found)}):")
             for link in not_found:
                 print(f"  - {link}")
 
@@ -197,10 +197,10 @@ async def restore_game(game_id: str, dry_run: bool = False):
 
             from sqlalchemy.orm.attributes import flag_modified
 
-            game.zone_pairs = copy.deepcopy(zone_pairs)
-            game.discovered_links = new_discovered_links
-            flag_modified(game, "zone_pairs")
-            flag_modified(game, "discovered_links")
+            game.zone_links = copy.deepcopy(zone_links)
+            game.discovered_zone_links = new_discovered_zone_links
+            flag_modified(game, "zone_links")
+            flag_modified(game, "discovered_zone_links")
             await session.commit()
             print("Changes committed to database.")
         else:

@@ -14,7 +14,7 @@ from fogvizu.auth import get_current_user_by_mod_token
 from fogvizu.config import settings
 from fogvizu.database import Game, User, get_db
 from fogvizu.game_logic import compute_discovery_stats
-from fogvizu.models import GameCreateResponse, GameListResponse, GameSummary, Zone, ZonePair
+from fogvizu.models import GameCreateResponse, GameListResponse, GameSummary, Zone, ZoneLink
 from fogvizu.spoiler_parser import (
     SpoilerParseError,
     enrich_connections_with_zone_keys,
@@ -80,8 +80,8 @@ async def list_games(
 
     games = []
     for game in result.scalars().all():
-        discovered_links = game.discovered_links or []
-        stats = compute_discovery_stats(game.zone_pairs, discovered_links)
+        discovered_zone_links = game.discovered_zone_links or []
+        stats = compute_discovery_stats(game.zone_links, discovered_zone_links)
 
         games.append(
             GameSummary(
@@ -131,14 +131,16 @@ async def create_game(
     resolver = get_resolver()
     enriched_connections = enrich_connections_with_zone_keys(parsed.connections, resolver)
 
-    # Convert parsed data to zone_pairs format
-    zone_pairs = [
-        ZonePair(
+    # Convert parsed data to zone_links format
+    zone_links = [
+        ZoneLink(
             id=conn.id,
             source=conn.source,
-            destination=conn.target,
+            source_id=conn.source_id,
             source_key=conn.source_key,
-            destination_key=conn.destination_key,
+            target=conn.target,
+            target_id=conn.target_id,
+            target_key=conn.target_key,
             type=conn.conn_type,
             source_details=conn.source_details or None,
             target_details=conn.target_details or None,
@@ -151,6 +153,7 @@ async def create_game(
     zones = [
         Zone(
             id=zone.id,
+            name=zone.name,
             is_boss=zone.is_boss,
             scaling=zone.scaling,
         ).model_dump()
@@ -162,10 +165,10 @@ async def create_game(
         user_id=user.id,
         seed=parsed.seed,
         label=data.label,
-        zone_pairs=zone_pairs,
+        zone_links=zone_links,
         zones=zones,
         entity_mapping=data.entity_mapping,
-        discovered_links=[],
+        discovered_zone_links=[],
         node_positions={},
         tags={},
     )

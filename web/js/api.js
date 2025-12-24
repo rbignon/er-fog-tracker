@@ -51,7 +51,7 @@ export async function createGame({ seed, label, zonePairs, zones }) {
         body: JSON.stringify({
             seed,
             label: label || null,
-            zone_pairs: zonePairs,
+            zone_links: zonePairs,
             zones: zones || null,
         }),
     });
@@ -145,7 +145,7 @@ export async function regenerateModToken() {
  * Create a discovery.
  * @param {string} gameId - Game UUID
  * @param {Object} data - { source, target, link_id? }
- * @returns {Promise<{ propagated: Array<{ source, target }>, discovered_links: Array }>}
+ * @returns {Promise<{ propagated: Array<{ source, target }>, discovered_zone_links: Array }>}
  */
 export async function createDiscovery(gameId, { source, target, link_id }) {
     const body = { source, target };
@@ -162,7 +162,7 @@ export async function createDiscovery(gameId, { source, target, link_id }) {
  * Undiscover a zone (and cascade to unreachable zones).
  * @param {string} gameId - Game UUID
  * @param {string} zone - Zone ID to undiscover
- * @returns {Promise<{ removed: string[], discovered_links: Array }>}
+ * @returns {Promise<{ removed: string[], discovered_zone_links: Array }>}
  */
 export async function undiscoverZone(gameId, zone) {
     return apiFetch(`/api/games/${gameId}/undiscoveries`, {

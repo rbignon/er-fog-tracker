@@ -17,23 +17,23 @@ logger = logging.getLogger(__name__)
 
 def build_game_state(game: Game) -> dict:
     """Build game state dict from database game object."""
-    zone_pairs = game.zone_pairs or []
-    zp_index = {zp["id"]: zp for zp in zone_pairs if zp.get("id")}
+    zone_links = game.zone_links or []
+    zl_index = {zl["id"]: zl for zl in zone_links if zl.get("id")}
     expanded_links = []
-    for dl in game.discovered_links or []:
-        link_id = dl.get("link_id")
-        zp = zp_index.get(link_id)
-        if zp:
+    for dl in game.discovered_zone_links or []:
+        zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
+        zl = zl_index.get(zone_link_id)
+        if zl:
             expanded_links.append(
                 {
-                    "link_id": link_id,
-                    "source": zp["source"],
-                    "target": zp["destination"],
+                    "zone_link_id": zone_link_id,
+                    "source": zl["source"],
+                    "target": zl["target"],
                 }
             )
 
     return {
-        "discovered_links": expanded_links,
+        "discovered_zone_links": expanded_links,
         "node_positions": game.node_positions or {},
         "tags": game.tags or {},
     }

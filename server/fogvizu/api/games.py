@@ -18,8 +18,8 @@ from fogvizu.game_logic import (
     propagate_discovery,
 )
 from fogvizu.models import (
-    DiscoveredLink,
-    DiscoveredLinkResponse,
+    DiscoveredZoneLink,
+    DiscoveredZoneLinkResponse,
     DiscoveryCreate,
     DiscoveryResponse,
     GameCreate,
@@ -33,18 +33,20 @@ from fogvizu.models import (
     UndiscoveryRequest,
     UndiscoveryResponse,
     Zone,
+    ZoneLink,
 )
 from fogvizu.websocket import manager as ws_manager
-from fogvizu.zone_matching import build_zone_pairs_index, get_discovered_nodes, undiscover_zone
+from fogvizu.zone_matching import build_zone_pairs_index, undiscover_zone
 
 router = APIRouter()
 
 
-def _expand_discovered_link(dl: dict, zp_index: dict[str, dict]) -> tuple[str, str, str]:
-    """Expand a discovered link to (link_id, source, target)."""
-    zp = zp_index.get(dl["link_id"])
+def _expand_discovered_zone_link(dl: dict, zp_index: dict[str, dict]) -> tuple[str, str, str]:
+    """Expand a discovered zone link to (zone_link_id, source, target)."""
+    zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
+    zp = zp_index.get(zone_link_id)
     if zp:
-        return dl["link_id"], zp["source"], zp["destination"]
+        return zone_link_id, zp["source"], zp["target"]
     return "", "", ""  # Link not found
 
 
@@ -77,9 +79,9 @@ async def create_game(
         user_id=user.id,
         seed=data.seed,
         label=data.label,
-        zone_pairs=[zp.model_dump() for zp in data.zone_pairs],
+        zone_links=[zl.model_dump() for zl in data.zone_links],
         zones=[z.model_dump() for z in data.zones] if data.zones else None,
-        discovered_links=[],
+        discovered_zone_links=[],
         node_positions={},
         tags={},
     )
@@ -106,16 +108,15 @@ async def get_game(
             detail="Game not found",
         )
 
-    # Compute discovered nodes from discovered_links
-    zone_pairs = game.zone_pairs or []
-    discovered_links = game.discovered_links or []
-    discovered_nodes = get_discovered_nodes(discovered_links, zone_pairs)
+    # Get zone_links and discovered_zone_links
+    zone_links = game.zone_links or []
+    discovered_zone_links = game.discovered_zone_links or []
 
-    # Build zone_pairs index to expand link_ids to source/target
-    zp_index = build_zone_pairs_index(zone_pairs)
+    # Build zone_links index to expand zone_link_ids
+    zp_index = build_zone_pairs_index(zone_links)
 
     # Compute discovery stats
-    stats = compute_discovery_stats(zone_pairs, discovered_links)
+    stats = compute_discovery_stats(zone_links, discovered_zone_links)
 
     # Parse node positions
     node_positions = {
@@ -126,16 +127,14 @@ async def get_game(
     # Parse zones metadata
     zones = [Zone(**z) for z in game.zones] if game.zones else None
 
-    # Expand discovered_links to include source/target for API response
-    expanded_links = []
-    for dl in discovered_links:
-        zp = zp_index.get(dl["link_id"])
-        if zp:
-            expanded_links.append(
-                DiscoveredLinkResponse(
-                    link_id=dl["link_id"],
-                    source=zp["source"],
-                    target=zp["destination"],
+    # Build discovered_zone_links response (just zone_link_id + metadata)
+    response_links = []
+    for dl in discovered_zone_links:
+        zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
+        if zone_link_id and zone_link_id in zp_index:
+            response_links.append(
+                DiscoveredZoneLinkResponse(
+                    zone_link_id=zone_link_id,
                     discovered_at=dl.get("discovered_at"),
                     discovered_by=dl.get("discovered_by"),
                 )
@@ -145,10 +144,9 @@ async def get_game(
         id=game.id,
         seed=game.seed,
         label=game.label,
-        zone_pairs=zone_pairs,
+        zone_links=[ZoneLink(**zl) for zl in zone_links],
         zones=zones,
-        discovered_links=expanded_links,
-        discovered_nodes=list(discovered_nodes),
+        discovered_zone_links=response_links,
         node_positions=node_positions,
         tags=game.tags or {},
         discovery_count=stats["discovered"],
@@ -173,8 +171,8 @@ async def get_my_games(
 
     games = []
     for game in result.scalars().all():
-        discovered_links = game.discovered_links or []
-        stats = compute_discovery_stats(game.zone_pairs, discovered_links)
+        discovered_zone_links = game.discovered_zone_links or []
+        stats = compute_discovery_stats(game.zone_links, discovered_zone_links)
 
         games.append(
             GameSummary(
@@ -246,8 +244,8 @@ async def update_game(
 
     await db.flush()
 
-    discovered_links = game.discovered_links or []
-    stats = compute_discovery_stats(game.zone_pairs, discovered_links)
+    discovered_zone_links = game.discovered_zone_links or []
+    stats = compute_discovery_stats(game.zone_links, discovered_zone_links)
 
     return GameSummary(
         id=game.id,
@@ -293,50 +291,45 @@ async def create_discovery(
         db, game_id, data.source, data.target, discovered_by="web", link_id=data.link_id
     )
 
-    # Refresh game to get updated discovered_links
+    # Refresh game to get updated discovered_zone_links
     await db.refresh(game)
-    all_links = game.discovered_links or []
-    zone_pairs = game.zone_pairs or []
-    zp_index = build_zone_pairs_index(zone_pairs)
+    all_links = game.discovered_zone_links or []
+    zone_links = game.zone_links or []
+    zp_index = build_zone_pairs_index(zone_links)
 
-    # Build response with expanded links
-    expanded_links = []
+    # Build response with zone_link_id only (no source/target duplication)
+    response_links = []
     for dl in all_links:
-        link_id, source, target = _expand_discovered_link(dl, zp_index)
-        if source and target:  # Skip broken links
-            expanded_links.append(
-                DiscoveredLink(
-                    link_id=link_id,
-                    source=source,
-                    target=target,
+        zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
+        if zone_link_id and zone_link_id in zp_index:
+            response_links.append(
+                DiscoveredZoneLink(
+                    zone_link_id=zone_link_id,
                     discovered_at=dl.get("discovered_at"),
                     discovered_by=dl.get("discovered_by"),
                 )
             )
 
     # Compute discovery stats
-    stats = compute_discovery_stats(zone_pairs, all_links)
+    stats = compute_discovery_stats(zone_links, all_links)
 
     # Broadcast to viewers via WebSocket (host already has the response)
     if propagated:
         # Convert to dict format for WebSocket broadcast
-        expanded_links_ws = [
-            {"link_id": dl.link_id, "source": dl.source, "target": dl.target}
-            for dl in expanded_links
-        ]
+        links_ws = [{"zone_link_id": dl.zone_link_id} for dl in response_links]
         await ws_manager.broadcast_to_viewers(
             game_id,
             {
                 "type": "discovery",
                 "propagated": propagated,
-                "discovered_links": expanded_links_ws,
+                "discovered_zone_links": links_ws,
                 "stats": stats,
             },
         )
 
     return DiscoveryResponse(
         propagated=[PropagatedLink(source=p["source"], target=p["target"]) for p in propagated],
-        discovered_links=expanded_links,
+        discovered_zone_links=response_links,
         discovery_count=stats["discovered"],
         total_zones=stats["total"],
     )
@@ -366,26 +359,24 @@ async def create_undiscovery(
         )
 
     # Undiscover the zone and cascade
-    discovered_links = game.discovered_links or []
-    zone_pairs = game.zone_pairs or []
-    new_links, removed_zones = undiscover_zone(discovered_links, data.zone, zone_pairs)
+    discovered_zone_links = game.discovered_zone_links or []
+    zone_links = game.zone_links or []
+    new_links, removed_zones = undiscover_zone(discovered_zone_links, data.zone, zone_links)
 
     # Update game
-    game.discovered_links = new_links
-    flag_modified(game, "discovered_links")
+    game.discovered_zone_links = new_links
+    flag_modified(game, "discovered_zone_links")
     await db.flush()
 
-    # Build response with expanded links
-    zp_index = build_zone_pairs_index(zone_pairs)
-    expanded_links = []
+    # Build response with zone_link_id only
+    zp_index = build_zone_pairs_index(zone_links)
+    response_links = []
     for dl in new_links:
-        link_id, source, target = _expand_discovered_link(dl, zp_index)
-        if source and target:  # Skip broken links
-            expanded_links.append(
-                DiscoveredLink(
-                    link_id=link_id,
-                    source=source,
-                    target=target,
+        zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
+        if zone_link_id and zone_link_id in zp_index:
+            response_links.append(
+                DiscoveredZoneLink(
+                    zone_link_id=zone_link_id,
                     discovered_at=dl.get("discovered_at"),
                     discovered_by=dl.get("discovered_by"),
                 )
@@ -393,22 +384,19 @@ async def create_undiscovery(
 
     # Broadcast to viewers via WebSocket
     if removed_zones:
-        stats = compute_discovery_stats(zone_pairs, new_links)
-        expanded_links_ws = [
-            {"link_id": dl.link_id, "source": dl.source, "target": dl.target}
-            for dl in expanded_links
-        ]
+        stats = compute_discovery_stats(zone_links, new_links)
+        links_ws = [{"zone_link_id": dl.zone_link_id} for dl in response_links]
         await ws_manager.broadcast_to_viewers(
             game_id,
             {
                 "type": "discovery",  # Reuse discovery type - sends full state
                 "propagated": [],
-                "discovered_links": expanded_links_ws,
+                "discovered_zone_links": links_ws,
                 "stats": stats,
             },
         )
 
     return UndiscoveryResponse(
         removed=removed_zones,
-        discovered_links=expanded_links,
+        discovered_zone_links=response_links,
     )

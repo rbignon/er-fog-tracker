@@ -92,21 +92,21 @@ class HostClient(Client):
             )
             await db.commit()
 
-            # Refetch game to get full discovered_links
+            # Refetch game to get full discovered_zone_links
             result = await db.execute(select(Game).where(Game.id == self.game_id))
             game = result.scalar_one_or_none()
 
         if game:
             expanded_links = expand_discovered_links(
-                game.discovered_links or [], game.zone_pairs or []
+                game.discovered_zone_links or [], game.zone_links or []
             )
-            stats = compute_discovery_stats(game.zone_pairs or [], game.discovered_links or [])
+            stats = compute_discovery_stats(game.zone_links or [], game.discovered_zone_links or [])
             await manager.broadcast_to_all(
                 self.game_id,
                 {
                     "type": "discovery",
                     "propagated": propagated,
-                    "discovered_links": expanded_links,
+                    "discovered_zone_links": expanded_links,
                     "stats": stats,
                 },
                 exclude=self.ws,

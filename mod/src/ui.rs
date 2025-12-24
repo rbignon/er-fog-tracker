@@ -300,14 +300,14 @@ impl FogRandoTracker {
         }
 
         for exit in &self.current_exits {
-            let dest_color = if exit.destination == "???" {
+            let dest_color = if exit.target == "???" {
                 undiscovered_color
             } else {
                 discovered_color
             };
 
-            // Line 1: destination zone (or "???")
-            let mut dest_line = format!("→ {}", exit.destination);
+            // Line 1: target zone (or "???")
+            let mut dest_line = format!("→ {}", exit.target);
             if let Some(ref from) = exit.from_zone {
                 dest_line.push_str(&format!(" [from {}]", from));
             }

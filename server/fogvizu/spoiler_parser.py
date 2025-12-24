@@ -112,7 +112,8 @@ DETAIL_PATTERNS = [
 class ZoneInfo:
     """Parsed zone/area info."""
 
-    id: str
+    id: str  # UUID
+    name: str  # Display name
     is_boss: bool = False
     scaling: str | None = None
 
@@ -122,13 +123,15 @@ class ConnectionInfo:
     """Parsed connection info."""
 
     id: str  # Unique identifier for this link
-    source: str
-    target: str
-    conn_type: str  # 'random' or 'preexisting'
+    source: str  # Source zone name
+    source_id: str | None = None  # Source zone UUID
+    target: str  # Target zone name
+    target_id: str | None = None  # Target zone UUID
+    conn_type: str = "random"  # 'random' or 'preexisting'
     source_details: str = ""
     target_details: str = ""
     source_key: str | None = None  # Internal zone key (from fog.txt)
-    destination_key: str | None = None  # Internal zone key (from fog.txt)
+    target_key: str | None = None  # Internal zone key (from fog.txt)
     required_item_from: str | None = None
     is_inherently_one_way: bool = False
 
@@ -177,7 +180,7 @@ def _parse_area_line(line: str) -> ZoneInfo | None:
     if name_match:
         name = name_match.group(1).strip()
         if name:
-            return ZoneInfo(id=name, is_boss=is_boss, scaling=scaling)
+            return ZoneInfo(id=str(uuid4()), name=name, is_boss=is_boss, scaling=scaling)
     return None
 
 
@@ -244,7 +247,9 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
     return ConnectionInfo(
         id=str(uuid4()),
         source=clean_source,
+        source_id=None,  # Will be populated later with zone UUID
         target=clean_target,
+        target_id=None,  # Will be populated later with zone UUID
         conn_type=conn_type,
         source_details=source_details,
         target_details=target_details,
@@ -281,7 +286,7 @@ def parse_spoiler_log(text: str) -> ParseResult:
     seed = int(seed_match.group(1))
     options = first_line
 
-    zones: dict[str, ZoneInfo] = {}
+    zones: dict[str, ZoneInfo] = {}  # Keyed by zone name
     connections: list[ConnectionInfo] = []
 
     for line in lines:
@@ -292,11 +297,11 @@ def parse_spoiler_log(text: str) -> ParseResult:
         # Try to parse as area
         zone_info = _parse_area_line(line)
         if zone_info:
-            if zone_info.id not in zones:
-                zones[zone_info.id] = zone_info
+            if zone_info.name not in zones:
+                zones[zone_info.name] = zone_info
             else:
                 # Update existing zone with boss/scaling info if we have it
-                existing = zones[zone_info.id]
+                existing = zones[zone_info.name]
                 if zone_info.is_boss:
                     existing.is_boss = True
                 if zone_info.scaling:
@@ -307,11 +312,11 @@ def parse_spoiler_log(text: str) -> ParseResult:
         if line.startswith("  ") or line.startswith("\t"):
             conn = _parse_connection_line(line)
             if conn:
-                # Ensure zones exist
+                # Ensure zones exist (create with UUID if missing)
                 if conn.source not in zones:
-                    zones[conn.source] = ZoneInfo(id=conn.source)
+                    zones[conn.source] = ZoneInfo(id=str(uuid4()), name=conn.source)
                 if conn.target not in zones:
-                    zones[conn.target] = ZoneInfo(id=conn.target)
+                    zones[conn.target] = ZoneInfo(id=str(uuid4()), name=conn.target)
                 connections.append(conn)
 
     if not zones:
@@ -319,6 +324,13 @@ def parse_spoiler_log(text: str) -> ParseResult:
 
     if not connections:
         raise SpoilerParseError("No connections found in spoiler log")
+
+    # Populate source_id and target_id for each connection
+    for conn in connections:
+        if conn.source in zones:
+            conn.source_id = zones[conn.source].id
+        if conn.target in zones:
+            conn.target_id = zones[conn.target].id
 
     return ParseResult(
         seed=seed,
@@ -364,12 +376,12 @@ def enrich_connections_with_zone_keys(
         resolver: ZoneResolver with fog.txt data loaded
 
     Returns:
-        List of enriched connections with source_key and destination_key populated.
+        List of enriched connections with source_key and target_key populated.
     """
     enriched = []
     for conn in connections:
         source_key = None
-        destination_key = None
+        target_key = None
 
         # Try to resolve source_key from source_details (ASide/BSide text)
         if conn.source_details:
@@ -382,28 +394,30 @@ def enrich_connections_with_zone_keys(
         if not source_key:
             source_key = resolver.lookup_by_display_name(conn.source)
 
-        # Try to resolve destination_key from target_details
+        # Try to resolve target_key from target_details
         if conn.target_details:
             zone_key, display_name = resolver.lookup_by_detail_text(conn.target_details)
             # Only use if the display_name matches the expected target
             if zone_key and display_name and display_name == conn.target:
-                destination_key = zone_key
+                target_key = zone_key
 
         # Fallback: try display_name → zone_key
-        if not destination_key:
-            destination_key = resolver.lookup_by_display_name(conn.target)
+        if not target_key:
+            target_key = resolver.lookup_by_display_name(conn.target)
 
-        # Create enriched connection
+        # Create enriched connection (preserve source_id/target_id from original)
         enriched.append(
             ConnectionInfo(
                 id=conn.id,
                 source=conn.source,
+                source_id=conn.source_id,
                 target=conn.target,
+                target_id=conn.target_id,
                 conn_type=conn.conn_type,
                 source_details=conn.source_details,
                 target_details=conn.target_details,
                 source_key=source_key,
-                destination_key=destination_key,
+                target_key=target_key,
                 required_item_from=conn.required_item_from,
                 is_inherently_one_way=conn.is_inherently_one_way,
             )

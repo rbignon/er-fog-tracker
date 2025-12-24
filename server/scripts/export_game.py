@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-Export game data (zone_pairs, zones, entity_mapping) to JSON files.
+Export game data (zone_links, zones, entity_mapping, discovered_zone_links) to JSON files.
 
 Usage:
     cd server
     python scripts/export_game.py <game_uuid>
 
 Outputs:
-    <seed>/zone_pairs.json
+    <seed>/zone_links.json
     <seed>/zones.json
     <seed>/entity_mapping.json
+    <seed>/discovered_zone_links.json
 """
 
 import asyncio
@@ -58,15 +59,15 @@ async def export_game(game_id: str) -> None:
         print(f"Found game with seed: {seed}")
 
         # Create output directory
-        output_dir = Path(str(seed))
+        output_dir = Path("..") / "logs" / str(seed)
         output_dir.mkdir(exist_ok=True)
         print(f"Created directory: {output_dir}")
 
-        # Export zone_pairs
-        zone_pairs_file = output_dir / "zone_pairs.json"
-        with open(zone_pairs_file, "w") as f:
-            json.dump(game.zone_pairs, f, indent=2)
-        print(f"Exported: {zone_pairs_file}")
+        # Export zone_links
+        zone_links_file = output_dir / "zone_links.json"
+        with open(zone_links_file, "w") as f:
+            json.dump(game.zone_links, f, indent=2)
+        print(f"Exported: {zone_links_file}")
 
         # Export zones
         zones_file = output_dir / "zones.json"
@@ -79,6 +80,12 @@ async def export_game(game_id: str) -> None:
         with open(entity_mapping_file, "w") as f:
             json.dump(game.entity_mapping, f, indent=2)
         print(f"Exported: {entity_mapping_file}")
+
+        # Export discovered_zone_links
+        discovered_zone_links_file = output_dir / "discovered_zone_links.json"
+        with open(discovered_zone_links_file, "w") as f:
+            json.dump(game.discovered_zone_links, f, indent=2)
+        print(f"Exported: {discovered_zone_links_file}")
 
     await engine.dispose()
 

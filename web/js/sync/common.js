@@ -229,12 +229,12 @@ export function handleTagUpdateFromServer(zone, tags) {
 /**
  * Handle discovery messages from server (mod or other source).
  * Server is the source of truth - apply the full state it sends.
- * Server sends links with {link_id, source, target} format.
+ * Server sends links with {zone_link_id, source, target} format.
  * @param {Array} propagated - Propagated links
- * @param {Array} discoveredLinks - All discovered links
+ * @param {Array} discoveredZoneLinks - All discovered zone links
  * @param {Object} [stats] - Discovery stats from server {discovered, total}
  */
-export function handleDiscoveryFromServer(propagated, discoveredLinks, stats) {
+export function handleDiscoveryFromServer(propagated, discoveredZoneLinks, stats) {
     const explorationState = State.getExplorationState();
     if (!explorationState) return;
 
@@ -242,20 +242,21 @@ export function handleDiscoveryFromServer(propagated, discoveredLinks, stats) {
     let newlyDiscoveredTarget = null;
     const newlyDiscoveredZones = []; // Track all newly discovered zones
 
-    // If server sent full discovered_links, use it directly (server is source of truth)
-    if (discoveredLinks && Array.isArray(discoveredLinks)) {
+    // If server sent full discovered_zone_links, use it directly (server is source of truth)
+    if (discoveredZoneLinks && Array.isArray(discoveredZoneLinks)) {
         // Rebuild discovered nodes and links from server state
         // Always include START_NODE (same as server-side logic)
         const newDiscovered = new Set([State.START_NODE]);
         const newDiscoveredLinks = new Set();
 
-        for (const link of discoveredLinks) {
-            // Server expands link_id to include source/target
+        for (const link of discoveredZoneLinks) {
+            // Server expands zone_link_id to include source/target
             newDiscovered.add(link.source);
             newDiscovered.add(link.target);
-            // Store link UUID
-            if (link.link_id) {
-                newDiscoveredLinks.add(link.link_id);
+            // Store link UUID (support both zone_link_id and legacy link_id)
+            const linkId = link.zone_link_id || link.link_id;
+            if (linkId) {
+                newDiscoveredLinks.add(linkId);
             }
         }
 

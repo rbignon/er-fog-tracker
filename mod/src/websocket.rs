@@ -89,8 +89,8 @@ pub struct PropagatedLink {
 /// A fog gate exit from the current zone
 #[derive(Debug, Clone, Deserialize)]
 pub struct FogExit {
-    /// Destination zone name, or "???" if not discovered
-    pub destination: String,
+    /// Target zone name, or "???" if not discovered
+    pub target: String,
     /// How to get there (direction/description)
     #[serde(default)]
     pub description: String,

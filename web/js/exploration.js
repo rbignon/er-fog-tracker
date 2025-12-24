@@ -83,10 +83,10 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
         // Send to server - response will contain full state with back-propagation
         Api.createDiscovery(gameId, { source: fromNodeId, target: areaId, link_id: viaLink?.id })
             .then(response => {
-                // Server response contains discovered_links and stats - apply them
-                if (response && response.discovered_links) {
+                // Server response contains discovered_zone_links and stats - apply them
+                if (response && response.discovered_zone_links) {
                     applyServerDiscoveryState(
-                        response.discovered_links,
+                        response.discovered_zone_links,
                         response.discovery_count,
                         response.total_zones
                     );
@@ -121,13 +121,13 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
 
 /**
  * Apply discovery state from server response (server is source of truth).
- * Server sends links with {link_id, source, target} format.
- * @param {Array} discoveredLinks - List of discovered links from server
+ * Server sends links with {zone_link_id, source, target} format.
+ * @param {Array} discoveredZoneLinks - List of discovered zone links from server
  * @param {number} [discoveryCount] - Discovery count from server (optional)
  * @param {number} [totalZones] - Total zones from server (optional)
  */
-function applyServerDiscoveryState(discoveredLinks, discoveryCount, totalZones) {
-    if (!discoveredLinks || !Array.isArray(discoveredLinks)) return;
+function applyServerDiscoveryState(discoveredZoneLinks, discoveryCount, totalZones) {
+    if (!discoveredZoneLinks || !Array.isArray(discoveredZoneLinks)) return;
 
     const explorationState = State.getExplorationState();
     if (!explorationState) return;
@@ -136,13 +136,14 @@ function applyServerDiscoveryState(discoveredLinks, discoveryCount, totalZones) 
     const newDiscovered = new Set();
     const newDiscoveredLinks = new Set();
 
-    for (const link of discoveredLinks) {
-        // Add nodes from source/target (server expands link_id to include these)
+    for (const link of discoveredZoneLinks) {
+        // Add nodes from source/target (server expands zone_link_id to include these)
         newDiscovered.add(link.source);
         newDiscovered.add(link.target);
-        // Store link UUID
-        if (link.link_id) {
-            newDiscoveredLinks.add(link.link_id);
+        // Store link UUID (support both zone_link_id and legacy link_id)
+        const linkId = link.zone_link_id || link.link_id;
+        if (linkId) {
+            newDiscoveredLinks.add(linkId);
         }
     }
 
@@ -193,9 +194,9 @@ export function undiscoverArea(areaId) {
         // Send to server - response will contain authoritative state
         Api.undiscoverZone(gameId, areaId)
             .then(response => {
-                // Server response contains discovered_links - apply it
-                if (response && response.discovered_links) {
-                    applyServerDiscoveryState(response.discovered_links);
+                // Server response contains discovered_zone_links - apply it
+                if (response && response.discovered_zone_links) {
+                    applyServerDiscoveryState(response.discovered_zone_links);
                 }
             })
             .catch(err => console.error('Failed to persist undiscovery:', err));
@@ -523,9 +524,9 @@ export function discoverPathTo(targetId) {
                         link_id: lastStep.viaLink?.id,
                     })
                         .then(response => {
-                            if (response && response.discovered_links) {
+                            if (response && response.discovered_zone_links) {
                                 applyServerDiscoveryState(
-                                    response.discovered_links,
+                                    response.discovered_zone_links,
                                     response.discovery_count,
                                     response.total_zones
                                 );

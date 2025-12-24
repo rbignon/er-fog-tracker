@@ -109,13 +109,13 @@ async function createGame() {
     const errorEl = document.getElementById('new-game-error');
     const createBtn = document.getElementById('create-game-btn');
 
-    // Convert graph data to zone_pairs format
+    // Convert graph data to zone_links format
     const zonePairs = parsedData.graphData.links.map(link => {
         const { sourceId, targetId } = getLinkEndpoints(link);
         return {
             id: link.id,
             source: sourceId,
-            destination: targetId,
+            target: targetId,
             type: link.type || 'random',
             source_details: link.sourceDetails || null,
             target_details: link.targetDetails || null,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Migration script to add UUIDs to zone_pairs and convert discovered_links format.
+Migration script to add UUIDs to zone_links and convert discovered_zone_links format.
 
 Run from the server directory:
     python -m scripts.migrate_link_uuids
@@ -25,47 +25,47 @@ from fogvizu.database import Game
 
 async def migrate_game(session: AsyncSession, game: Game, dry_run: bool = False) -> dict:
     """
-    Migrate a single game's zone_pairs and discovered_links.
+    Migrate a single game's zone_links and discovered_zone_links.
 
     Returns dict with migration stats.
     """
     stats = {
-        "zone_pairs_updated": 0,
-        "discovered_links_converted": 0,
+        "zone_links_updated": 0,
+        "discovered_zone_links_converted": 0,
         "parallel_links_expanded": 0,
     }
 
-    zone_pairs = game.zone_pairs or []
-    discovered_links = game.discovered_links or []
+    zone_links = game.zone_links or []
+    discovered_zone_links = game.discovered_zone_links or []
 
-    # Step 1: Add UUIDs to zone_pairs that don't have them
-    zone_pairs_modified = False
-    for zp in zone_pairs:
-        if not zp.get("id"):
-            zp["id"] = str(uuid4())
-            stats["zone_pairs_updated"] += 1
-            zone_pairs_modified = True
+    # Step 1: Add UUIDs to zone_links that don't have them
+    zone_links_modified = False
+    for zl in zone_links:
+        if not zl.get("id"):
+            zl["id"] = str(uuid4())
+            stats["zone_links_updated"] += 1
+            zone_links_modified = True
 
-    # Step 2: Build index for looking up zone_pairs by source/target
-    # Note: Multiple zone_pairs can have same source/target (parallel links)
-    zp_by_endpoints: dict[tuple[str, str], list[dict]] = {}
-    for zp in zone_pairs:
-        key = (zp.get("source", ""), zp.get("destination", ""))
-        if key not in zp_by_endpoints:
-            zp_by_endpoints[key] = []
-        zp_by_endpoints[key].append(zp)
+    # Step 2: Build index for looking up zone_links by source/target
+    # Note: Multiple zone_links can have same source/target (parallel links)
+    zl_by_endpoints: dict[tuple[str, str], list[dict]] = {}
+    for zl in zone_links:
+        key = (zl.get("source", ""), zl.get("target", ""))
+        if key not in zl_by_endpoints:
+            zl_by_endpoints[key] = []
+        zl_by_endpoints[key].append(zl)
 
-    # Step 3: Convert discovered_links from {source, target} to {link_id}
-    new_discovered_links = []
+    # Step 3: Convert discovered_zone_links from {source, target} to {zone_link_id}
+    new_discovered_zone_links = []
     seen_link_ids = set()
 
-    for dl in discovered_links:
+    for dl in discovered_zone_links:
         # Check if already in new format
-        if "link_id" in dl and "source" not in dl:
+        if "zone_link_id" in dl and "source" not in dl:
             # Already migrated
-            if dl["link_id"] not in seen_link_ids:
-                new_discovered_links.append(dl)
-                seen_link_ids.add(dl["link_id"])
+            if dl["zone_link_id"] not in seen_link_ids:
+                new_discovered_zone_links.append(dl)
+                seen_link_ids.add(dl["zone_link_id"])
             continue
 
         # Old format: {source, target, discovered_at, discovered_by}
@@ -74,47 +74,47 @@ async def migrate_game(session: AsyncSession, game: Game, dry_run: bool = False)
         discovered_at = dl.get("discovered_at")
         discovered_by = dl.get("discovered_by")
 
-        # Find matching zone_pair(s)
-        matching_zps = zp_by_endpoints.get((source, target), [])
+        # Find matching zone_link(s)
+        matching_zls = zl_by_endpoints.get((source, target), [])
 
-        if not matching_zps:
+        if not matching_zls:
             # Try reverse direction for bidirectional links
-            matching_zps = zp_by_endpoints.get((target, source), [])
+            matching_zls = zl_by_endpoints.get((target, source), [])
 
-        if not matching_zps:
-            # No matching zone_pair found - skip this discovered_link
-            print(f"  Warning: No zone_pair found for {source} -> {target}")
+        if not matching_zls:
+            # No matching zone_link found - skip this discovered_zone_link
+            print(f"  Warning: No zone_link found for {source} -> {target}")
             continue
 
-        # Mark ALL matching zone_pairs as discovered (conservative approach for parallel links)
-        if len(matching_zps) > 1:
-            stats["parallel_links_expanded"] += len(matching_zps) - 1
+        # Mark ALL matching zone_links as discovered (conservative approach for parallel links)
+        if len(matching_zls) > 1:
+            stats["parallel_links_expanded"] += len(matching_zls) - 1
 
-        for zp in matching_zps:
-            link_id = zp.get("id")
+        for zl in matching_zls:
+            link_id = zl.get("id")
             if link_id and link_id not in seen_link_ids:
-                new_discovered_links.append(
+                new_discovered_zone_links.append(
                     {
-                        "link_id": link_id,
+                        "zone_link_id": link_id,
                         "discovered_at": discovered_at,
                         "discovered_by": discovered_by,
                     }
                 )
                 seen_link_ids.add(link_id)
-                stats["discovered_links_converted"] += 1
+                stats["discovered_zone_links_converted"] += 1
 
     # Step 4: Update game if changes were made
-    has_changes = zone_pairs_modified or stats["discovered_links_converted"] > 0
+    has_changes = zone_links_modified or stats["discovered_zone_links_converted"] > 0
     if has_changes and not dry_run:
         import copy
 
         from sqlalchemy.orm.attributes import flag_modified
 
         # Deep copy and flag_modified to force SQLAlchemy to detect JSONB changes
-        game.zone_pairs = copy.deepcopy(zone_pairs)
-        game.discovered_links = list(new_discovered_links)
-        flag_modified(game, "zone_pairs")
-        flag_modified(game, "discovered_links")
+        game.zone_links = copy.deepcopy(zone_links)
+        game.discovered_zone_links = list(new_discovered_zone_links)
+        flag_modified(game, "zone_links")
+        flag_modified(game, "discovered_zone_links")
 
     return stats
 
@@ -130,8 +130,8 @@ async def run_migration(dry_run: bool = False):
     total_stats = {
         "games_processed": 0,
         "games_modified": 0,
-        "zone_pairs_updated": 0,
-        "discovered_links_converted": 0,
+        "zone_links_updated": 0,
+        "discovered_zone_links_converted": 0,
         "parallel_links_expanded": 0,
     }
 
@@ -148,10 +148,12 @@ async def run_migration(dry_run: bool = False):
 
             stats = await migrate_game(session, game, dry_run)
 
-            if stats["zone_pairs_updated"] > 0 or stats["discovered_links_converted"] > 0:
+            if stats["zone_links_updated"] > 0 or stats["discovered_zone_links_converted"] > 0:
                 total_stats["games_modified"] += 1
-                print(f"  - Zone pairs updated: {stats['zone_pairs_updated']}")
-                print(f"  - Discovered links converted: {stats['discovered_links_converted']}")
+                print(f"  - Zone links updated: {stats['zone_links_updated']}")
+                print(
+                    f"  - Discovered zone links converted: {stats['discovered_zone_links_converted']}"
+                )
                 if stats["parallel_links_expanded"] > 0:
                     print(f"  - Parallel links expanded: {stats['parallel_links_expanded']}")
 
@@ -166,8 +168,8 @@ async def run_migration(dry_run: bool = False):
     print("\n=== Migration Summary ===")
     print(f"Games processed: {total_stats['games_processed']}")
     print(f"Games modified: {total_stats['games_modified']}")
-    print(f"Zone pairs updated: {total_stats['zone_pairs_updated']}")
-    print(f"Discovered links converted: {total_stats['discovered_links_converted']}")
+    print(f"Zone links updated: {total_stats['zone_links_updated']}")
+    print(f"Discovered zone links converted: {total_stats['discovered_zone_links_converted']}")
     print(f"Parallel links expanded: {total_stats['parallel_links_expanded']}")
 
 

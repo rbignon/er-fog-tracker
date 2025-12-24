@@ -176,7 +176,7 @@ class ModClient(Client):
             all_propagated = []
             resolved_links = []
 
-            if game and game.zone_pairs:
+            if game and game.zone_links:
                 # If entity_mapping is available, use it to improve zone candidate ordering
                 if destination_entity_id and game.entity_mapping:
                     entity_info = game.entity_mapping.get(str(destination_entity_id))
@@ -221,17 +221,17 @@ class ModClient(Client):
                                         [c[1] for c in prioritized[:3]],
                                     )
 
-                # Check if zone_pairs have zone_keys (V3 enrichment)
+                # Check if zone_links have zone_keys (V3 enrichment)
                 has_zone_keys = any(
-                    zp.get("source_key") or zp.get("destination_key")
-                    for zp in game.zone_pairs[:5]  # Check first few
+                    zl.get("source_key") or zl.get("target_key")
+                    for zl in game.zone_links[:5]  # Check first few
                 )
 
                 if has_zone_keys:
                     # Use key-based matching (more precise)
                     # Find ALL matches, then pick those with lowest back-propagation cost
                     all_matches = find_all_matching_zone_pairs_by_keys(
-                        game.zone_pairs,
+                        game.zone_links,
                         source_candidates[:15],
                         target_candidates[:15],
                     )
@@ -243,8 +243,8 @@ class ModClient(Client):
                         matches_with_cost = []
                         for source_display, target_display, pair in all_matches:
                             cost = compute_backprop_cost(
-                                game.zone_pairs,
-                                game.discovered_links or [],
+                                game.zone_links,
+                                game.discovered_zone_links or [],
                                 source_display,
                             )
                             matches_with_cost.append((source_display, target_display, pair, cost))
@@ -306,7 +306,7 @@ class ModClient(Client):
                     # Fallback: use display name matching (legacy behavior)
                     # Also apply backprop cost tie-breaking
                     all_matches = find_all_matching_zone_pairs(
-                        game.zone_pairs,
+                        game.zone_links,
                         source_candidates[:15],
                         target_candidates[:15],
                     )
@@ -320,8 +320,8 @@ class ModClient(Client):
                         matches_with_cost = []
                         for source_display, target_display, pair in all_matches:
                             cost = compute_backprop_cost(
-                                game.zone_pairs,
-                                game.discovered_links or [],
+                                game.zone_links,
+                                game.discovered_zone_links or [],
                                 source_display,
                             )
                             matches_with_cost.append((source_display, target_display, pair, cost))
@@ -379,7 +379,7 @@ class ModClient(Client):
                             len(target_candidates[:15]),
                         )
             else:
-                logger.warning("[MOD] Game has no zone_pairs, cannot resolve")
+                logger.warning("[MOD] Game has no zone_links, cannot resolve")
 
             await db.commit()
 
@@ -407,8 +407,8 @@ class ModClient(Client):
                 logger.info("[MOD] Player arrived at zone: %s", destination_zone)
 
                 exits = compute_zone_exits(
-                    game.zone_pairs or [],
-                    game.discovered_links or [],
+                    game.zone_links or [],
+                    game.discovered_zone_links or [],
                     destination_zone,
                 )
                 logger.info("[MOD] Computed %d exits from zone '%s'", len(exits), destination_zone)
@@ -416,7 +416,9 @@ class ModClient(Client):
             # Compute discovery stats
             stats = {"discovered": 0, "total": 0, "percent": 0}
             if game:
-                stats = compute_discovery_stats(game.zone_pairs or [], game.discovered_links or [])
+                stats = compute_discovery_stats(
+                    game.zone_links or [], game.discovered_zone_links or []
+                )
 
             # Send ack to mod
             ack_msg = {
@@ -443,21 +445,21 @@ class ModClient(Client):
 
             # Broadcast to host and viewers
             if all_propagated:
-                # Refetch game to ensure we have ALL discovered_links after multiple propagate calls
+                # Refetch game to ensure we have ALL discovered_zone_links after multiple propagate calls
                 result = await db.execute(select(Game).where(Game.id == self.game_id))
                 game = result.scalar_one_or_none()
 
                 if game:
-                    # Debug: log raw discovered_links before expansion
-                    raw_links = game.discovered_links or []
+                    # Debug: log raw discovered_zone_links before expansion
+                    raw_links = game.discovered_zone_links or []
                     logger.debug(
-                        "[MOD] Before expand: %d raw links, last 5 link_ids: %s",
+                        "[MOD] Before expand: %d raw links, last 5 zone_link_ids: %s",
                         len(raw_links),
-                        [dl.get("link_id") for dl in raw_links[-5:]],
+                        [dl.get("zone_link_id") or dl.get("link_id") for dl in raw_links[-5:]],
                     )
 
                     expanded_links = expand_discovered_links(
-                        game.discovered_links or [], game.zone_pairs or []
+                        game.discovered_zone_links or [], game.zone_links or []
                     )
 
                     # Debug: check if expansion dropped any links
@@ -477,7 +479,7 @@ class ModClient(Client):
                         {
                             "type": "discovery",
                             "propagated": all_propagated,
-                            "discovered_links": expanded_links,
+                            "discovered_zone_links": expanded_links,
                             "stats": stats,
                         },
                         exclude=self.ws,

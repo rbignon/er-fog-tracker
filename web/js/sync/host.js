@@ -488,8 +488,8 @@ export async function connectAsHost(gameId) {
             // Game state received after auth (or reconnection)
             if (data.type === 'game_state') {
                 // Apply discoveries from server (source of truth, may have changed during disconnect)
-                if (data.state?.discovered_links) {
-                    handleDiscoveryFromServer([], data.state.discovered_links);
+                if (data.state?.discovered_zone_links) {
+                    handleDiscoveryFromServer([], data.state.discovered_zone_links);
                 }
                 authResolved = true;
                 State.setSyncState(true, true, gameId);
@@ -510,7 +510,7 @@ export async function connectAsHost(gameId) {
 
             // Discovery from mod
             if (data.type === 'discovery') {
-                handleDiscoveryFromServer(data.propagated, data.discovered_links, data.stats);
+                handleDiscoveryFromServer(data.propagated, data.discovered_zone_links, data.stats);
                 return;
             }
 
