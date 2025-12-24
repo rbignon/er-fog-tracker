@@ -98,8 +98,6 @@ class ConnectionManager:
         for viewer in disconnected:
             room.viewers.remove(viewer)
 
-        logger.debug("[BROADCAST] Sent to %d viewers for game %s", sent_count, game_id)
-
     async def broadcast_to_all(
         self, game_id: UUID, message: dict, exclude: WebSocket | None = None
     ):
