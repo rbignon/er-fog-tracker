@@ -213,6 +213,8 @@ Create a discovery (REST fallback, prefer WebSocket).
 }
 ```
 
+**Side effect**: Broadcasts a `discovery` message to all connected viewers via WebSocket.
+
 #### `POST /api/games/{game_id}/undiscoveries`
 Undiscover a zone and cascade.
 
@@ -224,6 +226,8 @@ Undiscover a zone and cascade.
   "zone": "Zone Name"
 }
 ```
+
+**Side effect**: Broadcasts a `discovery` message (with updated state) to all connected viewers via WebSocket.
 
 ---
 
@@ -369,6 +373,8 @@ Update tags on a zone.
 
 Broadcast current visual state to viewers.
 
+**Note**: This message contains only visual information (positions, highlights, viewport, selection). Discoveries are NOT included here - the server is the single source of truth for discoveries, synced via dedicated `discovery` messages.
+
 ```json
 {
   "type": "visual_state",
@@ -391,7 +397,9 @@ Broadcast current visual state to viewers.
   },
   "explorationMode": true,
   "frontierMode": true,
-  "selectedNode": "Zone A"
+  "selectedNode": "Zone A",
+  "discoveredCount": 15,
+  "totalAreas": 100
 }
 ```
 
@@ -522,20 +530,29 @@ Error message.
 
 ### Viewer Sync Flow
 
+**Two separate channels:**
+
+1. **Visual state** - Host broadcasts positions, highlights, viewport to viewers
+2. **Discoveries** - Server broadcasts discoveries to all clients (host + viewers)
+
 ```
   Host           Server        Viewer
     │               │             │
-    │ visual_state  │             │
-    │──────────────▶│             │
-    │               │             │
-    │               │ visual_state│
+    │               │  game_state │  (on connect: initial discoveries)
     │               │────────────▶│
     │               │             │
-    │               │             │ apply classes,
-    │               │             │ positions,
-    │               │             │ viewport
+    │ visual_state  │             │
+    │──────────────▶│             │
+    │               │ visual_state│
+    │               │────────────▶│  apply positions, highlights
+    │               │             │
+    │               │             │
+    │               │  discovery  │  (when mod/host discovers)
+    │               │────────────▶│  apply new discoveries
     │               │             │
 ```
+
+**Key principle**: The server is the single source of truth for discoveries. Viewers receive discoveries from `game_state` (initial load) and `discovery` messages (real-time updates), NOT from the host's `visual_state`.
 
 ## Error Handling
 

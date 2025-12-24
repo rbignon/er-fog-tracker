@@ -144,29 +144,29 @@ If no exact match:
    - Boss zones last
 3. Try matching each candidate against spoiler log
 
-## Zone Pair Matching
+## Zone Link Matching
 
-After resolving zone names, we need to match against the spoiler log's zone pairs.
+After resolving zone names, we need to match against the spoiler log's zone links.
 
 ### Key-Based Matching (V3)
 
-Zone pairs are enriched with internal keys at game creation:
+Zone links are enriched with internal keys at game creation:
 
 ```json
 {
   "source": "Limgrave - Stormhill",
-  "destination": "Liurnia - Lake",
+  "target": "Liurnia - Lake",
   "source_key": "m10_01_stormhill",
-  "destination_key": "m11_05_lake"
+  "target_key": "m11_05_lake"
 }
 ```
 
 Matching process:
 1. Get source candidates (internal names)
 2. Get target candidates (internal names)
-3. Find zone_pair where:
+3. Find zone_link where:
    - `source_key` matches a source candidate, AND
-   - `destination_key` matches a target candidate
+   - `target_key` matches a target candidate
 
 **Precision**: ~92% with entity mapping, ~82% without
 
@@ -175,15 +175,15 @@ Matching process:
 If key-based matching fails, fall back to display name matching:
 1. Get source display names
 2. Get target display names
-3. Find zone_pair where:
+3. Find zone_link where:
    - `source` matches a source display name, AND
-   - `destination` matches a target display name
+   - `target` matches a target display name
 
 **Precision**: ~60% (display names can be ambiguous)
 
-## Zone Pair Enrichment
+## Zone Link Enrichment
 
-At game creation, zone pairs from the spoiler log are enriched with internal keys:
+At game creation, zone links from the spoiler log are enriched with internal keys:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -212,12 +212,12 @@ At game creation, zone pairs from the spoiler log are enriched with internal key
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Enriched Zone Pair                                          │
+│ Enriched Zone Link                                          │
 │ {                                                           │
 │   "source": "Limgrave - Stormhill",                         │
-│   "destination": "Liurnia - Lake",                          │
+│   "target": "Liurnia - Lake",                               │
 │   "source_key": "m10_01_stormhill",                         │
-│   "destination_key": "m11_05_lake"                          │
+│   "target_key": "m11_05_lake"                               │
 │ }                                                           │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -278,7 +278,7 @@ The entity mapping from EMEVD parsing improves precision by providing exact map 
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Match against zone_pairs with reordered candidates          │
+│ Match against zone_links with reordered candidates          │
 │ (More likely to match the correct one first)                │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -319,8 +319,8 @@ If we find that X's source_entity (Y) appears as another entry's dest_entity, an
 
 **2. Spoiler Log Validation**
 
-Cross-reference spoiler log zone pairs against entity_mapping pairs:
-- For each zone_pair (A → B), check if there's a matching (B → A) in entity_mapping
+Cross-reference spoiler log zone links against entity_mapping pairs:
+- For each zone_link (A → B), check if there's a matching (B → A) in entity_mapping
 - Flag inconsistencies between spoiler log and EMEVD data
 
 **3. One-Way Link Detection**
@@ -372,7 +372,7 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
                              ▼
             ┌────────────────────────────────────┐
             │   Try key-based matching           │
-            │   (source_key, destination_key)    │
+            │   (source_key, target_key)         │
             └─────────────────┬──────────────────┘
                     Found ┌───┴───┐ Not found
                           ▼       ▼
@@ -386,14 +386,14 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
 
 ### Discovery Not Matching
 
-1. **Check zone_pairs**: Does the game have the expected connection?
-2. **Check enrichment**: Are `source_key`/`destination_key` populated?
+1. **Check zone_links**: Does the game have the expected connection?
+2. **Check enrichment**: Are `source_key`/`target_key` populated?
 3. **Check entity_mapping**: If launcher was used, is the entity in the mapping?
 4. **Check logs**: Server logs show resolution attempts with candidates
 
 ### Multiple Matches
 
-If multiple zone pairs match the same candidates:
+If multiple zone links match the same candidates:
 - Server picks the first match in spoiler log order
 - This can lead to incorrect matches in rare cases
 - Entity mapping helps by narrowing candidates

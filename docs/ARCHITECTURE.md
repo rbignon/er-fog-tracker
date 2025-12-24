@@ -94,7 +94,7 @@ See: [MOD_INTERNALS.md](MOD_INTERNALS.md)
 
 **Key responsibilities**:
 - Twitch OAuth authentication
-- Store game data (zone pairs, discoveries, positions)
+- Store game data (zone links, discoveries, positions)
 - Resolve zone names from map_id + position
 - WebSocket rooms for host/viewer sync
 - Broadcast discoveries to connected clients
@@ -138,10 +138,10 @@ See: [PROTOCOL.md](PROTOCOL.md)
 
 1. User selects randomizer folder in launcher
 2. Launcher validates folder structure
-3. Launcher parses spoiler log → zone pairs
+3. Launcher parses spoiler log → zone links
 4. Launcher parses EMEVD files → entity mapping
 5. Launcher sends both to server via POST /api/mod/games
-6. Server stores game with enriched zone_pairs
+6. Server stores game with enriched zone_links
 
 ### Discovery Flow (In-Game)
 
@@ -178,23 +178,40 @@ See: [PROTOCOL.md](PROTOCOL.md)
 ```
 ┌──────────┐         ┌──────────┐         ┌──────────┐
 │   Host   │◀───────▶│  Server  │◀───────▶│ Viewers  │
-│ (browser)│  visual │  (room)  │  visual │(browsers)│
-│          │  state  │          │  state  │          │
+│ (browser)│         │  (room)  │         │(browsers)│
 └──────────┘         └──────────┘         └──────────┘
-      │                                         │
-      │ Full control                Read-only   │
-      │ - Select nodes                 mirror   │
+      │                    │                    │
+      │ visual_state ─────▶│───── visual_state ▶│
+      │ (positions,        │     (positions,    │
+      │  highlights,       │      highlights,   │
+      │  viewport)         │      viewport)     │
+      │                    │                    │
+      │ manual_discovery ─▶│                    │
+      │                    │◀── discovery ─────▶│
+      │                    │   (from mod/API)   │
+      │                    │                    │
+      │ Full control       │           Read-only│
+      │ - Select nodes     │              mirror│
       │ - Discover/undiscover                   │
       │ - Move nodes                            │
       │ - Change modes                          │
-      └─────────────────────────────────────────┘
+      └────────────────────┴────────────────────┘
 ```
 
+**Two separate sync channels:**
+
+1. **Visual state** (host → viewers): Positions, highlights, viewport, selection, modes
+2. **Discoveries** (server → all): Server is the single source of truth for discoveries
+
+**Flow:**
+
 1. Host opens game in browser and connects via WebSocket
-2. Viewers join with session code (read-only)
-3. Host actions (selections, discoveries) are broadcast
-4. Viewers receive and apply visual state updates
-5. Node positions are persisted to server
+2. Server sends `game_state` with current `discovered_zone_links`
+3. Viewers join with session code (read-only)
+4. Host visual actions (selections, highlights) are broadcast via `visual_state`
+5. Discoveries (from mod, host manual, or REST API) trigger `discovery` messages
+6. Server broadcasts `discovery` messages to all connected clients
+7. Node positions are persisted to server
 
 ## Technology Stack
 
@@ -215,5 +232,5 @@ See: [PROTOCOL.md](PROTOCOL.md)
 
 - [PROTOCOL.md](PROTOCOL.md) - API endpoints and WebSocket protocol
 - [MOD_INTERNALS.md](MOD_INTERNALS.md) - Memory reading and event detection
-- [GRAPH_MODEL.md](GRAPH_MODEL.md) - Zone pairs and link structure
+- [GRAPH_MODEL.md](GRAPH_MODEL.md) - Zone links and discovery logic
 - [ZONE_MATCHING.md](ZONE_MATCHING.md) - Zone resolution strategies

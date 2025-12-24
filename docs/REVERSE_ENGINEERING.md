@@ -228,22 +228,22 @@ Since MSB parsing failed, we can try matching by position:
 
 1. When mod sends discovery: `(source_pos, target_pos, destination_entity_id)`
 2. Compare `target_pos` with known fog gate positions from fog.txt or other sources
-3. Match to the closest zone_pair entry
+3. Match to the closest zone_link entry
 
 **Challenge**: fog.txt contains zone definitions but not exact fog gate positions.
 
 ### Alternative Approach: EMEVD + Spoiler Log Cross-Reference
 
 1. Group EMEVD events by `(source_map, dest_map)`
-2. Group spoiler log entries by zone pairs (where zones map to maps)
+2. Group spoiler log entries by zone links (where zones map to maps)
 3. If group sizes match, assume 1:1 correspondence
 4. If not, use additional heuristics (order, sub-zone matching)
 
-## Entity → Zone Pair Matching (2025-12-21)
+## Entity → Zone Link Matching (2025-12-21)
 
 ### Working Solution: EMEVD + Spoiler Log Cross-Reference
 
-Created `fog/match_entity_to_zone_pair.py` that successfully matches destination_entity_id to zone_pairs.
+Created `fog/match_entity_to_zone_pair.py` that successfully matches destination_entity_id to zone_links.
 
 **Algorithm:**
 1. Extract all fog warp events from EMEVD files
@@ -251,7 +251,7 @@ Created `fog/match_entity_to_zone_pair.py` that successfully matches destination
 2. Load parsed spoiler log (both `random` and `preexisting` entries)
    - Each entry gives: `(source_zone, dest_zone, source_details, target_details, type)`
 3. Use fog.txt to map zone names → map IDs
-4. Match by finding zone pairs where maps align (in either direction for bidirectional gates)
+4. Match by finding zone links where maps align (in either direction for bidirectional gates)
 
 **Usage:**
 ```bash
