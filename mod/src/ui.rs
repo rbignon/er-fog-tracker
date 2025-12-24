@@ -2,6 +2,7 @@
 
 use hudhook::imgui::{Condition, FontConfig, FontGlyphRanges, FontSource, StyleColor, WindowFlags};
 use hudhook::{ImguiRenderLoop, RenderContext};
+use tracing::{debug, info};
 
 use crate::config::parse_hex_color;
 use crate::tracker::FogRandoTracker;
@@ -41,9 +42,9 @@ impl ImguiRenderLoop for FogRandoTracker {
                 }),
             }]);
 
-            println!("Custom font registered with imgui (size: {}px)", font_size);
+            info!(size = font_size, "Custom font registered with imgui");
         } else {
-            println!("Using default imgui font");
+            info!("Using default imgui font");
         }
     }
 
@@ -128,11 +129,11 @@ impl FogRandoTracker {
     fn handle_hotkeys(&mut self) {
         if self.config.keybindings.toggle_ui.is_just_pressed() {
             self.show_ui = !self.show_ui;
-            println!("UI toggled: show_ui={}", self.show_ui);
+            debug!(show_ui = self.show_ui, "UI toggled");
         }
         if self.config.keybindings.toggle_debug.is_just_pressed() {
             self.show_debug = !self.show_debug;
-            println!("Debug toggled: show_debug={}", self.show_debug);
+            debug!(show_debug = self.show_debug, "Debug toggled");
         }
     }
 

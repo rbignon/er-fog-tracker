@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use tracing::{debug, error, info};
 use windows::Win32::Foundation::HINSTANCE;
 use windows::Win32::System::LibraryLoader::GetModuleFileNameW;
 
@@ -175,12 +176,22 @@ impl Default for ServerSettings {
     }
 }
 
+/// Logging configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LoggingSettings {
+    /// Enable debug console window for real-time logging
+    #[serde(default)]
+    pub console: bool,
+    /// Log file path (relative to DLL directory or absolute). Empty = no file logging.
+    #[serde(default)]
+    pub log_file: String,
+}
+
 /// Main configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
-    /// Enable debug console window for real-time logging
     #[serde(default)]
-    pub debug_console: bool,
+    pub logging: LoggingSettings,
     #[serde(default)]
     pub keybindings: KeyBindings,
     #[serde(default)]
@@ -263,9 +274,9 @@ impl Config {
         let config_path = Self::get_launcher_config_path()?;
 
         if !config_path.exists() {
-            println!(
-                "[config] No launcher config found at {}",
-                config_path.display()
+            debug!(
+                path = %config_path.display(),
+                "[config] No launcher config found"
             );
             return None;
         }
@@ -273,19 +284,19 @@ impl Config {
         match fs::read_to_string(&config_path) {
             Ok(contents) => match toml::from_str(&contents) {
                 Ok(config) => {
-                    println!(
-                        "[config] Loaded launcher config from {}",
-                        config_path.display()
+                    info!(
+                        path = %config_path.display(),
+                        "[config] Loaded launcher config"
                     );
                     Some(config)
                 }
                 Err(e) => {
-                    eprintln!("[config] Failed to parse launcher config: {}", e);
+                    error!(error = %e, "[config] Failed to parse launcher config");
                     None
                 }
             },
             Err(e) => {
-                eprintln!("[config] Failed to read launcher config: {}", e);
+                error!(error = %e, "[config] Failed to read launcher config");
                 None
             }
         }
@@ -296,22 +307,22 @@ impl Config {
         let dir = Self::get_dll_directory(hmodule).ok_or(ConfigError::PathError)?;
         let config_path = dir.join(Self::CONFIG_FILENAME);
 
-        println!(
-            "[config] Looking for local config at: {}",
-            config_path.display()
+        debug!(
+            path = %config_path.display(),
+            "[config] Looking for local config"
         );
 
         // Load local config (overlay, keybindings)
         let mut config: Config = if config_path.exists() {
             let contents = fs::read_to_string(&config_path).map_err(ConfigError::ReadError)?;
             let config: Config = toml::from_str(&contents).map_err(ConfigError::ParseError)?;
-            println!(
-                "[config] Loaded local config from {}",
-                config_path.display()
+            info!(
+                path = %config_path.display(),
+                "[config] Loaded local config"
             );
             config
         } else {
-            println!("[config] No local config found, using defaults");
+            debug!("[config] No local config found, using defaults");
             Config::default()
         };
 
@@ -332,7 +343,7 @@ impl Config {
                     config.server.game_id = game_id;
                 }
             }
-            println!("[config] Merged launcher config into server settings");
+            debug!("[config] Merged launcher config into server settings");
         }
 
         Ok(config)

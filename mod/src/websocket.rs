@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
+use tracing::{debug, error, info, trace, warn};
 use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{connect, Message, WebSocket};
 
@@ -209,12 +210,12 @@ impl WebSocketClient {
     /// Start the WebSocket connection in a background thread
     pub fn connect(&mut self) {
         if !self.is_enabled() {
-            eprintln!("WebSocket client not enabled or missing config");
+            warn!("[WS] Client not enabled or missing config");
             return;
         }
 
         if self.thread_handle.is_some() {
-            eprintln!("WebSocket client already running");
+            warn!("[WS] Client already running");
             return;
         }
 
@@ -375,12 +376,12 @@ fn websocket_thread(
         };
         let ws_url = format!("{}/ws/mod/{}", ws_base, settings.game_id);
 
-        println!("[WS] Connecting to {}...", ws_url);
+        info!(url = %ws_url, "[WS] Connecting...");
         let _ = incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Connecting));
 
         match connect_and_authenticate(&ws_url, &settings.mod_token) {
             Ok(mut socket) => {
-                println!("[WS] Connected and authenticated");
+                info!("[WS] Connected and authenticated");
                 let _ =
                     incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Connected));
                 reconnect_delay = Duration::from_secs(1); // Reset on successful connect
@@ -389,7 +390,7 @@ fn websocket_thread(
                 let result = message_loop(&mut socket, &outgoing_rx, &incoming_tx, &shutdown_flag);
 
                 if let Err(ref e) = result {
-                    println!("[WS] Message loop ended: {}", e);
+                    info!(error = %e, "[WS] Message loop ended");
                 }
 
                 // Close socket gracefully
@@ -405,7 +406,7 @@ fn websocket_thread(
                 }
             }
             Err(e) => {
-                eprintln!("WebSocket connection failed: {}", e);
+                error!(error = %e, "[WS] Connection failed");
                 let _ = incoming_tx.send(IncomingMessage::Error(e.clone()));
                 let _ = incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Error));
 
@@ -421,7 +422,10 @@ fn websocket_thread(
         }
 
         // Wait before reconnecting
-        println!("Reconnecting in {} seconds...", reconnect_delay.as_secs());
+        info!(
+            delay_secs = reconnect_delay.as_secs(),
+            "[WS] Reconnecting..."
+        );
         thread::sleep(reconnect_delay);
 
         // Exponential backoff
@@ -439,11 +443,11 @@ fn connect_and_authenticate(
     api_token: &str,
 ) -> Result<WebSocket<MaybeTlsStream<TcpStream>>, String> {
     // tungstenite handles TLS automatically for wss:// URLs
-    println!("[WS] Opening socket to {}", url);
+    debug!(url, "[WS] Opening socket");
     let (mut socket, _response) = connect(url).map_err(|e| format!("Connection failed: {}", e))?;
 
     // Send auth message
-    println!("[WS] Socket opened, sending auth...");
+    debug!("[WS] Socket opened, sending auth...");
     let auth_msg = ServerMessage::Auth {
         token: api_token.to_string(),
     };
@@ -453,22 +457,22 @@ fn connect_and_authenticate(
         .map_err(|e| format!("Send error: {}", e))?;
 
     // Wait for auth response (with timeout via socket read timeout)
-    println!("[WS] Waiting for auth response...");
+    debug!("[WS] Waiting for auth response...");
     let response = socket.read().map_err(|e| format!("Read error: {}", e))?;
 
     match response {
         Message::Text(text) => {
-            println!("[WS] Auth response: {}", text);
+            debug!(response = %text, "[WS] Auth response received");
             let resp: ServerResponse =
                 serde_json::from_str(&text).map_err(|e| format!("JSON parse error: {}", e))?;
 
             match resp {
                 ServerResponse::AuthOk => {
-                    println!("[WS] Auth successful");
+                    info!("[WS] Auth successful");
                     Ok(socket)
                 }
                 ServerResponse::AuthError { message } => {
-                    println!("[WS] Auth failed: {}", message);
+                    error!(message = %message, "[WS] Auth failed");
                     Err(format!("Auth failed: {}", message))
                 }
                 _ => Err("Unexpected response during auth".to_string()),
@@ -512,11 +516,16 @@ fn message_loop(
             }) => {
                 let source_map_str = format_map_id(source_map_id);
                 let target_map_str = format_map_id(target_map_id);
-                println!(
-                    "[WS TX] Discovery v2: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?} [{}] dest_entity={}",
-                    source_map_str, source_pos.x, source_pos.y, source_pos.z, source_play_region_id,
-                    target_map_str, target_pos.x, target_pos.y, target_pos.z, target_play_region_id,
-                    warp_type, destination_entity_id
+                debug!(
+                    source = %source_map_str,
+                    source_pos = format!("({:.1}, {:.1}, {:.1})", source_pos.x, source_pos.y, source_pos.z),
+                    source_region = ?source_play_region_id,
+                    target = %target_map_str,
+                    target_pos = format!("({:.1}, {:.1}, {:.1})", target_pos.x, target_pos.y, target_pos.z),
+                    target_region = ?target_play_region_id,
+                    warp_type,
+                    dest_entity = destination_entity_id,
+                    "[WS TX] Discovery v2"
                 );
                 let msg = ServerMessage::DiscoveryV2 {
                     source_map_id: source_map_str,
@@ -534,7 +543,6 @@ fn message_loop(
                     .map_err(|e| e.to_string())?;
             }
             Ok(OutgoingMessage::Pong) => {
-                println!("[WS TX] Pong");
                 let msg = ServerMessage::Pong;
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket
@@ -543,7 +551,7 @@ fn message_loop(
                 last_ping_response = Instant::now();
             }
             Ok(OutgoingMessage::Shutdown) => {
-                println!("[WS TX] Shutdown");
+                debug!("[WS TX] Shutdown");
                 return Ok(());
             }
             Err(TryRecvError::Empty) => {}
@@ -555,11 +563,10 @@ fn message_loop(
         // Check for incoming messages (non-blocking)
         match socket.read() {
             Ok(Message::Text(text)) => {
-                println!("[WS RX] Raw: {}", text);
+                trace!(raw = %text, "[WS RX]");
                 if let Ok(resp) = serde_json::from_str::<ServerResponse>(&text) {
                     match resp {
                         ServerResponse::Ping => {
-                            println!("[WS RX] Ping");
                             let _ = incoming_tx.send(IncomingMessage::Ping);
                         }
                         ServerResponse::DiscoveryV2Ack {
@@ -568,13 +575,13 @@ fn message_loop(
                             ref exits,
                             ref stats,
                         } => {
-                            println!(
-                                "[WS RX] DiscoveryV2Ack: zone={} (propagated: {}, exits: {}, discovered: {}/{})",
-                                current_zone.as_deref().unwrap_or("?"),
-                                propagated.len(),
-                                exits.len(),
-                                stats.discovered,
-                                stats.total
+                            debug!(
+                                zone = current_zone.as_deref().unwrap_or("?"),
+                                propagated = propagated.len(),
+                                exits = exits.len(),
+                                discovered = stats.discovered,
+                                total = stats.total,
+                                "[WS RX] DiscoveryV2Ack"
                             );
                             let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
                                 propagated: propagated.clone(),
@@ -588,11 +595,11 @@ fn message_loop(
                             ref stats,
                         } => {
                             // Web UI discovery broadcast - just update stats
-                            println!(
-                                "[WS RX] Discovery (from web): propagated: {}, discovered: {}/{}",
-                                propagated.len(),
-                                stats.discovered,
-                                stats.total
+                            debug!(
+                                propagated = propagated.len(),
+                                discovered = stats.discovered,
+                                total = stats.total,
+                                "[WS RX] Discovery (from web)"
                             );
                             // Send as DiscoveryAck without zone/exits (only stats matter)
                             let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
@@ -603,11 +610,11 @@ fn message_loop(
                             });
                         }
                         ServerResponse::Error { ref message } => {
-                            println!("[WS RX] Error: {}", message);
+                            error!(message, "[WS RX] Error");
                             let _ = incoming_tx.send(IncomingMessage::Error(message.clone()));
                         }
                         _ => {
-                            println!("[WS RX] Other: {:?}", resp);
+                            debug!(response = ?resp, "[WS RX] Other");
                         }
                     }
                 }

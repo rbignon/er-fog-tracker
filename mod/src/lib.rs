@@ -25,6 +25,7 @@
 mod config;
 mod game_state;
 mod hotkey;
+mod logging;
 mod tracker;
 mod ui;
 mod websocket;
@@ -34,9 +35,11 @@ mod websocket;
 // =============================================================================
 
 use std::ffi::c_void;
+use std::path::PathBuf;
 
 use hudhook::hooks::dx12::ImguiDx12Hooks;
 use hudhook::{eject, Hudhook};
+use tracing::{error, info};
 #[allow(unused_imports)]
 use windows::Win32::Foundation::HINSTANCE;
 use windows::Win32::System::Console::{AllocConsole, SetConsoleTitleW};
@@ -44,6 +47,7 @@ use windows::Win32::System::Console::{AllocConsole, SetConsoleTitleW};
 use windows::Win32::System::SystemServices::DLL_PROCESS_ATTACH;
 
 use crate::config::Config;
+use crate::logging::init_logging;
 use crate::tracker::FogRandoTracker;
 
 // =============================================================================
@@ -59,13 +63,38 @@ fn setup_debug_console() {
     }
 }
 
+/// Resolve log file path (relative to DLL directory or absolute)
+fn resolve_log_path(hmodule: HINSTANCE, log_file: &str) -> Option<PathBuf> {
+    if log_file.is_empty() {
+        return None;
+    }
+
+    let path = PathBuf::from(log_file);
+    if path.is_absolute() {
+        Some(path)
+    } else {
+        Config::get_dll_directory(hmodule).map(|dir| dir.join(log_file))
+    }
+}
+
 fn start_mod(hmodule: HINSTANCE) {
-    // Try to load config early to check for debug_console
-    if let Ok(config) = Config::load(hmodule) {
-        if config.debug_console {
-            setup_debug_console();
-            println!("[FogRandoTracker] Debug console enabled");
-        }
+    // Try to load config early to setup logging
+    let (enable_console, log_path) = if let Ok(config) = Config::load(hmodule) {
+        let log_path = resolve_log_path(hmodule, &config.logging.log_file);
+        (config.logging.console, log_path)
+    } else {
+        (false, None)
+    };
+
+    // Setup console if enabled (must be done before logging init)
+    if enable_console {
+        setup_debug_console();
+    }
+
+    // Initialize logging (console and/or file)
+    if enable_console || log_path.is_some() {
+        init_logging(enable_console, log_path);
+        info!("FogRandoTracker logging initialized");
     }
 
     let tracker = match FogRandoTracker::new(hmodule) {
@@ -82,7 +111,7 @@ fn start_mod(hmodule: HINSTANCE) {
         .build()
         .apply()
     {
-        eprintln!("Couldn't apply hooks: {e:?}");
+        error!("Couldn't apply hooks: {e:?}");
         eject();
     }
 }

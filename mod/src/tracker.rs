@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use tracing::{debug, error, info, warn};
 use windows::Win32::Foundation::HINSTANCE;
 
 use crate::config::Config;
@@ -83,7 +84,7 @@ pub struct FogRandoTracker {
 impl FogRandoTracker {
     /// Create a new FogRandoTracker instance
     pub fn new(hmodule: HINSTANCE) -> Option<Self> {
-        println!("Initializing FogRandoTracker...");
+        info!("Initializing FogRandoTracker...");
 
         // Get DLL directory for loading resources
         let dll_dir = Config::get_dll_directory(hmodule)?;
@@ -92,18 +93,18 @@ impl FogRandoTracker {
         let config = match Config::load(hmodule) {
             Ok(cfg) => cfg,
             Err(e) => {
-                eprintln!("Failed to load configuration: {}", e);
-                eprintln!(
-                    "Please ensure '{}' exists next to the DLL.",
-                    Config::CONFIG_FILENAME
+                error!(error = %e, "Failed to load configuration");
+                error!(
+                    filename = Config::CONFIG_FILENAME,
+                    "Please ensure config file exists next to the DLL"
                 );
                 return None;
             }
         };
 
-        println!(
-            "Keybindings: Toggle UI={}",
-            config.keybindings.toggle_ui.name()
+        info!(
+            toggle_ui = config.keybindings.toggle_ui.name(),
+            "Keybindings loaded"
         );
 
         // Initialize game state reader
@@ -118,18 +119,18 @@ impl FogRandoTracker {
         // Initialize GameMan reader for warp detection
         let game_man_reader = GameManReader::new(game_state.base_addresses());
 
-        println!("FogRandoTracker initialized!");
+        info!("FogRandoTracker initialized!");
 
         // Initialize WebSocket client for server integration
         let mut ws_client = WebSocketClient::new(config.server.clone());
         if ws_client.is_enabled() {
-            println!(
-                "Server integration enabled, connecting to {}...",
-                config.server.url
+            info!(
+                url = %config.server.url,
+                "Server integration enabled, connecting..."
             );
             ws_client.connect();
         } else {
-            println!("Server integration disabled (missing url, token, or game_id in config)");
+            info!("Server integration disabled (missing url, token, or game_id in config)");
         }
 
         // Pre-load font data (will be used in initialize())
@@ -199,9 +200,14 @@ impl FogRandoTracker {
             if is_fog_rando_entity(dest_entity_id) {
                 if let Some(pos) = self.game_state.read_position() {
                     let transport_type = self.infer_transport_type();
-                    println!(
-                        "[WARP] Fog rando warp detected! type={} dest_entity={} entry=[{}] pos=({:.1}, {:.1}, {:.1})",
-                        transport_type, dest_entity_id, pos.map_id_str, pos.x, pos.y, pos.z
+                    info!(
+                        transport_type,
+                        dest_entity_id,
+                        map_id = pos.map_id_str,
+                        x = format!("{:.1}", pos.x),
+                        y = format!("{:.1}", pos.y),
+                        z = format!("{:.1}", pos.z),
+                        "[WARP] Fog rando warp detected"
                     );
                     self.pending_warp = Some(PendingWarp {
                         entry: pos,
@@ -209,9 +215,9 @@ impl FogRandoTracker {
                         transport_type,
                     });
                 } else {
-                    println!(
-                        "[WARP] WARNING: Fog rando warp detected but position unreadable! dest_entity={}",
-                        dest_entity_id
+                    warn!(
+                        dest_entity_id,
+                        "[WARP] Fog rando warp detected but position unreadable"
                     );
                 }
             }
@@ -219,18 +225,18 @@ impl FogRandoTracker {
             // Warp just completed - send discovery if we have a pending warp
             if let Some(pending) = self.pending_warp.take() {
                 if let Some(exit_pos) = self.game_state.read_position() {
-                    println!(
-                        "[WARP] Complete: {} → {} (type={}, dest_entity={})",
-                        pending.entry.map_id_str,
-                        exit_pos.map_id_str,
-                        pending.transport_type,
-                        pending.destination_entity_id
+                    info!(
+                        entry = pending.entry.map_id_str,
+                        exit = exit_pos.map_id_str,
+                        transport_type = pending.transport_type,
+                        dest_entity = pending.destination_entity_id,
+                        "[WARP] Complete"
                     );
                     self.send_discovery(&pending, &exit_pos);
                 } else {
-                    println!(
-                        "[WARP] WARNING: Warp completed but exit position unreadable! Entry was at {}",
-                        pending.entry.map_id_str
+                    warn!(
+                        entry = pending.entry.map_id_str,
+                        "[WARP] Completed but exit position unreadable"
                     );
                 }
             }
@@ -253,15 +259,15 @@ impl FogRandoTracker {
     /// Send discovery event to server
     fn send_discovery(&mut self, pending: &PendingWarp, exit_pos: &PlayerPosition) {
         if self.ws_client.is_connected() {
-            println!(
-                "[WARP] Sending to server: {} ({:.1}, {:.1}, {:.1}) region={:?} → {} ({:.1}, {:.1}, {:.1}) region={:?} dest_entity={}",
-                pending.entry.map_id_str,
-                pending.entry.x, pending.entry.y, pending.entry.z,
-                pending.entry.play_region_id,
-                exit_pos.map_id_str,
-                exit_pos.x, exit_pos.y, exit_pos.z,
-                exit_pos.play_region_id,
-                pending.destination_entity_id
+            debug!(
+                entry_map = pending.entry.map_id_str,
+                entry_pos = format!("({:.1}, {:.1}, {:.1})", pending.entry.x, pending.entry.y, pending.entry.z),
+                entry_region = ?pending.entry.play_region_id,
+                exit_map = exit_pos.map_id_str,
+                exit_pos_coords = format!("({:.1}, {:.1}, {:.1})", exit_pos.x, exit_pos.y, exit_pos.z),
+                exit_region = ?exit_pos.play_region_id,
+                dest_entity = pending.destination_entity_id,
+                "[WARP] Sending discovery to server"
             );
             self.ws_client.send_discovery_v2(
                 pending.entry.map_id,
@@ -274,7 +280,7 @@ impl FogRandoTracker {
                 pending.destination_entity_id,
             );
         } else {
-            println!("[WARP] Not connected to server, discovery not sent");
+            warn!("[WARP] Not connected to server, discovery not sent");
         }
     }
 
@@ -305,7 +311,7 @@ impl FogRandoTracker {
         while let Some(msg) = self.ws_client.poll() {
             match msg {
                 IncomingMessage::StatusChanged(status) => {
-                    println!("WebSocket status: {:?}", status);
+                    info!(status = ?status, "WebSocket status changed");
                     match status {
                         ConnectionStatus::Connected => {
                             self.set_status("Server connected".to_string());
@@ -327,13 +333,13 @@ impl FogRandoTracker {
                     exits,
                     stats,
                 } => {
-                    println!(
-                        "Discovery acknowledged by server ({} propagated, zone={:?}, {} exits, {}/{} discovered)",
-                        propagated.len(),
-                        current_zone,
-                        exits.len(),
-                        stats.discovered,
-                        stats.total
+                    info!(
+                        propagated_count = propagated.len(),
+                        zone = ?current_zone,
+                        exit_count = exits.len(),
+                        discovered = stats.discovered,
+                        total = stats.total,
+                        "Discovery acknowledged by server"
                     );
                     // Update current zone, exits, and stats
                     if current_zone.is_some() {
@@ -346,7 +352,7 @@ impl FogRandoTracker {
                     }
                 }
                 IncomingMessage::Error(err) => {
-                    eprintln!("WebSocket error: {}", err);
+                    error!(error = %err, "WebSocket error");
                 }
                 IncomingMessage::Ping => {
                     // Auto-handled by poll()
@@ -377,19 +383,19 @@ impl FogRandoTracker {
         if warp_requested != self.last_logged_warp_requested {
             let warp_info = self.game_man_reader.get_warp_info();
             if warp_requested {
-                println!(
-                    "[GAMEMAN] >>> WARP REQUESTED <<< dest_entity={} dest_map={}",
-                    warp_info
+                debug!(
+                    dest_entity = warp_info
                         .as_ref()
                         .map(|w| w.destination_entity_id)
                         .unwrap_or(0),
-                    warp_info
+                    dest_map = warp_info
                         .as_ref()
                         .map(|w| w.destination_map_id)
-                        .unwrap_or(0)
+                        .unwrap_or(0),
+                    "[GAMEMAN] >>> WARP REQUESTED <<<"
                 );
             } else {
-                println!("[GAMEMAN] Warp completed");
+                debug!("[GAMEMAN] Warp completed");
             }
             self.last_logged_warp_requested = warp_requested;
         }
@@ -409,19 +415,19 @@ impl FogRandoTracker {
                 Some(anim_id) => {
                     // Highlight known animations
                     let label = match anim_id {
-                        60060 => " (FOG_WALL)",
-                        60490 => " (WAYGATE)",
-                        60470 => " (SENDING_GATE_BLUE)",
-                        60472 => " (SENDING_GATE_RED)",
-                        50340 => " (ITEM_USE_MEDAL)",
-                        50230 => " (ITEM_USE_MEMORY)",
-                        63000 => " (SPAWN)",
-                        0 => " (IDLE?)",
+                        60060 => "FOG_WALL",
+                        60490 => "WAYGATE",
+                        60470 => "SENDING_GATE_BLUE",
+                        60472 => "SENDING_GATE_RED",
+                        50340 => "ITEM_USE_MEDAL",
+                        50230 => "ITEM_USE_MEMORY",
+                        63000 => "SPAWN",
+                        0 => "IDLE?",
                         _ => "",
                     };
-                    println!("[ANIM] cur_anim: {}{}", anim_id, label);
+                    debug!(anim_id, label, "[ANIM] cur_anim");
                 }
-                None => println!("[ANIM] cur_anim: None (loading?)"),
+                None => debug!("[ANIM] cur_anim: None (loading?)"),
             };
             self.last_logged_anim = cur_anim;
             self.last_anim_log_time = Instant::now();
@@ -431,8 +437,8 @@ impl FogRandoTracker {
     /// Log SpEffect debug info (with deduplication)
     /// Only logs when state changes or every 5 seconds as a heartbeat
     fn log_speffect_debug(&mut self) {
-        let debug = self.sp_effect_reader.get_debug_info();
-        let current_state = (debug.has_teleport_effect, debug.active_effects.clone());
+        let dbg = self.sp_effect_reader.get_debug_info();
+        let current_state = (dbg.has_teleport_effect, dbg.active_effects.clone());
 
         // Check if state changed or 5 seconds elapsed
         let state_changed = self.last_logged_speffect_state.as_ref() != Some(&current_state);
@@ -440,24 +446,24 @@ impl FogRandoTracker {
 
         if state_changed || heartbeat_due {
             // Log pointer chain status
-            let chain_status = if debug.player_ins.is_some() && debug.sp_effect_ctrl.is_some() {
+            let chain_status = if dbg.player_ins.is_some() && dbg.sp_effect_ctrl.is_some() {
                 "OK"
             } else {
                 "BROKEN"
             };
 
-            println!(
-                "[SPEFFECT] Chain: {} | PlayerIns: {:?} | SpEffCtrl: {:?}",
-                chain_status,
-                debug.player_ins.map(|p| format!("0x{:X}", p)),
-                debug.sp_effect_ctrl.map(|p| format!("0x{:X}", p)),
+            debug!(
+                chain = chain_status,
+                player_ins = ?dbg.player_ins.map(|p| format!("0x{:X}", p)),
+                sp_effect_ctrl = ?dbg.sp_effect_ctrl.map(|p| format!("0x{:X}", p)),
+                "[SPEFFECT] Chain status"
             );
 
             // Log active effects
-            if debug.active_effects.is_empty() {
-                println!("[SPEFFECT] Active: (none)");
+            if dbg.active_effects.is_empty() {
+                debug!("[SPEFFECT] Active: (none)");
             } else {
-                let display: Vec<String> = debug
+                let effects_str: Vec<String> = dbg
                     .active_effects
                     .iter()
                     .map(|id| {
@@ -468,17 +474,17 @@ impl FogRandoTracker {
                         }
                     })
                     .collect();
-                println!("[SPEFFECT] Active: [{}]", display.join(", "));
+                debug!(effects = %effects_str.join(", "), "[SPEFFECT] Active");
             }
 
             // Log teleport status change specifically
             if state_changed {
                 if let Some((was_teleporting, _)) = &self.last_logged_speffect_state {
-                    if *was_teleporting != debug.has_teleport_effect {
-                        if debug.has_teleport_effect {
-                            println!("[SPEFFECT] >>> TELEPORT EFFECT 4280 ACTIVATED <<<");
+                    if *was_teleporting != dbg.has_teleport_effect {
+                        if dbg.has_teleport_effect {
+                            info!("[SPEFFECT] >>> TELEPORT EFFECT 4280 ACTIVATED <<<");
                         } else {
-                            println!("[SPEFFECT] >>> TELEPORT EFFECT 4280 DEACTIVATED <<<");
+                            info!("[SPEFFECT] >>> TELEPORT EFFECT 4280 DEACTIVATED <<<");
                         }
                     }
                 }
@@ -529,15 +535,19 @@ impl FogRandoTracker {
             if full_path.exists() {
                 match fs::read(full_path) {
                     Ok(data) => {
-                        println!(
-                            "Loaded font from: {} ({} bytes)",
-                            full_path.display(),
-                            data.len()
+                        info!(
+                            path = %full_path.display(),
+                            size = data.len(),
+                            "Loaded font"
                         );
                         return Some(data);
                     }
                     Err(e) => {
-                        eprintln!("Failed to read font file {}: {}", full_path.display(), e);
+                        error!(
+                            path = %full_path.display(),
+                            error = %e,
+                            "Failed to read font file"
+                        );
                     }
                 }
             }
@@ -549,7 +559,7 @@ impl FogRandoTracker {
             .map(|p| p.display().to_string())
             .collect::<Vec<_>>()
             .join(", ");
-        eprintln!("Font not found (tried: {}). Using imgui default.", tried);
+        warn!(tried_paths = %tried, "Font not found, using imgui default");
         None
     }
 }
