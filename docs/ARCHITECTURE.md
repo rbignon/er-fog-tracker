@@ -67,7 +67,7 @@ This document provides a high-level overview of the Fog Gate Randomizer Tracker 
 
 **Key responsibilities**:
 - Read game memory to detect player position, animation state, and warp events
-- Detect different teleport types: fog walls, waygates, coffins, medals
+- Detect teleport animations: fog walls, waygates, sending gates, medals
 - Send discovery events to server via WebSocket
 - Display overlay UI showing current zone and available exits
 
@@ -162,15 +162,16 @@ See: [PROTOCOL.md](PROTOCOL.md)
 ```
 
 1. Player walks through a fog gate
-2. Mod detects animation + warp_requested + position change
-3. Mod sends discovery_v2 with map_id, position, destination_entity_id
-4. Server resolves zone names using:
+2. Mod detects teleport animation start → records entry position
+3. Mod captures destination_entity_id from GameMan when available
+4. Mod detects animation end + position readable → sends discovery_v2
+5. Server resolves zone names using:
    - entity_mapping (if available)
    - Col-based matching
    - Position rules (submaps.txt)
    - Zone key matching (fog.txt)
-5. Server stores discovered link and broadcasts to host/viewers
-6. Web UI updates graph to show new discovery
+6. Server stores discovered link and broadcasts to host/viewers
+7. Web UI updates graph to show new discovery
 
 ### Streamer Sync Flow
 

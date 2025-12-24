@@ -15,14 +15,33 @@ use crate::websocket::{
 };
 
 // =============================================================================
-// FOG GATE RANDOMIZER ENTITY RANGE
+// TELEPORT ANIMATION IDS
 // =============================================================================
+
+/// Known teleportation animation IDs
+const ANIM_FOG_WALL: u32 = 60060;
+const ANIM_WAYGATE: u32 = 60490;
+const ANIM_SENDING_GATE_BLUE: u32 = 60470;
+const ANIM_SENDING_GATE_RED: u32 = 60472;
+const ANIM_MEDAL: u32 = 50340;
+
+/// Check if an animation ID corresponds to a teleportation and return its name
+fn get_teleport_type(anim_id: u32) -> Option<&'static str> {
+    match anim_id {
+        ANIM_FOG_WALL => Some("FOG"),
+        ANIM_WAYGATE => Some("WAYGATE"),
+        ANIM_SENDING_GATE_BLUE | ANIM_SENDING_GATE_RED => Some("SENDING_GATE"),
+        ANIM_MEDAL => Some("MEDAL"),
+        _ => None,
+    }
+}
 
 /// Fog Gate Randomizer generates sequential entity IDs in this range
 const FOG_RANDO_ENTITY_MIN: u32 = 755890000;
 const FOG_RANDO_ENTITY_MAX: u32 = 755899999;
 
 /// Check if an entity ID is from Fog Gate Randomizer
+#[allow(dead_code)]
 fn is_fog_rando_entity(entity_id: u32) -> bool {
     entity_id >= FOG_RANDO_ENTITY_MIN && entity_id <= FOG_RANDO_ENTITY_MAX
 }
@@ -35,9 +54,9 @@ fn is_fog_rando_entity(entity_id: u32) -> bool {
 #[derive(Clone, Debug)]
 pub(crate) struct PendingWarp {
     entry: PlayerPosition,
-    /// Entity ID of the warp destination (755890xxx for fog rando warps)
+    /// Entity ID of the warp destination (captured when warp_requested becomes true)
     destination_entity_id: u32,
-    /// Inferred transport type (for logging only)
+    /// Transport type inferred from animation
     transport_type: &'static str,
 }
 
@@ -52,8 +71,8 @@ pub struct FogRandoTracker {
     game_man_reader: GameManReader,
     /// Pending fog rando warp (entry recorded, waiting for exit)
     pending_warp: Option<PendingWarp>,
-    /// Previous warp_requested state (edge detection)
-    was_warp_requested: bool,
+    /// Whether we were in a teleport animation last frame
+    was_in_teleport_anim: bool,
     pub(crate) show_ui: bool,
     pub(crate) show_debug: bool,
     pub(crate) config: Config,
@@ -141,7 +160,7 @@ impl FogRandoTracker {
             sp_effect_reader,
             game_man_reader,
             pending_warp: None,
-            was_warp_requested: false,
+            was_in_teleport_anim: false,
             show_ui: true,
             show_debug: false,
             config,
@@ -162,9 +181,11 @@ impl FogRandoTracker {
 
     /// Check for fog gate randomizer warps each frame
     ///
-    /// Simplified detection: a warp is relevant if dest_entity_id is in the
-    /// Fog Gate Randomizer range (755890000-755899999). This avoids complex
-    /// animation/SpEffect detection and eliminates false positives from deaths.
+    /// Detection strategy:
+    /// 1. Detect teleport animations (fog wall, waygate, sending gate, medal)
+    /// 2. When animation starts → record entry position
+    /// 3. Capture dest_entity_id when warp_requested becomes true (delayed for fog gates)
+    /// 4. When animation ends + position readable → send discovery
     pub fn check_fog_traversal(&mut self) {
         // Log SpEffect debug info (with deduplication)
         self.log_speffect_debug();
@@ -177,8 +198,9 @@ impl FogRandoTracker {
 
         // Track loading screens - clear zone info when exiting a loading screen
         // (position goes from None to Some). This handles teleportation, death, fast travel, etc.
+        // But only if we don't have a pending warp (to avoid clearing info we just received)
         let position_now_readable = self.game_state.read_position().is_some();
-        if position_now_readable && !self.was_position_readable {
+        if position_now_readable && !self.was_position_readable && self.pending_warp.is_none() {
             // Just exited a loading screen - clear current zone until we get new info from server
             self.current_zone = None;
             self.current_exits.clear();
@@ -186,43 +208,53 @@ impl FogRandoTracker {
         self.was_position_readable = position_now_readable;
 
         // =========================================================================
-        // FOG GATE RANDOMIZER WARP DETECTION
+        // ANIMATION-BASED TELEPORT DETECTION
         //
-        // Simple logic: when warp_requested becomes true and dest_entity_id is
-        // in the fog rando range (755890000-755899999), record entry position.
-        // When warp completes (warp_requested = false + position readable), send.
+        // 1. Detect animation start → record entry position (dest_entity_id = 0)
+        // 2. When warp_requested becomes true → capture dest_entity_id
+        // 3. Detect animation end + position readable → send discovery
         // =========================================================================
-        let warp_requested = self.game_man_reader.is_warp_requested();
-        let dest_entity_id = self.game_man_reader.get_destination_entity_id();
+        let cur_anim = self.game_state.read_animation();
+        let is_in_teleport_anim = cur_anim.and_then(get_teleport_type).is_some();
+        let transport_type = cur_anim.and_then(get_teleport_type).unwrap_or("OTHER");
 
-        if warp_requested && !self.was_warp_requested {
-            // Warp just started - check if it's a fog rando warp
-            if is_fog_rando_entity(dest_entity_id) {
-                if let Some(pos) = self.game_state.read_position() {
-                    let transport_type = self.infer_transport_type();
-                    info!(
-                        transport_type,
-                        dest_entity_id,
-                        map_id = pos.map_id_str,
-                        x = format!("{:.1}", pos.x),
-                        y = format!("{:.1}", pos.y),
-                        z = format!("{:.1}", pos.z),
-                        "[WARP] Fog rando warp detected"
-                    );
-                    self.pending_warp = Some(PendingWarp {
-                        entry: pos,
-                        destination_entity_id: dest_entity_id,
-                        transport_type,
-                    });
-                } else {
-                    warn!(
-                        dest_entity_id,
-                        "[WARP] Fog rando warp detected but position unreadable"
-                    );
+        // Entry detection: animation just started
+        if is_in_teleport_anim && !self.was_in_teleport_anim {
+            if let Some(pos) = self.game_state.read_position() {
+                info!(
+                    transport_type,
+                    map_id = pos.map_id_str,
+                    x = format!("{:.1}", pos.x),
+                    y = format!("{:.1}", pos.y),
+                    z = format!("{:.1}", pos.z),
+                    "[WARP] Teleport animation started"
+                );
+                self.pending_warp = Some(PendingWarp {
+                    entry: pos,
+                    destination_entity_id: 0, // Will be captured when warp_requested becomes true
+                    transport_type,
+                });
+            } else {
+                warn!(
+                    transport_type,
+                    "[WARP] Teleport animation started but position unreadable"
+                );
+            }
+        }
+
+        // Capture dest_entity_id when available (happens after animation start for fog gates)
+        if let Some(ref mut pending) = self.pending_warp {
+            if pending.destination_entity_id == 0 {
+                let dest_entity_id = self.game_man_reader.get_destination_entity_id();
+                if dest_entity_id != 0 {
+                    pending.destination_entity_id = dest_entity_id;
+                    debug!(dest_entity_id, "[WARP] Captured destination entity ID");
                 }
             }
-        } else if !warp_requested && self.was_warp_requested {
-            // Warp just completed - send discovery if we have a pending warp
+        }
+
+        // Exit detection: animation ended + position readable
+        if !is_in_teleport_anim && self.was_in_teleport_anim {
             if let Some(pending) = self.pending_warp.take() {
                 if let Some(exit_pos) = self.game_state.read_position() {
                     info!(
@@ -234,26 +266,34 @@ impl FogRandoTracker {
                     );
                     self.send_discovery(&pending, &exit_pos);
                 } else {
-                    warn!(
+                    // Position not readable yet (still loading) - keep pending
+                    debug!(
                         entry = pending.entry.map_id_str,
-                        "[WARP] Completed but exit position unreadable"
+                        "[WARP] Animation ended but position unreadable, waiting..."
                     );
+                    self.pending_warp = Some(pending);
                 }
             }
         }
 
-        self.was_warp_requested = warp_requested;
-    }
-
-    /// Infer transport type from current animation (best-effort, for logging only)
-    fn infer_transport_type(&self) -> &'static str {
-        match self.game_state.read_animation() {
-            Some(60060) => "FOG",
-            Some(60490) => "WAYGATE",
-            Some(60470) | Some(60472) => "SENDING_GATE",
-            Some(50340) => "MEDAL",
-            _ => "OTHER", // coffin, scripted events, etc.
+        // Also check: if we have a pending warp with no animation and position is readable, send it
+        // This handles cases where the animation ended while position was unreadable
+        if self.pending_warp.is_some() && !is_in_teleport_anim && position_now_readable {
+            if let Some(pending) = self.pending_warp.take() {
+                if let Some(exit_pos) = self.game_state.read_position() {
+                    info!(
+                        entry = pending.entry.map_id_str,
+                        exit = exit_pos.map_id_str,
+                        transport_type = pending.transport_type,
+                        dest_entity = pending.destination_entity_id,
+                        "[WARP] Complete (delayed)"
+                    );
+                    self.send_discovery(&pending, &exit_pos);
+                }
+            }
         }
+
+        self.was_in_teleport_anim = is_in_teleport_anim;
     }
 
     /// Send discovery event to server
