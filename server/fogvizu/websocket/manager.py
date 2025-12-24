@@ -59,7 +59,6 @@ class ConnectionManager:
             return
 
         if not room.viewers:
-            logger.debug("[BROADCAST] No viewers in room for game %s", game_id)
             return
 
         disconnected = []
