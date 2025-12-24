@@ -122,10 +122,13 @@ class ZoneInfo:
 class ConnectionInfo:
     """Parsed connection info."""
 
+    # Required fields (no defaults) must come first
     id: str  # Unique identifier for this link
     source: str  # Source zone name
-    source_id: str | None = None  # Source zone UUID
     target: str  # Target zone name
+
+    # Optional fields with defaults
+    source_id: str | None = None  # Source zone UUID
     target_id: str | None = None  # Target zone UUID
     conn_type: str = "random"  # 'random' or 'preexisting'
     source_details: str = ""
