@@ -36,14 +36,14 @@ from fogvizu.models import (
     ZoneLink,
 )
 from fogvizu.websocket import manager as ws_manager
-from fogvizu.zone_matching import build_zone_pairs_index, undiscover_zone
+from fogvizu.zone_matching import build_zone_pairs_index, get_zone_link_id, undiscover_zone
 
 router = APIRouter()
 
 
 def _expand_discovered_zone_link(dl: dict, zp_index: dict[str, dict]) -> tuple[str, str, str]:
     """Expand a discovered zone link to (zone_link_id, source, target)."""
-    zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
+    zone_link_id = get_zone_link_id(dl)
     zp = zp_index.get(zone_link_id)
     if zp:
         return zone_link_id, zp["source"], zp["target"]
@@ -130,7 +130,7 @@ async def get_game(
     # Build discovered_zone_links response (just zone_link_id + metadata)
     response_links = []
     for dl in discovered_zone_links:
-        zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
+        zone_link_id = get_zone_link_id(dl)
         if zone_link_id and zone_link_id in zp_index:
             response_links.append(
                 DiscoveredZoneLinkResponse(
@@ -300,7 +300,7 @@ async def create_discovery(
     # Build response with zone_link_id only (no source/target duplication)
     response_links = []
     for dl in all_links:
-        zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
+        zone_link_id = get_zone_link_id(dl)
         if zone_link_id and zone_link_id in zp_index:
             response_links.append(
                 DiscoveredZoneLink(
@@ -372,7 +372,7 @@ async def create_undiscovery(
     zp_index = build_zone_pairs_index(zone_links)
     response_links = []
     for dl in new_links:
-        zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
+        zone_link_id = get_zone_link_id(dl)
         if zone_link_id and zone_link_id in zp_index:
             response_links.append(
                 DiscoveredZoneLink(

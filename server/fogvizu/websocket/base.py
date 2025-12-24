@@ -11,6 +11,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from fogvizu.config import settings
 from fogvizu.database import Game, User
+from fogvizu.zone_matching import get_zone_link_id
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,9 @@ def build_game_state(game: Game) -> dict:
     # Only include zone_link_id (client resolves source/target from linkIndex)
     discovered_links = []
     for dl in game.discovered_zone_links or []:
-        zone_link_id = dl.get("zone_link_id") or dl.get("link_id")
-        if zone_link_id and zone_link_id in zl_ids:
-            discovered_links.append({"zone_link_id": zone_link_id})
+        zl_id = get_zone_link_id(dl)
+        if zl_id and zl_id in zl_ids:
+            discovered_links.append({"zone_link_id": zl_id})
 
     return {
         "discovered_zone_links": discovered_links,

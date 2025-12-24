@@ -2,6 +2,7 @@
 // SYNC HOST - Host (streamer) WebSocket logic
 // ============================================================
 
+import { TIMING } from '../constants.js';
 import * as State from '../state.js';
 import * as Auth from '../auth.js';
 import {
@@ -246,7 +247,7 @@ function getFullSyncState() {
 export function initStreamUI() {
     const streamModal = document.getElementById('stream-modal');
     if (!streamModal) {
-        setTimeout(initStreamUI, 50);
+        setTimeout(initStreamUI, TIMING.STREAM_UI_INIT);
         return;
     }
 
@@ -358,7 +359,7 @@ State.subscribe('viewportChanged', () => {
 
 State.subscribe('selectionChanged', () => {
     if (State.isSyncConnected() && State.isStreamerHost()) {
-        setTimeout(() => syncState(), 50);
+        setTimeout(() => syncState(), TIMING.SYNC_THROTTLE);
     }
 });
 
@@ -394,37 +395,37 @@ State.subscribe('nodeTagsChanged', ({ nodeId, tags }) => {
 
 State.subscribe('nodeSelected', () => {
     if (State.isSyncConnected() && State.isStreamerHost()) {
-        setTimeout(() => syncState(), 50);
+        setTimeout(() => syncState(), TIMING.SYNC_THROTTLE);
     }
 });
 
 State.subscribe('searchMatched', () => {
     if (State.isSyncConnected() && State.isStreamerHost()) {
-        setTimeout(() => syncState(), 50);
+        setTimeout(() => syncState(), TIMING.SYNC_THROTTLE);
     }
 });
 
 State.subscribe('searchCleared', () => {
     if (State.isSyncConnected() && State.isStreamerHost()) {
-        setTimeout(() => syncState(), 50);
+        setTimeout(() => syncState(), TIMING.SYNC_THROTTLE);
     }
 });
 
 State.subscribe('frontierHighlightChanged', () => {
     if (State.isSyncConnected() && State.isStreamerHost()) {
-        setTimeout(() => syncState(), 50);
+        setTimeout(() => syncState(), TIMING.SYNC_THROTTLE);
     }
 });
 
 State.subscribe('tagFilterChanged', () => {
     if (State.isSyncConnected() && State.isStreamerHost()) {
-        setTimeout(() => syncState(), 50);
+        setTimeout(() => syncState(), TIMING.SYNC_THROTTLE);
     }
 });
 
 State.subscribe('explorationModeChanged', () => {
     if (State.isSyncConnected() && State.isStreamerHost()) {
-        setTimeout(() => syncState(), 200);
+        setTimeout(() => syncState(), TIMING.SYNC_THROTTLE_SLOW);
     }
 });
 
@@ -548,9 +549,4 @@ export async function connectAsHost(gameId) {
             }
         };
     });
-}
-
-// Reset lastSyncedViewport on disconnect (exported for common.js)
-export function resetSyncState() {
-    lastSyncedViewport = null;
 }

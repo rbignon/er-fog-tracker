@@ -6,6 +6,7 @@ import { extractRequiredItemFromDescription, parseRequiredItemZones } from './pa
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
 import * as PositionManager from './positionManager.js';
+import { TIMING } from './constants.js';
 
 // Track which tags are selected for filtering
 const selectedTagFilters = new Set();
@@ -199,13 +200,13 @@ export function renderGraph(preservePositions = false) {
             svg.transition()
                 .duration(750)
                 .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-        }, 2000);
+        }, TIMING.INITIAL_ZOOM_DELAY);
     }
 
     // Re-apply frontier highlight if active AND no node is selected
     // (if a node is selected, applySelectionHighlights already handled it)
     if (State.isFrontierHighlightActive() && !State.getSelectedNodeId()) {
-        setTimeout(() => State.emit('frontierHighlightChanged', true), 100);
+        setTimeout(() => State.emit('frontierHighlightChanged', true), TIMING.POST_RENDER_SETUP);
     }
 
     // Update tag stats display
@@ -213,12 +214,12 @@ export function renderGraph(preservePositions = false) {
 
     // Re-apply tag highlight if filters are active
     if (selectedTagFilters.size > 0) {
-        setTimeout(() => applyTagHighlight(), 100);
+        setTimeout(() => applyTagHighlight(), TIMING.POST_RENDER_SETUP);
     }
 
     // Sync state after render completes (to capture restored highlights)
     if (preservePositions) {
-        setTimeout(() => State.emit('graphRenderCompleted'), 150);
+        setTimeout(() => State.emit('graphRenderCompleted'), TIMING.GRAPH_RENDER_COMPLETE);
     }
 }
 
@@ -656,7 +657,7 @@ function unfreezeNodesAfterDelay(simulation) {
             }
         });
         simulation.alpha(0.1).restart();
-    }, 500);
+    }, TIMING.NODE_UNFREEZE_DELAY);
 }
 
 // ============================================================
@@ -1290,7 +1291,7 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
         if (selectedNodeData) {
             // Apply immediately and also after a delay to ensure it sticks
             applySelectionHighlights(selectedNode, selectedNodeData);
-            setTimeout(() => applySelectionHighlights(selectedNode, selectedNodeData), 50);
+            setTimeout(() => applySelectionHighlights(selectedNode, selectedNodeData), TIMING.SELECTION_RESTORE_DELAY);
         }
     }
 

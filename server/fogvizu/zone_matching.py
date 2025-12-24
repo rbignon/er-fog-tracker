@@ -14,6 +14,14 @@ logger = logging.getLogger(__name__)
 START_NODE = "Chapel of Anticipation"
 
 
+def get_zone_link_id(link: dict) -> str | None:
+    """Get the zone_link_id from a link dict, with legacy fallback.
+
+    Handles both new format (zone_link_id) and legacy format (link_id).
+    """
+    return link.get("zone_link_id") or link.get("link_id")
+
+
 def strip_parenthetical(name: str) -> str:
     """Strip parenthetical suffix from zone name.
 
@@ -107,7 +115,7 @@ def expand_discovered_links(discovered_links: list[dict], zone_pairs: list[dict]
     skipped = []
 
     for link in discovered_links:
-        link_id = link.get("link_id") or link.get("zone_link_id")
+        link_id = get_zone_link_id(link)
         if link_id and link_id in zp_index:
             valid_links.append({"zone_link_id": link_id})
         else:
@@ -133,7 +141,7 @@ def get_discovered_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -
     zp_index = build_zone_pairs_index(zone_pairs)
 
     for link in discovered_links:
-        link_id = link.get("link_id") or link.get("zone_link_id")
+        link_id = get_zone_link_id(link)
         zp = zp_index.get(link_id)
         if zp:
             discovered.add(zp["source"])
@@ -152,7 +160,7 @@ def link_exists(
     zp_index = build_zone_pairs_index(zone_pairs)
 
     for dl in discovered_links:
-        link_id = dl.get("link_id") or dl.get("zone_link_id")
+        link_id = get_zone_link_id(dl)
         zp = zp_index.get(link_id)
         if zp and zp["source"] == source and zp["target"] == target:
             return True
@@ -484,7 +492,7 @@ def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]
     # Collect discovered zones (appear in any discovered link)
     discovered_zones = set()
     for link in discovered_links:
-        link_id = link.get("link_id") or link.get("zone_link_id")
+        link_id = get_zone_link_id(link)
         zp = zp_index.get(link_id)
         if zp:
             discovered_zones.add(zp["source"])
@@ -534,7 +542,7 @@ def is_link_discovered(
     zp_index = build_zone_pairs_index(zone_pairs)
 
     for dl in discovered_links:
-        link_id = dl.get("link_id") or dl.get("zone_link_id")
+        link_id = get_zone_link_id(dl)
         zp = zp_index.get(link_id)
         if zp:
             dl_src = zp["source"]
@@ -561,7 +569,7 @@ def is_accessible_from_start(
     # Expand links to (source, target) tuples
     expanded_links = []
     for dl in discovered_links:
-        link_id = dl.get("link_id") or dl.get("zone_link_id")
+        link_id = get_zone_link_id(dl)
         zp = zp_index.get(link_id)
         if zp:
             expanded_links.append((zp["source"], zp["target"]))
@@ -718,7 +726,7 @@ def find_reachable_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -
     # Expand links to (source, target) tuples
     expanded_links = []
     for dl in discovered_links:
-        link_id = dl.get("link_id") or dl.get("zone_link_id")
+        link_id = get_zone_link_id(dl)
         zp = zp_index.get(link_id)
         if zp:
             expanded_links.append((zp["source"], zp["target"]))
@@ -764,7 +772,7 @@ def undiscover_zone(
 
     def get_link_endpoints(dl: dict) -> tuple[str, str]:
         """Get source and target from a discovered link."""
-        link_id = dl.get("link_id") or dl.get("zone_link_id")
+        link_id = get_zone_link_id(dl)
         zp = zp_index.get(link_id)
         if zp:
             return zp["source"], zp["target"]

@@ -998,6 +998,42 @@ input[type="checkbox"]:checked::after {
 #graph-container {
     width: 100%;
     height: 100vh;
+    position: relative;
+}
+
+/* Loading overlay */
+.graph-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #c4b998;
+    font-size: 16px;
+    z-index: 100;
+}
+
+.graph-loading.hidden {
+    display: none;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #3a3530;
+    border-top-color: #c4b998;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 svg {

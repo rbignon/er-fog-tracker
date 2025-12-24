@@ -5,7 +5,6 @@ FastAPI server with REST API and WebSocket support for real-time sync.
 """
 
 import argparse
-import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import UUID
@@ -18,26 +17,14 @@ from fastapi.staticfiles import StaticFiles
 from fogvizu.api import api_router
 from fogvizu.config import settings
 from fogvizu.database import init_db
+from fogvizu.logging_config import configure_logging, get_logger
 from fogvizu.websocket import HostClient, ModClient, ViewerClient
 from fogvizu.zone_resolver import init_resolver
 
-# Configure logging
-log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
-log_format = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
-log_datefmt = "%Y-%m-%d %H:%M:%S"
-
-handlers: list[logging.Handler] = [logging.StreamHandler()]
-
-if settings.log_file:
-    file_handler = logging.FileHandler(settings.log_file, encoding="utf-8")
-    file_handler.setFormatter(logging.Formatter(log_format, datefmt=log_datefmt))
-    handlers.append(file_handler)
-
-logging.basicConfig(
-    level=log_level,
-    format=log_format,
-    datefmt=log_datefmt,
-    handlers=handlers,
+# Configure structured logging
+configure_logging(
+    json_output=settings.log_json,
+    log_level=settings.log_level,
 )
 
 
@@ -51,10 +38,11 @@ async def lifespan(app: FastAPI):
     # Initialize zone resolver with fog randomizer data
     data_dir = Path(__file__).parent.parent / settings.data_dir
     resolver = init_resolver(data_dir)
-    logging.getLogger(__name__).info(
-        "Zone resolver initialized with %d map rules, %d zone names",
-        len(resolver.map_rules),
-        len(resolver.zone_display_names),
+    logger = get_logger(__name__)
+    logger.info(
+        "zone_resolver_initialized",
+        map_rules=len(resolver.map_rules),
+        zone_names=len(resolver.zone_display_names),
     )
 
     yield

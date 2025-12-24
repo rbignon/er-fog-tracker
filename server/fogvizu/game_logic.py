@@ -18,6 +18,7 @@ from fogvizu.zone_matching import (
     find_similar_zones,
     find_zone_pair,
     get_discovered_nodes,
+    get_zone_link_id,
     is_accessible_from_start,
     link_exists,
 )
@@ -244,8 +245,7 @@ async def propagate_discovery(
                 if link_type == "preexisting":
                     # Check if this specific link is already discovered
                     already_discovered = any(
-                        (dl.get("link_id") or dl.get("zone_link_id")) == link_uuid
-                        for dl in discovered_links
+                        get_zone_link_id(dl) == link_uuid for dl in discovered_links
                     )
                     if not already_discovered:
                         new_link = {

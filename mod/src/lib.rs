@@ -39,6 +39,7 @@ use std::path::PathBuf;
 
 use hudhook::hooks::dx12::ImguiDx12Hooks;
 use hudhook::{eject, Hudhook};
+use libeldenring::version::get_version;
 use tracing::{error, info};
 #[allow(unused_imports)]
 use windows::Win32::Foundation::HINSTANCE;
@@ -95,6 +96,7 @@ fn start_mod(hmodule: HINSTANCE) {
     if enable_console || log_path.is_some() {
         init_logging(enable_console, log_path);
         info!("FogRandoTracker logging initialized");
+        info!(version = ?get_version(), "Detected game version");
     }
 
     let tracker = match FogRandoTracker::new(hmodule) {

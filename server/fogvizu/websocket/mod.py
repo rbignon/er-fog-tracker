@@ -21,6 +21,7 @@ from fogvizu.zone_matching import (
     compute_zone_exits,
     expand_discovered_links,
     find_all_matching_zone_pairs_by_keys,
+    get_zone_link_id,
 )
 from fogvizu.zone_resolver import get_resolver
 
@@ -455,7 +456,7 @@ class ModClient(Client):
                     logger.debug(
                         "[MOD] Before expand: %d raw links, last 5 zone_link_ids: %s",
                         len(raw_links),
-                        [dl.get("zone_link_id") or dl.get("link_id") for dl in raw_links[-5:]],
+                        [get_zone_link_id(dl) for dl in raw_links[-5:]],
                     )
 
                     expanded_links = expand_discovered_links(

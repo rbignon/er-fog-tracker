@@ -2,6 +2,7 @@
 // SYNC VIEWER - Viewer WebSocket logic
 // ============================================================
 
+import { TIMING } from '../constants.js';
 import * as State from '../state.js';
 import * as PositionManager from '../positionManager.js';
 import {
@@ -162,7 +163,7 @@ function applyViewport(vp) {
     const g = svg.select('g');
 
     if (!svg.node() || !g.node()) {
-        setTimeout(() => applyViewport(vp), 200);
+        setTimeout(() => applyViewport(vp), TIMING.VIEWPORT_APPLY_DELAY);
         return;
     }
 

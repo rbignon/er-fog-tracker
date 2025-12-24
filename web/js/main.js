@@ -19,6 +19,17 @@ import * as ViewerListPage from './pages/viewer-list.js';
 // ============================================================
 
 /**
+ * Show or hide the graph loading overlay.
+ * @param {boolean} show - Whether to show the loading overlay
+ */
+function setGraphLoading(show) {
+    const loadingEl = document.getElementById('graph-loading');
+    if (loadingEl) {
+        loadingEl.classList.toggle('hidden', !show);
+    }
+}
+
+/**
  * Set the navigation links (title and back link) to the same destination.
  * @param {string} href - The URL to navigate to
  * @param {string|null} backText - Text for back link, or null to hide it
@@ -178,6 +189,7 @@ function handleOfflineGraphLoaded() {
  * Initialize play mode (host) - load game from server.
  */
 async function initPlayMode(gameId) {
+    setGraphLoading(true);
     try {
         const { getGame } = await import('./api.js');
         const game = await getGame(gameId);
@@ -198,7 +210,11 @@ async function initPlayMode(gameId) {
         // Trigger initial render - only preserve positions if we have some saved
         const hasPositions = State.getNodePositions().size > 0;
         State.emit('graphNeedsRender', { preservePositions: hasPositions });
+
+        // Hide loading after render starts (graph will appear shortly)
+        setGraphLoading(false);
     } catch (e) {
+        setGraphLoading(false);
         console.error('Failed to load game:', e);
         const Toast = await import('./toast.js');
         Toast.error(`Failed to load game: ${e.message}`);
@@ -210,6 +226,7 @@ async function initPlayMode(gameId) {
  * Initialize viewer mode - load game and connect as viewer.
  */
 async function initViewerMode(gameId) {
+    setGraphLoading(true);
     try {
         const { getGame } = await import('./api.js');
         const game = await getGame(gameId);
@@ -230,7 +247,11 @@ async function initViewerMode(gameId) {
         // Trigger initial render - only preserve positions if we have some saved
         const hasPositions = State.getNodePositions().size > 0;
         State.emit('graphNeedsRender', { preservePositions: hasPositions });
+
+        // Hide loading after render starts (graph will appear shortly)
+        setGraphLoading(false);
     } catch (e) {
+        setGraphLoading(false);
         console.error('Failed to load game:', e);
         const Toast = await import('./toast.js');
         Toast.error(`Failed to load game: ${e.message}`);
