@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+SPOILER_LOGS_DIR = FIXTURES_DIR / "spoiler_logs"
 
 
 def pytest_addoption(parser):
@@ -140,3 +141,18 @@ def discovered_to_caelid(simple_zone_pairs: list[dict]) -> list[dict]:
         {"zone_link_id": "link-1"},
         {"zone_link_id": "link-4"},
     ]
+
+
+# Spoiler log fixtures
+
+
+@pytest.fixture
+def spoiler_log_1078869800() -> str:
+    """Real spoiler log for seed 1078869800."""
+    return (SPOILER_LOGS_DIR / "seed_1078869800.txt").read_text()
+
+
+@pytest.fixture
+def spoiler_log_1851144969() -> str:
+    """Real spoiler log for seed 1851144969."""
+    return (SPOILER_LOGS_DIR / "seed_1851144969.txt").read_text()

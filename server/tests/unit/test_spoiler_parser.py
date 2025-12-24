@@ -329,3 +329,61 @@ class TestDataclasses:
         assert result.zones == []
         assert result.connections == []
         assert result.options == ""
+
+
+class TestWithRealSpoilerLogs:
+    """Tests using real spoiler log files."""
+
+    def test_parse_seed_1078869800(self, spoiler_log_1078869800):
+        result = parse_spoiler_log(spoiler_log_1078869800)
+        assert result.seed == 1078869800
+        assert len(result.zones) > 50
+        assert len(result.connections) > 100
+
+    def test_parse_seed_1851144969(self, spoiler_log_1851144969):
+        result = parse_spoiler_log(spoiler_log_1851144969)
+        assert result.seed == 1851144969
+        assert len(result.zones) > 50
+        assert len(result.connections) > 100
+
+    def test_all_connections_have_valid_zones(self, spoiler_log_1078869800):
+        result = parse_spoiler_log(spoiler_log_1078869800)
+        zone_names = {z.name for z in result.zones}
+        for conn in result.connections:
+            assert conn.source in zone_names, f"Source '{conn.source}' not in zones"
+            assert conn.target in zone_names, f"Target '{conn.target}' not in zones"
+
+    def test_connections_have_valid_zone_ids(self, spoiler_log_1078869800):
+        result = parse_spoiler_log(spoiler_log_1078869800)
+        zone_ids = {z.id for z in result.zones}
+        for conn in result.connections:
+            assert conn.source_id in zone_ids, f"source_id '{conn.source_id}' not found"
+            assert conn.target_id in zone_ids, f"target_id '{conn.target_id}' not found"
+
+    def test_has_both_connection_types(self, spoiler_log_1078869800):
+        result = parse_spoiler_log(spoiler_log_1078869800)
+        types = {c.conn_type for c in result.connections}
+        assert "random" in types
+        assert "preexisting" in types
+
+    def test_has_boss_zones(self, spoiler_log_1078869800):
+        result = parse_spoiler_log(spoiler_log_1078869800)
+        boss_zones = [z for z in result.zones if z.is_boss]
+        assert len(boss_zones) > 0
+
+    def test_has_scaling_info(self, spoiler_log_1078869800):
+        result = parse_spoiler_log(spoiler_log_1078869800)
+        zones_with_scaling = [z for z in result.zones if z.scaling]
+        assert len(zones_with_scaling) > 0
+
+    def test_has_one_way_connections(self, spoiler_log_1078869800):
+        result = parse_spoiler_log(spoiler_log_1078869800)
+        one_way = [c for c in result.connections if c.is_inherently_one_way]
+        # Real spoiler logs typically have some one-way connections (sending gates, etc.)
+        assert len(one_way) > 0
+
+    def test_chapel_of_anticipation_exists(self, spoiler_log_1078869800):
+        """Chapel of Anticipation is always the starting zone."""
+        result = parse_spoiler_log(spoiler_log_1078869800)
+        zone_names = {z.name for z in result.zones}
+        assert "Chapel of Anticipation" in zone_names
