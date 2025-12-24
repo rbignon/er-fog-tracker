@@ -171,6 +171,8 @@ class DiscoveryResponse(BaseModel):
 
     propagated: list[PropagatedLink]
     discovered_links: list[DiscoveredLink]
+    discovery_count: int
+    total_zones: int
 
 
 class UndiscoveryRequest(BaseModel):

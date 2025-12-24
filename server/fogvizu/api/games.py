@@ -314,9 +314,14 @@ async def create_discovery(
                 )
             )
 
+    # Compute discovery stats
+    stats = compute_discovery_stats(zone_pairs, all_links)
+
     return DiscoveryResponse(
         propagated=[PropagatedLink(source=p["source"], target=p["target"]) for p in propagated],
         discovered_links=expanded_links,
+        discovery_count=stats["discovered"],
+        total_zones=stats["total"],
     )
 
 

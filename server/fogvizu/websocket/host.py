@@ -15,7 +15,7 @@ from fogvizu.game_logic import propagate_discovery
 from fogvizu.websocket.auth import authenticate_ws, verify_game_access
 from fogvizu.websocket.base import Client, build_game_state
 from fogvizu.websocket.manager import manager
-from fogvizu.zone_matching import expand_discovered_links
+from fogvizu.zone_matching import compute_discovery_stats, expand_discovered_links
 
 logger = logging.getLogger(__name__)
 
@@ -100,12 +100,14 @@ class HostClient(Client):
             expanded_links = expand_discovered_links(
                 game.discovered_links or [], game.zone_pairs or []
             )
+            stats = compute_discovery_stats(game.zone_pairs or [], game.discovered_links or [])
             await manager.broadcast_to_all(
                 self.game_id,
                 {
                     "type": "discovery",
                     "propagated": propagated,
                     "discovered_links": expanded_links,
+                    "stats": stats,
                 },
                 exclude=self.ws,
             )

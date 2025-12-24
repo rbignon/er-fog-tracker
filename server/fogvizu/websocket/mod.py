@@ -478,6 +478,7 @@ class ModClient(Client):
                             "type": "discovery",
                             "propagated": all_propagated,
                             "discovered_links": expanded_links,
+                            "stats": stats,
                         },
                         exclude=self.ws,
                     )

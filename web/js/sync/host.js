@@ -512,7 +512,7 @@ export async function connectAsHost(gameId) {
 
             // Discovery from mod
             if (data.type === 'discovery') {
-                handleDiscoveryFromServer(data.propagated, data.discovered_links);
+                handleDiscoveryFromServer(data.propagated, data.discovered_links, data.stats);
                 return;
             }
 

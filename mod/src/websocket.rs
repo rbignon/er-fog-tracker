@@ -149,6 +149,13 @@ enum ServerResponse {
         #[serde(default)]
         stats: DiscoveryStats,
     },
+    /// Discovery broadcast from host (web UI manual discovery)
+    Discovery {
+        #[serde(default)]
+        propagated: Vec<PropagatedLink>,
+        #[serde(default)]
+        stats: DiscoveryStats,
+    },
     Ping,
     Error {
         message: String,
@@ -573,6 +580,25 @@ fn message_loop(
                                 propagated: propagated.clone(),
                                 current_zone: current_zone.clone(),
                                 exits: exits.clone(),
+                                stats: stats.clone(),
+                            });
+                        }
+                        ServerResponse::Discovery {
+                            ref propagated,
+                            ref stats,
+                        } => {
+                            // Web UI discovery broadcast - just update stats
+                            println!(
+                                "[WS RX] Discovery (from web): propagated: {}, discovered: {}/{}",
+                                propagated.len(),
+                                stats.discovered,
+                                stats.total
+                            );
+                            // Send as DiscoveryAck without zone/exits (only stats matter)
+                            let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
+                                propagated: propagated.clone(),
+                                current_zone: None,
+                                exits: vec![],
                                 stats: stats.clone(),
                             });
                         }

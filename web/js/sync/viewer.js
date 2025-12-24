@@ -662,7 +662,7 @@ export async function connectAsViewer(gameId) {
 
             // Discovery from server
             if (data.type === 'discovery') {
-                handleDiscoveryFromServer(data.propagated, data.discovered_links);
+                handleDiscoveryFromServer(data.propagated, data.discovered_links, data.stats);
                 return;
             }
 

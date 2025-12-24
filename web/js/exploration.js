@@ -83,9 +83,13 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
         // Send to server - response will contain full state with back-propagation
         Api.createDiscovery(gameId, { source: fromNodeId, target: areaId, link_id: viaLink?.id })
             .then(response => {
-                // Server response contains discovered_links - apply it
+                // Server response contains discovered_links and stats - apply them
                 if (response && response.discovered_links) {
-                    applyServerDiscoveryState(response.discovered_links);
+                    applyServerDiscoveryState(
+                        response.discovered_links,
+                        response.discovery_count,
+                        response.total_zones
+                    );
                 }
             })
             .catch(err => console.error('Failed to persist discovery:', err));
@@ -118,8 +122,11 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
 /**
  * Apply discovery state from server response (server is source of truth).
  * Server sends links with {link_id, source, target} format.
+ * @param {Array} discoveredLinks - List of discovered links from server
+ * @param {number} [discoveryCount] - Discovery count from server (optional)
+ * @param {number} [totalZones] - Total zones from server (optional)
  */
-function applyServerDiscoveryState(discoveredLinks) {
+function applyServerDiscoveryState(discoveredLinks, discoveryCount, totalZones) {
     if (!discoveredLinks || !Array.isArray(discoveredLinks)) return;
 
     const explorationState = State.getExplorationState();
@@ -149,6 +156,15 @@ function applyServerDiscoveryState(discoveredLinks) {
         explorationState.discoveredLinks = newDiscoveredLinks;
         State.saveExplorationToStorage();
         State.emit('graphNeedsRender', { preservePositions: true });
+    }
+
+    // Update stats from server (server is source of truth for stats)
+    if (discoveryCount !== undefined && totalZones !== undefined) {
+        const graphData = State.getGraphData();
+        if (graphData?.metadata) {
+            graphData.metadata.discoveryCount = discoveryCount;
+            graphData.metadata.totalZones = totalZones;
+        }
     }
 }
 
@@ -508,7 +524,11 @@ export function discoverPathTo(targetId) {
                     })
                         .then(response => {
                             if (response && response.discovered_links) {
-                                applyServerDiscoveryState(response.discovered_links);
+                                applyServerDiscoveryState(
+                                    response.discovered_links,
+                                    response.discovery_count,
+                                    response.total_zones
+                                );
                             }
                         })
                         .catch(err => console.error('Failed to persist discovery:', err));

@@ -230,8 +230,11 @@ export function handleTagUpdateFromServer(zone, tags) {
  * Handle discovery messages from server (mod or other source).
  * Server is the source of truth - apply the full state it sends.
  * Server sends links with {link_id, source, target} format.
+ * @param {Array} propagated - Propagated links
+ * @param {Array} discoveredLinks - All discovered links
+ * @param {Object} [stats] - Discovery stats from server {discovered, total}
  */
-export function handleDiscoveryFromServer(propagated, discoveredLinks) {
+export function handleDiscoveryFromServer(propagated, discoveredLinks, stats) {
     const explorationState = State.getExplorationState();
     if (!explorationState) return;
 
@@ -319,10 +322,16 @@ export function handleDiscoveryFromServer(propagated, discoveredLinks) {
     }
 
     if (changed) {
-        // Update metadata.discoveryCount so the counter updates correctly
+        // Update metadata stats - use server stats if provided (source of truth)
         const graphData = State.getGraphData();
         if (graphData?.metadata) {
-            graphData.metadata.discoveryCount = explorationState.discovered.size;
+            if (stats && stats.discovered !== undefined && stats.total !== undefined) {
+                graphData.metadata.discoveryCount = stats.discovered;
+                graphData.metadata.totalZones = stats.total;
+            } else {
+                // Fallback to local count
+                graphData.metadata.discoveryCount = explorationState.discovered.size;
+            }
         }
 
         // On host, select the newly discovered node and show its tooltip
