@@ -10,6 +10,9 @@ import * as PositionManager from './positionManager.js';
 // Track which tags are selected for filtering
 const selectedTagFilters = new Set();
 
+// Track subscriptions for cleanup between renders (prevents memory leak)
+let graphSubscriptionCleanups = [];
+
 // ============================================================
 // RENDER GRAPH
 // ============================================================
@@ -26,6 +29,10 @@ export function renderGraph(preservePositions = false) {
         Exploration.propagatePreexistingDiscoveries();
         State.saveExplorationToStorage();
     }
+
+    // Cleanup previous subscriptions to avoid memory leak
+    graphSubscriptionCleanups.forEach(cleanup => cleanup());
+    graphSubscriptionCleanups = [];
 
     // Clear previous graph
     d3.select('#graph-container svg').selectAll('*').remove();
@@ -149,10 +156,12 @@ export function renderGraph(preservePositions = false) {
         .attr('dy', 4)
         .text(d => getNodeLabel(d, explorationMode, explorationState));
 
-    // Setup interactions
+    // Setup interactions (collect cleanups to prevent memory leak)
     setupTooltip(node, nodeConnections, explorationMode, explorationState, placeholderMap, nodeMap, visibleLinks);
-    setupNodeClick(node, svg, nodeConnections, explorationMode, explorationState, placeholderMap, visibleLinks);
-    setupSearch(node, link, nodes);
+    graphSubscriptionCleanups.push(
+        ...setupNodeClick(node, svg, nodeConnections, explorationMode, explorationState, placeholderMap, visibleLinks)
+    );
+    graphSubscriptionCleanups.push(...setupSearch(node, link, nodes));
 
     // Simulation tick handler
     simulation.on('tick', () => {
@@ -1151,6 +1160,8 @@ function buildConnectionsList(
 // ============================================================
 
 function setupNodeClick(node, svg, nodeConnections, explorationMode, explorationState, placeholderMap, visibleLinks) {
+    const cleanups = [];
+
     // Restore selected node from state if exists
     let selectedNode = State.getSelectedNodeId();
 
@@ -1169,14 +1180,16 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
     }
 
     // Listen for tooltip close button
-    State.subscribe('tooltipClosed', () => {
-        selectedNode = null;
-        if (State.isFrontierHighlightActive()) {
-            State.emit('restoreFrontierHighlight');
-        } else {
-            resetHighlight(node, svg);
-        }
-    });
+    cleanups.push(
+        State.subscribe('tooltipClosed', () => {
+            selectedNode = null;
+            if (State.isFrontierHighlightActive()) {
+                State.emit('restoreFrontierHighlight');
+            } else {
+                resetHighlight(node, svg);
+            }
+        })
+    );
 
     // Check if we need to select a placeholder after undiscover
     const pendingUndiscoveredNodeId = State.getPendingUndiscoveredNodeId();
@@ -1297,66 +1310,72 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
     svg.on('click', () => clearSelection());
 
     // Listen for restore selection highlight event (e.g., after clearing frontier)
-    State.subscribe('restoreSelectionHighlight', () => {
-        if (selectedNode) {
-            const selectedNodeData = node.data().find(n => n.id === selectedNode);
-            applySelectionHighlights(selectedNode, selectedNodeData);
-        }
-    });
+    cleanups.push(
+        State.subscribe('restoreSelectionHighlight', () => {
+            if (selectedNode) {
+                const selectedNodeData = node.data().find(n => n.id === selectedNode);
+                applySelectionHighlights(selectedNode, selectedNodeData);
+            }
+        })
+    );
 
     // Listen for path-from-start checkbox changes
-    State.subscribe('pathFromStartChanged', () => {
-        const currentSelected = State.getSelectedNodeId();
-        if (currentSelected) {
-            // Re-select current nodes from DOM (in case graph was re-rendered)
-            const currentNodes = d3.selectAll('.node');
-            const selectedNodeData = currentNodes.data().find(n => n.id === currentSelected);
-            if (selectedNodeData) {
-                // Re-apply highlights using current DOM elements
-                let connectedNodes = new Set();
+    cleanups.push(
+        State.subscribe('pathFromStartChanged', () => {
+            const currentSelected = State.getSelectedNodeId();
+            if (currentSelected) {
+                // Re-select current nodes from DOM (in case graph was re-rendered)
+                const currentNodes = d3.selectAll('.node');
+                const selectedNodeData = currentNodes.data().find(n => n.id === currentSelected);
+                if (selectedNodeData) {
+                    // Re-apply highlights using current DOM elements
+                    let connectedNodes = new Set();
 
-                if (selectedNodeData.isPlaceholder) {
-                    connectedNodes.add(currentSelected);
-                    if (selectedNodeData.sourceNodeId) {
-                        connectedNodes.add(selectedNodeData.sourceNodeId);
+                    if (selectedNodeData.isPlaceholder) {
+                        connectedNodes.add(currentSelected);
+                        if (selectedNodeData.sourceNodeId) {
+                            connectedNodes.add(selectedNodeData.sourceNodeId);
+                            const showPathFromStart = document.getElementById('show-path-from-start')?.checked;
+                            if (showPathFromStart) {
+                                const pathResult = Exploration.findPathFromStart(selectedNodeData.sourceNodeId);
+                                pathResult.nodes.forEach(n => connectedNodes.add(n));
+                            }
+                        }
+                    } else {
+                        const localResult = Exploration.followLinearPath(currentSelected);
+                        connectedNodes = localResult.nodes;
                         const showPathFromStart = document.getElementById('show-path-from-start')?.checked;
                         if (showPathFromStart) {
-                            const pathResult = Exploration.findPathFromStart(selectedNodeData.sourceNodeId);
+                            const pathResult = Exploration.findPathFromStart(currentSelected);
                             pathResult.nodes.forEach(n => connectedNodes.add(n));
                         }
+                        // Include connected placeholders
+                        currentNodes.each(n => {
+                            if (n.isPlaceholder && n.sourceNodeId && connectedNodes.has(n.sourceNodeId)) {
+                                connectedNodes.add(n.id);
+                            }
+                        });
                     }
-                } else {
-                    const localResult = Exploration.followLinearPath(currentSelected);
-                    connectedNodes = localResult.nodes;
-                    const showPathFromStart = document.getElementById('show-path-from-start')?.checked;
-                    if (showPathFromStart) {
-                        const pathResult = Exploration.findPathFromStart(currentSelected);
-                        pathResult.nodes.forEach(n => connectedNodes.add(n));
-                    }
-                    // Include connected placeholders
-                    currentNodes.each(n => {
-                        if (n.isPlaceholder && n.sourceNodeId && connectedNodes.has(n.sourceNodeId)) {
-                            connectedNodes.add(n.id);
-                        }
-                    });
+
+                    currentNodes
+                        .classed('highlighted', n => connectedNodes.has(n.id))
+                        .classed('dimmed', n => !connectedNodes.has(n.id));
+
+                    d3.selectAll('.link')
+                        .classed('highlighted', l => {
+                            const { sourceId, targetId } = State.getLinkEndpoints(l);
+                            return connectedNodes.has(sourceId) && connectedNodes.has(targetId);
+                        })
+                        .classed('dimmed', l => {
+                            const { sourceId, targetId } = State.getLinkEndpoints(l);
+                            return !(connectedNodes.has(sourceId) && connectedNodes.has(targetId));
+                        });
                 }
-
-                currentNodes
-                    .classed('highlighted', n => connectedNodes.has(n.id))
-                    .classed('dimmed', n => !connectedNodes.has(n.id));
-
-                d3.selectAll('.link')
-                    .classed('highlighted', l => {
-                        const { sourceId, targetId } = State.getLinkEndpoints(l);
-                        return connectedNodes.has(sourceId) && connectedNodes.has(targetId);
-                    })
-                    .classed('dimmed', l => {
-                        const { sourceId, targetId } = State.getLinkEndpoints(l);
-                        return !(connectedNodes.has(sourceId) && connectedNodes.has(targetId));
-                    });
             }
-        }
-    });
+        })
+    );
+
+    return cleanups;
 }
 
 function resetHighlight(node, svg) {
@@ -1373,15 +1392,23 @@ function resetHighlight(node, svg) {
 // ============================================================
 
 function setupSearch(node, link, allNodes) {
-    State.subscribe('searchMatched', ({ matchingIds }) => {
-        node.classed('highlighted', n => matchingIds.has(n.id)).classed('dimmed', n => !matchingIds.has(n.id));
-        link.classed('dimmed', true).classed('highlighted', false);
-    });
+    const cleanups = [];
 
-    State.subscribe('searchCleared', () => {
-        node.classed('highlighted', false).classed('dimmed', false);
-        link.classed('dimmed', false).classed('highlighted', false);
-    });
+    cleanups.push(
+        State.subscribe('searchMatched', ({ matchingIds }) => {
+            node.classed('highlighted', n => matchingIds.has(n.id)).classed('dimmed', n => !matchingIds.has(n.id));
+            link.classed('dimmed', true).classed('highlighted', false);
+        })
+    );
+
+    cleanups.push(
+        State.subscribe('searchCleared', () => {
+            node.classed('highlighted', false).classed('dimmed', false);
+            link.classed('dimmed', false).classed('highlighted', false);
+        })
+    );
+
+    return cleanups;
 }
 
 // ============================================================

@@ -50,6 +50,9 @@ fn is_fog_rando_entity(entity_id: u32) -> bool {
 // PENDING WARP
 // =============================================================================
 
+/// Maximum time a pending warp can stay unresolved before being discarded
+const WARP_TIMEOUT: Duration = Duration::from_secs(30);
+
 /// Pending warp event (entry position recorded, waiting for exit)
 #[derive(Clone, Debug)]
 pub(crate) struct PendingWarp {
@@ -58,6 +61,8 @@ pub(crate) struct PendingWarp {
     destination_entity_id: u32,
     /// Transport type inferred from animation
     transport_type: &'static str,
+    /// When this pending warp was created (for timeout detection)
+    created_at: Instant,
 }
 
 // =============================================================================
@@ -207,6 +212,18 @@ impl FogRandoTracker {
         }
         self.was_position_readable = position_now_readable;
 
+        // Check for pending warp timeout (prevents stale warps from hanging indefinitely)
+        if let Some(ref pending) = self.pending_warp {
+            if pending.created_at.elapsed() > WARP_TIMEOUT {
+                warn!(
+                    transport_type = pending.transport_type,
+                    elapsed_secs = pending.created_at.elapsed().as_secs(),
+                    "[WARP] Pending warp timed out, discarding"
+                );
+                self.pending_warp = None;
+            }
+        }
+
         // =========================================================================
         // ANIMATION-BASED TELEPORT DETECTION
         //
@@ -233,6 +250,7 @@ impl FogRandoTracker {
                     entry: pos,
                     destination_entity_id: 0, // Will be captured when warp_requested becomes true
                     transport_type,
+                    created_at: Instant::now(),
                 });
             } else {
                 warn!(

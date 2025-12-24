@@ -168,9 +168,9 @@ class ModClient(Client):
             )
             return
 
-        # Process with fresh DB session
+        # Process with fresh DB session (with row lock to prevent race conditions)
         async with async_session() as db:
-            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            result = await db.execute(select(Game).where(Game.id == self.game_id).with_for_update())
             game = result.scalar_one_or_none()
 
             all_propagated = []

@@ -475,10 +475,10 @@ fn connect_and_authenticate(
                     error!(message = %message, "[WS] Auth failed");
                     Err(format!("Auth failed: {}", message))
                 }
-                _ => Err("Unexpected response during auth".to_string()),
+                other => Err(format!("Unexpected response during auth: {:?}", other)),
             }
         }
-        _ => Err("Unexpected message type during auth".to_string()),
+        other => Err(format!("Unexpected message type during auth: {:?}", other)),
     }
 }
 
@@ -564,8 +564,8 @@ fn message_loop(
         match socket.read() {
             Ok(Message::Text(text)) => {
                 trace!(raw = %text, "[WS RX]");
-                if let Ok(resp) = serde_json::from_str::<ServerResponse>(&text) {
-                    match resp {
+                match serde_json::from_str::<ServerResponse>(&text) {
+                    Ok(resp) => match resp {
                         ServerResponse::Ping => {
                             let _ = incoming_tx.send(IncomingMessage::Ping);
                         }
@@ -616,6 +616,13 @@ fn message_loop(
                         _ => {
                             debug!(response = ?resp, "[WS RX] Other");
                         }
+                    },
+                    Err(e) => {
+                        warn!(
+                            error = %e,
+                            raw = %text,
+                            "[WS RX] Failed to parse server response"
+                        );
                     }
                 }
             }

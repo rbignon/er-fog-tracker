@@ -3,6 +3,7 @@ Authentication routes (Twitch OAuth).
 """
 
 import secrets
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
@@ -22,19 +23,27 @@ from fogvizu.models import UserMe
 router = APIRouter()
 
 # In-memory state storage (for OAuth CSRF protection)
-# In production, use Redis or similar
-_oauth_states: set[str] = set()
+# States expire after 10 minutes
+_oauth_states: dict[str, float] = {}
+_STATE_TTL_SECONDS = 600  # 10 minutes
+
+
+def _cleanup_expired_states() -> None:
+    """Remove OAuth states older than TTL."""
+    cutoff = time.time() - _STATE_TTL_SECONDS
+    expired = [k for k, v in _oauth_states.items() if v < cutoff]
+    for k in expired:
+        del _oauth_states[k]
 
 
 @router.get("/twitch")
 async def auth_twitch_redirect():
     """Redirect to Twitch OAuth."""
     state = secrets.token_urlsafe(16)
-    _oauth_states.add(state)
+    _oauth_states[state] = time.time()
 
-    # Clean up old states (keep last 1000)
-    if len(_oauth_states) > 1000:
-        _oauth_states.clear()
+    # Lazy cleanup of expired states
+    _cleanup_expired_states()
 
     return RedirectResponse(url=get_twitch_oauth_url(state))
 
@@ -54,13 +63,13 @@ async def auth_twitch_callback(
             detail=f"Twitch OAuth error: {error}",
         )
 
-    # Validate state
+    # Validate state (also checks expiration via TTL)
     if not state or state not in _oauth_states:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid OAuth state",
         )
-    _oauth_states.discard(state)
+    del _oauth_states[state]
 
     # Validate code
     if not code:

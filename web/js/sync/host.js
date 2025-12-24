@@ -50,13 +50,13 @@ function syncState() {
         isSyncing = true;
         try {
             const state = getFullSyncState();
-
-            ws.send(
-                JSON.stringify({
-                    type: 'visual_state',
-                    state,
-                })
-            );
+            const message = JSON.stringify({
+                type: 'visual_state',
+                state,
+            });
+            ws.send(message);
+        } catch (err) {
+            console.error('[HOST SYNC] Failed to sync state:', err);
         } finally {
             isSyncing = false;
         }

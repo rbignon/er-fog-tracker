@@ -4,36 +4,58 @@
 
 import { getAuthHeaders } from './auth.js';
 
+const DEFAULT_TIMEOUT_MS = 30000;
+
 /**
- * Base fetch wrapper with error handling.
+ * Base fetch wrapper with error handling and timeout.
+ * @param {string} path - API path
+ * @param {Object} options - Fetch options
+ * @param {number} timeout - Timeout in ms (default 30s)
  */
-async function apiFetch(path, options = {}) {
-    const response = await fetch(path, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeaders(),
-            ...options.headers,
-        },
-    });
+async function apiFetch(path, options = {}, timeout = DEFAULT_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-    if (!response.ok) {
-        const error = new Error(`API error: ${response.status}`);
-        error.status = response.status;
-        try {
-            error.detail = (await response.json()).detail;
-        } catch {
-            error.detail = response.statusText;
+    try {
+        const response = await fetch(path, {
+            ...options,
+            signal: controller.signal,
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders(),
+                ...options.headers,
+            },
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const error = new Error(`API error: ${response.status}`);
+            error.status = response.status;
+            try {
+                error.detail = (await response.json()).detail;
+            } catch {
+                error.detail = response.statusText;
+            }
+            throw error;
         }
-        throw error;
-    }
 
-    // Handle 204 No Content
-    if (response.status === 204) {
-        return null;
-    }
+        // Handle 204 No Content
+        if (response.status === 204) {
+            return null;
+        }
 
-    return response.json();
+        return response.json();
+    } catch (err) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+            const error = new Error(`Request timeout after ${timeout}ms`);
+            error.status = 0;
+            error.detail = 'The server took too long to respond';
+            throw error;
+        }
+        throw err;
+    }
 }
 
 // =============================================================================
