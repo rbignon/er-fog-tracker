@@ -250,15 +250,19 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
     clean_target = target.split(", using")[0].strip()
 
     # Detect if this is a one-way connection based on description patterns
+    # IMPORTANT: Only search in details text (parenthetical content), not zone names.
+    # Zone names like "Volcano Manor - Hallway Opposite Sending Gate" should not
+    # trigger one-way detection just because they contain pattern keywords.
+    details_text = f"{source_details} {target_details}"
     is_inherently_one_way = False
     if conn_type == "random":
-        # Check patterns that always indicate one-way
-        if any(pattern.search(content) for pattern in ALWAYS_ONE_WAY_PATTERNS):
+        # Check patterns that always indicate one-way (in details only)
+        if any(pattern.search(details_text) for pattern in ALWAYS_ONE_WAY_PATTERNS):
             is_inherently_one_way = True
-        # Check "arriving" - only one-way if source contains teleport mechanism
-        elif re.search(r"arriving (at|in|from)", content, re.IGNORECASE):
+        # Check "arriving" - only one-way if source details contain teleport mechanism
+        elif re.search(r"arriving (at|in|from)", details_text, re.IGNORECASE):
             is_inherently_one_way = any(
-                pattern.search(source_part) for pattern in TELEPORT_SOURCE_PATTERNS
+                pattern.search(source_details) for pattern in TELEPORT_SOURCE_PATTERNS
             )
 
     return ConnectionInfo(

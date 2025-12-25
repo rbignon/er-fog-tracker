@@ -332,6 +332,33 @@ class TestOneWayDetection:
         assert conn is not None
         assert conn.is_inherently_one_way is expected_one_way
 
+    def test_zone_name_containing_sending_gate_is_not_one_way(self):
+        """Zone names containing 'Sending Gate' should NOT make a link one-way.
+
+        Regression test: 'Volcano Manor - Hallway Opposite Sending Gate' was
+        incorrectly marked as one-way because the pattern matched the zone name.
+        """
+        line = (
+            "  Random: After Mohg, Lord of Blood (after Mohg's arena at the back left) "
+            "--> Volcano Manor - Hallway Opposite Sending Gate "
+            "(in the hallway towards the Imp Seal back to main Volcano Manor)"
+        )
+        conn = _parse_connection_line(line)
+        assert conn is not None
+        assert conn.source == "After Mohg, Lord of Blood"
+        assert conn.target == "Volcano Manor - Hallway Opposite Sending Gate"
+        assert conn.is_inherently_one_way is False
+
+    def test_actual_sending_gate_usage_is_one_way(self):
+        """Using a sending gate (in details) should be one-way."""
+        line = (
+            "  Random: Divine Tower of Limgrave (using the sending gate) "
+            "--> Leyndell, Royal Capital (arriving at the Divine Bridge)"
+        )
+        conn = _parse_connection_line(line)
+        assert conn is not None
+        assert conn.is_inherently_one_way is True
+
 
 class TestDataclasses:
     """Tests for dataclass structures."""
