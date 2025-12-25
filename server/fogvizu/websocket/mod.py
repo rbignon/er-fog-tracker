@@ -191,35 +191,67 @@ class ModClient(Client):
                             emevd_dest_map,
                         )
 
-                        # Prioritize candidates that match the EMEVD maps
+                        # Add and prioritize candidates from EMEVD maps
+                        # The mod reports the player's tile, but the fog gate may be in a
+                        # different tile. EMEVD maps tell us where the fog gate actually is.
                         if emevd_source_map:
-                            # Get zones for this map and prioritize them
                             emevd_source_zones = resolver.resolve_from_map_id(emevd_source_map)
                             if emevd_source_zones:
-                                # Move matching candidates to the front
                                 emevd_keys = {z[0] for z in emevd_source_zones}
-                                prioritized = [c for c in source_candidates if c[0] in emevd_keys]
-                                others = [c for c in source_candidates if c[0] not in emevd_keys]
-                                if prioritized:
-                                    source_candidates = prioritized + others
+                                # Add zones from EMEVD map that aren't already in candidates
+                                existing_keys = {c[0] for c in source_candidates}
+                                new_zones = [
+                                    z for z in emevd_source_zones if z[0] not in existing_keys
+                                ]
+                                # Prioritize: existing matching EMEVD first, then new zones, then rest
+                                prioritized_existing = [
+                                    c for c in source_candidates if c[0] in emevd_keys
+                                ]
+                                non_prioritized = [
+                                    c for c in source_candidates if c[0] not in emevd_keys
+                                ]
+                                source_candidates = (
+                                    prioritized_existing + new_zones + non_prioritized
+                                )
+                                if new_zones:
+                                    logger.debug(
+                                        "[MOD] Added source candidates from entity_mapping: %s",
+                                        [c[1] for c in new_zones[:3]],
+                                    )
+                                elif prioritized_existing:
                                     logger.debug(
                                         "[MOD] Prioritized source candidates from entity_mapping: %s",
-                                        [c[1] for c in prioritized[:3]],
+                                        [c[1] for c in prioritized_existing[:3]],
                                     )
 
                         if emevd_dest_map:
-                            # Get zones for this map and prioritize them
                             emevd_dest_zones = resolver.resolve_from_map_id(emevd_dest_map)
                             if emevd_dest_zones:
-                                # Move matching candidates to the front
                                 emevd_keys = {z[0] for z in emevd_dest_zones}
-                                prioritized = [c for c in target_candidates if c[0] in emevd_keys]
-                                others = [c for c in target_candidates if c[0] not in emevd_keys]
-                                if prioritized:
-                                    target_candidates = prioritized + others
+                                # Add zones from EMEVD map that aren't already in candidates
+                                existing_keys = {c[0] for c in target_candidates}
+                                new_zones = [
+                                    z for z in emevd_dest_zones if z[0] not in existing_keys
+                                ]
+                                # Prioritize: existing matching EMEVD first, then new zones, then rest
+                                prioritized_existing = [
+                                    c for c in target_candidates if c[0] in emevd_keys
+                                ]
+                                non_prioritized = [
+                                    c for c in target_candidates if c[0] not in emevd_keys
+                                ]
+                                target_candidates = (
+                                    prioritized_existing + new_zones + non_prioritized
+                                )
+                                if new_zones:
+                                    logger.debug(
+                                        "[MOD] Added target candidates from entity_mapping: %s",
+                                        [c[1] for c in new_zones[:3]],
+                                    )
+                                elif prioritized_existing:
                                     logger.debug(
                                         "[MOD] Prioritized target candidates from entity_mapping: %s",
-                                        [c[1] for c in prioritized[:3]],
+                                        [c[1] for c in prioritized_existing[:3]],
                                     )
 
                 # Check if zone_links have zone_keys (V3 enrichment)

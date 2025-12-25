@@ -532,3 +532,61 @@ class TestDisplayNameToZones:
         for _display_name, zones in resolver.display_name_to_zones.items():
             assert isinstance(zones, list)
             assert len(zones) >= 1
+
+
+class TestTileBoundaryResolution:
+    """Tests for zones near tile boundaries.
+
+    When a player is near a tile boundary, they may be in a different map tile
+    than the fog gate they're entering. The entity_mapping provides the fog gate's
+    actual tile, allowing the server to find zones that wouldn't otherwise be
+    candidates from the player's tile alone.
+
+    This documents the Royal Knight Loretta case where:
+    - Fog gate is in m60_35_50_00 (liurnia_loretta zone)
+    - Player may be in m60_35_51_00 (adjacent tile, liurnia_postmanor only)
+    - Without entity_mapping enhancement, liurnia_loretta wouldn't be found
+    """
+
+    def test_liurnia_loretta_only_in_fog_gate_tile(self, resolver):
+        """liurnia_loretta should only be in m60_35_50_00, not m60_35_51_00.
+
+        This verifies the underlying data that makes entity_mapping enhancement
+        necessary for tile boundary cases.
+        """
+        # Fog gate tile - should include liurnia_loretta
+        zones_50 = resolver.map_zones.get("m60_35_50_00", set())
+        assert (
+            "liurnia_loretta" in zones_50
+        ), "liurnia_loretta should be a candidate for m60_35_50_00 (fog gate tile)"
+
+        # Adjacent tile - should NOT include liurnia_loretta
+        zones_51 = resolver.map_zones.get("m60_35_51_00", set())
+        assert "liurnia_loretta" not in zones_51, (
+            "liurnia_loretta should NOT be in m60_35_51_00 (adjacent tile) - "
+            "this is why entity_mapping enhancement is needed"
+        )
+
+    def test_resolve_from_map_id_for_adjacent_tiles(self, resolver):
+        """resolve_from_map_id should return different zones for adjacent tiles."""
+        zones_50 = resolver.resolve_from_map_id("m60_35_50_00")
+        zones_51 = resolver.resolve_from_map_id("m60_35_51_00")
+
+        keys_50 = {z[0] for z in zones_50}
+        keys_51 = {z[0] for z in zones_51}
+
+        # liurnia_loretta should be in 50 but not 51
+        assert "liurnia_loretta" in keys_50
+        assert "liurnia_loretta" not in keys_51
+
+        # liurnia_postmanor should be in both (spans multiple tiles)
+        assert "liurnia_postmanor" in keys_50
+        assert "liurnia_postmanor" in keys_51
+
+    def test_liurnia_postmanor_spans_both_tiles(self, resolver):
+        """liurnia_postmanor should be a candidate for both adjacent tiles."""
+        zones_50 = resolver.map_zones.get("m60_35_50_00", set())
+        zones_51 = resolver.map_zones.get("m60_35_51_00", set())
+
+        assert "liurnia_postmanor" in zones_50
+        assert "liurnia_postmanor" in zones_51
