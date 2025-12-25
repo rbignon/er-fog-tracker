@@ -40,3 +40,4 @@ package-lock.json
 coverage.xml
 .pytest_cache/
 htmlcov/
+analysis/seeds/

@@ -59,7 +59,7 @@ async def export_game(game_id: str) -> None:
         print(f"Found game with seed: {seed}")
 
         # Create output directory
-        output_dir = Path("..") / "logs" / str(seed)
+        output_dir = Path("..") / "analysis" / "seeds" / str(seed)
         output_dir.mkdir(exist_ok=True)
         print(f"Created directory: {output_dir}")
 

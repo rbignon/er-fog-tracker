@@ -220,6 +220,8 @@ class ZoneResolver:
         in_bside = False
         aside_area = None
         bside_area = None
+        # Track fog gate's map (for ASide/BSide zone candidates)
+        foggate_map = None
 
         for line in content.split("\n"):
             line_stripped = line.strip()
@@ -227,6 +229,18 @@ class ZoneResolver:
             indent = len(line) - len(line.lstrip())
 
             if line_stripped.startswith("- Name:"):
+                # Before moving to a new entry, add ASide/BSide areas to map_zones
+                # Only for overworld fog gates (m60_/m61_) to underground zones
+                if foggate_map and foggate_map.startswith(("m60_", "m61_")):
+                    if aside_area and not aside_area.startswith("m"):
+                        if foggate_map not in self.map_zones:
+                            self.map_zones[foggate_map] = set()
+                        self.map_zones[foggate_map].add(aside_area)
+                    if bside_area and not bside_area.startswith("m"):
+                        if foggate_map not in self.map_zones:
+                            self.map_zones[foggate_map] = set()
+                        self.map_zones[foggate_map].add(bside_area)
+
                 current_name = line_stripped.replace("- Name:", "").strip()
                 # Initialize zone_metadata entry
                 if current_name not in self.zone_metadata:
@@ -236,6 +250,7 @@ class ZoneResolver:
                 in_bside = False
                 aside_area = None
                 bside_area = None
+                foggate_map = None
             elif line_stripped.startswith("To:"):
                 in_to_section = True
                 in_aside = False
@@ -254,6 +269,9 @@ class ZoneResolver:
                     aside_area = area
                 elif in_bside:
                     bside_area = area
+                elif indent <= 2 and not in_to_section:
+                    # Fog gate's top-level Area: (the map_id it's in)
+                    foggate_map = area
             elif line_stripped.startswith("Text:"):
                 text = line_stripped.replace("Text:", "").strip()
                 if in_aside and aside_area:
@@ -288,6 +306,17 @@ class ZoneResolver:
             elif indent <= 2 and (in_aside or in_bside):
                 in_aside = False
                 in_bside = False
+
+        # Handle the last fog gate entry (same logic as above)
+        if foggate_map and foggate_map.startswith(("m60_", "m61_")):
+            if aside_area and not aside_area.startswith("m"):
+                if foggate_map not in self.map_zones:
+                    self.map_zones[foggate_map] = set()
+                self.map_zones[foggate_map].add(aside_area)
+            if bside_area and not bside_area.startswith("m"):
+                if foggate_map not in self.map_zones:
+                    self.map_zones[foggate_map] = set()
+                self.map_zones[foggate_map].add(bside_area)
 
         # Build display_name_to_zones reverse index
         for internal_name, display_name in self.zone_display_names.items():

@@ -135,6 +135,37 @@ pytest --cov=fogvizu tests/unit    # With coverage
 pytest --run-integration            # Integration tests (requires running server)
 ```
 
+### Fixing zone resolution issues
+
+When a fog gate traversal fails to match (logs show "Zone non trouvée" or "No spoiler log match"):
+
+1. **Generate a report** with server logs and seed data:
+   ```bash
+   cd analysis
+   ./report_zone_mismatch.py --log ../fogvizu.log --seed seeds/<seed_number>
+   ```
+   This outputs a formatted prompt with all context needed.
+
+2. **Capture baseline** before fixing:
+   ```bash
+   ./test_fog_resolution.py seeds/<seed_number>
+   ```
+   Note the "1 link" percentage and "not found" count.
+
+3. **After fixing**, verify:
+   - The specific case is now resolved
+   - No regression: "1 link %" stays same or improves
+   - No new "not found" cases introduced
+   - All unit tests pass: `pytest tests/unit/`
+
+4. **Add a unit test** in `tests/unit/test_zone_resolver.py` for the fix.
+
+Key files for zone resolution:
+- `server/fogvizu/zone_resolver.py` - Zone candidate resolution
+- `server/fogvizu/zone_matching.py` - Spoiler log matching
+- `server/fogvizu/websocket/mod.py` - Discovery handling
+- `server/data/fog.txt` - Zone definitions and fog gates
+
 ## Deployment
 
 See `server/README.md` for production deployment:
