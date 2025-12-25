@@ -305,6 +305,99 @@ class TestComputeBackpropCost:
         cost = compute_backprop_cost(simple_zone_pairs, [], "Isolated Zone")
         assert cost == -1
 
+    def test_tiebreaker_scenario(self):
+        """
+        Simulate tie-breaking scenario: two matches with different backprop costs.
+
+        Graph structure:
+        START -> A (random) -> B (preexisting) -> C (preexisting)
+        START -> X (random) -> Y (random) -> Z (random)
+
+        Cost to reach C = 1 (one random link: START->A)
+        Cost to reach Z = 3 (three random links: START->X, X->Y, Y->Z)
+
+        The algorithm should prefer C (lower cost).
+        """
+        zone_pairs = [
+            # Path to C: 1 random + 2 preexisting
+            {
+                "id": "1",
+                "type": "random",
+                "source": START_NODE,
+                "target": "Zone A",
+                "source_key": "start",
+                "target_key": "zone_a",
+            },
+            {
+                "id": "2",
+                "type": "preexisting",
+                "source": "Zone A",
+                "target": "Zone B",
+                "source_key": "zone_a",
+                "target_key": "zone_b",
+            },
+            {
+                "id": "3",
+                "type": "preexisting",
+                "source": "Zone B",
+                "target": "Zone C",
+                "source_key": "zone_b",
+                "target_key": "zone_c",
+            },
+            # Path to Z: 3 random
+            {
+                "id": "4",
+                "type": "random",
+                "source": START_NODE,
+                "target": "Zone X",
+                "source_key": "start",
+                "target_key": "zone_x",
+            },
+            {
+                "id": "5",
+                "type": "random",
+                "source": "Zone X",
+                "target": "Zone Y",
+                "source_key": "zone_x",
+                "target_key": "zone_y",
+            },
+            {
+                "id": "6",
+                "type": "random",
+                "source": "Zone Y",
+                "target": "Zone Z",
+                "source_key": "zone_y",
+                "target_key": "zone_z",
+            },
+            # Fog gates at C and Z leading to different destinations
+            {
+                "id": "fog_c",
+                "type": "random",
+                "source": "Zone C",
+                "target": "Far Away",
+                "source_key": "zone_c",
+                "target_key": "far_away",
+            },
+            {
+                "id": "fog_z",
+                "type": "random",
+                "source": "Zone Z",
+                "target": "Far Away 2",
+                "source_key": "zone_z",
+                "target_key": "far_away_2",
+            },
+        ]
+        discovered_links = []
+
+        # Cost to reach Zone C (1 random link via A)
+        cost_c = compute_backprop_cost(zone_pairs, discovered_links, "Zone C")
+        # Cost to reach Zone Z (3 random links via X, Y)
+        cost_z = compute_backprop_cost(zone_pairs, discovered_links, "Zone Z")
+
+        assert cost_c == 1, f"Expected cost 1 for Zone C, got {cost_c}"
+        assert cost_z == 3, f"Expected cost 3 for Zone Z, got {cost_z}"
+        assert cost_c < cost_z, "Zone C should have lower cost than Zone Z"
+
 
 class TestUndiscoverZone:
     """Tests for undiscover_zone function."""
