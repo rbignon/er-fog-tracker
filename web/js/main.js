@@ -265,13 +265,16 @@ async function convertServerDataToGraph(game) {
     const { extractRequiredItemFromDescription } = await import('./parser.js');
 
     // Build zone metadata map if available
+    // Note: zones have UUID id but links use zone names, so key by name
     const zoneMetadata = new Map();
     if (game.zones) {
         for (const zone of game.zones) {
-            zoneMetadata.set(zone.id, {
-                isBoss: zone.is_boss || false,
-                scaling: zone.scaling || null,
-            });
+            if (zone.name) {
+                zoneMetadata.set(zone.name, {
+                    isBoss: zone.is_boss || false,
+                    scaling: zone.scaling || null,
+                });
+            }
         }
     }
 
