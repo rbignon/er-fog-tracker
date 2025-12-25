@@ -16,6 +16,17 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class ZoneMetadata:
+    """Enriched zone information for reverse lookups."""
+
+    internal_name: str
+    display_name: str = ""
+    map_ids: list[str] = field(default_factory=list)
+    cols: list[str] = field(default_factory=list)
+    position_bounds: dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
 class PositionRule:
     """A position-based rule for zone resolution."""
 
@@ -68,6 +79,12 @@ class ZoneResolver:
         self.col_zones: dict[tuple[str, str], str] = {}
         # Detail text (from ASide/BSide) -> internal zone name (for fallback matching)
         self.detail_text_to_zone: dict[str, str] = {}
+
+        # Reverse lookup structures (for test simulation)
+        # internal_name -> ZoneMetadata (enriched zone info)
+        self.zone_metadata: dict[str, ZoneMetadata] = {}
+        # display_name -> list of internal_names (handles duplicates)
+        self.display_name_to_zones: dict[str, list[str]] = {}
 
         if data_dir:
             self._load_data()
@@ -171,6 +188,23 @@ class ZoneResolver:
 
             if has_condition:
                 rules.rules.append(area)
+                # Store position bounds in zone_metadata
+                if area.area not in self.zone_metadata:
+                    self.zone_metadata[area.area] = ZoneMetadata(internal_name=area.area)
+                bounds = self.zone_metadata[area.area].position_bounds
+                # Only set bounds if not already set (first occurrence wins)
+                if area.x_above is not None and "XAbove" not in bounds:
+                    bounds["XAbove"] = area.x_above
+                if area.x_below is not None and "XBelow" not in bounds:
+                    bounds["XBelow"] = area.x_below
+                if area.y_above is not None and "YAbove" not in bounds:
+                    bounds["YAbove"] = area.y_above
+                if area.y_below is not None and "YBelow" not in bounds:
+                    bounds["YBelow"] = area.y_below
+                if area.z_above is not None and "ZAbove" not in bounds:
+                    bounds["ZAbove"] = area.z_above
+                if area.z_below is not None and "ZBelow" not in bounds:
+                    bounds["ZBelow"] = area.z_below
             else:
                 # Last unconditional rule becomes default
                 rules.default_area = area.area
@@ -194,6 +228,9 @@ class ZoneResolver:
 
             if line_stripped.startswith("- Name:"):
                 current_name = line_stripped.replace("- Name:", "").strip()
+                # Initialize zone_metadata entry
+                if current_name not in self.zone_metadata:
+                    self.zone_metadata[current_name] = ZoneMetadata(internal_name=current_name)
                 in_to_section = False
                 in_aside = False
                 in_bside = False
@@ -234,6 +271,9 @@ class ZoneResolver:
                 ):
                     # Zone-level Text: -> display name
                     self.zone_display_names[current_name] = text
+                    # Also update zone_metadata
+                    if current_name in self.zone_metadata:
+                        self.zone_metadata[current_name].display_name = text
             elif line_stripped.startswith("Maps:") and current_name and indent <= 2:
                 # Also build zone-to-map mappings from fog.txt
                 map_ids = line_stripped.replace("Maps:", "").strip().split()
@@ -241,10 +281,19 @@ class ZoneResolver:
                     if map_id not in self.map_zones:
                         self.map_zones[map_id] = set()
                     self.map_zones[map_id].add(current_name)
+                # Store map_ids in zone_metadata
+                if current_name in self.zone_metadata:
+                    self.zone_metadata[current_name].map_ids.extend(map_ids)
             # Reset ASide/BSide context when we exit their indentation level
             elif indent <= 2 and (in_aside or in_bside):
                 in_aside = False
                 in_bside = False
+
+        # Build display_name_to_zones reverse index
+        for internal_name, display_name in self.zone_display_names.items():
+            if display_name not in self.display_name_to_zones:
+                self.display_name_to_zones[display_name] = []
+            self.display_name_to_zones[display_name].append(internal_name)
 
     def _load_foglocations(self, path: Path):
         """Parse foglocations2.txt for Col -> zone mappings and fog gate AArea."""
@@ -262,6 +311,9 @@ class ZoneResolver:
             if line_stripped.startswith("- Name:"):
                 current_zone = line_stripped.replace("- Name:", "").strip()
                 current_fog_map = None  # Reset fog gate context
+                # Ensure zone_metadata entry exists
+                if current_zone not in self.zone_metadata:
+                    self.zone_metadata[current_zone] = ZoneMetadata(internal_name=current_zone)
             elif line_stripped.startswith("Cols:") and current_zone:
                 cols = line_stripped.replace("Cols:", "").strip().split()
                 for col_entry in cols:
@@ -275,6 +327,24 @@ class ZoneResolver:
                         self.map_zones[map_id].add(current_zone)
                         # Store in col_zones for exact matching
                         self.col_zones[(map_id, col)] = current_zone
+                        # Store in zone_metadata
+                        if current_zone in self.zone_metadata:
+                            meta = self.zone_metadata[current_zone]
+                            if col_entry not in meta.cols:
+                                meta.cols.append(col_entry)
+                            if map_id not in meta.map_ids:
+                                meta.map_ids.append(map_id)
+            elif line_stripped.startswith("MainMap:") and current_zone:
+                # MainMap: provides additional map_ids
+                main_maps = line_stripped.replace("MainMap:", "").strip().split()
+                if current_zone in self.zone_metadata:
+                    for map_id in main_maps:
+                        if map_id not in self.zone_metadata[current_zone].map_ids:
+                            self.zone_metadata[current_zone].map_ids.append(map_id)
+                        # Also add to map_zones for consistency
+                        if map_id not in self.map_zones:
+                            self.map_zones[map_id] = set()
+                        self.map_zones[map_id].add(current_zone)
             # Fog gate definitions (nested under zones)
             elif line_stripped.startswith("- Map:"):
                 current_fog_map = line_stripped.replace("- Map:", "").strip()
@@ -514,6 +584,156 @@ class ZoneResolver:
             detail_text = match.group(1)
             return self.lookup_by_detail_text(detail_text)
         return None, None
+
+    # =========================================================================
+    # Reverse lookup methods (for test simulation)
+    # =========================================================================
+
+    TILE_SIZE = 256.0  # Tile size for overworld maps (m60/m61)
+
+    def estimate_position(
+        self, map_id: str, internal_name: str | None = None
+    ) -> tuple[float, float, float] | None:
+        """
+        Estimate approximate x, y, z coordinates for a zone.
+
+        Args:
+            map_id: The map ID (e.g., "m60_42_32_00")
+            internal_name: Optional internal zone name for bounds lookup
+
+        Returns:
+            Tuple of (x, y, z) or None if cannot estimate.
+        """
+        if not map_id:
+            return None
+
+        match = re.match(r"m(\d+)_(\d+)_(\d+)_(\d+)", map_id)
+        if not match:
+            return None
+
+        area_no = int(match.group(1))
+        grid_x = int(match.group(2))
+        grid_z = int(match.group(3))
+
+        # For overworld maps, use grid-based calculation
+        if area_no in (60, 61):
+            x = (grid_x - 50) * self.TILE_SIZE
+            z = (grid_z - 50) * self.TILE_SIZE
+            y = 100.0
+            return (x, y, z)
+
+        # For dungeon maps, try to use position bounds
+        if internal_name and internal_name in self.zone_metadata:
+            bounds = self.zone_metadata[internal_name].position_bounds
+            if bounds:
+                x = y = z = 0.0
+
+                if "XAbove" in bounds and "XBelow" in bounds:
+                    x = (bounds["XAbove"] + bounds["XBelow"]) / 2
+                elif "XAbove" in bounds:
+                    x = bounds["XAbove"] + 50
+                elif "XBelow" in bounds:
+                    x = bounds["XBelow"] - 50
+
+                if "YAbove" in bounds and "YBelow" in bounds:
+                    y = (bounds["YAbove"] + bounds["YBelow"]) / 2
+                elif "YAbove" in bounds:
+                    y = bounds["YAbove"] + 50
+                elif "YBelow" in bounds:
+                    y = bounds["YBelow"] - 50
+
+                if "ZAbove" in bounds and "ZBelow" in bounds:
+                    z = (bounds["ZAbove"] + bounds["ZBelow"]) / 2
+                elif "ZAbove" in bounds:
+                    z = bounds["ZAbove"] + 50
+                elif "ZBelow" in bounds:
+                    z = bounds["ZBelow"] - 50
+
+                return (x, y, z)
+
+        return None
+
+    def find_map_ids_for_display_name(
+        self, display_name: str, details: str | None = None
+    ) -> tuple[list[str], str | None, tuple[float, float, float] | None]:
+        """
+        Reverse lookup: find map_ids for a zone given its display name.
+
+        This is used for test simulation - given a zone name from the spoiler log,
+        find what map_id(s) it corresponds to.
+
+        Args:
+            display_name: Zone display name (e.g., "Limgrave")
+            details: Optional detail text for disambiguation
+
+        Returns:
+            Tuple of:
+            - list[str]: map_ids that match this zone
+            - str | None: internal zone name (if disambiguated)
+            - tuple | None: estimated position (x, y, z)
+        """
+        # Get all zones matching this display name
+        internal_names = self.display_name_to_zones.get(display_name, [])
+
+        if not internal_names:
+            # Try extracting base name from parenthetical
+            base_match = re.match(r"^(.+?)\s+\([^)]+\)\s*$", display_name)
+            if base_match:
+                base_name = base_match.group(1).strip()
+                internal_names = self.display_name_to_zones.get(base_name, [])
+                # Also extract the parenthetical as potential details
+                paren_match = re.search(r"\(([^)]+)\)$", display_name)
+                if paren_match and not details:
+                    details = paren_match.group(1)
+
+        if not internal_names:
+            return [], None, None
+
+        # Get zone metadata for each matching zone
+        zones = [self.zone_metadata.get(name) for name in internal_names]
+        zones = [z for z in zones if z is not None]
+
+        if not zones:
+            return [], None, None
+
+        # If only one zone, return it directly
+        if len(zones) == 1:
+            zone = zones[0]
+            map_id = zone.map_ids[0] if zone.map_ids else None
+            pos = self.estimate_position(map_id, zone.internal_name)
+            return zone.map_ids, zone.internal_name, pos
+
+        # Multiple zones - try to disambiguate using details
+        if details:
+            details_lower = details.lower()
+
+            # Try to match detail_text_to_zone
+            if details in self.detail_text_to_zone:
+                internal_name = self.detail_text_to_zone[details]
+                if internal_name in self.zone_metadata:
+                    zone = self.zone_metadata[internal_name]
+                    map_id = zone.map_ids[0] if zone.map_ids else None
+                    pos = self.estimate_position(map_id, zone.internal_name)
+                    return zone.map_ids, zone.internal_name, pos
+
+            # Try heuristics based on zone internal name patterns
+            for zone in zones:
+                if "boss" in zone.internal_name and "arena" in details_lower:
+                    map_id = zone.map_ids[0] if zone.map_ids else None
+                    pos = self.estimate_position(map_id, zone.internal_name)
+                    return zone.map_ids, zone.internal_name, pos
+                if "postboss" in zone.internal_name and "after" in details_lower:
+                    map_id = zone.map_ids[0] if zone.map_ids else None
+                    pos = self.estimate_position(map_id, zone.internal_name)
+                    return zone.map_ids, zone.internal_name, pos
+
+        # Could not disambiguate - return all map_ids
+        all_map_ids: list[str] = []
+        for zone in zones:
+            for map_id in zone.map_ids:
+                if map_id not in all_map_ids:
+                    all_map_ids.append(map_id)
+        return all_map_ids, None, None
 
 
 # Global instance

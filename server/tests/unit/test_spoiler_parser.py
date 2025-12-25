@@ -74,6 +74,30 @@ class TestExtractAreaAndDetails:
         assert area == "Divine Bridge"
         assert details == "using the sending gate"
 
+    def test_fallback_inside_details(self):
+        """Parenthetical starting with 'inside' (not in DETAIL_PATTERNS)."""
+        area, details = _extract_area_and_details(
+            "Divine Tower of East Altus - Fell Twins (inside the Fell Twins' arena)"
+        )
+        assert area == "Divine Tower of East Altus - Fell Twins"
+        assert details == "inside the Fell Twins' arena"
+
+    def test_fallback_approaching_details(self):
+        """Parenthetical starting with 'approaching' (not in DETAIL_PATTERNS)."""
+        area, details = _extract_area_and_details(
+            "Divine Tower of East Altus (approaching the Divine Tower of East Altus gate)"
+        )
+        assert area == "Divine Tower of East Altus"
+        assert details == "approaching the Divine Tower of East Altus gate"
+
+    def test_fallback_lying_down_details(self):
+        """Parenthetical starting with 'lying down' (not in DETAIL_PATTERNS)."""
+        area, details = _extract_area_and_details(
+            "Farum Azula Rooftop and Bridge (lying down in front of the tempest)"
+        )
+        assert area == "Farum Azula Rooftop and Bridge"
+        assert details == "lying down in front of the tempest"
+
 
 class TestParseAreaLine:
     """Tests for _parse_area_line function."""

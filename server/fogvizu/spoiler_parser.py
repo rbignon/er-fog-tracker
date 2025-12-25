@@ -188,7 +188,12 @@ def _parse_area_line(line: str) -> ZoneInfo | None:
 
 
 def _extract_area_and_details(text: str) -> tuple[str, str]:
-    """Extract area name and details from a text segment."""
+    """Extract area name and details from a text segment.
+
+    Zone names in fog.txt never contain parentheses, so any parenthetical
+    content in spoiler log names is always connection detail text.
+    """
+    # First try DETAIL_PATTERNS for specific pattern matching
     for pattern in DETAIL_PATTERNS:
         match = pattern.search(text)
         if match:
@@ -197,6 +202,15 @@ def _extract_area_and_details(text: str) -> tuple[str, str]:
             details_match = re.search(r"\(([^)]+)\)", text[match.start() :])
             details = details_match.group(1) if details_match else ""
             return area_name, details
+
+    # Fallback: extract any trailing parenthetical content
+    # Zone names never contain parentheses, so this is always details
+    paren_match = re.search(r"\s*\(([^)]+)\)\s*$", text)
+    if paren_match:
+        area_name = text[: paren_match.start()].strip()
+        details = paren_match.group(1)
+        return area_name, details
+
     return text.strip(), ""
 
 
