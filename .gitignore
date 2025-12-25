@@ -34,3 +34,9 @@ mod/target/
 # Node.js (web/)
 node_modules/
 package-lock.json
+
+# Test artifacts
+.coverage
+coverage.xml
+.pytest_cache/
+htmlcov/

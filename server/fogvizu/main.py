@@ -25,6 +25,8 @@ from fogvizu.zone_resolver import init_resolver
 configure_logging(
     json_output=settings.log_json,
     log_level=settings.log_level,
+    log_file=settings.log_file,
+    log_file_json=settings.log_file_json,
 )
 
 

@@ -11,14 +11,22 @@ import sys
 import structlog
 
 
-def configure_logging(*, json_output: bool = False, log_level: str = "INFO") -> None:
+def configure_logging(
+    *,
+    json_output: bool = False,
+    log_level: str = "INFO",
+    log_file: str | None = None,
+    log_file_json: bool = True,
+) -> None:
     """
     Configure structured logging for the application.
 
     Args:
-        json_output: If True, output JSON format (for production).
+        json_output: If True, output JSON format to console (for production).
                      If False, output human-readable format (for development).
         log_level: The minimum log level to output.
+        log_file: Optional file path to write logs to (in addition to stdout).
+        log_file_json: If True, write JSON format to file. If False, write plaintext.
     """
     # Shared processors for all loggers
     shared_processors: list[structlog.types.Processor] = [
@@ -65,10 +73,28 @@ def configure_logging(*, json_output: bool = False, log_level: str = "INFO") -> 
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
 
-    # Add our handler
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
-    root_logger.addHandler(handler)
+    # Add console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+
+    # Add file handler if log_file is specified
+    if log_file:
+        if log_file_json:
+            file_renderer: structlog.types.Processor = structlog.processors.JSONRenderer()
+        else:
+            file_renderer = structlog.dev.ConsoleRenderer(colors=False)
+
+        file_formatter = structlog.stdlib.ProcessorFormatter(
+            foreign_pre_chain=shared_processors,
+            processors=[
+                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                file_renderer,
+            ],
+        )
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(file_formatter)
+        root_logger.addHandler(file_handler)
 
     # Set levels for noisy loggers
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)

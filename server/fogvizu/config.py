@@ -20,8 +20,9 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
-    log_json: bool = False  # Output JSON logs (for production)
+    log_json: bool = False  # Output JSON logs to console (for production)
     log_file: str | None = None  # Optional file path for logging
+    log_file_json: bool = True  # Output JSON logs to file (easier to parse)
 
     # Data files (fog randomizer data)
     data_dir: str = "data"
