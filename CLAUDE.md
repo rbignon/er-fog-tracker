@@ -23,6 +23,7 @@ er-fog-vizu/
 │   └── styles/
 ├── server/                 # Backend (Python FastAPI)
 │   ├── fogvizu/            # Main module (api/, websocket.py, zone_resolver.py)
+│   ├── tests/              # Pytest tests (unit/, integration/)
 │   ├── alembic/            # Database migrations
 │   └── data/               # Zone data files (fog.txt, submaps.txt)
 ├── mod/                    # In-game mod (Rust DLL + Launcher)
@@ -34,7 +35,8 @@ er-fog-vizu/
 │       └── launcher/       # Windows GUI launcher
 ├── docs/                   # Architecture documentation
 │   └── specs/              # Original design specs
-└── tests/
+├── analysis/               # CLI analysis scripts (not tests)
+└── CONTRIBUTING.md         # Development and testing guide
 ```
 
 ## Running the Application
@@ -123,6 +125,14 @@ Undiscover Zone B
 cd server
 alembic revision -m "description"  # Create migration
 alembic upgrade head               # Apply
+```
+
+### Running tests
+```bash
+cd server
+pytest                              # Run unit tests
+pytest --cov=fogvizu tests/unit    # With coverage
+pytest --run-integration            # Integration tests (requires running server)
 ```
 
 ## Deployment
