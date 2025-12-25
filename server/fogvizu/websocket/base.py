@@ -15,6 +15,9 @@ from fogvizu.zone_matching import get_zone_link_id
 
 logger = logging.getLogger(__name__)
 
+# Custom WebSocket close codes (4000-4999 are available for application use)
+WS_CLOSE_SESSION_REPLACED = 4001  # Another session took over (don't reconnect)
+
 
 def build_game_state(game: Game) -> dict:
     """Build game state dict from database game object.

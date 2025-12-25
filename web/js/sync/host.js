@@ -2,7 +2,7 @@
 // SYNC HOST - Host (streamer) WebSocket logic
 // ============================================================
 
-import { TIMING } from '../constants.js';
+import { TIMING, WS } from '../constants.js';
 import * as State from '../state.js';
 import * as Auth from '../auth.js';
 import {
@@ -542,8 +542,15 @@ export async function connectAsHost(gameId) {
             }
         };
 
-        gameWs.onclose = () => {
+        gameWs.onclose = event => {
             stopGameWsHeartbeatMonitoring();
+            // Don't reconnect if session was replaced by another tab
+            if (event.code === WS.CLOSE_SESSION_REPLACED) {
+                console.log('[HOST] Session replaced by another tab, not reconnecting');
+                import('../toast.js').then(Toast => Toast.warning('Session replaced by another browser tab'));
+                State.setSyncState(false, false, null);
+                return;
+            }
             if (State.isSyncConnected() && getCurrentGameId() === gameId) {
                 handleGameWsDisconnect();
             }

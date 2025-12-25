@@ -13,7 +13,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from fogvizu.database import Game, async_session
 from fogvizu.game_logic import propagate_discovery
 from fogvizu.websocket.auth import authenticate_ws, verify_game_access
-from fogvizu.websocket.base import Client, build_game_state
+from fogvizu.websocket.base import WS_CLOSE_SESSION_REPLACED, Client, build_game_state
 from fogvizu.websocket.manager import manager
 from fogvizu.zone_matching import compute_discovery_stats, expand_discovered_links
 
@@ -144,7 +144,7 @@ class HostClient(Client):
                 old_host = room.host
                 old_host.stop()
                 with contextlib.suppress(Exception):
-                    await old_host.ws.close()
+                    await old_host.ws.close(WS_CLOSE_SESSION_REPLACED, "Session replaced")
                 room.host = None
             else:
                 await websocket.send_json({"type": "error", "message": "Host already connected"})

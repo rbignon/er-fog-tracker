@@ -34,6 +34,8 @@ export const WS = {
     RECONNECT_BACKOFF_FACTOR: 1.5, // Exponential backoff multiplier
     HEARTBEAT_INTERVAL: 15000, // Ping interval
     HEARTBEAT_TIMEOUT: 30000, // Time without pong before considering dead
+    // Custom close codes (must match server)
+    CLOSE_SESSION_REPLACED: 4001, // Session replaced by another tab (don't reconnect)
 };
 
 // =============================================================================
