@@ -179,6 +179,9 @@ function handleOfflineGraphLoaded() {
 
     // Configure for offline mode
     State.setBackendMode('offline');
+
+    // Hide loading spinner (graph is already loaded from file)
+    setGraphLoading(false);
 }
 
 // ============================================================
