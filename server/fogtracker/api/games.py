@@ -11,16 +11,16 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
-from fogvizu.auth import get_current_user
-from fogvizu.config import settings
-from fogvizu.database import Game, User, get_db
-from fogvizu.game_logic import (
+from fogtracker.auth import get_current_user
+from fogtracker.config import settings
+from fogtracker.database import Game, User, get_db
+from fogtracker.game_logic import (
     compute_discovery_stats,
     format_discovery_summary,
     format_undiscovery_summary,
     propagate_discovery,
 )
-from fogvizu.models import (
+from fogtracker.models import (
     DiscoveredZoneLink,
     DiscoveredZoneLinkResponse,
     DiscoveryCreate,
@@ -38,8 +38,8 @@ from fogvizu.models import (
     Zone,
     ZoneLink,
 )
-from fogvizu.websocket import manager as ws_manager
-from fogvizu.zone_matching import build_zone_pairs_index, get_zone_link_id, undiscover_zone
+from fogtracker.websocket import manager as ws_manager
+from fogtracker.zone_matching import build_zone_pairs_index, get_zone_link_id, undiscover_zone
 
 logger = logging.getLogger(__name__)
 

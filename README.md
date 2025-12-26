@@ -4,7 +4,7 @@ A web-based tool to visualize and track exploration progress for the [Fog Gate R
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen) ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-**Try it online:** [https://fogvizu.malenia.win](https://fogvizu.malenia.win)
+**Try it online:** [https://fogtracker.malenia.win](https://fogtracker.malenia.win)
 
 ## Features
 
@@ -22,14 +22,14 @@ A web-based tool to visualize and track exploration progress for the [Fog Gate R
 
 ### Online Mode (with account)
 
-1. Go to [fogvizu.malenia.win](https://fogvizu.malenia.win)
+1. Go to [fogtracker.malenia.win](https://fogtracker.malenia.win)
 2. Log in with your Twitch account
 3. Upload your spoiler log to create a game
 4. Start exploring!
 
 ### Offline Mode (no account required)
 
-1. Go to [fogvizu.malenia.win](https://fogvizu.malenia.win)
+1. Go to [fogtracker.malenia.win](https://fogtracker.malenia.win)
 2. Click "Use Offline" on the landing page
 3. Drag and drop your spoiler log file
 4. Your progress is saved locally in your browser
@@ -38,8 +38,8 @@ A web-based tool to visualize and track exploration progress for the [Fog Gate R
 
 ```bash
 # Clone the repository
-git clone https://github.com/rbignon/er-fog-vizu.git
-cd er-fog-vizu/server
+git clone https://github.com/rbignon/er-fog-tracker.git
+cd er-fog-tracker/server
 
 # Install and configure
 pip install -e .
@@ -47,7 +47,7 @@ cp .env.example .env  # Configure your environment
 alembic upgrade head
 
 # Run
-uvicorn fogvizu.main:app --reload --port 8001
+uvicorn fogtracker.main:app --reload --port 8001
 ```
 
 See [server/README.md](server/README.md) for detailed setup instructions (PostgreSQL, Twitch OAuth, etc.).
@@ -77,7 +77,7 @@ The browser source will mirror your interactions in real-time: navigation, zoom,
 ## Project Structure
 
 ```
-er-fog-vizu/
+er-fog-tracker/
 ├── web/                    # Frontend (vanilla JS + D3.js)
 ├── server/                 # Backend (Python FastAPI + PostgreSQL)
 ├── mod/                    # In-game mod (Rust DLL)

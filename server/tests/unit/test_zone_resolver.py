@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from fogvizu.zone_resolver import MapRules, PositionRule, ZoneResolver
+from fogtracker.zone_resolver import MapRules, PositionRule, ZoneResolver
 
 
 @pytest.fixture

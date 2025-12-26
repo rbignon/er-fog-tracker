@@ -30,8 +30,8 @@ from pathlib import Path
 # Add server module to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "server"))
 
-from fogvizu.zone_resolver import ZoneResolver
-from fogvizu.zone_matching import (
+from fogtracker.zone_resolver import ZoneResolver
+from fogtracker.zone_matching import (
     find_all_matching_zone_pairs,
     find_all_matching_zone_pairs_by_keys,
     names_match,

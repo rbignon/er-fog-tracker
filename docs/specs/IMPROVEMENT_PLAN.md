@@ -101,7 +101,7 @@ try {
 
 ### 1.4 Serveur - Gestion des OAuth States
 
-**Fichier:** `server/fogvizu/api/auth.py:24-40`
+**Fichier:** `server/fogtracker/api/auth.py:24-40`
 
 **Problème:** `_oauth_states.clear()` efface tous les states d'un coup, cassant les OAuth flows en cours.
 
@@ -130,7 +130,7 @@ async def auth_twitch_redirect():
 
 ### 1.5 Serveur - Transaction Isolation pour Découvertes
 
-**Fichier:** `server/fogvizu/websocket/mod.py:171-384`
+**Fichier:** `server/fogtracker/websocket/mod.py:171-384`
 
 **Problème:** Si deux mods envoient des découvertes en parallèle, une peut être perdue (race condition sur `discovered_zone_links`).
 
@@ -227,7 +227,7 @@ Améliorations de robustesse et performance.
 
 ### 2.2 Serveur - Validation des Noms de Zones
 
-**Fichier:** `server/fogvizu/api/games.py`
+**Fichier:** `server/fogtracker/api/games.py`
 
 **Problème:** Noms de zones acceptés sans validation (longueur, charset).
 
@@ -250,7 +250,7 @@ class ZoneLink(BaseModel):
 
 ### 2.3 Serveur - Rate Limiting Viewers
 
-**Fichier:** `server/fogvizu/websocket/viewer.py`
+**Fichier:** `server/fogtracker/websocket/viewer.py`
 
 **Problème:** N'importe qui peut se connecter à n'importe quel `game_id` sans limite.
 
@@ -301,7 +301,7 @@ if (!placeholderIdSet.has(placeholderIdForward)) {
 
 ### 2.5 Serveur - Index Base de Données
 
-**Fichier:** `server/fogvizu/database.py`
+**Fichier:** `server/fogtracker/database.py`
 
 **Problème:** Index manquant sur `Game.seed` et `Game.updated_at`.
 

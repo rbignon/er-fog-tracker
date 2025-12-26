@@ -1,1 +1,1 @@
-# Tests for fogvizu server
+# Tests for fogtracker server

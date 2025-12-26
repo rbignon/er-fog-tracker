@@ -1,4 +1,4 @@
-# Fog Gate Visualizer - Backend Server
+# Fog Gate Tracker - Backend Server
 
 FastAPI backend server with PostgreSQL, Twitch OAuth, and WebSocket sync.
 
@@ -38,7 +38,7 @@ cp .env.example .env
 Required environment variables:
 
 ```env
-DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/fogvizu
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/fogtracker
 TWITCH_CLIENT_ID=your_twitch_client_id
 TWITCH_CLIENT_SECRET=your_twitch_client_secret
 TWITCH_REDIRECT_URI=http://localhost:8001/auth/twitch/callback
@@ -49,7 +49,7 @@ SECRET_KEY=your_random_secret_key
 
 ```bash
 # Create database
-createdb fogvizu
+createdb fogtracker
 
 # Run migrations
 alembic upgrade head
@@ -59,10 +59,10 @@ alembic upgrade head
 
 ```bash
 # Development (with auto-reload)
-uvicorn fogvizu.main:app --reload --port 8001
+uvicorn fogtracker.main:app --reload --port 8001
 
 # Or using the entry point
-fogvizu
+fogtracker
 ```
 
 The server runs at http://localhost:8001
@@ -90,18 +90,18 @@ pytest
 
 ```bash
 # Copy service file
-sudo cp fog-vizu.service /etc/systemd/system/
+sudo cp fog-tracker.service /etc/systemd/system/
 
 # Edit paths if needed
-sudo systemctl edit fog-vizu
+sudo systemctl edit fog-tracker
 
 # Enable and start
-sudo systemctl enable fog-vizu
-sudo systemctl start fog-vizu
+sudo systemctl enable fog-tracker
+sudo systemctl start fog-tracker
 
 # Check status
-sudo systemctl status fog-vizu
-journalctl -u fog-vizu -f
+sudo systemctl status fog-tracker
+journalctl -u fog-tracker -f
 ```
 
 ### Nginx
@@ -110,7 +110,7 @@ Add to your nginx server block:
 
 ```bash
 # Option 1: Include the config file
-include /var/www/fog-vizu/server/fog-vizu.nginx.conf;
+include /var/www/fog-tracker/server/fog-tracker.nginx.conf;
 
 # Option 2: Copy content to your site config
 sudo nano /etc/nginx/sites-available/your-site
@@ -142,7 +142,7 @@ Once running, visit:
 
 ```
 server/
-├── fogvizu/
+├── fogtracker/
 │   ├── __init__.py
 │   ├── main.py            # FastAPI app entry point
 │   ├── config.py          # Settings (pydantic-settings)
@@ -162,6 +162,6 @@ server/
 ├── data/                  # Static data files (zone coordinates)
 ├── pyproject.toml
 ├── .env.example
-├── fog-vizu.service       # Systemd unit
-└── fog-vizu.nginx.conf    # Nginx config
+├── fog-tracker.service       # Systemd unit
+└── fog-tracker.nginx.conf    # Nginx config
 ```

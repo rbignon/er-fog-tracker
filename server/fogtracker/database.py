@@ -94,7 +94,7 @@ class Game(Base):
 @lru_cache
 def get_engine():
     """Get cached database engine. Lazily initialized on first call."""
-    from fogvizu.config import get_settings
+    from fogtracker.config import get_settings
 
     return create_async_engine(get_settings().database_url, echo=False)
 

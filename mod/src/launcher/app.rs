@@ -165,7 +165,7 @@ pub struct LauncherApp {
     #[nwg_control(parent: window, text: "", position: (20, 110), size: (460, 25), flags: "VISIBLE|TAB_STOP")]
     token_input: nwg::TextInput,
 
-    #[nwg_control(parent: window, text: "Find your token in Settings on the fog-vizu website", position: (20, 145), size: (460, 20))]
+    #[nwg_control(parent: window, text: "Find your token in Settings on the fog-tracker website", position: (20, 145), size: (460, 20))]
     token_hint: nwg::Label,
 
     #[nwg_control(parent: window, text: "", position: (20, 175), size: (460, 40))]

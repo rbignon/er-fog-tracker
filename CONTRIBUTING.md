@@ -3,7 +3,7 @@
 ## Project Structure
 
 ```
-er-fog-vizu/
+er-fog-tracker/
 ├── web/                    # Frontend (vanilla JS + D3.js)
 ├── server/                 # Backend (Python FastAPI)
 ├── mod/                    # In-game mod (Rust DLL)
@@ -22,7 +22,7 @@ source venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
 alembic upgrade head
-uvicorn fogvizu.main:app --reload --port 8001
+uvicorn fogtracker.main:app --reload --port 8001
 ```
 
 ### Mod (Rust)
@@ -93,7 +93,7 @@ pytest tests/unit/test_zone_matching.py::TestNamesMatch
 pytest tests/unit/test_zone_matching.py::TestNamesMatch::test_exact_match
 
 # Run with coverage
-pytest --cov=fogvizu --cov-report=term-missing tests/unit
+pytest --cov=fogtracker --cov-report=term-missing tests/unit
 
 # Run integration tests (requires server on localhost:8001)
 pytest --run-integration
@@ -109,7 +109,7 @@ pytest --run-integration
 **Example:**
 
 ```python
-from fogvizu.zone_matching import names_match
+from fogtracker.zone_matching import names_match
 
 class TestNamesMatch:
     def test_exact_match(self):

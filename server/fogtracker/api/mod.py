@@ -10,18 +10,18 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fogvizu.auth import get_current_user_by_mod_token
-from fogvizu.config import settings
-from fogvizu.database import Game, User, get_db
-from fogvizu.game_logic import compute_discovery_stats
-from fogvizu.models import GameCreateResponse, GameListResponse, GameSummary, Zone, ZoneLink
-from fogvizu.spoiler_parser import (
+from fogtracker.auth import get_current_user_by_mod_token
+from fogtracker.config import settings
+from fogtracker.database import Game, User, get_db
+from fogtracker.game_logic import compute_discovery_stats
+from fogtracker.models import GameCreateResponse, GameListResponse, GameSummary, Zone, ZoneLink
+from fogtracker.spoiler_parser import (
     SpoilerParseError,
     enrich_connections_with_zone_keys,
     parse_spoiler_log,
 )
-from fogvizu.websocket import manager as ws_manager
-from fogvizu.zone_resolver import get_resolver
+from fogtracker.websocket import manager as ws_manager
+from fogtracker.zone_resolver import get_resolver
 
 router = APIRouter(prefix="/mod", tags=["mod"])
 

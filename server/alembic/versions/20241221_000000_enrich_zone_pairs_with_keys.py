@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 def upgrade() -> None:
     """Enrich all existing zone_pairs with zone_keys."""
     # Import here to avoid circular imports and ensure fresh resolver
-    from fogvizu.zone_resolver import ZoneResolver
+    from fogtracker.zone_resolver import ZoneResolver
 
     conn = op.get_bind()
 

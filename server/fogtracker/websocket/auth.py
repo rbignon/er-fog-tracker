@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import WebSocket
 from sqlalchemy import or_, select
 
-from fogvizu.database import Game, User
+from fogtracker.database import Game, User
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

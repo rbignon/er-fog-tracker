@@ -11,8 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
-from fogvizu.database import Game
-from fogvizu.zone_matching import (
+from fogtracker.database import Game
+from fogtracker.zone_matching import (
     build_preexisting_adjacency,
     find_candidate_zones,
     find_path_prioritizing_discovered,
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 # Re-export commonly used functions for backward compatibility
-from fogvizu.zone_matching import (  # noqa: E402, F401
+from fogtracker.zone_matching import (  # noqa: E402, F401
     compute_discovery_stats,
     compute_total_zones,
     find_all_matching_zone_pairs,

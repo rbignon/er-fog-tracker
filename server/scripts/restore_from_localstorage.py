@@ -21,8 +21,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 sys.path.insert(0, ".")
 
-from fogvizu.config import settings
-from fogvizu.database import Game
+from fogtracker.config import settings
+from fogtracker.database import Game
 
 # localStorage data to restore
 LOCALSTORAGE_DATA = {

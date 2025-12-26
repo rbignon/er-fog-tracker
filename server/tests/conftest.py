@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for fogvizu tests."""
+"""Shared pytest fixtures for fogtracker tests."""
 
 import json
 from pathlib import Path

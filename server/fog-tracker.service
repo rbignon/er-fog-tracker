@@ -1,0 +1,17 @@
+[Unit]
+Description=Fog Gate Tracker Backend Server
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/fog-tracker/server
+ExecStart=/var/www/fog-tracker/server/venv/bin/uvicorn fogtracker.main:app --host 127.0.0.1 --port 8001
+Restart=always
+RestartSec=5
+EnvironmentFile=/var/www/fog-tracker/server/.env
+
+[Install]
+WantedBy=multi-user.target

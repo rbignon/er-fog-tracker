@@ -25,7 +25,7 @@ Fast travel → loading screen → position readable → mod sends zone_query
 
 ### 1. Server: New `zone_query` handler
 
-**File**: `server/fogvizu/websocket/mod.py`
+**File**: `server/fogtracker/websocket/mod.py`
 
 1. Add handler in `_register_handlers()`:
    ```python
@@ -199,7 +199,7 @@ Response with resolved zone and exits.
 
 | File | Changes |
 |------|---------|
-| `server/fogvizu/websocket/mod.py` | +handler `_handle_zone_query` |
+| `server/fogtracker/websocket/mod.py` | +handler `_handle_zone_query` |
 | `mod/src/websocket.rs` | +messages `ZoneQuery`, `ZoneQueryAck`, +method `send_zone_query` |
 | `mod/src/tracker.rs` | Modify loading screen detection, +handle `ZoneQueryAck` |
 | `docs/PROTOCOL.md` | Document new messages |

@@ -35,7 +35,7 @@ sys.path.insert(0, str(server_dir))
 from scripts.export_game import export_game  # noqa: E402
 
 # Log file location
-LOG_FILE = script_dir.parent / "fogvizu.log"
+LOG_FILE = script_dir.parent / "fogtracker.log"
 
 # Time window for log extraction (in minutes)
 LOG_WINDOW_MINUTES = 5
@@ -120,7 +120,7 @@ def generate_report_md(
         "- `zone_links.json` - All zone links (randomized connections)",
         "- `entity_mapping.json` - Entity ID to zone mapping",
         "- `discovered_zone_links.json` - Currently discovered links",
-        "- `fogvizu.log` - Recent server logs",
+        "- `fogtracker.log` - Recent server logs",
         "",
         "## Reference Files (not included)",
         "",
@@ -144,9 +144,9 @@ def generate_report_md(
         "",
         "Key files for zone resolution:",
         "",
-        "- `server/fogvizu/zone_resolver.py` - Zone candidate resolution",
-        "- `server/fogvizu/zone_matching.py` - Spoiler log matching",
-        "- `server/fogvizu/websocket/mod.py` - Discovery handling",
+        "- `server/fogtracker/zone_resolver.py` - Zone candidate resolution",
+        "- `server/fogtracker/zone_matching.py` - Spoiler log matching",
+        "- `server/fogtracker/websocket/mod.py` - Discovery handling",
         "",
         "### 3. After fixing, verify",
         "",
@@ -202,7 +202,7 @@ async def main() -> None:
     # Extract recent logs
     print("Extracting recent logs...", file=sys.stderr)
     log_content = extract_recent_logs(LOG_FILE)
-    log_file = report_dir / "fogvizu.log"
+    log_file = report_dir / "fogtracker.log"
     with open(log_file, "w") as f:
         f.write(log_content)
     print(f"Extracted log to: {log_file}", file=sys.stderr)

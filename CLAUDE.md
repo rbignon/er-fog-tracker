@@ -16,13 +16,13 @@ Elden Ring Fog Gate Randomizer Tracker - a web-based tool to visualize and track
 ## Project Structure
 
 ```
-er-fog-vizu/
+er-fog-tracker/
 ├── web/                    # Frontend (vanilla JS + D3.js)
 │   ├── index.html
 │   ├── js/                 # ES6 modules (state.js, graph.js, exploration.js, sync.js)
 │   └── styles/
 ├── server/                 # Backend (Python FastAPI)
-│   ├── fogvizu/            # Main module (api/, websocket.py, zone_resolver.py)
+│   ├── fogtracker/            # Main module (api/, websocket.py, zone_resolver.py)
 │   ├── tests/              # Pytest tests (unit/, integration/)
 │   ├── alembic/            # Database migrations
 │   └── data/               # Zone data files (fog.txt, submaps.txt)
@@ -48,7 +48,7 @@ source venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env        # Configure environment
 alembic upgrade head        # Run migrations
-uvicorn fogvizu.main:app --reload --port 8001
+uvicorn fogtracker.main:app --reload --port 8001
 ```
 
 Open `http://localhost:8001` in browser.
@@ -111,8 +111,8 @@ Undiscover Zone B
 ## Common Tasks
 
 ### Adding a new API endpoint
-1. Add route in `server/fogvizu/api/`
-2. Add models in `server/fogvizu/models.py`
+1. Add route in `server/fogtracker/api/`
+2. Add models in `server/fogtracker/models.py`
 3. Update `docs/PROTOCOL.md`
 
 ### Adding a new teleport type (mod)
@@ -131,7 +131,7 @@ alembic upgrade head               # Apply
 ```bash
 cd server
 pytest                              # Run unit tests
-pytest --cov=fogvizu tests/unit    # With coverage
+pytest --cov=fogtracker tests/unit    # With coverage
 pytest --run-integration            # Integration tests (requires running server)
 ```
 
@@ -154,13 +154,13 @@ When a fog gate traversal fails to match (logs show "Zone non trouvée" or "No s
 3. **Add a unit test** in `tests/unit/test_zone_resolver.py` for the fix.
 
 Key files for zone resolution:
-- `server/fogvizu/zone_resolver.py` - Zone candidate resolution
-- `server/fogvizu/zone_matching.py` - Spoiler log matching
-- `server/fogvizu/websocket/mod.py` - Discovery handling
+- `server/fogtracker/zone_resolver.py` - Zone candidate resolution
+- `server/fogtracker/zone_matching.py` - Spoiler log matching
+- `server/fogtracker/websocket/mod.py` - Discovery handling
 - `server/data/fog.txt` - Zone definitions and fog gates
 
 ## Deployment
 
 See `server/README.md` for production deployment:
-- Systemd service (`server/fog-vizu.service`)
-- Nginx reverse proxy (`server/fog-vizu.nginx.conf`)
+- Systemd service (`server/fog-tracker.service`)
+- Nginx reverse proxy (`server/fog-tracker.nginx.conf`)

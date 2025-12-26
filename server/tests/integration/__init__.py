@@ -1,1 +1,1 @@
-# Integration tests for fogvizu
+# Integration tests for fogtracker

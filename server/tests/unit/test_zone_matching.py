@@ -4,7 +4,7 @@ Tests pure functions for zone name matching, graph traversal,
 and discovery logic.
 """
 
-from fogvizu.zone_matching import (
+from fogtracker.zone_matching import (
     START_NODE,
     build_full_adjacency,
     build_preexisting_adjacency,

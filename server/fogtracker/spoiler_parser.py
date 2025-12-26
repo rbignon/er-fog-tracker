@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 if TYPE_CHECKING:
-    from fogvizu.zone_resolver import ZoneResolver
+    from fogtracker.zone_resolver import ZoneResolver
 
 # Patterns that ALWAYS indicate a one-way connection
 ALWAYS_ONE_WAY_PATTERNS = [

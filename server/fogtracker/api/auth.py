@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fogvizu.auth import (
+from fogtracker.auth import (
     exchange_code_for_token,
     generate_api_token,
     get_current_user,
@@ -17,8 +17,8 @@ from fogvizu.auth import (
     get_twitch_oauth_url,
     get_twitch_user,
 )
-from fogvizu.database import User, get_db
-from fogvizu.models import UserMe
+from fogtracker.database import User, get_db
+from fogtracker.models import UserMe
 
 router = APIRouter()
 

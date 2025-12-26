@@ -5,7 +5,7 @@ Tests the parsing of Fog Gate Randomizer spoiler logs.
 
 import pytest
 
-from fogvizu.spoiler_parser import (
+from fogtracker.spoiler_parser import (
     ConnectionInfo,
     ParseResult,
     SpoilerParseError,

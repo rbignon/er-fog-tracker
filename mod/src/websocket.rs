@@ -1,4 +1,4 @@
-// WebSocket client for fog-vizu server integration
+// WebSocket client for fog-tracker server integration
 //
 // Handles connection to the server, authentication, and real-time
 // transmission of fog gate discoveries.

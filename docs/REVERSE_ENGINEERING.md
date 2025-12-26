@@ -195,7 +195,7 @@ if warp_requested && !self.was_warp_requested {
 | `fog/enhanced_spoiler.json` | Generated mapping (currently broken) |
 | `fog/enriched_game_state.json` | Generated game state (currently broken) |
 | `fog/src-decompiled/FogMod/*.cs` | Decompiled FogMod source |
-| `er-fog-vizu/tests/*.json` | Parsed spoiler logs for testing |
+| `er-fog-tracker/tests/*.json` | Parsed spoiler logs for testing |
 
 ## MSB Parsing Investigation (2025-12-21)
 

@@ -33,8 +33,8 @@ os.chdir(server_dir)
 # Add server dir to path for imports
 sys.path.insert(0, str(server_dir))
 
-from fogvizu.config import settings  # noqa: E402
-from fogvizu.database import Game  # noqa: E402
+from fogtracker.config import settings  # noqa: E402
+from fogtracker.database import Game  # noqa: E402
 
 
 async def export_game(game_id: str, output_dir: Path | None = None) -> Path:

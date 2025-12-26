@@ -9,7 +9,7 @@ Tests:
 
 Usage:
     # Start server first:
-    uvicorn fogvizu.main:app --port 8001
+    uvicorn fogtracker.main:app --port 8001
 
     # Run tests:
     python -m pytest tests/test_server_integration.py -v
@@ -47,7 +47,7 @@ DEFAULT_SPOILER_LOG = "2025-12-18_20.06.27_log_1078869800_97790.txt"
 def get_spoiler_log() -> str:
     """Load spoiler log from file or use minimal fallback."""
     script_dir = Path(__file__).parent
-    project_root = script_dir.parent.parent  # server/tests -> er-fog-vizu
+    project_root = script_dir.parent.parent  # server/tests -> er-fog-tracker
 
     # Try to load from file
     spoiler_path = project_root / DEFAULT_SPOILER_LOG
@@ -964,7 +964,7 @@ async def main():
                 sys.exit(1)
     except Exception as e:
         print(f"ERROR: Cannot connect to server at {BASE_URL}")
-        print("       Make sure the server is running: uvicorn fogvizu.main:app --port 8001")
+        print("       Make sure the server is running: uvicorn fogtracker.main:app --port 8001")
         print(f"       Error: {e}")
         sys.exit(1)
 
@@ -975,7 +975,7 @@ async def main():
     try:
         # Get database URL from settings
         sys.path.insert(0, str(Path(__file__).parent.parent))
-        from fogvizu.config import settings
+        from fogtracker.config import settings
 
         await setup_test_user(settings.database_url)
     except Exception as e:

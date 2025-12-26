@@ -145,7 +145,7 @@ pub fn parse_hex_color(hex: &str, alpha: f32) -> [f32; 4] {
     [r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, alpha]
 }
 
-/// Server settings for fog-vizu integration
+/// Server settings for fog-tracker integration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerSettings {
     #[serde(default)]

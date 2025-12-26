@@ -34,7 +34,7 @@
 - Determine if teleporters have unique IDs that map to fog gate randomizer entries
 - Check if "return to entrance" has a consistent hook point
 
-**Files to modify**: `mod/src/` (Rust hooks), `server/fogvizu/api/` (handle new event types)
+**Files to modify**: `mod/src/` (Rust hooks), `server/fogtracker/api/` (handle new event types)
 
 ---
 
@@ -171,7 +171,7 @@ const isHub = (node) => {
    - Send `modConnected` / `modDisconnected` events to host
 
 **Files to modify**:
-- `server/fogvizu/api/` - track mod connections per session
+- `server/fogtracker/api/` - track mod connections per session
 - `web/js/sync.js` - handle mod status events
 - `web/js/ui.js` - status indicator and config modal
 
@@ -196,7 +196,7 @@ const isHub = (node) => {
 **Files to create/modify**:
 - `mod/src/config.rs` - configuration handling
 - `mod/src/spoiler.rs` - spoiler log parsing (port from JS or use existing Rust parser)
-- `server/fogvizu/api/sessions.py` - endpoint for mod-initiated session creation
+- `server/fogtracker/api/sessions.py` - endpoint for mod-initiated session creation
 
 ---
 

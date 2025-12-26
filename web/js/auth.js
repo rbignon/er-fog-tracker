@@ -2,8 +2,8 @@
  * Authentication module - Twitch OAuth token management.
  */
 
-const TOKEN_KEY = 'fogvizu_api_token';
-const USER_KEY = 'fogvizu_user';
+const TOKEN_KEY = 'fogtracker_api_token';
+const USER_KEY = 'fogtracker_user';
 
 let cachedUser = null;
 let fetchingUser = null; // Promise to prevent concurrent fetches

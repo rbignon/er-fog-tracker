@@ -1,6 +1,6 @@
 # Backend Specification (Revised)
 
-This document describes the backend architecture for er-fog-vizu integration with the Route Tracker mod.
+This document describes the backend architecture for er-fog-tracker integration with the Route Tracker mod.
 
 ## 1. Overview
 
@@ -492,9 +492,9 @@ Viewers don't need auth (game viewing is public).
 server/
 ├── pyproject.toml           # Package config + dependencies
 ├── .env.example             # Environment template
-├── fog-vizu.service         # Systemd unit file
-├── fog-vizu.nginx.conf      # Nginx reverse proxy config
-├── fogvizu/                  # Python module
+├── fog-tracker.service         # Systemd unit file
+├── fog-tracker.nginx.conf      # Nginx reverse proxy config
+├── fogtracker/                  # Python module
 │   ├── __init__.py
 │   ├── main.py              # FastAPI app, route mounting
 │   ├── config.py            # Settings (pydantic-settings)
@@ -523,7 +523,7 @@ See `server/.env.example` for the full template.
 
 ```bash
 # Database
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/fogvizu
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/fogtracker
 
 # Twitch OAuth
 TWITCH_CLIENT_ID=xxx
@@ -545,13 +545,13 @@ HEARTBEAT_INTERVAL=30
 ```bash
 cd server
 source venv/bin/activate
-uvicorn fogvizu.main:app --reload --port 8001
+uvicorn fogtracker.main:app --reload --port 8001
 ```
 
 Or using the installed entry point:
 
 ```bash
-fogvizu
+fogtracker
 ```
 
 ## 7. Key Implementation Notes

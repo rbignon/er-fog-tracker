@@ -1,6 +1,6 @@
 # FogRandoTracker - Elden Ring Fog Gate Randomizer Tracker
 
-DLL mod for Elden Ring that detects fog gate traversals and integrates with er-fog-vizu for automatic zone discovery visualization.
+DLL mod for Elden Ring that detects fog gate traversals and integrates with er-fog-tracker for automatic zone discovery visualization.
 
 ## Building
 
@@ -26,7 +26,7 @@ cargo build --release
 
 Edit `fog_rando_tracker.toml` to configure:
 - Hotkey for UI toggle (default: F9)
-- Server integration for fog-vizu
+- Server integration for fog-tracker
 
 ## Architecture
 
@@ -49,13 +49,13 @@ Fog gate traversal is detected via animation ID 60060. The tracker captures:
 
 The server matches coordinates to zone names using the game's map data.
 
-## Integration with er-fog-vizu
+## Integration with er-fog-tracker
 
-The mod connects to the er-fog-vizu server via WebSocket to automatically send fog gate discoveries in real-time.
+The mod connects to the er-fog-tracker server via WebSocket to automatically send fog gate discoveries in real-time.
 
 ### Setup
 
-1. Log in to the fog-vizu website with your Twitch account
+1. Log in to the fog-tracker website with your Twitch account
 2. Create a new game from your spoiler log
 3. Copy your mod token and game ID from the dashboard
 4. Edit `fog_rando_tracker.toml` and fill in the `[server]` section:
@@ -63,7 +63,7 @@ The mod connects to the er-fog-vizu server via WebSocket to automatically send f
 ```toml
 [server]
 enabled = true
-url = "wss://fogvizu.malenia.win"
+url = "wss://fogtracker.malenia.win"
 mod_token = "your-mod-token-here"
 game_id = "your-game-uuid-here"
 auto_reconnect = true

@@ -1,5 +1,5 @@
 """
-Fog Gate Visualizer - Backend Server
+Fog Gate Tracker - Backend Server
 
 FastAPI server with REST API and WebSocket support for real-time sync.
 """
@@ -14,12 +14,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from fogvizu.api import api_router
-from fogvizu.config import settings
-from fogvizu.database import init_db
-from fogvizu.logging_config import configure_logging, get_logger
-from fogvizu.websocket import HostClient, ModClient, ViewerClient
-from fogvizu.zone_resolver import init_resolver
+from fogtracker.api import api_router
+from fogtracker.config import settings
+from fogtracker.database import init_db
+from fogtracker.logging_config import configure_logging, get_logger
+from fogtracker.websocket import HostClient, ModClient, ViewerClient
+from fogtracker.zone_resolver import init_resolver
 
 # Configure structured logging
 configure_logging(
@@ -52,8 +52,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Fog Gate Visualizer API",
-    description="Backend for er-fog-vizu with real-time sync",
+    title="Fog Gate Tracker API",
+    description="Backend for er-fog-tracker with real-time sync",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -102,7 +102,7 @@ async def ws_viewer(websocket: WebSocket, game_id: UUID):
 @app.get("/api/health")
 async def health():
     """Health check endpoint."""
-    from fogvizu.websocket import manager
+    from fogtracker.websocket import manager
 
     total_rooms = len(manager.rooms)
     total_viewers = sum(len(r.viewers) for r in manager.rooms.values())
@@ -161,7 +161,7 @@ async def spa_fallback(request: Request, full_path: str):
 def main():
     import uvicorn
 
-    parser = argparse.ArgumentParser(description="Fog Gate Visualizer Server")
+    parser = argparse.ArgumentParser(description="Fog Gate Tracker Server")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
@@ -171,7 +171,7 @@ def main():
     print(f"API docs: http://localhost:{args.port}/docs")
 
     uvicorn.run(
-        "fogvizu.main:app",
+        "fogtracker.main:app",
         host=args.host,
         port=args.port,
         reload=args.reload,

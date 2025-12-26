@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["wospins"]
 license = "AGPL-3.0"
 description = "Fog Gate Randomizer tracker mod for Elden Ring"
-repository = "https://github.com/rbignon/er-fog-vizu"
+repository = "https://github.com/rbignon/er-fog-tracker"
 
 [lib]
 crate-type = ["cdylib"]
@@ -39,7 +39,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "0.8"
 
-# --- WebSocket client for fog-vizu integration ---
+# --- WebSocket client for fog-tracker integration ---
 tungstenite = { version = "0.21", features = ["native-tls"] }
 crossbeam-channel = "0.5"
 

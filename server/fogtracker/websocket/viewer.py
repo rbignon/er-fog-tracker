@@ -7,11 +7,11 @@ from uuid import UUID
 
 from fastapi import WebSocket
 
-from fogvizu.config import settings
-from fogvizu.database import async_session
-from fogvizu.websocket.auth import verify_game_access
-from fogvizu.websocket.base import Client, build_game_state
-from fogvizu.websocket.manager import manager
+from fogtracker.config import settings
+from fogtracker.database import async_session
+from fogtracker.websocket.auth import verify_game_access
+from fogtracker.websocket.base import Client, build_game_state
+from fogtracker.websocket.manager import manager
 
 logger = logging.getLogger(__name__)
 

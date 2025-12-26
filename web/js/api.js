@@ -1,5 +1,5 @@
 /**
- * REST API client for the fog-vizu backend.
+ * REST API client for the fog-tracker backend.
  */
 
 import { getAuthHeaders } from './auth.js';

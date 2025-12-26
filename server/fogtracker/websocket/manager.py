@@ -12,9 +12,9 @@ from uuid import UUID
 from fastapi import WebSocket
 
 if TYPE_CHECKING:
-    from fogvizu.websocket.host import HostClient
-    from fogvizu.websocket.mod import ModClient
-    from fogvizu.websocket.viewer import ViewerClient
+    from fogtracker.websocket.host import HostClient
+    from fogtracker.websocket.mod import ModClient
+    from fogtracker.websocket.viewer import ViewerClient
 
 logger = logging.getLogger(__name__)
 

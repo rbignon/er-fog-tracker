@@ -1,4 +1,4 @@
-// API client for fog-vizu server communication
+// API client for fog-tracker server communication
 
 use serde::{Deserialize, Serialize};
 use std::time::Duration;

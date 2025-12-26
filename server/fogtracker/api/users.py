@@ -6,10 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fogvizu.auth import get_user_by_username
-from fogvizu.database import Game, get_db
-from fogvizu.game_logic import compute_discovery_stats
-from fogvizu.models import GameListResponse, GameSummary, UserPublic
+from fogtracker.auth import get_user_by_username
+from fogtracker.database import Game, get_db
+from fogtracker.game_logic import compute_discovery_stats
+from fogtracker.models import GameListResponse, GameSummary, UserPublic
 
 router = APIRouter()
 

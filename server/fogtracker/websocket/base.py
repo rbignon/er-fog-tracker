@@ -9,9 +9,9 @@ from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from fogvizu.config import settings
-from fogvizu.database import Game, User
-from fogvizu.zone_matching import get_zone_link_id
+from fogtracker.config import settings
+from fogtracker.database import Game, User
+from fogtracker.zone_matching import get_zone_link_id
 
 logger = logging.getLogger(__name__)
 

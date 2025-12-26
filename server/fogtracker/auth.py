@@ -11,8 +11,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fogvizu.config import settings
-from fogvizu.database import User, get_db
+from fogtracker.config import settings
+from fogtracker.database import User, get_db
 
 # =============================================================================
 # Twitch OAuth

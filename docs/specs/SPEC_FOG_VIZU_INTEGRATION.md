@@ -1,6 +1,6 @@
 # Fog Visualizer Integration Specification
 
-This document describes the integration between the Elden Ring Route Tracker mod and the er-fog-vizu web application for automatic zone discovery tracking.
+This document describes the integration between the Elden Ring Route Tracker mod and the er-fog-tracker web application for automatic zone discovery tracking.
 
 > **Note:** This is the original design specification. Some sections have been superseded by actual implementation:
 > - **Section 5 (Server Python Implementation)**: See `SPEC_BACKEND.md` for the actual implementation (FastAPI + PostgreSQL + SQLAlchemy, not aiohttp + SQLite)
@@ -27,12 +27,12 @@ This document describes the integration between the Elden Ring Route Tracker mod
 
 ### 1.1 Goal
 
-Automate zone discovery tracking in er-fog-vizu when a player traverses fog gates in Elden Ring with the Fog Randomizer mod enabled.
+Automate zone discovery tracking in er-fog-tracker when a player traverses fog gates in Elden Ring with the Fog Randomizer mod enabled.
 
 ### 1.2 Current State
 
 - **Route Tracker Mod**: Detects fog gate traversals, captures `(map_id_src, map_id_dst)` and positions
-- **er-fog-vizu**: Web app that visualizes fog randomizer connections, requires manual zone discovery
+- **er-fog-tracker**: Web app that visualizes fog randomizer connections, requires manual zone discovery
 
 ### 1.3 Target State
 
@@ -318,7 +318,7 @@ Viewers watching the stream see:
 - Camera position synced with streamer's site view
 - No access to overlay (it's on streamer's game screen)
 
-Public URL: `https://er-fog-vizu.com/watch/{username}/{game_id}`
+Public URL: `https://er-fog-tracker.com/watch/{username}/{game_id}`
 
 ---
 
@@ -588,11 +588,11 @@ Add to `route_tracker.toml`:
 
 ```toml
 [server]
-# API token from er-fog-vizu.com (get this after Twitch login)
+# API token from er-fog-tracker.com (get this after Twitch login)
 api_token = ""
 
 # Server URL (default: production server)
-base_url = "https://er-fog-vizu.com"
+base_url = "https://er-fog-tracker.com"
 
 # Enable/disable server sync
 enabled = true
@@ -661,7 +661,7 @@ if let Some(pending) = self.pending_fog.take() {
 ### 5.1 File Structure (Original Design)
 
 ```
-er-fog-vizu/
+er-fog-tracker/
 ├── server.py              # Main server (update existing)
 ├── database.py            # SQLite database layer (new)
 ├── models.py              # Data models (new)
@@ -737,7 +737,7 @@ from typing import Optional
 from contextlib import contextmanager
 
 class Database:
-    def __init__(self, db_path: str = "fogvizu.db"):
+    def __init__(self, db_path: str = "fogtracker.db"):
         self.db_path = db_path
         self._init_db()
 
@@ -1163,7 +1163,7 @@ def create_app() -> web.Application:
     app.router.add_get("/ws", handle_websocket)
     app.router.add_get("/ws/{game_id}", handle_websocket)
 
-    # Static files (existing er-fog-vizu frontend)
+    # Static files (existing er-fog-tracker frontend)
     app.router.add_static("/", "src", show_index=True)
 
     return app

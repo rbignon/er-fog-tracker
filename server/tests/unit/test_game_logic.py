@@ -3,7 +3,7 @@
 Tests for discovery result formatting and related utilities.
 """
 
-from fogvizu.game_logic import (
+from fogtracker.game_logic import (
     DiscoveredLink,
     DiscoveryResult,
     format_discovery_summary,

@@ -19,8 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 # Add parent directory to path for imports
 sys.path.insert(0, ".")
 
-from fogvizu.config import settings
-from fogvizu.database import Game
+from fogtracker.config import settings
+from fogtracker.database import Game
 
 
 async def migrate_game(session: AsyncSession, game: Game, dry_run: bool = False) -> dict:

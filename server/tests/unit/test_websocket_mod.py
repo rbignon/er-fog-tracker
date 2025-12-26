@@ -9,8 +9,8 @@ from uuid import uuid4
 
 import pytest
 
-from fogvizu.game_logic import DiscoveredLink, DiscoveryResult
-from fogvizu.websocket.mod import ModClient
+from fogtracker.game_logic import DiscoveredLink, DiscoveryResult
+from fogtracker.websocket.mod import ModClient
 
 # =============================================================================
 # Shared Fixtures
@@ -90,7 +90,7 @@ class TestZoneQueryHandler:
         """Should return null zone when game is not found."""
         mock_game = None
 
-        with patch("fogvizu.websocket.mod.async_session") as mock_session:
+        with patch("fogtracker.websocket.mod.async_session") as mock_session:
             mock_db = AsyncMock()
             mock_result = MagicMock()
             mock_result.scalar_one_or_none.return_value = mock_game
@@ -127,9 +127,9 @@ class TestZoneQueryHandler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
         ):
             mock_db = AsyncMock()
             mock_result = MagicMock()
@@ -169,9 +169,9 @@ class TestZoneQueryHandler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
         ):
             mock_db = AsyncMock()
             mock_result = MagicMock()
@@ -207,9 +207,9 @@ class TestZoneQueryHandler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
         ):
             mock_db = AsyncMock()
             mock_result = MagicMock()
@@ -246,9 +246,9 @@ class TestZoneQueryHandler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
         ):
             mock_db = AsyncMock()
             mock_result = MagicMock()
@@ -284,9 +284,9 @@ class TestZoneQueryHandler:
         mock_resolver.resolve_by_col.return_value = ("stormveil", "Stormveil Castle")
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
         ):
             mock_db = AsyncMock()
             mock_result = MagicMock()
@@ -326,9 +326,9 @@ class TestZoneQueryHandler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=expected_exits),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=expected_exits),
         ):
             mock_db = AsyncMock()
             mock_result = MagicMock()
@@ -358,14 +358,14 @@ class TestZoneQueryHandler:
         mock_resolver.resolve_by_col.return_value = (None, None)
         mock_resolver.resolve_all_candidates.return_value = []
 
-        with patch("fogvizu.websocket.mod.async_session") as mock_session:
+        with patch("fogtracker.websocket.mod.async_session") as mock_session:
             mock_db = AsyncMock()
             mock_result = MagicMock()
             mock_result.scalar_one_or_none.return_value = mock_game
             mock_db.execute.return_value = mock_result
             mock_session.return_value.__aenter__.return_value = mock_db
 
-            with patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver):
+            with patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver):
                 await mock_client._handle_zone_query(
                     {
                         "map_id": "m99_99_99_99",
@@ -495,8 +495,8 @@ class TestDiscoveryV2Handler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -526,8 +526,8 @@ class TestDiscoveryV2Handler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -570,24 +570,24 @@ class TestDiscoveryV2Handler:
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=[("Limgrave", "Stormveil Castle", {"id": "link1"})],
             ) as mock_find,
-            patch("fogvizu.websocket.mod.compute_backprop_cost", return_value=0),
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
             patch(
-                "fogvizu.websocket.mod.propagate_discovery",
+                "fogtracker.websocket.mod.propagate_discovery",
                 return_value=discovery_result,
             ),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 1, "total": 3, "percent": 33},
             ),
-            patch("fogvizu.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -644,24 +644,24 @@ class TestDiscoveryV2Handler:
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=[("Limgrave", "Stormveil Castle", {"id": "link1"})],
             ) as mock_find,
-            patch("fogvizu.websocket.mod.compute_backprop_cost", return_value=0),
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
             patch(
-                "fogvizu.websocket.mod.propagate_discovery",
+                "fogtracker.websocket.mod.propagate_discovery",
                 return_value=discovery_result,
             ),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 1, "total": 3, "percent": 33},
             ),
-            patch("fogvizu.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -705,25 +705,25 @@ class TestDiscoveryV2Handler:
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs_by_keys",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_keys",
                 return_value=[("Limgrave", "Stormveil Castle", {"id": "link1"})],
             ) as mock_find_by_keys,
-            patch("fogvizu.websocket.mod.find_all_matching_zone_pairs") as mock_find_by_name,
-            patch("fogvizu.websocket.mod.compute_backprop_cost", return_value=0),
+            patch("fogtracker.websocket.mod.find_all_matching_zone_pairs") as mock_find_by_name,
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
             patch(
-                "fogvizu.websocket.mod.propagate_discovery",
+                "fogtracker.websocket.mod.propagate_discovery",
                 return_value=discovery_result,
             ),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 1, "total": 3, "percent": 33},
             ),
-            patch("fogvizu.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -759,24 +759,24 @@ class TestDiscoveryV2Handler:
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=[("Limgrave", "Stormveil Castle", {"id": "link1"})],
             ) as mock_find_by_name,
-            patch("fogvizu.websocket.mod.compute_backprop_cost", return_value=0),
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
             patch(
-                "fogvizu.websocket.mod.propagate_discovery",
+                "fogtracker.websocket.mod.propagate_discovery",
                 return_value=discovery_result,
             ),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 1, "total": 3, "percent": 33},
             ),
-            patch("fogvizu.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -810,28 +810,28 @@ class TestDiscoveryV2Handler:
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs_by_keys",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_keys",
                 return_value=[],  # No key match
             ),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=[("Limgrave", "Stormveil Castle", {"id": "link1"})],
             ) as mock_find_by_name,
-            patch("fogvizu.websocket.mod.compute_backprop_cost", return_value=0),
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
             patch(
-                "fogvizu.websocket.mod.propagate_discovery",
+                "fogtracker.websocket.mod.propagate_discovery",
                 return_value=discovery_result,
             ),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 1, "total": 3, "percent": 33},
             ),
-            patch("fogvizu.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -875,27 +875,27 @@ class TestDiscoveryV2Handler:
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=all_matches,
             ),
             patch(
-                "fogvizu.websocket.mod.compute_backprop_cost",
+                "fogtracker.websocket.mod.compute_backprop_cost",
                 side_effect=[5, 1],  # First match cost 5, second cost 1
             ),
             patch(
-                "fogvizu.websocket.mod.propagate_discovery",
+                "fogtracker.websocket.mod.propagate_discovery",
                 return_value=discovery_result,
             ) as mock_propagate,
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 1, "total": 3, "percent": 33},
             ),
-            patch("fogvizu.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -940,27 +940,27 @@ class TestDiscoveryV2Handler:
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=all_matches,
             ),
             patch(
-                "fogvizu.websocket.mod.compute_backprop_cost",
+                "fogtracker.websocket.mod.compute_backprop_cost",
                 return_value=0,  # Same cost for all
             ),
             patch(
-                "fogvizu.websocket.mod.propagate_discovery",
+                "fogtracker.websocket.mod.propagate_discovery",
                 return_value=discovery_result,
             ) as mock_propagate,
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 2, "total": 3, "percent": 66},
             ),
-            patch("fogvizu.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -995,23 +995,23 @@ class TestDiscoveryV2Handler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=all_matches,
             ),
             patch(
-                "fogvizu.websocket.mod.compute_backprop_cost",
+                "fogtracker.websocket.mod.compute_backprop_cost",
                 return_value=-1,  # Unreachable
             ),
-            patch("fogvizu.websocket.mod.propagate_discovery") as mock_propagate,
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.propagate_discovery") as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 0, "total": 3, "percent": 0},
             ),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -1056,27 +1056,27 @@ class TestDiscoveryV2Handler:
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=[("Limgrave", "Stormveil Castle", {"id": "link1"})],
             ),
-            patch("fogvizu.websocket.mod.compute_backprop_cost", return_value=0),
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
             patch(
-                "fogvizu.websocket.mod.propagate_discovery",
+                "fogtracker.websocket.mod.propagate_discovery",
                 return_value=discovery_result,
             ),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 1, "total": 3, "percent": 33},
             ),
             patch(
-                "fogvizu.websocket.mod.expand_discovered_links",
+                "fogtracker.websocket.mod.expand_discovered_links",
                 return_value=[{"zone_link_id": "link1"}],
             ),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -1114,18 +1114,18 @@ class TestDiscoveryV2Handler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=[],  # No match found
             ),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 0, "total": 3, "percent": 0},
             ),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -1166,24 +1166,24 @@ class TestDiscoveryV2Handler:
         expected_stats = {"discovered": 1, "total": 3, "percent": 33}
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=[("Limgrave", "Stormveil Castle", {"id": "link1"})],
             ),
-            patch("fogvizu.websocket.mod.compute_backprop_cost", return_value=0),
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
             patch(
-                "fogvizu.websocket.mod.propagate_discovery",
+                "fogtracker.websocket.mod.propagate_discovery",
                 return_value=discovery_result,
             ),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=expected_exits),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=expected_exits),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value=expected_stats,
             ),
-            patch("fogvizu.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -1221,18 +1221,18 @@ class TestDiscoveryV2Handler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
-                "fogvizu.websocket.mod.find_all_matching_zone_pairs",
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
                 return_value=[],  # No match
             ),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 0, "total": 3, "percent": 0},
             ),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -1267,14 +1267,14 @@ class TestDiscoveryV2Handler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 0, "total": 0, "percent": 0},
             ),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -1303,14 +1303,14 @@ class TestDiscoveryV2Handler:
         ]
 
         with (
-            patch("fogvizu.websocket.mod.async_session") as mock_session,
-            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
-                "fogvizu.websocket.mod.compute_discovery_stats",
+                "fogtracker.websocket.mod.compute_discovery_stats",
                 return_value={"discovered": 0, "total": 0, "percent": 0},
             ),
-            patch("fogvizu.websocket.mod.manager", mock_manager),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
         ):
             self._setup_db_mock(mock_session, None)  # No game
 

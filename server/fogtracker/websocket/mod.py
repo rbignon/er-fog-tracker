@@ -10,18 +10,18 @@ from fastapi import WebSocket
 from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
 
-from fogvizu.database import Game, async_session
-from fogvizu.game_logic import (
+from fogtracker.database import Game, async_session
+from fogtracker.game_logic import (
     DiscoveryResult,
     find_all_matching_zone_pairs,
     format_discovery_summary,
     format_ingame_display,
     propagate_discovery,
 )
-from fogvizu.websocket.auth import authenticate_ws, verify_game_access
-from fogvizu.websocket.base import Client
-from fogvizu.websocket.manager import manager
-from fogvizu.zone_matching import (
+from fogtracker.websocket.auth import authenticate_ws, verify_game_access
+from fogtracker.websocket.base import Client
+from fogtracker.websocket.manager import manager
+from fogtracker.zone_matching import (
     compute_backprop_cost,
     compute_discovery_stats,
     compute_zone_exits,
@@ -29,7 +29,7 @@ from fogvizu.zone_matching import (
     find_all_matching_zone_pairs_by_keys,
     get_discovered_nodes,
 )
-from fogvizu.zone_resolver import get_resolver
+from fogtracker.zone_resolver import get_resolver
 
 logger = logging.getLogger(__name__)
 
