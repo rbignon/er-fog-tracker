@@ -4,15 +4,18 @@ Export game data (zone_links, zones, entity_mapping, discovered_zone_links) to J
 
 Usage:
     cd server
-    python scripts/export_game.py <game_uuid>
+    python scripts/export_game.py <game_uuid> [--output-dir <path>]
 
 Outputs:
-    <seed>/zone_links.json
-    <seed>/zones.json
-    <seed>/entity_mapping.json
-    <seed>/discovered_zone_links.json
+    <output_dir>/zone_links.json
+    <output_dir>/zones.json
+    <output_dir>/entity_mapping.json
+    <output_dir>/discovered_zone_links.json
+
+If --output-dir is not specified, defaults to analysis/seeds/<seed>/
 """
 
+import argparse
 import asyncio
 import json
 import os
@@ -34,8 +37,11 @@ from fogvizu.config import settings  # noqa: E402
 from fogvizu.database import Game  # noqa: E402
 
 
-async def export_game(game_id: str) -> None:
-    """Export game data to JSON files."""
+async def export_game(game_id: str, output_dir: Path | None = None) -> Path:
+    """Export game data to JSON files.
+
+    Returns the output directory path.
+    """
     try:
         game_uuid = UUID(game_id)
     except ValueError:
@@ -58,10 +64,12 @@ async def export_game(game_id: str) -> None:
         seed = game.seed
         print(f"Found game with seed: {seed}")
 
-        # Create output directory
-        output_dir = Path("..") / "analysis" / "seeds" / str(seed)
-        output_dir.mkdir(exist_ok=True)
-        print(f"Created directory: {output_dir}")
+        # Determine output directory
+        if output_dir is None:
+            output_dir = Path("..") / "analysis" / "seeds" / str(seed)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Output directory: {output_dir}")
 
         # Export zone_links
         zone_links_file = output_dir / "zone_links.json"
@@ -88,15 +96,23 @@ async def export_game(game_id: str) -> None:
         print(f"Exported: {discovered_zone_links_file}")
 
     await engine.dispose()
+    return output_dir
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        print("Usage: python scripts/export_game.py <game_uuid>")
-        print("Example: python scripts/export_game.py 123e4567-e89b-12d3-a456-426614174000")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Export game data to JSON files",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("game_id", help="Game UUID")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help="Output directory (default: analysis/seeds/<seed>/)",
+    )
 
-    asyncio.run(export_game(sys.argv[1]))
+    args = parser.parse_args()
+    asyncio.run(export_game(args.game_id, args.output_dir))
 
 
 if __name__ == "__main__":
