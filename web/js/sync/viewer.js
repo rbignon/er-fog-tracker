@@ -216,89 +216,6 @@ function applyViewport(vp) {
     g.transition().duration(300).attr('transform', `translate(${x},${y}) scale(${vp.k})`);
 }
 
-/**
- * Apply only positions and discovery state from visual_state (for interactive viewers).
- * Ignores selection, highlights, and viewport.
- * Still stores the full state for restoration after local interactions.
- */
-function applyPositionsAndDiscoveryOnly(data) {
-    if (!data.nodes) return;
-
-    // Interactive viewer: only sync positions and discovery
-    // Options like frontier highlight remain local and independent from host
-
-    const simulation = State.getSimulation();
-    const d3Nodes = simulation ? simulation.nodes() : [];
-    let positionsChanged = false;
-    let explorationChanged = false;
-
-    const explorationState = State.getExplorationState();
-
-    // Save and apply node positions
-    for (const [id, nodeState] of Object.entries(data.nodes)) {
-        if (
-            nodeState.x !== undefined &&
-            nodeState.y !== undefined &&
-            !isNaN(nodeState.x) &&
-            !isNaN(nodeState.y) &&
-            isFinite(nodeState.x) &&
-            isFinite(nodeState.y)
-        ) {
-            State.saveNodePosition(id, nodeState.x, nodeState.y);
-
-            const simNode = d3Nodes.find(n => n.id === id);
-            if (simNode && (Math.abs(simNode.x - nodeState.x) > 1 || Math.abs(simNode.y - nodeState.y) > 1)) {
-                simNode.x = nodeState.x;
-                simNode.y = nodeState.y;
-                simNode.fx = nodeState.x;
-                simNode.fy = nodeState.y;
-                positionsChanged = true;
-            }
-        }
-
-        // Update discovery state
-        if (explorationState && !nodeState.isPlaceholder) {
-            const wasDiscovered = explorationState.discovered.has(id);
-            const isDiscovered = nodeState.discovered || false;
-            if (wasDiscovered !== isDiscovered) {
-                explorationChanged = true;
-                if (isDiscovered) {
-                    explorationState.discovered.add(id);
-                } else {
-                    explorationState.discovered.delete(id);
-                }
-            }
-
-            // Update tags
-            const oldTags = explorationState.tags.get(id) || [];
-            const newTags = nodeState.tags || [];
-            if (JSON.stringify(oldTags) !== JSON.stringify(newTags)) {
-                explorationChanged = true;
-                if (newTags.length > 0) {
-                    explorationState.tags.set(id, newTags);
-                } else {
-                    explorationState.tags.delete(id);
-                }
-            }
-        }
-    }
-
-    // NOTE: We do NOT sync discoveredLinks from host's visual_state.
-    // Server is the source of truth for discoveries. Discoveries are synced via
-    // handleDiscoveryFromServer when the server sends 'discovery' or 'game_state' messages.
-
-    // Apply position changes to DOM
-    if (positionsChanged) {
-        PositionManager.updatePositionsInDOM(d3Nodes);
-    }
-
-    // Re-render if discovery changed
-    if (explorationChanged) {
-        State.saveAllNodePositions();
-        State.emit('graphNeedsRender', { preservePositions: true });
-    }
-}
-
 function applyVisualState(data) {
     if (!data.nodes) return false;
 
@@ -633,10 +550,9 @@ export async function connectAsViewer(gameId) {
                 if (State.isOverlayMode()) {
                     // Overlay mode: apply everything (selection, highlights, viewport, positions)
                     applySessionData(data.state);
-                } else {
-                    // Interactive viewer: only sync positions and discovery, ignore highlights/selection/viewport
-                    applyPositionsAndDiscoveryOnly(data.state);
                 }
+                // Interactive viewers ignore visual_state entirely.
+                // They receive data via dedicated messages: positions_update, discovery, tag_update
                 return;
             }
 
