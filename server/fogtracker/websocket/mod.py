@@ -169,7 +169,13 @@ class ModClient(Client):
                 zone_display,
             )
 
-        logger.info("[MOD] Zone query result: %s (%d exits)", zone_display, len(exits))
+            # Compute discovery stats
+            stats = compute_discovery_stats(game.zone_links or [], game.discovered_zone_links or [])
+
+        # Log in-game display preview
+        ingame = format_ingame_display(zone_display, exits, stats)
+        for line in ingame.split("\n"):
+            logger.info(line)
         await self.send(
             {
                 "type": "zone_query_ack",
