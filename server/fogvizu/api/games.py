@@ -2,6 +2,7 @@
 Game routes.
 """
 
+import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from fogvizu.config import settings
 from fogvizu.database import Game, User, get_db
 from fogvizu.game_logic import (
     compute_discovery_stats,
+    format_discovery_summary,
     propagate_discovery,
 )
 from fogvizu.models import (
@@ -37,6 +39,8 @@ from fogvizu.models import (
 )
 from fogvizu.websocket import manager as ws_manager
 from fogvizu.zone_matching import build_zone_pairs_index, get_zone_link_id, undiscover_zone
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -287,9 +291,10 @@ async def create_discovery(
         )
 
     # Propagate discovery
-    propagated = await propagate_discovery(
+    discovery_result = await propagate_discovery(
         db, game_id, data.source, data.target, discovered_by="web", link_id=data.link_id
     )
+    propagated = discovery_result.all_links()
 
     # Refresh game to get updated discovered_zone_links
     await db.refresh(game)
@@ -312,6 +317,17 @@ async def create_discovery(
 
     # Compute discovery stats
     stats = compute_discovery_stats(zone_links, all_links)
+
+    # Log discovery summary
+    if discovery_result.total_count() > 0:
+        summary = format_discovery_summary(
+            discovery_result,
+            discovered_by="web",
+            total_discovered=stats["discovered"],
+            total_links=stats["total"],
+        )
+        for line in summary.split("\n"):
+            logger.info(line)
 
     # Broadcast to viewers via WebSocket (host already has the response)
     if propagated:

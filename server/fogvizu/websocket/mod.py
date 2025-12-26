@@ -11,7 +11,12 @@ from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
 
 from fogvizu.database import Game, async_session
-from fogvizu.game_logic import find_all_matching_zone_pairs, propagate_discovery
+from fogvizu.game_logic import (
+    DiscoveryResult,
+    find_all_matching_zone_pairs,
+    format_discovery_summary,
+    propagate_discovery,
+)
 from fogvizu.websocket.auth import authenticate_ws, verify_game_access
 from fogvizu.websocket.base import Client
 from fogvizu.websocket.manager import manager
@@ -21,7 +26,6 @@ from fogvizu.zone_matching import (
     compute_zone_exits,
     expand_discovered_links,
     find_all_matching_zone_pairs_by_keys,
-    get_zone_link_id,
 )
 from fogvizu.zone_resolver import get_resolver
 
@@ -174,7 +178,8 @@ class ModClient(Client):
             result = await db.execute(select(Game).where(Game.id == self.game_id).with_for_update())
             game = result.scalar_one_or_none()
 
-            all_propagated = []
+            # Collect all discovery results to merge them for the summary
+            all_discovery_results: list[DiscoveryResult] = []
             resolved_links = []
 
             if game and game.zone_links:
@@ -306,7 +311,7 @@ class ModClient(Client):
                                 )
 
                             for source_display, target_display, _, cost in best_matches:
-                                logger.info(
+                                logger.debug(
                                     "[MOD] Discovered (by keys, cost=%d): '%s' -> '%s'",
                                     cost,
                                     source_display,
@@ -315,14 +320,14 @@ class ModClient(Client):
                                 resolved_links.append(
                                     {"source": source_display, "target": target_display}
                                 )
-                                propagated = await propagate_discovery(
+                                discovery_result = await propagate_discovery(
                                     db,
                                     self.game_id,
                                     source_display,
                                     target_display,
                                     discovered_by="mod",
                                 )
-                                all_propagated.extend(propagated)
+                                all_discovery_results.append(discovery_result)
                         else:
                             logger.warning(
                                 "[MOD] All %d matches are unreachable from START",
@@ -382,7 +387,7 @@ class ModClient(Client):
                                 )
 
                             for source_display, target_display, _, cost in best_matches:
-                                logger.info(
+                                logger.debug(
                                     "[MOD] Discovered (by display name, cost=%d): '%s' -> '%s'",
                                     cost,
                                     source_display,
@@ -392,14 +397,14 @@ class ModClient(Client):
                                     {"source": source_display, "target": target_display}
                                 )
 
-                                propagated = await propagate_discovery(
+                                discovery_result = await propagate_discovery(
                                     db,
                                     self.game_id,
                                     source_display,
                                     target_display,
                                     discovered_by="mod",
                                 )
-                                all_propagated.extend(propagated)
+                                all_discovery_results.append(discovery_result)
                         else:
                             logger.warning(
                                 "[MOD] All %d matches are unreachable from START",
@@ -415,6 +420,18 @@ class ModClient(Client):
                 logger.warning("[MOD] Game has no zone_links, cannot resolve")
 
             await db.commit()
+
+            # Merge all discovery results into one for summary logging
+            merged_result = DiscoveryResult(
+                origin=all_discovery_results[0].origin if all_discovery_results else ""
+            )
+            for dr in all_discovery_results:
+                merged_result.main_links.extend(dr.main_links)
+                merged_result.backprop_links.extend(dr.backprop_links)
+                merged_result.forward_links.extend(dr.forward_links)
+
+            # Build flat list for backward compatibility
+            all_propagated = merged_result.all_links()
 
             # Expire cached objects to ensure fresh data after propagate_discovery
             db.expire_all()
@@ -437,14 +454,11 @@ class ModClient(Client):
                 else:
                     destination_zone = link["target"]
 
-                logger.info("[MOD] Player arrived at zone: %s", destination_zone)
-
                 exits = compute_zone_exits(
                     game.zone_links or [],
                     game.discovered_zone_links or [],
                     destination_zone,
                 )
-                logger.info("[MOD] Computed %d exits from zone '%s'", len(exits), destination_zone)
 
             # Compute discovery stats
             stats = {"discovered": 0, "total": 0, "percent": 0}
@@ -452,6 +466,17 @@ class ModClient(Client):
                 stats = compute_discovery_stats(
                     game.zone_links or [], game.discovered_zone_links or []
                 )
+
+            # Log discovery summary
+            if merged_result.total_count() > 0:
+                summary = format_discovery_summary(
+                    merged_result,
+                    discovered_by="mod",
+                    total_discovered=stats["discovered"],
+                    total_links=stats["total"],
+                )
+                for line in summary.split("\n"):
+                    logger.info(line)
 
             # Send ack to mod
             ack_msg = {
@@ -465,15 +490,6 @@ class ModClient(Client):
             if not resolved_links:
                 ack_msg["error"] = "No matching link found in spoiler log"
 
-            logger.info(
-                "[MOD TX] Ack: %d resolved, %d propagated, %d exits, discovered %d/%d (%.1f%%)",
-                len(resolved_links),
-                len(all_propagated),
-                len(exits),
-                stats["discovered"],
-                stats["total"],
-                stats["percent"],
-            )
             await self.send(ack_msg)
 
             # Broadcast to host and viewers
@@ -483,14 +499,7 @@ class ModClient(Client):
                 game = result.scalar_one_or_none()
 
                 if game:
-                    # Debug: log raw discovered_zone_links before expansion
                     raw_links = game.discovered_zone_links or []
-                    logger.debug(
-                        "[MOD] Before expand: %d raw links, last 5 zone_link_ids: %s",
-                        len(raw_links),
-                        [get_zone_link_id(dl) for dl in raw_links[-5:]],
-                    )
-
                     expanded_links = expand_discovered_links(
                         game.discovered_zone_links or [], game.zone_links or []
                     )
@@ -502,6 +511,7 @@ class ModClient(Client):
                             len(raw_links),
                             len(expanded_links),
                         )
+
                     logger.info(
                         "[MOD] Broadcasting %d propagated links, %d total discovered to host/viewers",
                         len(all_propagated),

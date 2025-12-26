@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
 
 from fogvizu.database import Game, async_session
-from fogvizu.game_logic import propagate_discovery
+from fogvizu.game_logic import format_discovery_summary, propagate_discovery
 from fogvizu.websocket.auth import authenticate_ws, verify_game_access
 from fogvizu.websocket.base import WS_CLOSE_SESSION_REPLACED, Client, build_game_state
 from fogvizu.websocket.manager import manager
@@ -87,7 +87,7 @@ class HostClient(Client):
             return
 
         async with async_session() as db:
-            propagated = await propagate_discovery(
+            discovery_result = await propagate_discovery(
                 db, self.game_id, source, target, discovered_by="manual"
             )
             await db.commit()
@@ -101,6 +101,19 @@ class HostClient(Client):
                 game.discovered_zone_links or [], game.zone_links or []
             )
             stats = compute_discovery_stats(game.zone_links or [], game.discovered_zone_links or [])
+
+            # Log discovery summary
+            if discovery_result.total_count() > 0:
+                summary = format_discovery_summary(
+                    discovery_result,
+                    discovered_by="manual",
+                    total_discovered=stats["discovered"],
+                    total_links=stats["total"],
+                )
+                for line in summary.split("\n"):
+                    logger.info(line)
+
+            propagated = discovery_result.all_links()
             await manager.broadcast_to_all(
                 self.game_id,
                 {

@@ -3,6 +3,7 @@ Game logic: discovery propagation through preexisting links.
 """
 
 import logging
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -37,6 +38,87 @@ from fogvizu.zone_matching import (  # noqa: E402, F401
 )
 
 
+@dataclass
+class DiscoveredLink:
+    """A discovered link with its metadata."""
+
+    source: str
+    target: str
+    link_type: str  # "random" or "preexisting"
+
+
+@dataclass
+class DiscoveryResult:
+    """Structured result of a discovery propagation."""
+
+    origin: str  # The zone where the player was when discovering
+    main_links: list[DiscoveredLink] = field(
+        default_factory=list
+    )  # The directly discovered link(s)
+    backprop_links: list[DiscoveredLink] = field(
+        default_factory=list
+    )  # Links discovered via back-propagation
+    forward_links: list[DiscoveredLink] = field(
+        default_factory=list
+    )  # Links discovered via forward-propagation
+
+    def all_links(self) -> list[dict[str, str]]:
+        """Return all links as a flat list (for backward compatibility)."""
+        result = []
+        for link in self.backprop_links + self.main_links + self.forward_links:
+            result.append({"source": link.source, "target": link.target})
+        return result
+
+    def total_count(self) -> int:
+        """Return total number of newly discovered links."""
+        return len(self.backprop_links) + len(self.main_links) + len(self.forward_links)
+
+
+def format_discovery_summary(
+    result: DiscoveryResult,
+    discovered_by: str,
+    total_discovered: int | None = None,
+    total_links: int | None = None,
+) -> str:
+    """Format a discovery result as a visual summary for logging."""
+    lines = []
+
+    # Header
+    lines.append("╭─ Discovery Summary ─────────────────────────────────────────")
+    lines.append(f"│ Origin:     {result.origin}")
+
+    # Main discovered link(s)
+    if result.main_links:
+        for link in result.main_links:
+            arrow = "───>" if link.link_type == "random" else "--->"
+            lines.append(f"│ Link:       {link.source} {arrow} {link.target}")
+
+    # Back-propagation section
+    if result.backprop_links:
+        lines.append(f"├─ Back-propagation ({len(result.backprop_links)}):")
+        for link in result.backprop_links:
+            arrow = "───>" if link.link_type == "random" else "--->"
+            lines.append(f"│   ◂ {link.source} {arrow} {link.target}")
+
+    # Forward-propagation section
+    if result.forward_links:
+        lines.append(f"├─ Forward-propagation ({len(result.forward_links)}):")
+        for link in result.forward_links:
+            arrow = "───>" if link.link_type == "random" else "--->"
+            lines.append(f"│   ▸ {link.source} {arrow} {link.target}")
+
+    # Footer with stats
+    total = result.total_count()
+    link_word = "link" if total == 1 else "links"
+    footer = f"╰─ Total: {total} new {link_word}"
+    if total_discovered is not None and total_links is not None:
+        percent = (total_discovered / total_links * 100) if total_links > 0 else 0
+        footer += f" │ Progress: {total_discovered}/{total_links} ({percent:.1f}%)"
+    lines.append(footer)
+
+    return "\n".join(lines)
+
+
 async def propagate_discovery(
     db: AsyncSession,
     game_id: UUID,
@@ -44,10 +126,10 @@ async def propagate_discovery(
     target: str,
     discovered_by: str = "mod",
     link_id: str | None = None,
-) -> list[dict[str, str]]:
+) -> DiscoveryResult:
     """
     Propagate a discovery through preexisting links.
-    Returns all newly discovered links (including the initial one).
+    Returns a DiscoveryResult with categorized newly discovered links.
 
     Logic:
     1. Record the initial link as discovered
@@ -55,14 +137,17 @@ async def propagate_discovery(
        from target to already-discovered nodes and record them
     3. Recursively propagate through newly reachable preexisting links
     """
-    logger.info("[DISCOVERY] Request: '%s' → '%s' (by %s)", source, target, discovered_by)
+    logger.debug("[DISCOVERY] Request: '%s' → '%s' (by %s)", source, target, discovered_by)
+
+    # Initialize result with origin
+    discovery_result = DiscoveryResult(origin=source)
 
     # Get game data - refresh to ensure we see latest changes from other calls
     result = await db.execute(select(Game).where(Game.id == game_id))
     game = result.scalar_one_or_none()
     if not game:
         logger.warning("[DISCOVERY] Game %s not found", game_id)
-        return []
+        return discovery_result
 
     # Force refresh to get latest discovered_zone_links from DB
     await db.refresh(game, ["discovered_zone_links"])
@@ -75,19 +160,32 @@ async def propagate_discovery(
     zone_pairs = game.zone_links
     if not zone_pairs:
         logger.warning("[DISCOVERY] Game %s has no zone_links", game_id)
-        return []
+        return discovery_result
+
+    # Build index to look up link type by source/target
+    def get_link_type(src: str, dst: str) -> str:
+        """Get the type of a link (random or preexisting)."""
+        for zp in zone_pairs:
+            if (zp["source"] == src and zp["target"] == dst) or (
+                zp["source"] == dst and zp["target"] == src
+            ):
+                return zp.get("type", "random")
+        return "random"
 
     # Check if the link exists in zone_links
     found_pair = find_zone_pair(zone_pairs, source, target)
+    main_link_type = "random"
     if found_pair:
         # Use exact names from zone_links for consistency
         source = found_pair["source"]
         target = found_pair["target"]
-        logger.info(
+        main_link_type = found_pair.get("type", "random")
+        discovery_result.origin = source  # Update origin with exact name
+        logger.debug(
             "[DISCOVERY] Found matching pair: %s → %s (type=%s)",
             source,
             target,
-            found_pair["type"],
+            main_link_type,
         )
     else:
         logger.warning("[DISCOVERY] No matching pair found for '%s' → '%s'", source, target)
@@ -146,8 +244,6 @@ async def propagate_discovery(
     discovered_nodes = get_discovered_nodes(discovered_links, zone_pairs)
     logger.debug("[DISCOVERY] Currently %d discovered nodes", len(discovered_nodes))
 
-    # Track newly discovered links
-    newly_discovered: list[dict[str, str]] = []
     now = datetime.now(UTC).isoformat()
 
     # Track zones newly discovered via back-propagation (need to propagate their preexisting)
@@ -155,7 +251,7 @@ async def propagate_discovery(
 
     # Back-propagation: if source is not accessible from START, find path and discover it
     if not is_accessible_from_start(discovered_links, source, zone_pairs):
-        logger.info("[DISCOVERY] Source '%s' not accessible from START, back-propagating", source)
+        logger.debug("[DISCOVERY] Source '%s' not accessible from START, back-propagating", source)
         path_to_source = find_path_prioritizing_discovered(zone_pairs, discovered_links, source)
         if path_to_source:
             logger.debug("[DISCOVERY] Back-propagation path: %s", path_to_source)
@@ -169,12 +265,16 @@ async def propagate_discovery(
                             "discovered_by": f"{discovered_by} (backprop)",
                         }
                         discovered_links.append(new_link)
-                        newly_discovered.append({"source": src, "target": dst})
+                        link_type = get_link_type(src, dst)
+                        discovery_result.backprop_links.append(
+                            DiscoveredLink(source=src, target=dst, link_type=link_type)
+                        )
                         logger.debug(
-                            "[DISCOVERY] Back-propagated link: %s → %s (id=%s)",
+                            "[DISCOVERY] Back-propagated link: %s → %s (id=%s, type=%s)",
                             src,
                             dst,
                             backprop_zone_link_id,
+                            link_type,
                         )
                     else:
                         logger.warning("[DISCOVERY] No zone_link_id found for %s → %s", src, dst)
@@ -208,20 +308,21 @@ async def propagate_discovery(
 
     # BFS through preexisting links
     # For the initial link, use provided link_id if available
-    queue: list[tuple[str, str, str | None]] = [(source, target, link_id)]
+    # Mark the initial link specially so we can identify it
+    queue: list[tuple[str, str, str | None, bool]] = [(source, target, link_id, True)]
     visited: set[tuple[str, str]] = set()
 
     # Also queue preexisting links from zones newly discovered via back-propagation
     # These zones are now accessible but their preexisting links haven't been propagated
     for zone in backprop_new_zones:
         for next_dst, _is_bidir in preexisting_adj.get(zone, []):
-            queue.append((zone, next_dst, None))
+            queue.append((zone, next_dst, None, False))
             logger.debug(
                 "[DISCOVERY] Queuing preexisting from backprop zone: %s → %s", zone, next_dst
             )
 
     while queue:
-        src, dst, provided_link_id = queue.pop(0)
+        src, dst, provided_link_id, is_main_link = queue.pop(0)
         link_key = (src, dst)
 
         if link_key in visited:
@@ -239,9 +340,25 @@ async def propagate_discovery(
                     "discovered_by": discovered_by,
                 }
                 discovered_links.append(new_link)
-                newly_discovered.append({"source": src, "target": dst})
+                link_type = get_link_type(src, dst)
+
+                # Categorize the link
+                if is_main_link:
+                    discovery_result.main_links.append(
+                        DiscoveredLink(source=src, target=dst, link_type=link_type)
+                    )
+                else:
+                    discovery_result.forward_links.append(
+                        DiscoveredLink(source=src, target=dst, link_type=link_type)
+                    )
+
                 logger.debug(
-                    "[DISCOVERY] New link: %s → %s (id=%s)", src, dst, resolved_zone_link_id
+                    "[DISCOVERY] New link: %s → %s (id=%s, type=%s, category=%s)",
+                    src,
+                    dst,
+                    resolved_zone_link_id,
+                    link_type,
+                    "main" if is_main_link else "forward",
                 )
             else:
                 logger.warning("[DISCOVERY] No zone_link_id found for %s → %s", src, dst)
@@ -255,7 +372,8 @@ async def propagate_discovery(
             # (recursive discovery of zones connected via vanilla links)
             for next_dst, _is_bidir in preexisting_adj.get(dst, []):
                 # Queue for recursive discovery - will be skipped if already visited
-                queue.append((dst, next_dst, None))
+                # These are forward-propagated links (not main)
+                queue.append((dst, next_dst, None, False))
                 logger.debug("[DISCOVERY] Queuing preexisting: %s → %s", dst, next_dst)
         else:
             # Both nodes already discovered - check for preexisting links between them
@@ -274,7 +392,9 @@ async def propagate_discovery(
                             "discovered_by": discovered_by,
                         }
                         discovered_links.append(new_link)
-                        newly_discovered.append({"source": src, "target": dst})
+                        discovery_result.forward_links.append(
+                            DiscoveredLink(source=src, target=dst, link_type=link_type)
+                        )
                         logger.debug(
                             "[DISCOVERY] Parallel preexisting link: %s ↔ %s (id=%s)",
                             src,
@@ -283,7 +403,7 @@ async def propagate_discovery(
                         )
 
     # Update game with new discovered_zone_links
-    if newly_discovered:
+    if discovery_result.total_count() > 0:
         # Log all zone_link_ids being saved
         zone_link_ids_to_save = [dl.get("zone_link_id") for dl in discovered_links]
         logger.debug(
@@ -301,13 +421,7 @@ async def propagate_discovery(
             "[DISCOVERY] After flush, game.discovered_zone_links has %d items",
             len(game.discovered_zone_links) if game.discovered_zone_links else 0,
         )
-
-        logger.info(
-            "[DISCOVERY] Propagated %d new links (total discovered: %d)",
-            len(newly_discovered),
-            len(discovered_links),
-        )
     else:
-        logger.info("[DISCOVERY] No new links discovered (already known or invalid)")
+        logger.debug("[DISCOVERY] No new links discovered (already known or invalid)")
 
-    return newly_discovered
+    return discovery_result
