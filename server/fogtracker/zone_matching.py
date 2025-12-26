@@ -53,7 +53,7 @@ def build_preexisting_adjacency(
 
     A preexisting link is bidirectional unless:
     1. It is marked as inherently one-way (is_inherently_one_way: true), OR
-    2. An explicit reverse link exists but is marked as one-way
+    2. No reverse link exists in zone_pairs (asymmetric definition in fog.txt)
 
     Most preexisting links (e.g., elevators, doors) are bidirectional.
     """
@@ -61,9 +61,12 @@ def build_preexisting_adjacency(
 
     for pair in zone_pairs:
         if pair["type"] == "preexisting":
-            # Use is_inherently_one_way field (like random links)
-            # Default to bidirectional if field is missing
-            is_bidir = not pair.get("is_inherently_one_way", False)
+            # A preexisting link is one-way if:
+            # 1. It is marked as inherently one-way, OR
+            # 2. No reverse link exists (consistent with build_full_adjacency)
+            is_bidir = not pair.get("is_inherently_one_way", False) and not is_one_way(
+                pair, zone_pairs
+            )
             adj[pair["source"]].append((pair["target"], is_bidir))
             if is_bidir:
                 adj[pair["target"]].append((pair["source"], True))

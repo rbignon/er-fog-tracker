@@ -964,13 +964,16 @@ class TestComputeZoneExits:
         exit_targets = [e.get("target") for e in exits]
         assert "Sending Gate Origin" not in exit_targets
 
-    def test_preexisting_bidirectional_without_reverse_link(self):
+    def test_preexisting_bidirectional_with_reverse_link(self):
         """
-        Test that preexisting links are bidirectional based on is_inherently_one_way field,
-        even when no explicit reverse link exists in the data.
+        Test that preexisting links are bidirectional when both directions exist.
 
-        Bug fix scenario (Elphael):
-        - After Loretta -> Elphael (preexisting, is_inherently_one_way: false)
+        For a link to be bidirectional, there must be explicit links in both directions.
+        A single preexisting link without reverse is one-way (like a one-way door).
+
+        Scenario (Elphael elevator):
+        - After Loretta -> Elphael (preexisting)
+        - Elphael -> After Loretta (preexisting, reverse direction)
         - Yelough -> After Loretta (random)
         - From Elphael, we should see exits from both Elphael AND After Loretta
         """
@@ -991,7 +994,16 @@ class TestComputeZoneExits:
                 "type": "preexisting",
                 "source_details": None,
                 "target_details": "at the elevator",
-                "is_inherently_one_way": False,  # Bidirectional elevator
+                "is_inherently_one_way": False,
+            },
+            {
+                "id": "link-elphael-afterloretta",
+                "source": "Elphael",
+                "target": "After Loretta",
+                "type": "preexisting",
+                "source_details": "at the elevator",
+                "target_details": None,
+                "is_inherently_one_way": False,
             },
             {
                 "id": "link-elphael-malenia",
@@ -1007,10 +1019,10 @@ class TestComputeZoneExits:
         # No discovered links
         discovered = []
 
-        # From Elphael, merged zones should include After Loretta via preexisting
+        # From Elphael, merged zones should include After Loretta via bidirectional preexisting
         merged = get_zones_via_preexisting(zone_pairs, "Elphael")
         assert "Elphael" in merged
-        assert "After Loretta" in merged  # This was the bug - After Loretta was missing
+        assert "After Loretta" in merged  # Bidirectional because reverse link exists
 
         # Compute exits - should have 2 exits
         exits = compute_zone_exits(zone_pairs, discovered, "Elphael")
@@ -1028,6 +1040,45 @@ class TestComputeZoneExits:
 
         malenia_exit = next(e for e in exits if e["description"] == "before Malenia's arena")
         assert malenia_exit["from_zone"] is None  # Same as current zone
+
+    def test_preexisting_one_way_without_reverse_link(self):
+        """
+        Test that a preexisting link without reverse is treated as one-way.
+
+        Bug fix: Leyndell -> Leyndell - before Divine Tower is a one-way door.
+        Without an explicit reverse link, we should NOT be able to go back.
+        """
+        zone_pairs = [
+            {
+                "id": "link-stormveil-pretower",
+                "source": "Stormveil Castle after Gate",
+                "target": "Leyndell - before Divine Tower",
+                "type": "random",
+                "source_details": "at the side path",
+                "target_details": "at the base of the elevator",
+                "is_inherently_one_way": False,
+            },
+            {
+                "id": "link-leyndell-pretower",
+                "source": "Leyndell",
+                "target": "Leyndell - before Divine Tower",
+                "type": "preexisting",
+                "source_details": None,
+                "target_details": "opening the heavy door",
+                "is_inherently_one_way": False,  # No reverse link = one-way!
+            },
+        ]
+
+        # From "Leyndell - before Divine Tower", we should NOT see Leyndell
+        # because the preexisting link is one-way (no reverse link exists)
+        merged = get_zones_via_preexisting(zone_pairs, "Leyndell - before Divine Tower")
+        assert "Leyndell - before Divine Tower" in merged
+        assert "Leyndell" not in merged  # One-way door, cannot go back
+
+        # From Leyndell, we CAN see "Leyndell - before Divine Tower"
+        merged_from_leyndell = get_zones_via_preexisting(zone_pairs, "Leyndell")
+        assert "Leyndell" in merged_from_leyndell
+        assert "Leyndell - before Divine Tower" in merged_from_leyndell
 
 
 class TestBackpropPreexistingPropagation:
