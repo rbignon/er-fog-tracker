@@ -20,6 +20,7 @@ use crate::websocket::{
 
 /// Known teleportation animation IDs
 const ANIM_FOG_WALL: u32 = 60060;
+const ANIM_BACK_TO_ENTRANCE: u32 = 60460;
 const ANIM_WAYGATE: u32 = 60490;
 const ANIM_SENDING_GATE_BLUE: u32 = 60470;
 const ANIM_SENDING_GATE_RED: u32 = 60472;
@@ -29,6 +30,7 @@ const ANIM_MEDAL: u32 = 50340;
 fn get_teleport_type(anim_id: u32) -> Option<&'static str> {
     match anim_id {
         ANIM_FOG_WALL => Some("FOG"),
+        ANIM_BACK_TO_ENTRANCE => Some("BACK_TO_ENTRANCE"),
         ANIM_WAYGATE => Some("WAYGATE"),
         ANIM_SENDING_GATE_BLUE | ANIM_SENDING_GATE_RED => Some("SENDING_GATE"),
         ANIM_MEDAL => Some("MEDAL"),
@@ -523,6 +525,7 @@ impl FogRandoTracker {
                     // Highlight known animations
                     let label = match anim_id {
                         60060 => "FOG_WALL",
+                        60460 => "BACK_TO_ENTRANCE",
                         60490 => "WAYGATE",
                         60470 => "SENDING_GATE_BLUE",
                         60472 => "SENDING_GATE_RED",

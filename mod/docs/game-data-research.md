@@ -9,6 +9,7 @@ Documentation of memory structures, animation IDs, and SpEffects discovered duri
 | Type | Detection Method | Details |
 |------|------------------|---------|
 | Fog wall | Animation `60060` | Walk through fog gate |
+| Back to entrance | Animation `60460` | Interact with ground point after boss |
 | Waygate | Animation `60490` | Hand turns blue |
 | Sending gate | Animation `60490` | **Same as waygate!** Hand turns blue |
 | Coffin | Exclusion + SpEffect verification | No animation, `warp_requested` + `dest_entity_id == 0` |
@@ -32,13 +33,14 @@ Documentation of memory structures, animation IDs, and SpEffects discovered duri
 
 ```
 1. If animation 60060 detected → FOG WALL (track)
-2. If animation 60490 detected → WAYGATE or SENDING GATE (track)
-3. If animation 50340 + tae_queued_use_item == 0x40000870 → MEDAL (track)
-4. If warp_requested + no animation + dest_entity_id == 0 → COFFIN (track)
+2. If animation 60460 detected → BACK TO ENTRANCE (track)
+3. If animation 60490 detected → WAYGATE or SENDING GATE (track)
+4. If animation 50340 + tae_queued_use_item == 0x40000870 → MEDAL (track)
+5. If warp_requested + no animation + dest_entity_id == 0 → COFFIN (track)
    - Secondary verification: SpEffect 4190/4010/4510 (not required, for confirmation)
-5. If warp_requested + dest_entity_id != 0 + no animation → FAST TRAVEL (track for position)
-6. If animation 4xxx/20xxx → DEATH (ignore)
-7. If animation 50230 + SpEffect 3226 → MEMORY OF GRACE (ignore)
+6. If warp_requested + dest_entity_id != 0 + no animation → FAST TRAVEL (track for position)
+7. If animation 4xxx/20xxx → DEATH (ignore)
+8. If animation 50230 + SpEffect 3226 → MEMORY OF GRACE (ignore)
 ```
 
 Note: Animation 60470/60472 from CE table NOT used in practice for sending gates.
@@ -66,6 +68,11 @@ Source: CE Table (`eldenring_all-in-one_Hexinton-v5.0_ce7.5.ct`)
 | ID | Description | Usage |
 |----|-------------|-------|
 | 60060 | "Walk through fog gate, moves cam" | **Fog wall traversal** - trigger discovery |
+
+### Back to Entrance (Ground Point)
+| ID | Description | Usage |
+|----|-------------|-------|
+| 60460 | Interact with ground teleport point | **Back to entrance after boss** - trigger discovery |
 
 ### Teleporters (Waygates)
 | ID | Description | Usage |
