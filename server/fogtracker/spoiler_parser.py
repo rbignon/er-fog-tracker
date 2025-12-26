@@ -27,6 +27,7 @@ ALWAYS_ONE_WAY_PATTERNS = [
     re.compile(r"lying down", re.IGNORECASE),
     re.compile(r"warp to", re.IGNORECASE),
     re.compile(r"warp after", re.IGNORECASE),
+    re.compile(r"dropping", re.IGNORECASE),  # Drop-down connections (can't go back up)
 ]
 
 # "arriving at/in/from" is only one-way if the SOURCE contains a teleport mechanism
@@ -254,15 +255,17 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
     # trigger one-way detection just because they contain pattern keywords.
     details_text = f"{source_details} {target_details}"
     is_inherently_one_way = False
-    if conn_type == "random":
-        # Check patterns that always indicate one-way (in details only)
-        if any(pattern.search(details_text) for pattern in ALWAYS_ONE_WAY_PATTERNS):
-            is_inherently_one_way = True
-        # Check "arriving" - only one-way if source details contain teleport mechanism
-        elif re.search(r"arriving (at|in|from)", details_text, re.IGNORECASE):
-            is_inherently_one_way = any(
-                pattern.search(source_details) for pattern in TELEPORT_SOURCE_PATTERNS
-            )
+
+    # Check patterns that always indicate one-way (applies to both random and preexisting)
+    # This catches drop-downs, sending gates, coffins, etc.
+    if any(pattern.search(details_text) for pattern in ALWAYS_ONE_WAY_PATTERNS):
+        is_inherently_one_way = True
+    # Check "arriving" - only one-way if source details contain teleport mechanism
+    # This is specific to random links (fog gates with teleport mechanisms)
+    elif conn_type == "random" and re.search(r"arriving (at|in|from)", details_text, re.IGNORECASE):
+        is_inherently_one_way = any(
+            pattern.search(source_details) for pattern in TELEPORT_SOURCE_PATTERNS
+        )
 
     return ConnectionInfo(
         id=str(uuid4()),

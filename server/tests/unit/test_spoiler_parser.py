@@ -321,10 +321,13 @@ class TestOneWayDetection:
             ("resting in the coffin", True),
             ("lying down in bed", True),
             ("using the Pureblood Knight's Medal", True),
+            ("dropping down to the right", True),  # Drop-down connections
+            ("dropping into the boss fight", True),
             ("before boss arena", False),
             ("at the main gate", False),
             ("near the beach", False),
             ("return to entrance after boss", False),
+            ("at the elevator", False),  # Elevators are bidirectional
         ],
     )
     def test_one_way_patterns(self, description, expected_one_way):
@@ -379,6 +382,31 @@ class TestOneWayDetection:
             conn.target == "Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness"
         )
         assert conn.is_inherently_one_way is False
+
+    def test_preexisting_drop_down_is_one_way(self):
+        """Preexisting links with 'dropping' in description should be one-way.
+
+        Regression test: Queen's Bedchamber -> Ashen Leyndell drop-down was
+        incorrectly treated as bidirectional, causing propagation in wrong direction.
+        """
+        line = (
+            "  Preexisting: Ashen Leyndell - Queen's Bedchamber --> "
+            "Ashen Leyndell (instead of entering the sanctuary, dropping down to the right)"
+        )
+        conn = _parse_connection_line(line)
+        assert conn is not None
+        assert conn.conn_type == "preexisting"
+        assert conn.source == "Ashen Leyndell - Queen's Bedchamber"
+        assert conn.target == "Ashen Leyndell"
+        assert conn.is_inherently_one_way is True  # Drop-down = one-way
+
+    def test_preexisting_elevator_is_bidirectional(self):
+        """Preexisting links with elevator should be bidirectional."""
+        line = "  Preexisting: After Loretta --> Elphael (at the elevator)"
+        conn = _parse_connection_line(line)
+        assert conn is not None
+        assert conn.conn_type == "preexisting"
+        assert conn.is_inherently_one_way is False  # Elevator = bidirectional
 
 
 class TestDataclasses:
