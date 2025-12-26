@@ -201,12 +201,26 @@ impl FogRandoTracker {
         // Log GameMan warp state changes
         self.log_warp_debug();
 
-        // Track loading screens - clear zone info when exiting a loading screen
+        // Track loading screens - query zone info when exiting a loading screen
         // (position goes from None to Some). This handles teleportation, death, fast travel, etc.
-        // But only if we don't have a pending warp (to avoid clearing info we just received)
+        // But only if we don't have a pending warp (to avoid querying when we'll get info from discovery)
         let position_now_readable = self.game_state.read_position().is_some();
         if position_now_readable && !self.was_position_readable && self.pending_warp.is_none() {
-            // Just exited a loading screen - clear current zone until we get new info from server
+            // Just exited a loading screen - query server for current zone
+            if let Some(pos) = self.game_state.read_position() {
+                if self.ws_client.is_connected() {
+                    info!(
+                        map_id = pos.map_id_str,
+                        x = format!("{:.1}", pos.x),
+                        y = format!("{:.1}", pos.y),
+                        z = format!("{:.1}", pos.z),
+                        "[ZONE_QUERY] Sending after loading screen"
+                    );
+                    self.ws_client
+                        .send_zone_query(pos.map_id, pos.pos(), pos.play_region_id);
+                }
+            }
+            // Clear temporarily while waiting for response
             self.current_zone = None;
             self.current_exits.clear();
         }
@@ -407,6 +421,17 @@ impl FogRandoTracker {
                     // Always update stats (even if zone resolution failed)
                     if stats.total > 0 {
                         self.discovery_stats = Some(stats);
+                    }
+                }
+                IncomingMessage::ZoneQueryAck { zone, exits } => {
+                    info!(
+                        zone = ?zone,
+                        exit_count = exits.len(),
+                        "Zone query response"
+                    );
+                    if zone.is_some() {
+                        self.current_zone = zone;
+                        self.current_exits = exits;
                     }
                 }
                 IncomingMessage::Error(err) => {

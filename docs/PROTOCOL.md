@@ -342,6 +342,49 @@ Acknowledgment with resolved zone info.
 | `exits` | Available fog gates from current zone |
 | `stats` | Discovery progress |
 
+#### Mod → Server: `zone_query`
+
+Sent after fast travel (grace site teleportation) to request current zone info.
+
+```json
+{
+  "type": "zone_query",
+  "map_id": "m10_01_00_00",
+  "pos": {"x": 100.0, "y": 50.0, "z": 200.0},
+  "play_region_id": 1048576
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `map_id` | Current map ID (format: `mWW_XX_YY_DD`) |
+| `pos` | Player position |
+| `play_region_id` | Play region ID (Col) for precise resolution |
+
+#### Server → Mod: `zone_query_ack`
+
+Response with resolved zone and exits.
+
+```json
+{
+  "type": "zone_query_ack",
+  "zone": "Limgrave - Church of Elleh",
+  "exits": [
+    {
+      "id": "link-uuid",
+      "target": "Zone C",
+      "description": "after the boss",
+      "from_zone": null
+    }
+  ]
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `zone` | Resolved zone name (null if not found) |
+| `exits` | Available fog gates from current zone |
+
 #### Mod → Server: `debug_log`
 
 Debug message for server logging.

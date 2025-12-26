@@ -55,6 +55,12 @@ pub enum OutgoingMessage {
         /// Destination entity ID (755890xxx for fog rando warps, enables direct lookup)
         destination_entity_id: u32,
     },
+    /// Query current zone (after fast travel)
+    ZoneQuery {
+        map_id: u32,
+        pos: Position,
+        play_region_id: Option<u32>,
+    },
     /// Respond to server ping
     Pong,
     /// Shutdown the connection
@@ -72,6 +78,11 @@ pub enum IncomingMessage {
         current_zone: Option<String>,
         exits: Vec<FogExit>,
         stats: DiscoveryStats,
+    },
+    /// Zone query response (after fast travel)
+    ZoneQueryAck {
+        zone: Option<String>,
+        exits: Vec<FogExit>,
     },
     /// Error message
     Error(String),
@@ -131,6 +142,12 @@ enum ServerMessage {
         /// Destination entity ID (755890xxx for fog rando warps)
         destination_entity_id: u32,
     },
+    ZoneQuery {
+        map_id: String,
+        pos: Position,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        play_region_id: Option<u32>,
+    },
     Pong,
 }
 
@@ -156,6 +173,12 @@ enum ServerResponse {
         propagated: Vec<PropagatedLink>,
         #[serde(default)]
         stats: DiscoveryStats,
+    },
+    /// Zone query response (after fast travel)
+    ZoneQueryAck {
+        zone: Option<String>,
+        #[serde(default)]
+        exits: Vec<FogExit>,
     },
     Ping,
     Error {
@@ -291,6 +314,21 @@ impl WebSocketClient {
                 target_play_region_id,
                 warp_type: warp_type.to_string(),
                 destination_entity_id,
+            });
+        }
+    }
+
+    /// Send a zone query to the server (after fast travel)
+    pub fn send_zone_query(&self, map_id: u32, pos: (f32, f32, f32), play_region_id: Option<u32>) {
+        if let Some(tx) = &self.tx {
+            let _ = tx.try_send(OutgoingMessage::ZoneQuery {
+                map_id,
+                pos: Position {
+                    x: pos.0,
+                    y: pos.1,
+                    z: pos.2,
+                },
+                play_region_id,
             });
         }
     }
@@ -551,6 +589,28 @@ fn message_loop(
                     .send(Message::Text(json))
                     .map_err(|e| e.to_string())?;
             }
+            Ok(OutgoingMessage::ZoneQuery {
+                map_id,
+                ref pos,
+                play_region_id,
+            }) => {
+                let map_str = format_map_id(map_id);
+                debug!(
+                    map_id = %map_str,
+                    pos = format!("({:.1}, {:.1}, {:.1})", pos.x, pos.y, pos.z),
+                    play_region_id = ?play_region_id,
+                    "[WS TX] ZoneQuery"
+                );
+                let msg = ServerMessage::ZoneQuery {
+                    map_id: map_str,
+                    pos: pos.clone(),
+                    play_region_id,
+                };
+                let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
+                socket
+                    .send(Message::Text(json))
+                    .map_err(|e| e.to_string())?;
+            }
             Ok(OutgoingMessage::Pong) => {
                 let msg = ServerMessage::Pong;
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
@@ -616,6 +676,20 @@ fn message_loop(
                                 current_zone: None,
                                 exits: vec![],
                                 stats: stats.clone(),
+                            });
+                        }
+                        ServerResponse::ZoneQueryAck {
+                            ref zone,
+                            ref exits,
+                        } => {
+                            debug!(
+                                zone = zone.as_deref().unwrap_or("?"),
+                                exits = exits.len(),
+                                "[WS RX] ZoneQueryAck"
+                            );
+                            let _ = incoming_tx.send(IncomingMessage::ZoneQueryAck {
+                                zone: zone.clone(),
+                                exits: exits.clone(),
                             });
                         }
                         ServerResponse::Error { ref message } => {

@@ -27,6 +27,7 @@ from fogvizu.zone_matching import (
     compute_zone_exits,
     expand_discovered_links,
     find_all_matching_zone_pairs_by_keys,
+    get_discovered_nodes,
 )
 from fogvizu.zone_resolver import get_resolver
 
@@ -40,6 +41,7 @@ class ModClient(Client):
         return {
             "pong": self._handle_pong,
             "discovery_v2": self._handle_discovery_v2,
+            "zone_query": self._handle_zone_query,
             "debug_log": self._handle_debug_log,
             "tag_update": self._handle_tag_update,
         }
@@ -73,6 +75,103 @@ class ModClient(Client):
                 await db.commit()
 
         await manager.broadcast_to_all(self.game_id, data, exclude=self.ws)
+
+    async def _handle_zone_query(self, data: dict):
+        """Handle zone query (after fast travel) - returns current zone and exits.
+
+        Uses discovered zones to filter candidates: if a player can fast travel
+        to a grace site, the zone must be discovered. This helps disambiguate
+        when multiple zones match the same position.
+        """
+        map_id = data.get("map_id", "")
+        pos = data.get("pos", {})
+        play_region_id = data.get("play_region_id")
+
+        logger.info(
+            "[MOD] Zone query: %s (%.1f, %.1f, %.1f) region=%s",
+            map_id,
+            pos.get("x", 0),
+            pos.get("y", 0),
+            pos.get("z", 0),
+            play_region_id,
+        )
+
+        if not map_id:
+            await self.send({"type": "zone_query_ack", "zone": None, "exits": []})
+            return
+
+        # Get game data first to know which zones are discovered
+        async with async_session() as db:
+            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            game = result.scalar_one_or_none()
+
+            if not game:
+                await self.send({"type": "zone_query_ack", "zone": None, "exits": []})
+                return
+
+            discovered_zones = get_discovered_nodes(
+                game.discovered_zone_links or [], game.zone_links or []
+            )
+
+            resolver = get_resolver()
+
+            # Try Col resolution first if available
+            zone_internal = None
+            zone_display = None
+            if play_region_id:
+                col = f"h{play_region_id:06x}"
+                zone_internal, zone_display = resolver.resolve_by_col(map_id, col)
+                if zone_display:
+                    # Check if Col-resolved zone is discovered
+                    if zone_display in discovered_zones:
+                        logger.debug("[MOD] Zone resolved by Col (discovered): %s", zone_display)
+                    else:
+                        logger.debug(
+                            "[MOD] Zone resolved by Col but not discovered: %s, trying position",
+                            zone_display,
+                        )
+                        zone_internal, zone_display = None, None
+
+            # Fallback to position-based resolution, prioritizing discovered zones
+            if not zone_internal:
+                candidates = resolver.resolve_all_candidates(
+                    map_id, pos.get("x", 0), pos.get("y", 0), pos.get("z", 0)
+                )
+                if candidates:
+                    # Prefer discovered zones
+                    discovered_candidates = [c for c in candidates if c[1] in discovered_zones]
+                    if discovered_candidates:
+                        zone_internal, zone_display = discovered_candidates[0]
+                        logger.debug(
+                            "[MOD] Zone resolved by position (discovered): %s", zone_display
+                        )
+                    else:
+                        # Fallback to first candidate if none discovered
+                        zone_internal, zone_display = candidates[0]
+                        logger.debug(
+                            "[MOD] Zone resolved by position (not discovered): %s", zone_display
+                        )
+
+            if not zone_display:
+                logger.warning("[MOD] Zone query: no zone found for %s", map_id)
+                await self.send({"type": "zone_query_ack", "zone": None, "exits": []})
+                return
+
+            # Get exits for the resolved zone
+            exits = compute_zone_exits(
+                game.zone_links or [],
+                game.discovered_zone_links or [],
+                zone_display,
+            )
+
+        logger.info("[MOD] Zone query result: %s (%d exits)", zone_display, len(exits))
+        await self.send(
+            {
+                "type": "zone_query_ack",
+                "zone": zone_display,
+                "exits": exits,
+            }
+        )
 
     async def _handle_discovery_v2(self, data: dict):
         """Handle discovery with map_id + position (server resolves zone names)."""
