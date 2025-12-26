@@ -74,6 +74,27 @@ function syncViewport() {
     syncState();
 }
 
+function sendPositionsUpdate() {
+    if (!State.isStreamerHost()) return;
+
+    const gameWs = getGameWs();
+    if (!gameWs || gameWs.readyState !== WebSocket.OPEN) return;
+
+    // Convert Map to plain object
+    const nodePositions = State.getNodePositions();
+    const positions = {};
+    for (const [nodeId, pos] of nodePositions) {
+        positions[nodeId] = { x: pos.x, y: pos.y };
+    }
+
+    gameWs.send(
+        JSON.stringify({
+            type: 'positions_update',
+            positions,
+        })
+    );
+}
+
 // =============================================================================
 // State Serialization (host only)
 // =============================================================================
@@ -351,7 +372,7 @@ setUpdateModConnectionIndicator(updateModConnectionIndicator);
 
 State.subscribe('nodePositionsSaved', () => {
     if (State.isSyncConnected() && State.isStreamerHost()) {
-        syncState();
+        sendPositionsUpdate();
     }
 });
 
