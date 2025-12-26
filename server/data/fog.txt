@@ -1200,7 +1200,7 @@ Areas:
     Tags: drop
 - Name: siofrabank_nokron
   Text: Nokron before Mimic Tear
-  Maps: m12_07_00_00
+  Maps: m12_07_00_00 m12_02_00_00
   MainMaps: m12_07_00_00
 - Name: siofra_nokron_mimic
   Text: Mimic Tear

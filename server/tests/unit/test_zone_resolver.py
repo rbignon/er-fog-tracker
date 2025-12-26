@@ -590,3 +590,69 @@ class TestTileBoundaryResolution:
 
         assert "liurnia_postmanor" in zones_50
         assert "liurnia_postmanor" in zones_51
+
+
+class TestNokronBeforeMimicTearResolution:
+    """Tests for Nokron before Mimic Tear zone resolution.
+
+    Bug fix: siofrabank_nokron ("Nokron before Mimic Tear") should be
+    correctly resolved when the player is in m12_02_00_00 near the
+    Mimic Tear fog gate entrance (Z > 1100).
+
+    The fog gate AEG099_002_9000 (Mimic Tear front) is in m12_02_00_00
+    with ASide = siofrabank_nokron, but this zone was originally only
+    mapped to m12_07_00_00.
+    """
+
+    def test_siofrabank_nokron_is_candidate_for_m12_02_00_00(self, resolver):
+        """siofrabank_nokron should be a candidate for m12_02_00_00."""
+        zones = resolver.map_zones.get("m12_02_00_00", set())
+        assert (
+            "siofrabank_nokron" in zones
+        ), f"siofrabank_nokron should be in m12_02_00_00 candidates, got: {zones}"
+
+    def test_siofrabank_nokron_prioritized_when_z_above_1100(self, resolver):
+        """siofrabank_nokron should be first candidate when Z > 1100.
+
+        Player at (963.5, -617.5, 1164.9) should resolve to
+        siofrabank_nokron before siofra_nokron.
+        """
+        candidates = resolver.resolve_all_candidates("m12_02_00_00", 963.5, -617.5, 1164.9)
+        candidate_keys = [c[0] for c in candidates]
+
+        assert "siofrabank_nokron" in candidate_keys
+        # siofrabank_nokron should come before siofra_nokron due to position match
+        siofrabank_idx = candidate_keys.index("siofrabank_nokron")
+        siofra_nokron_idx = candidate_keys.index("siofra_nokron")
+        assert siofrabank_idx < siofra_nokron_idx, (
+            f"siofrabank_nokron (idx={siofrabank_idx}) should be prioritized over "
+            f"siofra_nokron (idx={siofra_nokron_idx})"
+        )
+
+    def test_siofra_nokron_prioritized_when_z_below_1100(self, resolver):
+        """siofra_nokron should be first candidate when Z < 1100.
+
+        Player at lower Z values (e.g., Z=0) should resolve to
+        siofra_nokron (default) before siofrabank_nokron.
+        """
+        candidates = resolver.resolve_all_candidates("m12_02_00_00", 963.5, -617.5, 0.0)
+        candidate_keys = [c[0] for c in candidates]
+
+        assert "siofra_nokron" in candidate_keys
+        assert "siofrabank_nokron" in candidate_keys
+        # siofra_nokron (default) should come before siofrabank_nokron (no position match)
+        siofra_nokron_idx = candidate_keys.index("siofra_nokron")
+        siofrabank_idx = candidate_keys.index("siofrabank_nokron")
+        assert siofra_nokron_idx < siofrabank_idx, (
+            f"siofra_nokron (idx={siofra_nokron_idx}) should be prioritized over "
+            f"siofrabank_nokron (idx={siofrabank_idx}) when Z < 1100"
+        )
+
+    def test_resolve_returns_siofrabank_at_mimic_tear_position(self, resolver):
+        """resolve() should return siofrabank_nokron at Mimic Tear fog gate position."""
+        # Position from race shop data: 929.708 -617.300 1179.369
+        internal, display = resolver.resolve("m12_02_00_00", 929.7, -617.3, 1179.4)
+        assert (
+            internal == "siofrabank_nokron"
+        ), f"Expected siofrabank_nokron at Mimic Tear fog gate position, got {internal}"
+        assert display == "Nokron before Mimic Tear"

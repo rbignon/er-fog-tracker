@@ -21,6 +21,9 @@ MapAreas:
   - Name: Siofra River
     Area: siofra
     YBelow: -700
+  - Name: Nokron before Mimic Tear
+    Area: siofrabank_nokron
+    ZAbove: 1100
   - Name: Nokron
     Area: siofra_nokron
 - Map: m12_07_00_00
