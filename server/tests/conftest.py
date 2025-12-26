@@ -156,3 +156,92 @@ def spoiler_log_1078869800() -> str:
 def spoiler_log_1851144969() -> str:
     """Real spoiler log for seed 1851144969."""
     return (SPOILER_LOGS_DIR / "seed_1851144969.txt").read_text()
+
+
+@pytest.fixture
+def backprop_preexisting_zone_pairs() -> list[dict]:
+    """
+    Zone pairs for testing preexisting propagation after back-propagation.
+
+    Graph structure:
+    START (Chapel) --random--> A --random--> B --preexisting--> C (source)
+                                                               |
+                                                               preexisting
+                                                               |
+                                                               v
+                                                              Boss
+    C --random--> Destination
+
+    When discovering C -> Destination:
+    1. C is not accessible from START
+    2. Back-propagate: START -> A -> B -> C
+    3. After backprop, C's preexisting link to Boss should also be discovered
+    """
+    return [
+        # Path from START to C
+        {
+            "id": "link-start-a",
+            "source": "Chapel of Anticipation",
+            "target": "Zone A",
+            "type": "random",
+            "source_details": None,
+            "target_details": None,
+            "is_inherently_one_way": False,
+        },
+        {
+            "id": "link-a-b",
+            "source": "Zone A",
+            "target": "Zone B",
+            "type": "random",
+            "source_details": None,
+            "target_details": None,
+            "is_inherently_one_way": False,
+        },
+        {
+            "id": "link-b-c",
+            "source": "Zone B",
+            "target": "Zone C",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": None,
+            "is_inherently_one_way": False,
+        },
+        {
+            "id": "link-c-b",
+            "source": "Zone C",
+            "target": "Zone B",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": None,
+            "is_inherently_one_way": False,
+        },
+        # Preexisting from C to Boss (should be discovered after backprop)
+        {
+            "id": "link-c-boss",
+            "source": "Zone C",
+            "target": "Boss Arena",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": None,
+            "is_inherently_one_way": False,
+        },
+        {
+            "id": "link-boss-c",
+            "source": "Boss Arena",
+            "target": "Zone C",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": None,
+            "is_inherently_one_way": False,
+        },
+        # The discovery link: C -> Destination
+        {
+            "id": "link-c-dest",
+            "source": "Zone C",
+            "target": "Destination",
+            "type": "random",
+            "source_details": None,
+            "target_details": None,
+            "is_inherently_one_way": False,
+        },
+    ]

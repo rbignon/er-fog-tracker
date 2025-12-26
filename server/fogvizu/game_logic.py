@@ -150,6 +150,9 @@ async def propagate_discovery(
     newly_discovered: list[dict[str, str]] = []
     now = datetime.now(UTC).isoformat()
 
+    # Track zones newly discovered via back-propagation (need to propagate their preexisting)
+    backprop_new_zones: set[str] = set()
+
     # Back-propagation: if source is not accessible from START, find path and discover it
     if not is_accessible_from_start(discovered_links, source, zone_pairs):
         logger.info("[DISCOVERY] Source '%s' not accessible from START, back-propagating", source)
@@ -177,6 +180,14 @@ async def propagate_discovery(
                         logger.warning("[DISCOVERY] No zone_link_id found for %s → %s", src, dst)
             # Update discovered nodes after back-propagation
             discovered_nodes = get_discovered_nodes(discovered_links, zone_pairs)
+
+            # Collect zones newly discovered via back-propagation
+            # These zones need their preexisting links propagated
+            for _src, dst in path_to_source:
+                backprop_new_zones.add(dst)
+            # The source itself is also newly accessible
+            backprop_new_zones.add(source)
+            logger.debug("[DISCOVERY] Zones newly accessible via backprop: %s", backprop_new_zones)
         else:
             logger.warning("[DISCOVERY] No path found from START to '%s'", source)
 
@@ -199,6 +210,15 @@ async def propagate_discovery(
     # For the initial link, use provided link_id if available
     queue: list[tuple[str, str, str | None]] = [(source, target, link_id)]
     visited: set[tuple[str, str]] = set()
+
+    # Also queue preexisting links from zones newly discovered via back-propagation
+    # These zones are now accessible but their preexisting links haven't been propagated
+    for zone in backprop_new_zones:
+        for next_dst, _is_bidir in preexisting_adj.get(zone, []):
+            queue.append((zone, next_dst, None))
+            logger.debug(
+                "[DISCOVERY] Queuing preexisting from backprop zone: %s → %s", zone, next_dst
+            )
 
     while queue:
         src, dst, provided_link_id = queue.pop(0)

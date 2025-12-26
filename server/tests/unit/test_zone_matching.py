@@ -963,3 +963,92 @@ class TestComputeZoneExits:
         # Should NOT have an exit back to Sending Gate Origin (one-way)
         exit_targets = [e.get("target") for e in exits]
         assert "Sending Gate Origin" not in exit_targets
+
+
+class TestBackpropPreexistingPropagation:
+    """
+    Tests for bug fix: preexisting links from zones made accessible via back-propagation
+    must also be propagated.
+
+    Bug scenario:
+    - Player is at zone C (source) and traverses to Destination
+    - Zone C is not yet accessible from START
+    - System back-propagates path: START -> A -> B -> C
+    - Zone C has a preexisting link to Boss Arena
+    - BUG: The preexisting C -> Boss Arena was NOT propagated
+
+    After fix:
+    - All preexisting links from zones in the backprop path should be queued
+    """
+
+    def test_source_not_accessible_before_backprop(self, backprop_preexisting_zone_pairs):
+        """Zone C should not be accessible from START with no discovered links."""
+        discovered_links = []
+        accessible = is_accessible_from_start(
+            discovered_links, "Zone C", backprop_preexisting_zone_pairs
+        )
+        assert not accessible
+
+    def test_backprop_path_includes_preexisting_zones(self, backprop_preexisting_zone_pairs):
+        """Back-propagation path to Zone C should include B (via preexisting link)."""
+        discovered_links = []
+        path = find_path_prioritizing_discovered(
+            backprop_preexisting_zone_pairs, discovered_links, "Zone C"
+        )
+        # Path should be: START -> A, A -> B, B -> C
+        assert len(path) == 3
+        sources = [src for src, _ in path]
+        targets = [tgt for _, tgt in path]
+        assert "Chapel of Anticipation" in sources
+        assert "Zone A" in sources or "Zone A" in targets
+        assert "Zone B" in sources or "Zone B" in targets
+        assert "Zone C" in targets
+
+    def test_preexisting_adjacency_includes_boss_link(self, backprop_preexisting_zone_pairs):
+        """Zone C should have preexisting link to Boss Arena in adjacency."""
+        preexisting_adj = build_preexisting_adjacency(backprop_preexisting_zone_pairs)
+        c_neighbors = [neighbor for neighbor, _ in preexisting_adj.get("Zone C", [])]
+        assert "Boss Arena" in c_neighbors
+        assert "Zone B" in c_neighbors
+
+    def test_zones_needing_preexisting_propagation(self, backprop_preexisting_zone_pairs):
+        """
+        After back-propagation, zones in the path should have their preexisting
+        links identified for propagation.
+
+        This tests the logic that was missing before the fix:
+        - Zone C (the source) has preexisting to Boss Arena
+        - Zone B (in backprop path) has preexisting to Zone C
+        """
+        discovered_links = []
+        preexisting_adj = build_preexisting_adjacency(backprop_preexisting_zone_pairs)
+
+        # Find backprop path
+        path = find_path_prioritizing_discovered(
+            backprop_preexisting_zone_pairs, discovered_links, "Zone C"
+        )
+
+        # Collect zones from backprop path
+        backprop_zones = set()
+        for _src, dst in path:
+            backprop_zones.add(dst)
+        backprop_zones.add("Zone C")  # The source itself
+
+        # These zones should have preexisting links that need propagation
+        preexisting_to_propagate = []
+        for zone in backprop_zones:
+            for neighbor, _ in preexisting_adj.get(zone, []):
+                preexisting_to_propagate.append((zone, neighbor))
+
+        # Zone C -> Boss Arena should be in the list
+        assert ("Zone C", "Boss Arena") in preexisting_to_propagate
+        # Zone B -> Zone C should also be there (though Zone C is already in path)
+        assert ("Zone B", "Zone C") in preexisting_to_propagate
+
+    def test_get_zones_via_preexisting_from_source(self, backprop_preexisting_zone_pairs):
+        """get_zones_via_preexisting should return Boss Arena from Zone C."""
+        reachable = get_zones_via_preexisting(backprop_preexisting_zone_pairs, "Zone C")
+        assert "Boss Arena" in reachable
+        assert "Zone B" in reachable
+        # Zone C itself should be in the set
+        assert "Zone C" in reachable
