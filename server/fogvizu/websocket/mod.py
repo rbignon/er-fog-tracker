@@ -132,25 +132,30 @@ class ModClient(Client):
                         )
                         zone_internal, zone_display = None, None
 
-            # Fallback to position-based resolution, prioritizing discovered zones
+            # Fallback to position-based resolution
+            # Only return if exactly 1 discovered candidate (avoid ambiguity)
             if not zone_internal:
                 candidates = resolver.resolve_all_candidates(
                     map_id, pos.get("x", 0), pos.get("y", 0), pos.get("z", 0)
                 )
                 if candidates:
-                    # Prefer discovered zones
                     discovered_candidates = [c for c in candidates if c[1] in discovered_zones]
-                    if discovered_candidates:
+                    if len(discovered_candidates) == 1:
+                        # Exactly one discovered candidate - safe to return
                         zone_internal, zone_display = discovered_candidates[0]
                         logger.debug(
-                            "[MOD] Zone resolved by position (discovered): %s", zone_display
+                            "[MOD] Zone resolved by position (1 discovered): %s", zone_display
+                        )
+                    elif len(discovered_candidates) > 1:
+                        # Multiple discovered candidates - ambiguous, return null
+                        logger.info(
+                            "[MOD] Zone query ambiguous: %d discovered candidates for %s",
+                            len(discovered_candidates),
+                            map_id,
                         )
                     else:
-                        # Fallback to first candidate if none discovered
-                        zone_internal, zone_display = candidates[0]
-                        logger.debug(
-                            "[MOD] Zone resolved by position (not discovered): %s", zone_display
-                        )
+                        # No discovered candidates - return null
+                        logger.debug("[MOD] Zone query: no discovered candidates for %s", map_id)
 
             if not zone_display:
                 logger.warning("[MOD] Zone query: no zone found for %s", map_id)

@@ -214,13 +214,15 @@ Response with resolved zone and exits.
 - **Timing**: `zone_query` is sent as soon as position becomes readable. If server response is slow, overlay will be empty briefly (acceptable).
 - **Unresolved zone**: If position doesn't match any zone, server returns `zone: null` and overlay stays empty (current behavior).
 
-## Optimization: Discovered Zone Filtering
+## Optimization: Conservative Zone Filtering
 
-Since a player can only fast travel to a grace site in a zone they've discovered, we use this to improve zone resolution accuracy:
+Since a player can only fast travel to a grace site in a zone they've discovered, we use this to improve zone resolution accuracy with a conservative approach:
 
-1. Get the set of discovered zones from `discovered_zone_links`
-2. For Col resolution: if the resolved zone is not discovered, fall back to position
-3. For position resolution: prefer candidates that are discovered
-4. If no discovered candidate exists, fall back to the first candidate
+| Situation | Result |
+|-----------|--------|
+| Col resolves to discovered zone | ✅ Return zone |
+| Col resolves to undiscovered zone | Try position fallback |
+| Position → exactly 1 discovered candidate | ✅ Return zone |
+| Position → 0 or >1 discovered candidates | ❌ Return null |
 
-This helps disambiguate when multiple zones match the same position (e.g., overlapping areas).
+**Rationale**: Better to show nothing than to show incorrect zone info that could mislead the player. Col resolution is precise (play_region_id is unique), so we trust it if the zone is discovered. Position-based resolution can match multiple overlapping zones, so we only return a result when there's no ambiguity.

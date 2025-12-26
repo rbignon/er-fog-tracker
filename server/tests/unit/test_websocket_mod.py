@@ -109,15 +109,57 @@ class TestZoneQueryHandler:
         )
 
     @pytest.mark.asyncio
-    async def test_zone_query_prefers_discovered_zone(
+    async def test_zone_query_returns_single_discovered_candidate(
         self, mock_client, sample_zone_links, sample_discovered_links
     ):
-        """Should prefer discovered zone when multiple candidates exist."""
+        """Should return zone when exactly one discovered candidate exists."""
         mock_game = MagicMock()
         mock_game.zone_links = sample_zone_links
         mock_game.discovered_zone_links = sample_discovered_links
 
-        # Mock resolver to return multiple candidates
+        # Mock resolver to return multiple candidates, but only one is discovered
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.return_value = [
+            ("weeping_peninsula", "Weeping Peninsula"),  # Not discovered
+            ("limgrave", "Limgrave"),  # Discovered (via link1)
+            ("unknown", "Unknown Zone"),  # Not discovered
+        ]
+
+        with (
+            patch("fogvizu.websocket.mod.async_session") as mock_session,
+            patch("fogvizu.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogvizu.websocket.mod.compute_zone_exits", return_value=[]),
+        ):
+            mock_db = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_game
+            mock_db.execute.return_value = mock_result
+            mock_session.return_value.__aenter__.return_value = mock_db
+
+            await mock_client._handle_zone_query(
+                {
+                    "map_id": "m60_41_36_00",
+                    "pos": {"x": 100, "y": 50, "z": 200},
+                }
+            )
+
+        # Should return Limgrave (the only discovered candidate)
+        mock_client.send.assert_called_once()
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["type"] == "zone_query_ack"
+        assert call_args["zone"] == "Limgrave"
+
+    @pytest.mark.asyncio
+    async def test_zone_query_returns_null_when_multiple_discovered(
+        self, mock_client, sample_zone_links, sample_discovered_links
+    ):
+        """Should return null when multiple discovered candidates exist (ambiguous)."""
+        mock_game = MagicMock()
+        mock_game.zone_links = sample_zone_links
+        mock_game.discovered_zone_links = sample_discovered_links
+
+        # Mock resolver to return candidates where 2 are discovered
         mock_resolver = MagicMock()
         mock_resolver.resolve_by_col.return_value = (None, None)
         mock_resolver.resolve_all_candidates.return_value = [
@@ -144,17 +186,15 @@ class TestZoneQueryHandler:
                 }
             )
 
-        # Should pick Limgrave (first discovered candidate), not Weeping Peninsula
-        mock_client.send.assert_called_once()
+        # Should return null (ambiguous - multiple discovered candidates)
         call_args = mock_client.send.call_args[0][0]
-        assert call_args["type"] == "zone_query_ack"
-        assert call_args["zone"] == "Limgrave"
+        assert call_args["zone"] is None
 
     @pytest.mark.asyncio
-    async def test_zone_query_fallback_to_first_when_none_discovered(
+    async def test_zone_query_returns_null_when_none_discovered(
         self, mock_client, sample_zone_links
     ):
-        """Should fallback to first candidate when no candidates are discovered."""
+        """Should return null when no candidates are discovered."""
         mock_game = MagicMock()
         mock_game.zone_links = sample_zone_links
         mock_game.discovered_zone_links = []  # Nothing discovered
@@ -184,9 +224,9 @@ class TestZoneQueryHandler:
                 }
             )
 
-        # Should pick first candidate since none are discovered
+        # Should return null (no discovered candidates)
         call_args = mock_client.send.call_args[0][0]
-        assert call_args["zone"] == "Weeping Peninsula"
+        assert call_args["zone"] is None
 
     @pytest.mark.asyncio
     async def test_zone_query_col_resolution_skipped_if_not_discovered(
