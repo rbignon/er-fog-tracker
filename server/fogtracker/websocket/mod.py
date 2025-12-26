@@ -635,6 +635,7 @@ class ModClient(Client):
                             "propagated": all_propagated,
                             "discovered_zone_links": expanded_links,
                             "stats": stats,
+                            "focus_target": destination_zone,
                         },
                         exclude=self.ws,
                     )

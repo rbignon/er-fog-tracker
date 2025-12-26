@@ -121,6 +121,7 @@ class HostClient(Client):
                     "propagated": propagated,
                     "discovered_zone_links": expanded_links,
                     "stats": stats,
+                    "focus_target": target,
                 },
                 exclude=self.ws,
             )

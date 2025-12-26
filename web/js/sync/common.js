@@ -234,8 +234,15 @@ export function handleTagUpdateFromServer(zone, tags) {
  * @param {Array} discoveredZoneLinks - All discovered zone links (may only have zone_link_id)
  * @param {Object} [stats] - Discovery stats from server {discovered, total}
  * @param {boolean} [isInitialSync=false] - True for initial sync (don't show toasts)
+ * @param {string} [focusTarget] - The zone to center on (destination of the traversal)
  */
-export function handleDiscoveryFromServer(propagated, discoveredZoneLinks, stats, isInitialSync = false) {
+export function handleDiscoveryFromServer(
+    propagated,
+    discoveredZoneLinks,
+    stats,
+    isInitialSync = false,
+    focusTarget = null
+) {
     const explorationState = State.getExplorationState();
     if (!explorationState) return;
 
@@ -292,8 +299,10 @@ export function handleDiscoveryFromServer(propagated, discoveredZoneLinks, stats
         }
 
         if (changed) {
-            // Find the target of the first propagated link (the newly discovered node)
-            if (propagated && propagated.length > 0) {
+            // Use focusTarget from server if provided, otherwise fall back to first propagated target
+            if (focusTarget) {
+                newlyDiscoveredTarget = focusTarget;
+            } else if (propagated && propagated.length > 0) {
                 newlyDiscoveredTarget = propagated[0].target;
             }
             explorationState.discovered = newDiscovered;
