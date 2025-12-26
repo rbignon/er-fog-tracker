@@ -342,20 +342,22 @@ def find_all_matching_zone_pairs_by_keys(
     matches = []
     seen_pair_ids = set()
 
-    for source_key, _source_display in source_candidates:
-        for target_key, _target_display in target_candidates:
+    for source_key, source_display in source_candidates:
+        for target_key, target_display in target_candidates:
             pair = find_zone_pair_by_keys(zone_pairs, source_key, target_key, source_details)
             if pair:
                 pair_id = pair.get("id")
                 if pair_id and pair_id not in seen_pair_ids:
                     seen_pair_ids.add(pair_id)
-                    matches.append((pair["source"], pair["target"], pair))
+                    # Return the caller's direction, not the stored direction.
+                    # This ensures propagation logic respects the actual travel direction.
+                    matches.append((source_display, target_display, pair))
                     logger.debug(
-                        "[MATCH] Found pair by keys: '%s' -> '%s' (keys: %s -> %s)",
+                        "[MATCH] Found pair by keys: '%s' -> '%s' (stored as %s -> %s)",
+                        source_display,
+                        target_display,
                         pair["source"],
                         pair["target"],
-                        source_key,
-                        target_key,
                     )
 
     return matches
@@ -428,10 +430,13 @@ def find_all_matching_zone_pairs(
                 link_key = frozenset([pair["source"], pair["target"]])
                 if link_key not in seen_links:
                     seen_links.add(link_key)
-                    # Return the actual names from the spoiler log pair
-                    matches.append((pair["source"], pair["target"], pair))
+                    # Return the caller's direction, not the stored direction.
+                    # This ensures propagation logic respects the actual travel direction.
+                    matches.append((source_display, target_display, pair))
                     logger.debug(
-                        "[MATCH] Found pair: '%s' → '%s'",
+                        "[MATCH] Found pair: '%s' → '%s' (stored as %s → %s)",
+                        source_display,
+                        target_display,
                         pair["source"],
                         pair["target"],
                     )

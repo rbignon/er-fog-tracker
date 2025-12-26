@@ -1117,3 +1117,91 @@ class TestBackpropPreexistingPropagation:
         assert "Zone B" in reachable
         # Zone C itself should be in the set
         assert "Zone C" in reachable
+
+
+class TestDirectionPreservation:
+    """
+    Tests that find_all_matching_zone_pairs returns the caller's direction,
+    not the stored direction from zone_pairs.
+
+    Regression test for bug where clicking "A → B" when the link is stored as
+    "B → A" would cause the system to treat B as the source, triggering
+    incorrect back-propagation.
+    """
+
+    def test_find_all_matching_zone_pairs_preserves_caller_direction(self):
+        """
+        When link is stored as B→A but caller searches A→B,
+        result should have A as source (caller's direction).
+        """
+        zone_pairs = [
+            {
+                "id": "1",
+                "source": "Nokron",  # Stored direction: Nokron → Farum
+                "target": "Farum Azula",
+                "type": "random",
+            }
+        ]
+        # Caller is searching for Farum → Nokron (reverse of stored direction)
+        source_candidates = [("farum", "Farum Azula")]
+        target_candidates = [("nokron", "Nokron")]
+
+        result = find_all_matching_zone_pairs(zone_pairs, source_candidates, target_candidates)
+
+        assert len(result) == 1
+        source_display, target_display, pair = result[0]
+        # Should preserve caller's direction, not stored direction
+        assert source_display == "Farum Azula"
+        assert target_display == "Nokron"
+        # The pair itself still has the stored direction
+        assert pair["source"] == "Nokron"
+        assert pair["target"] == "Farum Azula"
+
+    def test_find_all_matching_zone_pairs_by_keys_preserves_caller_direction(self):
+        """
+        When link is stored as B→A but caller searches A→B,
+        result should have A as source (caller's direction).
+        """
+        zone_pairs = [
+            {
+                "id": "1",
+                "source": "Nokron",
+                "target": "Farum Azula",
+                "source_key": "nokron_zone",
+                "target_key": "farum_zone",
+                "type": "random",
+            }
+        ]
+        # Caller is searching for Farum → Nokron (reverse of stored direction)
+        source_candidates = [("farum_zone", "Farum Azula")]
+        target_candidates = [("nokron_zone", "Nokron")]
+
+        result = find_all_matching_zone_pairs_by_keys(
+            zone_pairs, source_candidates, target_candidates
+        )
+
+        assert len(result) == 1
+        source_display, target_display, pair = result[0]
+        # Should preserve caller's direction
+        assert source_display == "Farum Azula"
+        assert target_display == "Nokron"
+
+    def test_find_all_matching_zone_pairs_direct_match_unchanged(self):
+        """When caller's direction matches stored direction, result is same."""
+        zone_pairs = [
+            {
+                "id": "1",
+                "source": "Farum Azula",
+                "target": "Nokron",
+                "type": "random",
+            }
+        ]
+        source_candidates = [("farum", "Farum Azula")]
+        target_candidates = [("nokron", "Nokron")]
+
+        result = find_all_matching_zone_pairs(zone_pairs, source_candidates, target_candidates)
+
+        assert len(result) == 1
+        source_display, target_display, pair = result[0]
+        assert source_display == "Farum Azula"
+        assert target_display == "Nokron"

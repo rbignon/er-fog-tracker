@@ -246,16 +246,18 @@ async def propagate_discovery(
     found_pair = find_zone_pair(zone_pairs, source, target)
     main_link_type = "random"
     if found_pair:
-        # Use exact names from zone_links for consistency
-        source = found_pair["source"]
-        target = found_pair["target"]
         main_link_type = found_pair.get("type", "random")
-        discovery_result.origin = source  # Update origin with exact name
+        # Note: We keep the caller's source/target direction for propagation logic.
+        # The pair may be stored in either direction, but we respect the user's intent
+        # (e.g., clicking "A → B" should treat A as accessible, not B).
+        # The zone_link_id lookup handles both directions.
         logger.debug(
-            "[DISCOVERY] Found matching pair: %s → %s (type=%s)",
+            "[DISCOVERY] Found matching pair: %s → %s (type=%s, stored as %s → %s)",
             source,
             target,
             main_link_type,
+            found_pair["source"],
+            found_pair["target"],
         )
     else:
         logger.warning("[DISCOVERY] No matching pair found for '%s' → '%s'", source, target)
