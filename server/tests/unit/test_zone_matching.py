@@ -964,6 +964,71 @@ class TestComputeZoneExits:
         exit_targets = [e.get("target") for e in exits]
         assert "Sending Gate Origin" not in exit_targets
 
+    def test_preexisting_bidirectional_without_reverse_link(self):
+        """
+        Test that preexisting links are bidirectional based on is_inherently_one_way field,
+        even when no explicit reverse link exists in the data.
+
+        Bug fix scenario (Elphael):
+        - After Loretta -> Elphael (preexisting, is_inherently_one_way: false)
+        - Yelough -> After Loretta (random)
+        - From Elphael, we should see exits from both Elphael AND After Loretta
+        """
+        zone_pairs = [
+            {
+                "id": "link-yelough-afterloretta",
+                "source": "Yelough Anix Tunnel",
+                "target": "After Loretta",
+                "type": "random",
+                "source_details": "at the front of Astel's arena",
+                "target_details": "after Loretta's arena",
+                "is_inherently_one_way": False,
+            },
+            {
+                "id": "link-afterloretta-elphael",
+                "source": "After Loretta",
+                "target": "Elphael",
+                "type": "preexisting",
+                "source_details": None,
+                "target_details": "at the elevator",
+                "is_inherently_one_way": False,  # Bidirectional elevator
+            },
+            {
+                "id": "link-elphael-malenia",
+                "source": "Elphael",
+                "target": "Sellia Crystal Tunnel",
+                "type": "random",
+                "source_details": "before Malenia's arena",
+                "target_details": "before Fallingstar Beast",
+                "is_inherently_one_way": False,
+            },
+        ]
+
+        # No discovered links
+        discovered = []
+
+        # From Elphael, merged zones should include After Loretta via preexisting
+        merged = get_zones_via_preexisting(zone_pairs, "Elphael")
+        assert "Elphael" in merged
+        assert "After Loretta" in merged  # This was the bug - After Loretta was missing
+
+        # Compute exits - should have 2 exits
+        exits = compute_zone_exits(zone_pairs, discovered, "Elphael")
+        exit_descriptions = {e["description"] for e in exits}
+
+        # Exit from Elphael itself (to Sellia via Malenia fog gate)
+        assert "before Malenia's arena" in exit_descriptions
+
+        # Exit from After Loretta (back through the Yelough fog gate)
+        assert "after Loretta's arena" in exit_descriptions
+
+        # Verify from_zone is set correctly
+        yelough_exit = next(e for e in exits if e["description"] == "after Loretta's arena")
+        assert yelough_exit["from_zone"] == "After Loretta"
+
+        malenia_exit = next(e for e in exits if e["description"] == "before Malenia's arena")
+        assert malenia_exit["from_zone"] is None  # Same as current zone
+
 
 class TestBackpropPreexistingPropagation:
     """

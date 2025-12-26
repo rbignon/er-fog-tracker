@@ -50,12 +50,20 @@ def build_preexisting_adjacency(
     """
     Build adjacency list for preexisting links only.
     Returns dict[source] -> list of (destination, is_bidirectional)
+
+    A preexisting link is bidirectional unless:
+    1. It is marked as inherently one-way (is_inherently_one_way: true), OR
+    2. An explicit reverse link exists but is marked as one-way
+
+    Most preexisting links (e.g., elevators, doors) are bidirectional.
     """
     adj: dict[str, list[tuple[str, bool]]] = defaultdict(list)
 
     for pair in zone_pairs:
         if pair["type"] == "preexisting":
-            is_bidir = not is_one_way(pair, zone_pairs)
+            # Use is_inherently_one_way field (like random links)
+            # Default to bidirectional if field is missing
+            is_bidir = not pair.get("is_inherently_one_way", False)
             adj[pair["source"]].append((pair["target"], is_bidir))
             if is_bidir:
                 adj[pair["target"]].append((pair["source"], True))
