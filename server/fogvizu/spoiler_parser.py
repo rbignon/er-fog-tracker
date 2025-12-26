@@ -21,7 +21,6 @@ ALWAYS_ONE_WAY_PATTERNS = [
     re.compile(r"burning the Sealing Tree", re.IGNORECASE),
     re.compile(r"using the Pureblood", re.IGNORECASE),
     re.compile(r"Hole-Laden Necklace", re.IGNORECASE),
-    re.compile(r"return to entrance", re.IGNORECASE),
     re.compile(r"O Mother", re.IGNORECASE),
     re.compile(r"resting in the coffin", re.IGNORECASE),
     re.compile(r"using the coffin", re.IGNORECASE),

@@ -324,6 +324,7 @@ class TestOneWayDetection:
             ("before boss arena", False),
             ("at the main gate", False),
             ("near the beach", False),
+            ("return to entrance after boss", False),
         ],
     )
     def test_one_way_patterns(self, description, expected_one_way):
@@ -358,6 +359,26 @@ class TestOneWayDetection:
         conn = _parse_connection_line(line)
         assert conn is not None
         assert conn.is_inherently_one_way is True
+
+    def test_return_to_entrance_fog_gate_is_bidirectional(self):
+        """Boss exit fog gates (return to entrance) are bidirectional in randomizer.
+
+        In vanilla, these are one-way teleports. But in the Fog Gate Randomizer,
+        they become regular fog gates that can be traversed in both directions.
+        """
+        line = (
+            "  Random: Consecrated Snowfield - Yelough Anix Tunnel "
+            "(at the entrance from Consecrated Snowfield) "
+            "--> Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness "
+            "(return to entrance after Astel, Stars of Darkness)"
+        )
+        conn = _parse_connection_line(line)
+        assert conn is not None
+        assert conn.source == "Consecrated Snowfield - Yelough Anix Tunnel"
+        assert (
+            conn.target == "Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness"
+        )
+        assert conn.is_inherently_one_way is False
 
 
 class TestDataclasses:
