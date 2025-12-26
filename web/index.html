@@ -329,47 +329,57 @@
     </div>
 
     <!-- =========================================================================
-         Stream to OBS Modal
+         Stream Modal - Share Links
          ========================================================================= -->
     <div id="stream-modal" class="modal hidden">
         <div class="stream-modal-content stream-modal-wide">
             <button id="close-stream-modal" class="modal-close-btn">&times;</button>
-            <h3>OBS Browser Source</h3>
-            <div class="stream-modal-layout">
-                <div class="stream-modal-left">
-                    <div class="stream-url-section">
-                        <label>Browser Source URL:</label>
-                        <textarea id="stream-url-input" readonly rows="3"></textarea>
-                        <button id="copy-url-btn" class="btn-secondary btn-copy">Copy URL</button>
-                    </div>
-                    <div class="stream-options">
-                        <div class="form-row">
-                            <label for="counter-position">Counter Position:</label>
-                            <select id="counter-position">
-                                <option value="br">Bottom Right</option>
-                                <option value="bl">Bottom Left</option>
-                                <option value="tr">Top Right</option>
-                                <option value="tl">Top Left</option>
-                                <option value="t">Top Center</option>
-                                <option value="b">Bottom Center</option>
-                                <option value="l">Left Center</option>
-                                <option value="r">Right Center</option>
-                                <option value="off">Hidden</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <label for="counter-size">Counter Size:</label>
-                            <select id="counter-size">
-                                <option value="sm">Small</option>
-                                <option value="md" selected>Medium</option>
-                                <option value="lg">Large</option>
-                                <option value="xl">Extra Large</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button id="close-stream-modal-btn" class="btn-secondary">Close</button>
+            <h3>Streamer links</h3>
+
+            <!-- Viewer Link Section -->
+            <div class="stream-section">
+                <h4>Viewer Link</h4>
+                <p class="stream-section-desc">Share with your chat or Discord for read-only viewing</p>
+                <div class="stream-url-row">
+                    <input type="text" id="viewer-url-input" class="stream-url-input" readonly>
+                    <button id="copy-viewer-url-btn" class="btn-icon" title="Copy">📋</button>
                 </div>
-                <div class="stream-modal-right">
+            </div>
+
+            <!-- OBS Overlay Section -->
+            <div class="stream-section">
+                <h4>OBS Overlay</h4>
+                <p class="stream-section-desc">Browser source URL for streaming</p>
+                <div class="stream-url-row">
+                    <input type="text" id="stream-url-input" class="stream-url-input" readonly>
+                    <button id="copy-url-btn" class="btn-icon" title="Copy">📋</button>
+                </div>
+                <div class="stream-options">
+                    <div class="form-row">
+                        <label for="counter-position">Counter Position:</label>
+                        <select id="counter-position">
+                            <option value="br">Bottom Right</option>
+                            <option value="bl">Bottom Left</option>
+                            <option value="tr">Top Right</option>
+                            <option value="tl">Top Left</option>
+                            <option value="t">Top Center</option>
+                            <option value="b">Bottom Center</option>
+                            <option value="l">Left Center</option>
+                            <option value="r">Right Center</option>
+                            <option value="off">Hidden</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="counter-size">Counter Size:</label>
+                        <select id="counter-size">
+                            <option value="sm">Small</option>
+                            <option value="md" selected>Medium</option>
+                            <option value="lg">Large</option>
+                            <option value="xl">Extra Large</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="obs-help">
                     <div class="stream-preview">
                         <img src="/stream.png" alt="OBS overlay example">
                     </div>

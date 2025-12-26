@@ -252,70 +252,72 @@ export function initStreamUI() {
     }
 
     const streamBtn = document.getElementById('stream-btn');
-    const urlInput = document.getElementById('stream-url-input');
+    const overlayUrlInput = document.getElementById('stream-url-input');
+    const viewerUrlInput = document.getElementById('viewer-url-input');
     const counterPositionSelect = document.getElementById('counter-position');
     const counterSizeSelect = document.getElementById('counter-size');
 
-    // Generate OBS URL based on current settings
-    function updateStreamUrl() {
+    // Generate URLs based on current settings
+    function updateUrls() {
         const user = Auth.getUser();
         const gameId = State.getGameId();
 
         if (!user || !gameId) {
-            if (urlInput) urlInput.value = 'Load a game first';
+            if (overlayUrlInput) overlayUrlInput.value = 'Load a game first';
+            if (viewerUrlInput) viewerUrlInput.value = 'Load a game first';
             return;
         }
 
+        const baseUrl = `${window.location.origin}/watch/${user.username}/${gameId}`;
+
+        // Viewer URL (no overlay params)
+        if (viewerUrlInput) viewerUrlInput.value = baseUrl;
+
+        // OBS Overlay URL (with counter options)
         const position = counterPositionSelect?.value || 'br';
         const size = counterSizeSelect?.value || 'md';
-
-        const baseUrl = `${window.location.origin}/watch/${user.username}/${gameId}`;
         const params = new URLSearchParams({
             overlay: 'true',
             counter: position,
             size: size,
         });
-
-        if (urlInput) urlInput.value = `${baseUrl}?${params.toString()}`;
+        if (overlayUrlInput) overlayUrlInput.value = `${baseUrl}?${params.toString()}`;
     }
 
-    // Open modal and update URL
+    // Open modal and update URLs
     if (streamBtn) {
         streamBtn.addEventListener('click', () => {
-            updateStreamUrl();
+            updateUrls();
             streamModal.classList.remove('hidden');
             streamModal.classList.add('visible');
         });
     }
 
-    // Update URL when options change
-    counterPositionSelect?.addEventListener('change', updateStreamUrl);
-    counterSizeSelect?.addEventListener('change', updateStreamUrl);
+    // Update OBS URL when options change
+    counterPositionSelect?.addEventListener('change', updateUrls);
+    counterSizeSelect?.addEventListener('change', updateUrls);
 
-    // Close modal buttons
+    // Close modal
     const closeModal = () => {
         streamModal.classList.remove('visible');
         streamModal.classList.add('hidden');
     };
     document.getElementById('close-stream-modal')?.addEventListener('click', closeModal);
-    document.getElementById('close-stream-modal-btn')?.addEventListener('click', closeModal);
 
-    // Copy URL button
-    const copyUrlBtn = document.getElementById('copy-url-btn');
-    if (copyUrlBtn) {
-        copyUrlBtn.addEventListener('click', () => {
-            if (urlInput) {
-                urlInput.select();
-                navigator.clipboard.writeText(urlInput.value).then(() => {
-                    const originalText = copyUrlBtn.textContent;
-                    copyUrlBtn.textContent = 'Copied!';
-                    setTimeout(() => {
-                        copyUrlBtn.textContent = originalText;
-                    }, 2000);
+    // Helper to setup copy button
+    function setupCopyButton(buttonId, inputElement) {
+        const btn = document.getElementById(buttonId);
+        if (btn && inputElement) {
+            btn.addEventListener('click', () => {
+                navigator.clipboard.writeText(inputElement.value).then(() => {
+                    import('../toast.js').then(Toast => Toast.show('Copied to clipboard'));
                 });
-            }
-        });
+            });
+        }
     }
+
+    setupCopyButton('copy-url-btn', overlayUrlInput);
+    setupCopyButton('copy-viewer-url-btn', viewerUrlInput);
 
     // Close on backdrop click
     streamModal.addEventListener('click', e => {
