@@ -2815,6 +2815,19 @@ marker path {
     position: absolute;
     top: 20px;
     left: 20px;
+    font-size: 1rem;
+    color: #a99968;
+    padding: 8px 16px;
+    border: 1px solid #a9996844;
+    border-radius: 4px;
+    background: rgba(169, 153, 104, 0.1);
+    transition: all 0.2s;
+}
+
+.offline-back:hover {
+    color: #c9a227;
+    border-color: #c9a227;
+    background: rgba(201, 162, 39, 0.15);
 }
 
 /* Header back link */

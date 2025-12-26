@@ -4,6 +4,8 @@
 
 import * as Auth from '../auth.js';
 import { navigate } from '../router.js';
+import * as State from '../state.js';
+import { loadOfflineGame } from '../ui.js';
 
 /**
  * Show the landing page.
@@ -49,7 +51,17 @@ export async function handleRoute({ query }) {
 
     // Check for offline mode
     if (query.offline === 'true') {
-        // Show offline upload screen instead
+        // If a specific seed is requested, try to load it
+        if (query.seed) {
+            State.setBackendMode('offline');
+            if (loadOfflineGame(query.seed)) {
+                // Game loaded successfully - handleOfflineGraphLoaded will be called via graphDataChanged event
+                return;
+            }
+        }
+
+        // No seed requested or failed to load - show upload screen
+        State.setBackendMode('offline');
         document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
         document.getElementById('upload-screen').classList.remove('hidden');
         return;

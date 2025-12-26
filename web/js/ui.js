@@ -55,9 +55,9 @@ function processSpoilerLogText(text) {
         );
     }
 
-    const graphData = SpoilerLogParser.parse(text);
+    const parsedData = SpoilerLogParser.parse(text);
 
-    if (graphData.nodes.length === 0) {
+    if (parsedData.nodes.length === 0) {
         throw new Error('No areas found in the log file.');
     }
 
@@ -69,11 +69,26 @@ function processSpoilerLogText(text) {
     searchInput.value = '';
 
     // Set seed BEFORE render so exploration state can be loaded
-    const newSeed = graphData.metadata?.seed || 'unknown';
+    const newSeed = parsedData.metadata?.seed || 'unknown';
     State.setSeed(newSeed);
 
-    // Store graph data first (needed for migration)
+    // Check if we already have saved graph data for this seed (preserves UUIDs)
+    const existingGraphData = State.loadGraphFromStorage(newSeed);
+    const graphData = existingGraphData || parsedData;
+
+    // Store graph data
     State.setGraphData(graphData);
+
+    // Save to localStorage only if this is a new seed
+    if (!existingGraphData) {
+        State.saveGraphToStorage();
+    }
+
+    // Update URL with seed parameter in offline mode (enables refresh/bookmark)
+    if (State.getBackendMode() === 'offline') {
+        const newUrl = `/?offline=true&seed=${newSeed}`;
+        history.replaceState(null, '', newUrl);
+    }
 
     // Load exploration state BEFORE render (if saved), or initialize
     if (State.isExplorationMode()) {
@@ -87,6 +102,42 @@ function processSpoilerLogText(text) {
 
     // Update UI controls based on current mode
     updateModeButtons();
+}
+
+/**
+ * Load a saved offline game by seed.
+ * @param {string} seed - The seed to load
+ * @returns {boolean} True if game was loaded, false otherwise
+ */
+export function loadOfflineGame(seed) {
+    const graphData = State.loadGraphFromStorage(seed);
+    if (!graphData) return false;
+
+    // Show main UI
+    uploadScreen.classList.add('hidden');
+    mainUI.classList.add('visible');
+
+    // Reset search
+    searchInput.value = '';
+
+    // Set seed and graph data
+    State.setSeed(seed);
+    State.setGraphData(graphData);
+
+    // Load exploration state
+    if (State.isExplorationMode()) {
+        if (!Exploration.loadExplorationState(seed)) {
+            Exploration.initExplorationState();
+        }
+    }
+
+    // Trigger render
+    State.emit('graphNeedsRender', { preservePositions: false });
+
+    // Update UI controls
+    updateModeButtons();
+
+    return true;
 }
 
 function handleFile(file) {

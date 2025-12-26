@@ -587,6 +587,69 @@ export function clearExplorationStorage(seed) {
 }
 
 // ============================================================
+// GRAPH DATA PERSISTENCE (offline mode)
+// ============================================================
+
+const GRAPH_STORAGE_KEY_PREFIX = 'er-fog-graph-';
+
+function getGraphStorageKey(seed) {
+    return GRAPH_STORAGE_KEY_PREFIX + seed;
+}
+
+/**
+ * Save graph data to localStorage (for offline mode persistence).
+ * This allows the graph to survive page reloads without re-uploading.
+ */
+export function saveGraphToStorage() {
+    if (!state.seed || !state.graphData) return;
+
+    try {
+        localStorage.setItem(getGraphStorageKey(state.seed), JSON.stringify(state.graphData));
+    } catch (err) {
+        console.error('Failed to save graph data:', err);
+    }
+}
+
+/**
+ * Load graph data from localStorage.
+ * @param {string} seed - The game seed to load
+ * @returns {Object|null} The graph data if found, null otherwise
+ */
+export function loadGraphFromStorage(seed) {
+    const saved = localStorage.getItem(getGraphStorageKey(seed));
+    if (!saved) return null;
+
+    try {
+        return JSON.parse(saved);
+    } catch (err) {
+        console.error('Failed to load graph data:', err);
+        return null;
+    }
+}
+
+/**
+ * Clear graph data from localStorage.
+ */
+export function clearGraphStorage(seed) {
+    localStorage.removeItem(getGraphStorageKey(seed || state.seed));
+}
+
+/**
+ * Get all saved offline game seeds from localStorage.
+ * @returns {string[]} Array of seed strings
+ */
+export function getOfflineGameSeeds() {
+    const seeds = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(GRAPH_STORAGE_KEY_PREFIX)) {
+            seeds.push(key.substring(GRAPH_STORAGE_KEY_PREFIX.length));
+        }
+    }
+    return seeds;
+}
+
+// ============================================================
 // CONSTANTS
 // ============================================================
 

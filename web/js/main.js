@@ -167,7 +167,7 @@ function handleOfflineGraphLoaded() {
     document.getElementById('main-ui').classList.remove('hidden');
     document.getElementById('main-ui').classList.add('visible');
 
-    // Set navigation to home (no back link text in offline)
+    // Set navigation to offline home (upload screen)
     setNavigationLinks('/?offline=true', null);
 
     // Show "Load New File" button
