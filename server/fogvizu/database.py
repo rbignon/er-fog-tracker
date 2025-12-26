@@ -4,14 +4,13 @@ SQLAlchemy models and database session management.
 
 from collections.abc import AsyncGenerator
 from datetime import datetime
+from functools import lru_cache
 from uuid import uuid4
 
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-from fogvizu.config import settings
 
 
 class Base(DeclarativeBase):
@@ -88,16 +87,37 @@ class Game(Base):
 
 
 # =============================================================================
-# Database Session
+# Database Session (lazy initialization)
 # =============================================================================
 
-engine = create_async_engine(settings.database_url, echo=False)
-async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+@lru_cache
+def get_engine():
+    """Get cached database engine. Lazily initialized on first call."""
+    from fogvizu.config import get_settings
+
+    return create_async_engine(get_settings().database_url, echo=False)
+
+
+@lru_cache
+def get_async_session_maker():
+    """Get cached async session maker. Lazily initialized on first call."""
+    return async_sessionmaker(get_engine(), class_=AsyncSession, expire_on_commit=False)
+
+
+class _AsyncSessionProxy:
+    """Lazy proxy for backward compatibility with `async with async_session() as db:`."""
+
+    def __call__(self):
+        return get_async_session_maker()()
+
+
+async_session = _AsyncSessionProxy()
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for getting async database sessions."""
-    async with async_session() as session:
+    async with get_async_session_maker()() as session:
         try:
             yield session
             await session.commit()
@@ -108,5 +128,5 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Create all tables (for development only, use Alembic in production)."""
-    async with engine.begin() as conn:
+    async with get_engine().begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

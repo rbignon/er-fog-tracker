@@ -2,6 +2,8 @@
 Application configuration loaded from environment variables.
 """
 
+from functools import lru_cache
+
 from pydantic_settings import BaseSettings
 
 
@@ -38,4 +40,19 @@ class Settings(BaseSettings):
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    """Get cached settings instance. Lazily initialized on first call."""
+    return Settings()
+
+
+# Backward compatibility alias (deprecated, use get_settings() instead)
+# This is a lazy proxy that only evaluates when accessed
+class _SettingsProxy:
+    """Lazy proxy for backward compatibility with `from config import settings`."""
+
+    def __getattr__(self, name: str):
+        return getattr(get_settings(), name)
+
+
+settings = _SettingsProxy()
