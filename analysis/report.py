@@ -179,7 +179,7 @@ async def main() -> None:
     # Prompt for problem description
     print("Describe the problem (Ctrl+D when done):", file=sys.stderr)
     try:
-        description = sys.stdin.read()
+        description = sys.stdin.buffer.read().decode("utf-8", errors="replace")
     except KeyboardInterrupt:
         print("\nAborted.", file=sys.stderr)
         sys.exit(1)
