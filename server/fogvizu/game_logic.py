@@ -119,6 +119,44 @@ def format_discovery_summary(
     return "\n".join(lines)
 
 
+def format_ingame_display(
+    current_zone: str,
+    exits: list[dict],
+    stats: dict,
+) -> str:
+    """Format what will be displayed in-game by the mod overlay."""
+    lines = []
+
+    # Header: Zone Name • discovered/total
+    lines.append("╭─ In-game Display ────────────────────────────────────────────")
+    stats_str = f"{stats.get('discovered', 0)}/{stats.get('total', 0)}"
+    lines.append(f"│ {current_zone} • {stats_str}")
+
+    # Exits
+    if exits:
+        lines.append("├─ Exits:")
+        for exit_info in exits:
+            target = exit_info.get("target", "???")
+            from_zone = exit_info.get("from_zone")
+            description = exit_info.get("description", "")
+
+            # Format: → Target [from Zone]
+            exit_line = f"→ {target}"
+            if from_zone:
+                exit_line += f" [from {from_zone}]"
+            lines.append(f"│   {exit_line}")
+
+            # Description (indented)
+            if description:
+                lines.append(f"│     {description}")
+    else:
+        lines.append("│ No exits available")
+
+    lines.append("╰──────────────────────────────────────────────────────────────")
+
+    return "\n".join(lines)
+
+
 def format_undiscovery_summary(
     target_zone: str,
     removed_zones: list[str],

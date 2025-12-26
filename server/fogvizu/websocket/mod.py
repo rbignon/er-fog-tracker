@@ -15,6 +15,7 @@ from fogvizu.game_logic import (
     DiscoveryResult,
     find_all_matching_zone_pairs,
     format_discovery_summary,
+    format_ingame_display,
     propagate_discovery,
 )
 from fogvizu.websocket.auth import authenticate_ws, verify_game_access
@@ -476,6 +477,12 @@ class ModClient(Client):
                     total_links=stats["total"],
                 )
                 for line in summary.split("\n"):
+                    logger.info(line)
+
+            # Log in-game display preview
+            if destination_zone:
+                ingame = format_ingame_display(destination_zone, exits, stats)
+                for line in ingame.split("\n"):
                     logger.info(line)
 
             # Send ack to mod

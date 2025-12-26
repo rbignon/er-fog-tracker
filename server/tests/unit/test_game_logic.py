@@ -7,6 +7,7 @@ from fogvizu.game_logic import (
     DiscoveredLink,
     DiscoveryResult,
     format_discovery_summary,
+    format_ingame_display,
     format_undiscovery_summary,
 )
 
@@ -230,3 +231,110 @@ class TestFormatUndiscoverySummary:
         # Check footer
         assert "Total: 3 zones removed" in summary
         assert "Progress: 5/180 (2.8%)" in summary
+
+
+class TestFormatIngameDisplay:
+    """Tests for format_ingame_display function."""
+
+    def test_simple_display(self):
+        exits = [
+            {"target": "Stormveil Castle", "from_zone": None, "description": "at the main gate"},
+        ]
+        stats = {"discovered": 5, "total": 180}
+
+        display = format_ingame_display("Limgrave", exits, stats)
+
+        assert "In-game Display" in display
+        assert "Limgrave • 5/180" in display
+        assert "→ Stormveil Castle" in display
+        assert "at the main gate" in display
+        assert "[from" not in display  # No from_zone
+
+    def test_display_with_from_zone(self):
+        exits = [
+            {
+                "target": "Capital Outskirts",
+                "from_zone": "Cave of Knowledge",
+                "description": "before the boss",
+            },
+        ]
+        stats = {"discovered": 10, "total": 180}
+
+        display = format_ingame_display("Cave of Knowledge", exits, stats)
+
+        assert "→ Capital Outskirts [from Cave of Knowledge]" in display
+        assert "before the boss" in display
+
+    def test_display_with_undiscovered_exit(self):
+        exits = [
+            {"target": "???", "from_zone": None, "description": "near the cliff"},
+        ]
+        stats = {"discovered": 3, "total": 180}
+
+        display = format_ingame_display("Limgrave", exits, stats)
+
+        assert "→ ???" in display
+        assert "near the cliff" in display
+
+    def test_display_with_no_exits(self):
+        stats = {"discovered": 5, "total": 180}
+
+        display = format_ingame_display("Roundtable Hold", [], stats)
+
+        assert "No exits available" in display
+
+    def test_display_multiple_exits(self):
+        exits = [
+            {"target": "Chapel of Anticipation", "from_zone": None, "description": "at the back"},
+            {"target": "???", "from_zone": "Stormveil", "description": "before the boss"},
+            {"target": "Liurnia", "from_zone": None, "description": ""},
+        ]
+        stats = {"discovered": 42, "total": 180}
+
+        display = format_ingame_display("Cave of Knowledge", exits, stats)
+
+        assert "Cave of Knowledge • 42/180" in display
+        assert "├─ Exits:" in display
+        assert "→ Chapel of Anticipation" in display
+        assert "at the back" in display
+        assert "→ ??? [from Stormveil]" in display
+        assert "before the boss" in display
+        assert "→ Liurnia" in display
+
+    def test_full_scenario(self):
+        """Test a realistic in-game display scenario."""
+        exits = [
+            {
+                "target": "Chapel of Anticipation",
+                "from_zone": None,
+                "description": "at the back entrance from the Seaside Ruins beach",
+            },
+            {
+                "target": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
+                "from_zone": "Cave of Knowledge",
+                "description": "before Soldier of Godrick's arena",
+            },
+            {
+                "target": "???",
+                "from_zone": None,
+                "description": "at the door to Stranded Graveyard",
+            },
+        ]
+        stats = {"discovered": 5, "total": 165}
+
+        display = format_ingame_display("Cave of Knowledge - From Seaside Ruins", exits, stats)
+
+        # Check header
+        assert "╭─ In-game Display" in display
+        assert "Cave of Knowledge - From Seaside Ruins • 5/165" in display
+
+        # Check exits
+        assert "→ Chapel of Anticipation" in display
+        assert "at the back entrance from the Seaside Ruins beach" in display
+        assert "→ Capital Outskirts - Sealed Tunnel - Onyx Lord [from Cave of Knowledge]" in display
+        assert "before Soldier of Godrick's arena" in display
+        assert "→ ???" in display
+        assert "at the door to Stranded Graveyard" in display
+
+        # Check footer
+        assert "╰─" in display
