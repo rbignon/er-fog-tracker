@@ -41,7 +41,6 @@ const FOG_RANDO_ENTITY_MIN: u32 = 755890000;
 const FOG_RANDO_ENTITY_MAX: u32 = 755899999;
 
 /// Check if an entity ID is from Fog Gate Randomizer
-#[allow(dead_code)]
 fn is_fog_rando_entity(entity_id: u32) -> bool {
     entity_id >= FOG_RANDO_ENTITY_MIN && entity_id <= FOG_RANDO_ENTITY_MAX
 }
@@ -466,17 +465,42 @@ impl FogRandoTracker {
         if warp_requested != self.last_logged_warp_requested {
             let warp_info = self.game_man_reader.get_warp_info();
             if warp_requested {
-                debug!(
-                    dest_entity = warp_info
-                        .as_ref()
-                        .map(|w| w.destination_entity_id)
-                        .unwrap_or(0),
-                    dest_map = warp_info
-                        .as_ref()
-                        .map(|w| w.destination_map_id)
-                        .unwrap_or(0),
+                let dest_entity = warp_info
+                    .as_ref()
+                    .map(|w| w.destination_entity_id)
+                    .unwrap_or(0);
+                let dest_map = warp_info
+                    .as_ref()
+                    .map(|w| w.destination_map_id)
+                    .unwrap_or(0);
+                let cur_anim = self.game_state.read_animation();
+                let is_fog_rando = is_fog_rando_entity(dest_entity);
+                let has_known_anim = cur_anim.and_then(get_teleport_type).is_some();
+
+                // Always log warp requests at info level for diagnostics
+                info!(
+                    dest_entity,
+                    dest_map,
+                    is_fog_rando,
+                    cur_anim = cur_anim.unwrap_or(0),
+                    has_known_anim,
                     "[GAMEMAN] >>> WARP REQUESTED <<<"
                 );
+
+                // Special warning for potential untracked Fog Rando warps
+                if is_fog_rando && !has_known_anim {
+                    if let Some(pos) = self.game_state.read_position() {
+                        warn!(
+                            dest_entity,
+                            map_id = pos.map_id_str,
+                            x = format!("{:.1}", pos.x),
+                            y = format!("{:.1}", pos.y),
+                            z = format!("{:.1}", pos.z),
+                            cur_anim = cur_anim.unwrap_or(0),
+                            "[GAMEMAN] !!! FOG RANDO WARP WITHOUT KNOWN ANIMATION - possible back-to-entrance !!!"
+                        );
+                    }
+                }
             } else {
                 debug!("[GAMEMAN] Warp completed");
             }
