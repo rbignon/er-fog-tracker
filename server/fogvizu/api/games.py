@@ -17,6 +17,7 @@ from fogvizu.database import Game, User, get_db
 from fogvizu.game_logic import (
     compute_discovery_stats,
     format_discovery_summary,
+    format_undiscovery_summary,
     propagate_discovery,
 )
 from fogvizu.models import (
@@ -398,9 +399,20 @@ async def create_undiscovery(
                 )
             )
 
+    # Compute stats and log summary
+    stats = compute_discovery_stats(zone_links, new_links)
+    if removed_zones:
+        summary = format_undiscovery_summary(
+            data.zone,
+            removed_zones,
+            total_discovered=stats["discovered"],
+            total_links=stats["total"],
+        )
+        for line in summary.split("\n"):
+            logger.info(line)
+
     # Broadcast to viewers via WebSocket
     if removed_zones:
-        stats = compute_discovery_stats(zone_links, new_links)
         links_ws = [{"zone_link_id": dl.zone_link_id} for dl in response_links]
         await ws_manager.broadcast_to_viewers(
             game_id,

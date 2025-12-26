@@ -7,6 +7,7 @@ from fogvizu.game_logic import (
     DiscoveredLink,
     DiscoveryResult,
     format_discovery_summary,
+    format_undiscovery_summary,
 )
 
 
@@ -171,3 +172,61 @@ class TestFormatDiscoverySummary:
         # Check footer
         assert "Total: 4 new links" in summary
         assert "Progress: 15/180 (8.3%)" in summary
+
+
+class TestFormatUndiscoverySummary:
+    """Tests for format_undiscovery_summary function."""
+
+    def test_single_zone_undiscovery(self):
+        summary = format_undiscovery_summary("Stormveil Castle", ["Stormveil Castle"])
+
+        assert "Undiscovery Summary" in summary
+        assert "Target:     Stormveil Castle" in summary
+        assert "Total: 1 zone removed" in summary
+        # No cascade section when only the target is removed
+        assert "Cascade" not in summary
+
+    def test_undiscovery_with_cascade(self):
+        removed = ["Stormveil Castle", "Stormveil Castle (Rampart)", "Stormveil Castle (Hall)"]
+        summary = format_undiscovery_summary("Stormveil Castle", removed)
+
+        assert "Target:     Stormveil Castle" in summary
+        assert "├─ Cascade (2):" in summary
+        assert "✗ Stormveil Castle (Rampart)" in summary
+        assert "✗ Stormveil Castle (Hall)" in summary
+        assert "Total: 3 zones removed" in summary
+
+    def test_with_progress_stats(self):
+        summary = format_undiscovery_summary(
+            "Zone A", ["Zone A"], total_discovered=10, total_links=180
+        )
+
+        assert "Progress: 10/180 (5.6%)" in summary
+
+    def test_without_progress_stats(self):
+        summary = format_undiscovery_summary("Zone A", ["Zone A"])
+
+        assert "Progress:" not in summary
+
+    def test_full_scenario(self):
+        """Test a complete undiscovery scenario with cascade."""
+        removed = ["Limgrave (Field)", "Stormveil Castle", "Stormveil Castle (Rampart)"]
+        summary = format_undiscovery_summary(
+            "Limgrave (Field)", removed, total_discovered=5, total_links=180
+        )
+
+        # Check structure
+        assert "╭─ Undiscovery Summary" in summary
+        assert "╰─ Total:" in summary
+
+        # Check target
+        assert "Target:     Limgrave (Field)" in summary
+
+        # Check cascade section
+        assert "├─ Cascade (2):" in summary
+        assert "✗ Stormveil Castle" in summary
+        assert "✗ Stormveil Castle (Rampart)" in summary
+
+        # Check footer
+        assert "Total: 3 zones removed" in summary
+        assert "Progress: 5/180 (2.8%)" in summary

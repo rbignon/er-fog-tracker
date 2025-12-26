@@ -119,6 +119,38 @@ def format_discovery_summary(
     return "\n".join(lines)
 
 
+def format_undiscovery_summary(
+    target_zone: str,
+    removed_zones: list[str],
+    total_discovered: int | None = None,
+    total_links: int | None = None,
+) -> str:
+    """Format an undiscovery result as a visual summary for logging."""
+    lines = []
+
+    # Header
+    lines.append("╭─ Undiscovery Summary ───────────────────────────────────────")
+    lines.append(f"│ Target:     {target_zone}")
+
+    # Cascade section (other zones that became unreachable)
+    cascade_zones = [z for z in removed_zones if z != target_zone]
+    if cascade_zones:
+        lines.append(f"├─ Cascade ({len(cascade_zones)}):")
+        for zone in cascade_zones:
+            lines.append(f"│   ✗ {zone}")
+
+    # Footer with stats
+    total = len(removed_zones)
+    zone_word = "zone" if total == 1 else "zones"
+    footer = f"╰─ Total: {total} {zone_word} removed"
+    if total_discovered is not None and total_links is not None:
+        percent = (total_discovered / total_links * 100) if total_links > 0 else 0
+        footer += f" │ Progress: {total_discovered}/{total_links} ({percent:.1f}%)"
+    lines.append(footer)
+
+    return "\n".join(lines)
+
+
 async def propagate_discovery(
     db: AsyncSession,
     game_id: UUID,
