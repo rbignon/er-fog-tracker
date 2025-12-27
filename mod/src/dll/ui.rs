@@ -53,6 +53,17 @@ impl ImguiRenderLoop for FogRandoTracker {
             info!("Using default imgui font");
         }
 
+        // Load death icon texture FIRST (testing order)
+        match DeathTexture::load(render_context) {
+            Ok(texture) => {
+                info!("Loaded death icon texture");
+                self.death_texture = Some(texture);
+            }
+            Err(e) => {
+                error!(error = %e, "Failed to load death texture");
+            }
+        }
+
         // Load rune icon textures
         match RuneTextures::load(render_context) {
             Ok(textures) => {
@@ -63,7 +74,6 @@ impl ImguiRenderLoop for FogRandoTracker {
                 error!(error = %e, "Failed to load rune textures");
             }
         }
-
         // Load kindling icon texture
         match KindlingTexture::load(render_context) {
             Ok(texture) => {
@@ -72,17 +82,6 @@ impl ImguiRenderLoop for FogRandoTracker {
             }
             Err(e) => {
                 error!(error = %e, "Failed to load kindling texture");
-            }
-        }
-
-        // Load death icon texture
-        match DeathTexture::load(render_context) {
-            Ok(texture) => {
-                info!("Loaded death icon texture");
-                self.death_texture = Some(texture);
-            }
-            Err(e) => {
-                error!(error = %e, "Failed to load death texture");
             }
         }
     }
