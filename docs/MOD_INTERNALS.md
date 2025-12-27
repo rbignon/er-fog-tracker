@@ -109,7 +109,7 @@ The mod uses **animation-based detection** for all known teleport types. This is
 | Sending Gate (Red) | `60472` | Portal-style gates |
 | Medal | `50340` | Pureblood Knight's Medal item use |
 | Horned Remains | `60010` | Teleport to Regal Ancestor Spirit (Nokron) |
-| Liurnia Tower Door | `12202126` | Opening the door at the bottom of the inverted tower |
+| Liurnia Tower Door | `12202126` | Opening the door at the bottom of the inverted tower. **Requires validation** (see below) |
 | Post Boss Warp | `12020210` | Warp after defeating a boss (e.g., Maliketh). **Requires validation** (see below) |
 | Erdtree Burn | `68110` | Cutscene warp when burning the Erdtree with Melina |
 
@@ -144,17 +144,17 @@ Coffins have no distinctive animation and are currently not explicitly detected.
 
 Fast travel (via map menu) is **not tracked** by the mod. It uses `warp_requested` without a teleport animation, but since it's not a fog gate traversal, it's intentionally ignored.
 
-### Post Boss Warp Validation
+### Cutscene Animation Validation
 
-The `POST_BOSS_WARP` animation (`12020210`) can be triggered without an actual warp occurring (e.g., during cutscenes or visual transitions after defeating a boss). To filter these false positives, discoveries with this transport type are validated before being sent to the server.
+Some animations in the `12xxxxxx` range (`POST_BOSS_WARP`, `LIURNIA_TOWER_DOOR`) can be triggered without an actual warp occurring (e.g., during cutscenes or visual transitions). To filter these false positives, discoveries with these transport types are validated before being sent to the server.
 
-A `POST_BOSS_WARP` discovery is considered **valid** only if `warp_requested` was true at some point during the warp. The tracker monitors `GameMan.warp_requested` each frame while a warp is pending and records if it ever becomes true.
+A discovery with these animation types is considered **valid** only if `warp_requested` was true at some point during the warp. The tracker monitors `GameMan.warp_requested` each frame while a warp is pending and records if it ever becomes true.
 
 **Example false positive** (filtered):
 ```
-Animation: POST_BOSS_WARP (12020210)
-Entry: m11_05_00_00 (-125.4, 40.9, -350.4)
-Exit:  m11_05_00_00 (-119.4, 40.6, -353.5)
+Animation: LIURNIA_TOWER_DOOR (12202126)
+Entry: m43_01_00_00 (-90.1, 357.2, 22.1)
+Exit:  m43_01_00_00 (-71.6, 347.8, 16.9)
 warp_requested: never true
 → Discarded (no warp was actually requested by the game)
 ```

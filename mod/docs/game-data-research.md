@@ -62,17 +62,17 @@ This provides:
 - The destination entity ID before the warp (for fast travel, this is the grace entity ID)
 - Works for all warp types, not just animation-based ones
 
-### Post Boss Warp Validation
+### Cutscene Animation Validation
 
-The `POST_BOSS_WARP` animation (`12020210`) can trigger without an actual warp (e.g., cutscenes, visual transitions). To filter false positives, discoveries with this transport type require validation.
+Animations in the `12xxxxxx` range (`POST_BOSS_WARP`, `LIURNIA_TOWER_DOOR`) can trigger without an actual warp (e.g., cutscenes, visual transitions). To filter false positives, discoveries with these transport types require validation.
 
-A `POST_BOSS_WARP` is **valid** only if `warp_requested` was true at some point during the warp.
+These animations are **valid** only if `warp_requested` was true at some point during the warp.
 
 ```
 Example false positive (filtered):
-  Animation: 12020210 (POST_BOSS_WARP)
-  Entry: m11_05_00_00 (-125.4, 40.9, -350.4)
-  Exit:  m11_05_00_00 (-119.4, 40.6, -353.5)
+  Animation: 12202126 (LIURNIA_TOWER_DOOR)
+  Entry: m43_01_00_00 (-90.1, 357.2, 22.1)
+  Exit:  m43_01_00_00 (-71.6, 347.8, 16.9)
   warp_requested: never true
   → Discarded
 ```
@@ -111,7 +111,7 @@ Source: CE Table (`eldenring_all-in-one_Hexinton-v5.0_ce7.5.ct`)
 | ID | Description | Usage |
 |----|-------------|-------|
 | 12020210 | Post-boss warp | **After defeating certain bosses** (e.g., Maliketh). Requires validation. |
-| 12202126 | Divine Tower door | **Liurnia Divine Tower inverted door** |
+| 12202126 | Divine Tower door | **Liurnia Divine Tower inverted door**. Requires validation. |
 | 68110 | Erdtree burn cutscene | **Burning the Erdtree with Melina** → Crumbling Farum Azula |
 
 ### Item Use Animations

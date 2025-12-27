@@ -55,21 +55,26 @@ pub struct DiscoveryEvent {
     pub warp_was_requested: bool,
 }
 
+/// Animation types that require warp_requested validation.
+/// These are cutscene/transition animations (12xxxxxx range) that can play
+/// without an actual warp occurring.
+const ANIMATIONS_REQUIRING_WARP_VALIDATION: &[&str] = &["POST_BOSS_WARP", "LIURNIA_TOWER_DOOR"];
+
 impl DiscoveryEvent {
     /// Check if this discovery event is valid (not a false positive).
     ///
-    /// POST_BOSS_WARP animation can be triggered without an actual warp
-    /// (e.g., cutscenes, boss transitions). We filter these by requiring
-    /// that `warp_requested` was true at some point during the warp.
+    /// Some animations (POST_BOSS_WARP, LIURNIA_TOWER_DOOR) can be triggered
+    /// without an actual warp (e.g., cutscenes, transitions). We filter these
+    /// by requiring that `warp_requested` was true at some point during the warp.
     ///
     /// Other transport types (FOG, WAYGATE, etc.) are always valid because
     /// their animations are only played during actual warps.
     pub fn is_valid(&self) -> bool {
-        if self.transport_type != "POST_BOSS_WARP" {
+        if !ANIMATIONS_REQUIRING_WARP_VALIDATION.contains(&self.transport_type) {
             return true;
         }
 
-        // POST_BOSS_WARP: require warp_requested to have been true
+        // Cutscene animations: require warp_requested to have been true
         self.warp_was_requested
     }
 }
@@ -1007,6 +1012,32 @@ mod tests {
             entry: make_pos(0x0A0A1000, -125.4, 40.9, -350.4),
             exit: make_pos(0x0A0A1000, -119.4, 40.6, -353.5),
             transport_type: "POST_BOSS_WARP",
+            destination_entity_id: 0,
+            warp_was_requested: false,
+        };
+        assert!(!discovery.is_valid());
+    }
+
+    #[test]
+    fn test_discovery_event_liurnia_tower_door_with_warp_requested() {
+        // LIURNIA_TOWER_DOOR with warp_requested=true is valid
+        let discovery = DiscoveryEvent {
+            entry: make_pos(0x0A0A1000, 100.0, 0.0, 100.0),
+            exit: make_pos(0x0B0B1000, 100.0, 0.0, 100.0),
+            transport_type: "LIURNIA_TOWER_DOOR",
+            destination_entity_id: 0,
+            warp_was_requested: true,
+        };
+        assert!(discovery.is_valid());
+    }
+
+    #[test]
+    fn test_discovery_event_liurnia_tower_door_false_positive() {
+        // LIURNIA_TOWER_DOOR without warp_requested is INVALID (false positive)
+        let discovery = DiscoveryEvent {
+            entry: make_pos(0x0A0A1000, -90.1, 357.2, 22.1),
+            exit: make_pos(0x0A0A1000, -71.6, 347.8, 16.9),
+            transport_type: "LIURNIA_TOWER_DOOR",
             destination_entity_id: 0,
             warp_was_requested: false,
         };
