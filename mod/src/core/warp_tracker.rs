@@ -377,4 +377,371 @@ mod tests {
         assert!(!is_fog_rando_entity(12345));
         assert!(!is_fog_rando_entity(0));
     }
+
+    #[test]
+    fn test_waygate_animation() {
+        use crate::core::constants::ANIM_WAYGATE;
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Limgrave
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Animation starts
+                Some(make_pos(0x3C3A3800, 500.0, 0.0, 500.0)), // Liurnia
+            ],
+            vec![Some(0), Some(ANIM_WAYGATE), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890999, 0x3C3A3800);
+
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        assert_eq!(tracker.pending_warp().unwrap().transport_type, "WAYGATE");
+
+        game_state.advance_frame();
+        let discovery = tracker.check_warp(&game_state, &warp);
+
+        assert!(discovery.is_some());
+        assert_eq!(discovery.unwrap().transport_type, "WAYGATE");
+    }
+
+    #[test]
+    fn test_sending_gate_animation() {
+        use crate::core::constants::ANIM_SENDING_GATE_BLUE;
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
+            ],
+            vec![Some(0), Some(ANIM_SENDING_GATE_BLUE), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "SENDING_GATE"
+        );
+
+        game_state.advance_frame();
+        let discovery = tracker.check_warp(&game_state, &warp);
+
+        assert!(discovery.is_some());
+        assert_eq!(discovery.unwrap().transport_type, "SENDING_GATE");
+    }
+
+    #[test]
+    fn test_medal_animation() {
+        use crate::core::constants::ANIM_MEDAL;
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
+            ],
+            vec![Some(0), Some(ANIM_MEDAL), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(tracker.pending_warp().unwrap().transport_type, "MEDAL");
+
+        game_state.advance_frame();
+        let discovery = tracker.check_warp(&game_state, &warp);
+
+        assert!(discovery.is_some());
+        assert_eq!(discovery.unwrap().transport_type, "MEDAL");
+    }
+
+    #[test]
+    fn test_multiple_warps_in_succession() {
+        // Complete one warp, then immediately start another
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Start at A
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Anim 1 starts
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Arrive at B
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Anim 2 starts
+                Some(make_pos(0x3C3A3800, 300.0, 0.0, 300.0)), // Arrive at C
+            ],
+            vec![
+                Some(0),
+                Some(ANIM_FOG_WALL),
+                Some(0),             // First warp completes
+                Some(ANIM_FOG_WALL), // Second warp starts immediately
+                Some(0),             // Second warp completes
+            ],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890001, 0x0A0A1000);
+
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle at A
+        assert!(tracker.check_warp(&game_state, &warp).is_none());
+        game_state.advance_frame();
+
+        // Frame 1: Animation starts for A→B
+        assert!(tracker.check_warp(&game_state, &warp).is_none());
+        game_state.advance_frame();
+
+        // Frame 2: First warp completes (A→B)
+        let discovery1 = tracker.check_warp(&game_state, &warp);
+        assert!(discovery1.is_some());
+        assert_eq!(discovery1.unwrap().exit.map_id, 0x0A0A1000);
+        game_state.advance_frame();
+
+        // Frame 3: Second animation starts immediately
+        warp.set_warp(true, 755890002, 0x3C3A3800);
+        assert!(tracker.check_warp(&game_state, &warp).is_none());
+        assert!(tracker.has_pending_warp());
+        game_state.advance_frame();
+
+        // Frame 4: Second warp completes (B→C)
+        let discovery2 = tracker.check_warp(&game_state, &warp);
+        assert!(discovery2.is_some());
+        let d2 = discovery2.unwrap();
+        assert_eq!(d2.entry.map_id, 0x0A0A1000); // Started at B
+        assert_eq!(d2.exit.map_id, 0x3C3A3800); // Ended at C
+    }
+
+    #[test]
+    fn test_position_null_when_animation_starts() {
+        // Animation starts but position is unreadable - should not create pending warp
+        let game_state = MockGameState::new(
+            vec![
+                None,                                          // Position unreadable
+                None,                                          // Still unreadable during animation
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Now readable
+            ],
+            vec![Some(0), Some(ANIM_FOG_WALL), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: No position
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: Animation starts but no position - no pending warp
+        tracker.check_warp(&game_state, &warp);
+        assert!(!tracker.has_pending_warp());
+        game_state.advance_frame();
+
+        // Frame 2: Animation ends, position readable - but no entry was recorded
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(discovery.is_none());
+    }
+
+    #[test]
+    fn test_loading_screen_delays_completion() {
+        // Animation ends but position not readable yet (loading screen)
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Entry
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Anim starts
+                None,                                          // Animation ended, still loading
+                None,                                          // Still loading
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Finally readable
+            ],
+            vec![
+                Some(0),
+                Some(ANIM_FOG_WALL),
+                Some(0), // Animation ended
+                Some(0),
+                Some(0),
+            ],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890042, 0x0A0A1000);
+
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: Animation starts
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        game_state.advance_frame();
+
+        // Frame 2: Animation ended but loading - pending warp kept
+        let d = tracker.check_warp(&game_state, &warp);
+        assert!(d.is_none());
+        assert!(tracker.has_pending_warp());
+        game_state.advance_frame();
+
+        // Frame 3: Still loading
+        let d = tracker.check_warp(&game_state, &warp);
+        assert!(d.is_none());
+        assert!(tracker.has_pending_warp());
+        game_state.advance_frame();
+
+        // Frame 4: Position readable - discovery triggered
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(discovery.is_some());
+        assert_eq!(discovery.unwrap().exit.map_id, 0x0A0A1000);
+    }
+
+    #[test]
+    fn test_just_exited_loading_screen() {
+        let game_state = MockGameState::new(
+            vec![
+                None,                                          // Loading
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Loaded
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Still loaded
+            ],
+            vec![Some(0), Some(0), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Loading
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: Just exited loading screen
+        tracker.check_warp(&game_state, &warp);
+        // Note: just_exited_loading_screen checks was_position_readable from previous frame
+        // After check_warp, was_position_readable is now true
+        // So we need to check on the transition
+
+        // Create fresh tracker to test the method directly
+        let mut tracker2 = WarpTracker::new();
+        tracker2.was_position_readable = false; // Simulate previous frame was loading
+
+        let game_state2 = MockGameState::new(
+            vec![Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0))],
+            vec![Some(0)],
+        );
+
+        assert!(tracker2.just_exited_loading_screen(&game_state2));
+    }
+
+    #[test]
+    fn test_just_exited_loading_screen_with_pending_warp() {
+        // Should not trigger zone query if there's a pending warp
+        let game_state = MockGameState::new(
+            vec![Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0))],
+            vec![Some(0)],
+        );
+
+        let mut tracker = WarpTracker::new();
+        tracker.was_position_readable = false;
+        tracker.pending_warp = Some(PendingWarp {
+            entry: make_pos(0x3C2C2400, 100.0, 0.0, 100.0),
+            destination_entity_id: 755890001,
+            transport_type: "FOG",
+            created_at: Instant::now(),
+        });
+
+        // Should return false because there's a pending warp
+        assert!(!tracker.just_exited_loading_screen(&game_state));
+    }
+
+    #[test]
+    fn test_clear_pending_warp() {
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+            ],
+            vec![Some(ANIM_FOG_WALL), Some(ANIM_FOG_WALL)],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+
+        tracker.clear_pending_warp();
+        assert!(!tracker.has_pending_warp());
+    }
+
+    #[test]
+    fn test_warp_same_map_different_position() {
+        // Warp within same map (e.g., trap chest within a dungeon)
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Position A
+                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Animation
+                Some(make_pos(0x0A0A1000, 500.0, 50.0, 500.0)), // Position B (same map!)
+            ],
+            vec![Some(0), Some(ANIM_FOG_WALL), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890050, 0x0A0A1000);
+
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(discovery.is_some());
+
+        let d = discovery.unwrap();
+        // Same map but different positions
+        assert_eq!(d.entry.map_id, d.exit.map_id);
+        assert_ne!(d.entry.pos(), d.exit.pos());
+    }
+
+    #[test]
+    fn test_non_fog_rando_entity() {
+        // Normal warp with non-fog-rando entity ID
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
+            ],
+            vec![Some(0), Some(ANIM_FOG_WALL), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 12345, 0x0A0A1000); // Non-fog-rando entity
+
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(discovery.is_some());
+
+        let d = discovery.unwrap();
+        assert_eq!(d.destination_entity_id, 12345);
+        assert!(!is_fog_rando_entity(d.destination_entity_id));
+    }
 }
