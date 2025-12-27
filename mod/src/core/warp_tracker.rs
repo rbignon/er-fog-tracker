@@ -472,6 +472,149 @@ mod tests {
     }
 
     #[test]
+    fn test_back_to_entrance_animation() {
+        // Animation 60460: ground teleporter after defeating dungeon boss
+        use crate::core::constants::ANIM_BACK_TO_ENTRANCE;
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Boss room
+                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Animation starts
+                Some(make_pos(0x3C2C2400, 200.0, 0.0, 200.0)), // Dungeon entrance
+            ],
+            vec![Some(0), Some(ANIM_BACK_TO_ENTRANCE), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890100, 0x3C2C2400);
+
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "BACK_TO_ENTRANCE"
+        );
+
+        game_state.advance_frame();
+        let discovery = tracker.check_warp(&game_state, &warp);
+
+        assert!(discovery.is_some());
+        let d = discovery.unwrap();
+        assert_eq!(d.transport_type, "BACK_TO_ENTRANCE");
+        assert_eq!(d.entry.map_id, 0x0A0A1000);
+        assert_eq!(d.exit.map_id, 0x3C2C2400);
+    }
+
+    #[test]
+    fn test_horned_remains_animation() {
+        // Animation 60010: Horned Remains item teleport (e.g., Nokron -> Farum Azula)
+        use crate::core::constants::ANIM_HORNED_REMAINS;
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C323000, 100.0, 0.0, 100.0)), // Nokron
+                Some(make_pos(0x3C323000, 100.0, 0.0, 100.0)), // Animation starts
+                Some(make_pos(0x3C0C1000, 500.0, 0.0, 500.0)), // Farum Azula
+            ],
+            vec![Some(0), Some(ANIM_HORNED_REMAINS), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890200, 0x3C0C1000);
+
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "HORNED_REMAINS"
+        );
+
+        game_state.advance_frame();
+        let discovery = tracker.check_warp(&game_state, &warp);
+
+        assert!(discovery.is_some());
+        assert_eq!(discovery.unwrap().transport_type, "HORNED_REMAINS");
+    }
+
+    #[test]
+    fn test_liurnia_tower_door_animation() {
+        // Animation 12202126: Divine Tower of Liurnia inverted door teleport
+        use crate::core::constants::ANIM_LIURNIA_TOWER_DOOR;
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C3A1000, 100.0, 0.0, 100.0)), // Tower bottom
+                Some(make_pos(0x3C3A1000, 100.0, 0.0, 100.0)), // Door opens
+                Some(make_pos(0x3C3A1000, 100.0, 50.0, 100.0)), // Tower top (same map, different pos)
+            ],
+            vec![Some(0), Some(ANIM_LIURNIA_TOWER_DOOR), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890300, 0x3C3A1000);
+
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "LIURNIA_TOWER_DOOR"
+        );
+
+        game_state.advance_frame();
+        let discovery = tracker.check_warp(&game_state, &warp);
+
+        assert!(discovery.is_some());
+        assert_eq!(discovery.unwrap().transport_type, "LIURNIA_TOWER_DOOR");
+    }
+
+    #[test]
+    fn test_post_boss_warp_animation() {
+        // Animation 12020210: warp after defeating certain bosses (e.g., Maliketh)
+        use crate::core::constants::ANIM_POST_BOSS_WARP;
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A101000, 100.0, 0.0, 100.0)), // Boss arena
+                Some(make_pos(0x0A101000, 100.0, 0.0, 100.0)), // Cutscene/warp
+                Some(make_pos(0x3C5A0000, 200.0, 0.0, 200.0)), // Crumbling Farum Azula
+            ],
+            vec![Some(0), Some(ANIM_POST_BOSS_WARP), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890400, 0x3C5A0000);
+
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "POST_BOSS_WARP"
+        );
+
+        game_state.advance_frame();
+        let discovery = tracker.check_warp(&game_state, &warp);
+
+        assert!(discovery.is_some());
+        assert_eq!(discovery.unwrap().transport_type, "POST_BOSS_WARP");
+    }
+
+    #[test]
     fn test_multiple_warps_in_succession() {
         // Complete one warp, then immediately start another
         let game_state = MockGameState::new(
