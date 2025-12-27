@@ -8,9 +8,7 @@ use tracing::{debug, error, info};
 
 use crate::core::color::parse_hex_color;
 use crate::core::map_utils::format_map_id;
-use crate::core::status_template::{
-    render_template, ContentSpan, NamedColor, TemplateColor, TemplateContext,
-};
+use crate::core::status_template::{render_template, ContentSpan, TemplateColor, TemplateContext};
 
 use super::rune_icons::RuneTextures;
 use super::tracker::FogRandoTracker;

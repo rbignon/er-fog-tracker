@@ -5,7 +5,7 @@
 use hudhook::imgui::TextureId;
 use hudhook::RenderContext;
 use std::collections::HashMap;
-use tracing::{debug, error};
+use tracing::debug;
 
 use crate::core::constants::GreatRune;
 
