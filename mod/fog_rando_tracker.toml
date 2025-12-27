@@ -100,14 +100,18 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   {progress}   - Discovery percentage (0-100)
 #   {status}     - Server connection indicator (colored dot)
 #   {map}        - Current map ID (e.g., "m60_44_36_00")
+#   {deaths}     - Total death count for the character
+#   {igt}        - In-game time (format: H:MM:SS)
 # Markers:
 #   $n - Newline (for multi-line status)
 #   $> - Right-align the rest of the line
 #
 # Examples:
-#   "{zone}$>{status} {discovered}/{total}"     - Zone left, stats right (default)
-#   "{zone} | {progress}%"                      - Simple single line
-#   "{zone}$n{discovered}/{total} discovered"  - Two lines
+#   "{zone}$>{status} {discovered}/{total}"              - Zone left, stats right (default)
+#   "{zone} | {progress}%"                               - Simple single line
+#   "{zone}$n{discovered}/{total} discovered"            - Two lines
+#   "{zone}$>{status} {discovered}/{total} | D:{deaths}" - With death counter
+#   "{zone}$>{igt} | {deaths}D"                          - With IGT and deaths
 #
 status_template = "{zone}$>{status} {discovered}/{total}"
 
