@@ -111,6 +111,7 @@ The mod uses **animation-based detection** for all known teleport types. This is
 | Horned Remains | `60010` | Teleport to Regal Ancestor Spirit (Nokron) |
 | Liurnia Tower Door | `12202126` | Opening the door at the bottom of the inverted tower |
 | Post Boss Warp | `12020210` | Warp after defeating a boss (e.g., Maliketh). **Requires validation** (see below) |
+| Erdtree Burn | `68110` | Cutscene warp when burning the Erdtree with Melina |
 
 ### Detection Flow
 

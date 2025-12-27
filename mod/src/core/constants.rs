@@ -34,6 +34,8 @@ pub enum Animation {
     LiurniaTowerDoor = 12202126,
     /// Post-boss warp animation (after defeating a boss)
     PostBossWarp = 12020210,
+    /// Erdtree burn cutscene warp (Melina sacrifices herself)
+    ErdtreeBurn = 68110,
 
     // -------------------------------------------------------------------------
     // Other known animations
@@ -70,6 +72,7 @@ impl Animation {
                 | Self::HornedRemains
                 | Self::LiurniaTowerDoor
                 | Self::PostBossWarp
+                | Self::ErdtreeBurn
         )
     }
 
@@ -86,6 +89,7 @@ impl Animation {
             Self::HornedRemains => Some("HORNED_REMAINS"),
             Self::LiurniaTowerDoor => Some("LIURNIA_TOWER_DOOR"),
             Self::PostBossWarp => Some("POST_BOSS_WARP"),
+            Self::ErdtreeBurn => Some("ERDTREE_BURN"),
             _ => None,
         }
     }
@@ -102,6 +106,7 @@ impl Animation {
             Self::HornedRemains => "HORNED_REMAINS",
             Self::LiurniaTowerDoor => "LIURNIA_TOWER_DOOR",
             Self::PostBossWarp => "POST_BOSS_WARP",
+            Self::ErdtreeBurn => "ERDTREE_BURN",
             Self::ItemUseMemory => "ITEM_USE_MEMORY",
             Self::Spawn => "SPAWN",
         }

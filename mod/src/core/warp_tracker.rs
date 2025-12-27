@@ -652,6 +652,43 @@ mod tests {
     }
 
     #[test]
+    fn test_erdtree_burn_animation() {
+        // Animation 68110: warp when burning the Erdtree with Melina
+        use crate::core::constants::Animation;
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x10000000, 100.0, 0.0, 100.0)), // Forge of the Giants
+                Some(make_pos(0x10000000, 100.0, 0.0, 100.0)), // Cutscene starts
+                Some(make_pos(0x0C020000, 1171.5, -820.4, 1310.6)), // Crumbling Farum Azula
+            ],
+            vec![Some(0), Some(Animation::ErdtreeBurn.as_u32()), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 12022204, 0x0C020000); // Vanilla entity ID
+
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "ERDTREE_BURN"
+        );
+
+        game_state.advance_frame();
+        let discovery = tracker.check_warp(&game_state, &warp);
+
+        assert!(discovery.is_some());
+        let d = discovery.unwrap();
+        assert_eq!(d.transport_type, "ERDTREE_BURN");
+        assert_eq!(d.exit.map_id, 0x0C020000);
+    }
+
+    #[test]
     fn test_multiple_warps_in_succession() {
         // Complete one warp, then immediately start another
         let game_state = MockGameState::new(

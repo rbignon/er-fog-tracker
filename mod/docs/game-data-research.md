@@ -15,6 +15,7 @@ Documentation of memory structures, animation IDs, and SpEffects discovered duri
 | Coffin | Exclusion + SpEffect verification | No animation, `warp_requested` + `dest_entity_id == 0` |
 | Pureblood Knight's Medal | Animation `50340` + Item ID `0x40000870` | Item use (via `tae_queued_use_item`) |
 | Post Boss Warp | Animation `12020210` + validation | Warp after defeating boss. **Requires validation** (see below) |
+| Erdtree Burn | Animation `68110` | Cutscene warp when burning the Erdtree with Melina |
 
 ### Events to Track (for position awareness, not randomized)
 
@@ -108,6 +109,13 @@ Source: CE Table (`eldenring_all-in-one_Hexinton-v5.0_ce7.5.ct`)
 | 60471 | "Come out other side of blue portal" | Exit animation (visual only?) |
 | 60472 | "Walk through red portal then go invis" | NOT used in practice (CE table only) |
 | 60473 | "Come out other side of red portal" | Exit animation (visual only?) |
+
+### Cutscene/Event Warps
+| ID | Description | Usage |
+|----|-------------|-------|
+| 12020210 | Post-boss warp | **After defeating certain bosses** (e.g., Maliketh). Requires validation. |
+| 12202126 | Divine Tower door | **Liurnia Divine Tower inverted door** |
+| 68110 | Erdtree burn cutscene | **Burning the Erdtree with Melina** → Crumbling Farum Azula |
 
 ### Item Use Animations
 | ID | Description | Usage |

@@ -129,6 +129,7 @@ mod tests {
         assert_eq!(get_teleport_type(60010), Some("HORNED_REMAINS"));
         assert_eq!(get_teleport_type(12202126), Some("LIURNIA_TOWER_DOOR"));
         assert_eq!(get_teleport_type(12020210), Some("POST_BOSS_WARP"));
+        assert_eq!(get_teleport_type(68110), Some("ERDTREE_BURN"));
     }
 
     #[test]
