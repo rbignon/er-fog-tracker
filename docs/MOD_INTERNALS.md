@@ -108,6 +108,7 @@ The mod uses **animation-based detection** for all known teleport types. This is
 | Sending Gate (Blue) | `60470` | Portal-style gates |
 | Sending Gate (Red) | `60472` | Portal-style gates |
 | Medal | `50340` | Pureblood Knight's Medal item use |
+| Horned Remains | `60010` | Teleport to Regal Ancestor Spirit (Nokron) |
 
 ### Detection Flow
 

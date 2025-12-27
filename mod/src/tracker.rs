@@ -25,6 +25,7 @@ const ANIM_WAYGATE: u32 = 60490;
 const ANIM_SENDING_GATE_BLUE: u32 = 60470;
 const ANIM_SENDING_GATE_RED: u32 = 60472;
 const ANIM_MEDAL: u32 = 50340;
+const ANIM_HORNED_REMAINS: u32 = 60010;
 
 /// Check if an animation ID corresponds to a teleportation and return its name
 fn get_teleport_type(anim_id: u32) -> Option<&'static str> {
@@ -34,6 +35,7 @@ fn get_teleport_type(anim_id: u32) -> Option<&'static str> {
         ANIM_WAYGATE => Some("WAYGATE"),
         ANIM_SENDING_GATE_BLUE | ANIM_SENDING_GATE_RED => Some("SENDING_GATE"),
         ANIM_MEDAL => Some("MEDAL"),
+        ANIM_HORNED_REMAINS => Some("HORNED_REMAINS"),
         _ => None,
     }
 }
@@ -531,6 +533,7 @@ impl FogRandoTracker {
                         60472 => "SENDING_GATE_RED",
                         50340 => "ITEM_USE_MEDAL",
                         50230 => "ITEM_USE_MEMORY",
+                        60010 => "HORNED_REMAINS",
                         63000 => "SPAWN",
                         0 => "IDLE?",
                         _ => "",
