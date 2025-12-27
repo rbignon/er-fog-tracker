@@ -2,6 +2,7 @@
 //!
 //! All magic numbers from Elden Ring that we need for fog gate tracking.
 
+use num_enum::TryFromPrimitive;
 use std::time::Duration;
 
 // =============================================================================
@@ -10,7 +11,7 @@ use std::time::Duration;
 
 /// Known animation IDs in Elden Ring
 #[repr(u32)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 pub enum Animation {
     // -------------------------------------------------------------------------
     // Teleport animations
@@ -48,22 +49,7 @@ impl Animation {
     ///
     /// Note: Returns None for unknown animations and for 0 (idle/no animation).
     pub fn from_anim_id(anim_id: u32) -> Option<Self> {
-        match anim_id {
-            // Teleport animations
-            60060 => Some(Self::FogWall),
-            60460 => Some(Self::BackToEntrance),
-            60490 => Some(Self::Waygate),
-            60470 => Some(Self::SendingGateBlue),
-            60472 => Some(Self::SendingGateRed),
-            50340 => Some(Self::Medal),
-            60010 => Some(Self::HornedRemains),
-            12202126 => Some(Self::LiurniaTowerDoor),
-            12020210 => Some(Self::PostBossWarp),
-            // Other animations
-            50230 => Some(Self::ItemUseMemory),
-            63000 => Some(Self::Spawn),
-            _ => None,
-        }
+        Self::try_from(anim_id).ok()
     }
 
     /// Get the raw animation ID
@@ -200,7 +186,7 @@ pub const INVENTORY_ENTRY_QUANTITY_OFFSET: usize = 0x08;
 ///
 /// Unrestored versions use param_ids 8148-8153, which map to Godrick-Malenia.
 #[repr(u32)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 pub enum GreatRune {
     Godrick = 191,
     Radahn = 192,
@@ -215,36 +201,16 @@ pub enum GreatRune {
 pub const GREAT_RUNE_UNRESTORED_RANGE: std::ops::RangeInclusive<u32> = 8148..=8153;
 
 impl GreatRune {
-    /// All Great Runes for iteration
-    pub const ALL: &'static [GreatRune] = &[
-        Self::Godrick,
-        Self::Radahn,
-        Self::Morgott,
-        Self::Rykard,
-        Self::Mohg,
-        Self::Malenia,
-        Self::Unborn,
-    ];
-
     /// Try to match a param_id, normalizing unrestored to restored
     pub fn from_param_id(param_id: u32) -> Option<Self> {
         // Normalize unrestored (8148-8153) to restored (191-196)
         let normalized = if GREAT_RUNE_UNRESTORED_RANGE.contains(&param_id) {
-            param_id - 8148 + 191
+            param_id - *GREAT_RUNE_UNRESTORED_RANGE.start() + Self::Godrick as u32
         } else {
             param_id
         };
 
-        match normalized {
-            191 => Some(Self::Godrick),
-            192 => Some(Self::Radahn),
-            193 => Some(Self::Morgott),
-            194 => Some(Self::Rykard),
-            195 => Some(Self::Mohg),
-            196 => Some(Self::Malenia),
-            10080 => Some(Self::Unborn),
-            _ => None,
-        }
+        Self::try_from(normalized).ok()
     }
 
     /// Get the raw param_id
