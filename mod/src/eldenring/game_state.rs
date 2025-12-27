@@ -8,7 +8,9 @@ use std::time::Duration;
 use libeldenring::memedit::PointerChain;
 use libeldenring::pointers::Pointers;
 
-use crate::core::constants::{FIELD_AREA_PLAY_REGION_ID_OFFSET, INVALID_MAP_ID};
+use crate::core::constants::{
+    FIELD_AREA_PLAY_REGION_ID_OFFSET, GAMEDATAMAN_DEATH_COUNT_OFFSET, INVALID_MAP_ID,
+};
 use crate::core::map_utils::format_map_id;
 use crate::core::traits::GameStateReader;
 use crate::core::types::PlayerPosition;
@@ -19,6 +21,7 @@ use crate::core::types::PlayerPosition;
 pub struct GameState {
     pointers: Pointers,
     play_region_id_ptr: PointerChain<u32>,
+    death_count_ptr: PointerChain<u32>,
 }
 
 impl GameState {
@@ -32,15 +35,37 @@ impl GameState {
             FIELD_AREA_PLAY_REGION_ID_OFFSET,
         ]);
 
+        // Create pointer chain for death count (GameDataMan + 0x94)
+        let death_count_ptr = PointerChain::<u32>::new(&[
+            pointers.base_addresses.game_data_man,
+            GAMEDATAMAN_DEATH_COUNT_OFFSET,
+        ]);
+
         Self {
             pointers,
             play_region_id_ptr,
+            death_count_ptr,
         }
     }
 
     /// Get base addresses (for creating SpEffect and GameMan readers)
     pub fn base_addresses(&self) -> &libeldenring::prelude::base_addresses::BaseAddresses {
         &self.pointers.base_addresses
+    }
+
+    /// Read the death count from game memory
+    ///
+    /// Returns the total number of deaths for the current character.
+    pub fn read_deaths(&self) -> Option<u32> {
+        self.death_count_ptr.read()
+    }
+
+    /// Read the in-game time from game memory
+    ///
+    /// Returns the IGT in milliseconds.
+    pub fn read_igt(&self) -> Option<u32> {
+        // libeldenring reads IGT as usize but it's actually a u32 in milliseconds
+        self.pointers.igt.read().map(|v| v as u32)
     }
 }
 

@@ -156,6 +156,8 @@ impl FogRandoTracker {
             server_enabled: self.is_server_enabled(),
             server_connected: matches!(self.ws_status(), ConnectionStatus::Connected),
             map_id,
+            deaths: self.game_state.read_deaths(),
+            igt_ms: self.game_state.read_igt(),
         }
     }
 

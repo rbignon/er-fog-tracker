@@ -79,3 +79,6 @@ pub const GAMEMAN_LOAD_TARGET_BLOCK_ID_OFFSET: usize = 0xAC8;
 
 /// SpEffect ID applied after spawning at a grace
 pub const GRACE_SPAWN_SPEFFECT_ID: u32 = 106;
+
+/// Offset of death_count in GameDataMan structure
+pub const GAMEDATAMAN_DEATH_COUNT_OFFSET: usize = 0x94;

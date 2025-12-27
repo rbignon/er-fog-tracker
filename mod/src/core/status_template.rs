@@ -4,7 +4,8 @@
 //!
 //! # Template syntax
 //!
-//! - Variables: `{zone}`, `{discovered}`, `{total}`, `{progress}`, `{status}`, `{map}`
+//! - Variables: `{zone}`, `{discovered}`, `{total}`, `{progress}`, `{status}`, `{map}`,
+//!   `{deaths}`, `{igt}`
 //! - Markers: `$n` (newline), `$>` (right-align rest of line)
 //!
 //! # Examples
@@ -48,6 +49,10 @@ pub struct TemplateContext {
     pub server_connected: bool,
     /// Current map ID (formatted, e.g., "m60_44_36_00")
     pub map_id: Option<String>,
+    /// Death count (total deaths for the character)
+    pub deaths: Option<u32>,
+    /// In-game time in milliseconds
+    pub igt_ms: Option<u32>,
 }
 
 impl Default for TemplateContext {
@@ -60,6 +65,8 @@ impl Default for TemplateContext {
             server_enabled: false,
             server_connected: false,
             map_id: None,
+            deaths: None,
+            igt_ms: None,
         }
     }
 }
@@ -159,6 +166,15 @@ pub fn render_template(template: &str, ctx: &TemplateContext) -> RenderedStatus 
     }
 }
 
+/// Format milliseconds as HH:MM:SS
+fn format_igt(ms: u32) -> String {
+    let total_seconds = ms / 1000;
+    let hours = total_seconds / 3600;
+    let minutes = (total_seconds % 3600) / 60;
+    let seconds = total_seconds % 60;
+    format!("{:01}:{:02}:{:02}", hours, minutes, seconds)
+}
+
 /// Substitute variables in a template string
 fn substitute_variables(template: &str, ctx: &TemplateContext, has_status: &mut bool) -> String {
     let mut result = template.to_string();
@@ -188,6 +204,14 @@ fn substitute_variables(template: &str, ctx: &TemplateContext, has_status: &mut 
     // {map} - map ID or empty
     let map_value = ctx.map_id.as_deref().unwrap_or("");
     result = result.replace("{map}", map_value);
+
+    // {deaths} - death count
+    let deaths_value = ctx.deaths.map(|d| d.to_string()).unwrap_or_default();
+    result = result.replace("{deaths}", &deaths_value);
+
+    // {igt} - in-game time formatted as H:MM:SS
+    let igt_value = ctx.igt_ms.map(format_igt).unwrap_or_default();
+    result = result.replace("{igt}", &igt_value);
 
     // {status} - connection indicator with markers for coloring
     if result.contains("{status}") {
@@ -251,6 +275,8 @@ mod tests {
             server_enabled: true,
             server_connected: true,
             map_id: Some("m60_44_36_00".to_string()),
+            deaths: Some(5),
+            igt_ms: Some(3723000), // 1:02:03
         }
     }
 
@@ -316,6 +342,72 @@ mod tests {
         };
         let result = render_template("Map: {map}", &ctx);
         assert_eq!(result.lines[0].left_text(), Some("Map: "));
+    }
+
+    #[test]
+    fn test_deaths() {
+        let ctx = default_ctx();
+        let result = render_template("Deaths: {deaths}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("Deaths: 5"));
+    }
+
+    #[test]
+    fn test_deaths_none() {
+        let ctx = TemplateContext {
+            deaths: None,
+            ..default_ctx()
+        };
+        let result = render_template("Deaths: {deaths}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("Deaths: "));
+    }
+
+    #[test]
+    fn test_igt() {
+        let ctx = default_ctx();
+        let result = render_template("IGT: {igt}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("IGT: 1:02:03"));
+    }
+
+    #[test]
+    fn test_igt_none() {
+        let ctx = TemplateContext {
+            igt_ms: None,
+            ..default_ctx()
+        };
+        let result = render_template("IGT: {igt}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("IGT: "));
+    }
+
+    #[test]
+    fn test_igt_formatting() {
+        // Test various IGT values
+        let ctx = TemplateContext {
+            igt_ms: Some(0),
+            ..default_ctx()
+        };
+        let result = render_template("{igt}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("0:00:00"));
+
+        let ctx = TemplateContext {
+            igt_ms: Some(59999), // 59.999 seconds
+            ..default_ctx()
+        };
+        let result = render_template("{igt}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("0:00:59"));
+
+        let ctx = TemplateContext {
+            igt_ms: Some(3661000), // 1:01:01
+            ..default_ctx()
+        };
+        let result = render_template("{igt}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("1:01:01"));
+
+        let ctx = TemplateContext {
+            igt_ms: Some(36000000), // 10:00:00
+            ..default_ctx()
+        };
+        let result = render_template("{igt}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("10:00:00"));
     }
 
     // -------------------------------------------------------------------------
