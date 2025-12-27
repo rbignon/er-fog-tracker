@@ -37,13 +37,6 @@ pub fn is_fog_rando_entity(entity_id: u32) -> bool {
 /// assert_eq!(get_teleport_type(12345), None);
 /// ```
 pub fn get_teleport_type(anim_id: u32) -> Option<&'static str> {
-    // Special case: both sending gates return "SENDING_GATE"
-    if anim_id == Animation::SendingGateBlue.as_u32()
-        || anim_id == Animation::SendingGateRed.as_u32()
-    {
-        return Some("SENDING_GATE");
-    }
-
     Animation::from_anim_id(anim_id).and_then(|a| a.teleport_label())
 }
 
