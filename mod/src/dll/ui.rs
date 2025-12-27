@@ -53,11 +53,8 @@ impl ImguiRenderLoop for FogRandoTracker {
         // Handle keyboard shortcuts
         self.handle_hotkeys();
 
-        // Check for fog traversals each frame
+        // Check for fog traversals each frame (includes WebSocket polling)
         self.check_fog_traversal();
-
-        // Poll WebSocket for status updates
-        self.poll_websocket();
 
         // NOTE: Hudhook crashes if render() doesn't draw anything.
         // We must always call window().build() even when hidden.
@@ -146,8 +143,7 @@ impl FogRandoTracker {
     fn render_header(&self, ui: &hudhook::imgui::Ui, max_width: f32) {
         // Zone name (or placeholder)
         let zone_text = self
-            .current_zone
-            .as_deref()
+            .current_zone()
             .unwrap_or("(traverse a fog to identify)");
 
         // Build right-aligned status text: "● X/Y" or "X/Y"
@@ -155,7 +151,7 @@ impl FogRandoTracker {
         if self.is_server_enabled() {
             status_text.push_str("● ");
         }
-        if let Some(ref stats) = self.discovery_stats {
+        if let Some(stats) = self.discovery_stats() {
             status_text.push_str(&format!("{}/{}", stats.discovered, stats.total));
         }
 
@@ -176,10 +172,10 @@ impl FogRandoTracker {
                 let (dot_color, _) = self.get_status_indicator();
                 ui.text_colored(dot_color, "●");
                 ui.same_line();
-                if let Some(ref stats) = self.discovery_stats {
+                if let Some(stats) = self.discovery_stats() {
                     ui.text(format!("{}/{}", stats.discovered, stats.total));
                 }
-            } else if let Some(ref stats) = self.discovery_stats {
+            } else if let Some(stats) = self.discovery_stats() {
                 ui.text(format!("{}/{}", stats.discovered, stats.total));
             }
         }
@@ -299,7 +295,7 @@ impl FogRandoTracker {
         let discovered_color = parse_hex_color(&self.config.overlay.discovered_color, 1.0);
         let undiscovered_color = parse_hex_color(&self.config.overlay.undiscovered_color, 1.0);
 
-        if self.current_exits.is_empty() {
+        if self.current_exits().is_empty() {
             ui.text_disabled("No exits available");
             return;
         }
@@ -309,13 +305,13 @@ impl FogRandoTracker {
             let hotkey = self.config.keybindings.toggle_exits.name();
             ui.text_disabled(format!(
                 "Exits: {} ({} to expand)",
-                self.current_exits.len(),
+                self.current_exits().len(),
                 hotkey
             ));
             return;
         }
 
-        for exit in &self.current_exits {
+        for exit in self.current_exits() {
             let dest_color = if exit.target == "???" {
                 undiscovered_color
             } else {
