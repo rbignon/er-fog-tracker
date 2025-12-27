@@ -14,9 +14,10 @@ use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{connect, Message, WebSocket};
 
 use crate::core::map_utils::format_map_id;
-use crate::core::protocol::{
-    DiscoveryStats, FogExit, Position, PropagatedLink, ServerMessage, ServerResponse,
-};
+use crate::core::protocol::{ServerMessage, ServerResponse};
+
+// Re-export protocol types used by tracker.rs
+pub use crate::core::protocol::{DiscoveryStats, FogExit, Position, PropagatedLink};
 
 use super::config::ServerSettings;
 
