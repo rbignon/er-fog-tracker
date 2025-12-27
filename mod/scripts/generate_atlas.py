@@ -32,12 +32,12 @@ ICONS_PER_ROW = 8  # 8 icons per row in the atlas
 ICONS = [
     # Great Runes (colored + gray variants)
     ("godrick", "runes/godrick.png", True),
+    ("unborn", "runes/unborn.png", True),
+    ("rykard", "runes/rykard.png", True),
     ("radahn", "runes/radahn.png", True),
     ("morgott", "runes/morgott.png", True),
-    ("rykard", "runes/rykard.png", True),
     ("mohg", "runes/mohg.png", True),
     ("malenia", "runes/malenia.png", True),
-    ("unborn", "runes/unborn.png", True),
     # Other icons (no gray variant)
     ("kindling", "messmers_kindling.png", False),
     ("death", "death.png", False),

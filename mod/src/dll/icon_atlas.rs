@@ -24,12 +24,12 @@ pub const _ICONS_PER_ROW: u32 = 9;
 
 // Icon indices (column in the atlas)
 pub const ICON_GODRICK: u32 = 0;
-pub const ICON_RADAHN: u32 = 1;
-pub const ICON_MORGOTT: u32 = 2;
-pub const ICON_RYKARD: u32 = 3;
-pub const ICON_MOHG: u32 = 4;
-pub const ICON_MALENIA: u32 = 5;
-pub const ICON_UNBORN: u32 = 6;
+pub const ICON_UNBORN: u32 = 1;
+pub const ICON_RYKARD: u32 = 2;
+pub const ICON_RADAHN: u32 = 3;
+pub const ICON_MORGOTT: u32 = 4;
+pub const ICON_MOHG: u32 = 5;
+pub const ICON_MALENIA: u32 = 6;
 pub const ICON_KINDLING: u32 = 7;
 pub const ICON_DEATH: u32 = 8;
 
@@ -69,12 +69,12 @@ impl IconAtlas {
     pub fn get_rune_uvs(&self, rune: GreatRune, possessed: bool) -> ([f32; 2], [f32; 2]) {
         let col = match rune {
             GreatRune::Godrick => ICON_GODRICK,
+            GreatRune::Unborn => ICON_UNBORN,
+            GreatRune::Rykard => ICON_RYKARD,
             GreatRune::Radahn => ICON_RADAHN,
             GreatRune::Morgott => ICON_MORGOTT,
-            GreatRune::Rykard => ICON_RYKARD,
             GreatRune::Mohg => ICON_MOHG,
             GreatRune::Malenia => ICON_MALENIA,
-            GreatRune::Unborn => ICON_UNBORN,
         };
         let row = if possessed { 0 } else { 1 };
         Self::calculate_uvs(col, row)
@@ -103,12 +103,12 @@ impl IconAtlas {
     pub fn runes_in_order() -> [GreatRune; 7] {
         [
             GreatRune::Godrick,
+            GreatRune::Unborn,
+            GreatRune::Rykard,
             GreatRune::Radahn,
             GreatRune::Morgott,
-            GreatRune::Rykard,
             GreatRune::Mohg,
             GreatRune::Malenia,
-            GreatRune::Unborn,
         ]
     }
 }
