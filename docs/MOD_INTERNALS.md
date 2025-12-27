@@ -110,7 +110,7 @@ The mod uses **animation-based detection** for all known teleport types. This is
 | Medal | `50340` | Pureblood Knight's Medal item use |
 | Horned Remains | `60010` | Teleport to Regal Ancestor Spirit (Nokron) |
 | Liurnia Tower Door | `12202126` | Opening the door at the bottom of the inverted tower |
-| Post Boss Warp | `12020210` | Warp after defeating a boss (e.g., Maliketh) |
+| Post Boss Warp | `12020210` | Warp after defeating a boss (e.g., Maliketh). **Requires validation** (see below) |
 
 ### Detection Flow
 
@@ -142,6 +142,29 @@ Coffins have no distinctive animation and are currently not explicitly detected.
 ### Fast Travel
 
 Fast travel (via map menu) is **not tracked** by the mod. It uses `warp_requested` without a teleport animation, but since it's not a fog gate traversal, it's intentionally ignored.
+
+### Post Boss Warp Validation
+
+The `POST_BOSS_WARP` animation (`12020210`) can be triggered without an actual warp occurring (e.g., during cutscenes or visual transitions after defeating a boss). To filter these false positives, discoveries with this transport type are validated before being sent to the server.
+
+A `POST_BOSS_WARP` discovery is considered **valid** if at least one of these conditions is met:
+- **Different map**: Entry and exit are on different maps
+- **Significant distance**: Entry and exit are ≥20m apart (even on the same map)
+- **Destination entity**: `destination_entity_id` is non-zero
+
+If none of these conditions are met, the discovery is discarded as a false positive.
+
+**Example false positive** (filtered):
+```
+Animation: POST_BOSS_WARP (12020210)
+Entry: m11_05_00_00 (-125.4, 40.9, -350.4)
+Exit:  m11_05_00_00 (-119.4, 40.6, -353.5)
+Distance: ~6.7m < 20m
+dest_entity_id: 0
+→ Discarded (same map, short distance, no entity)
+```
+
+Other teleport types (FOG, WAYGATE, MEDAL, etc.) are always valid because their animations are only played during actual warps.
 
 ## SpEffect Reading
 

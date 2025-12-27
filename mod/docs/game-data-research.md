@@ -14,6 +14,7 @@ Documentation of memory structures, animation IDs, and SpEffects discovered duri
 | Sending gate | Animation `60490` | **Same as waygate!** Hand turns blue |
 | Coffin | Exclusion + SpEffect verification | No animation, `warp_requested` + `dest_entity_id == 0` |
 | Pureblood Knight's Medal | Animation `50340` + Item ID `0x40000870` | Item use (via `tae_queued_use_item`) |
+| Post Boss Warp | Animation `12020210` + validation | Warp after defeating boss. **Requires validation** (see below) |
 
 ### Events to Track (for position awareness, not randomized)
 
@@ -59,6 +60,26 @@ This provides:
 - A reliable signal that ANY warp is about to happen
 - The destination entity ID before the warp (for fast travel, this is the grace entity ID)
 - Works for all warp types, not just animation-based ones
+
+### Post Boss Warp Validation
+
+The `POST_BOSS_WARP` animation (`12020210`) can trigger without an actual warp (e.g., cutscenes, visual transitions). To filter false positives, discoveries with this transport type require validation.
+
+A `POST_BOSS_WARP` is **valid** if at least one condition is met:
+- Different map (entry vs exit)
+- Significant distance ≥20m
+- `dest_entity_id != 0`
+
+```
+Example false positive (filtered):
+  Animation: 12020210 (POST_BOSS_WARP)
+  Entry: m11_05_00_00 (-125.4, 40.9, -350.4)
+  Exit:  m11_05_00_00 (-119.4, 40.6, -353.5)
+  Distance: ~6.7m < 20m, dest_entity_id: 0
+  → Discarded
+```
+
+Other animations (FOG, WAYGATE, etc.) don't need validation - they only play during actual warps.
 
 ## Animation IDs
 

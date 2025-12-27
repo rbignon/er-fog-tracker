@@ -51,6 +51,35 @@ pub struct DiscoveryEvent {
     pub destination_entity_id: u32,
 }
 
+/// Minimum distance (in game units) to consider a same-map warp as valid.
+/// Below this threshold, POST_BOSS_WARP on same map with no dest_entity is likely a false positive.
+const MIN_WARP_DISTANCE: f32 = 20.0;
+
+impl DiscoveryEvent {
+    /// Check if this discovery event is valid (not a false positive).
+    ///
+    /// POST_BOSS_WARP animation can be triggered without an actual warp
+    /// (e.g., cutscenes, boss transitions). We filter these by requiring:
+    /// - Different map, OR
+    /// - Significant distance (>20m), OR
+    /// - Valid dest_entity_id
+    ///
+    /// Other transport types (FOG, WAYGATE, etc.) are always valid because
+    /// their animations are only played during actual warps.
+    pub fn is_valid(&self) -> bool {
+        if self.transport_type != "POST_BOSS_WARP" {
+            return true;
+        }
+
+        // POST_BOSS_WARP: validate it's a real warp
+        let different_map = self.entry.map_id != self.exit.map_id;
+        let significant_distance = self.entry.distance_to(&self.exit) >= MIN_WARP_DISTANCE;
+        let has_dest_entity = self.destination_entity_id != 0;
+
+        different_map || significant_distance || has_dest_entity
+    }
+}
+
 // =============================================================================
 // WARP TRACKER
 // =============================================================================
@@ -186,7 +215,8 @@ impl WarpTracker {
         self.was_position_readable = position_now_readable;
         self.last_logged_warp_requested = warp_detector.is_warp_requested();
 
-        discovery
+        // Filter out false positives (e.g., POST_BOSS_WARP without actual warp)
+        discovery.filter(|d| d.is_valid())
     }
 
     /// Check if we just exited a loading screen (for zone query)
@@ -896,5 +926,133 @@ mod tests {
         let d = discovery.unwrap();
         assert_eq!(d.destination_entity_id, 12345);
         assert!(!is_fog_rando_entity(d.destination_entity_id));
+    }
+
+    // =========================================================================
+    // POST_BOSS_WARP false positive filtering tests
+    // =========================================================================
+
+    #[test]
+    fn test_discovery_event_is_valid_non_post_boss_warp() {
+        // Non-POST_BOSS_WARP types are always valid
+        let discovery = DiscoveryEvent {
+            entry: make_pos(0x0A0A1000, 100.0, 0.0, 100.0),
+            exit: make_pos(0x0A0A1000, 105.0, 0.0, 105.0), // Same map, small distance
+            transport_type: "FOG",
+            destination_entity_id: 0,
+        };
+        assert!(discovery.is_valid());
+    }
+
+    #[test]
+    fn test_discovery_event_post_boss_warp_different_map() {
+        // POST_BOSS_WARP with different map is valid
+        let discovery = DiscoveryEvent {
+            entry: make_pos(0x0A0A1000, 100.0, 0.0, 100.0),
+            exit: make_pos(0x0B0B1000, 100.0, 0.0, 100.0), // Different map
+            transport_type: "POST_BOSS_WARP",
+            destination_entity_id: 0,
+        };
+        assert!(discovery.is_valid());
+    }
+
+    #[test]
+    fn test_discovery_event_post_boss_warp_significant_distance() {
+        // POST_BOSS_WARP with significant distance (>20m) is valid
+        let discovery = DiscoveryEvent {
+            entry: make_pos(0x0A0A1000, 0.0, 0.0, 0.0),
+            exit: make_pos(0x0A0A1000, 100.0, 0.0, 100.0), // Same map, ~141m distance
+            transport_type: "POST_BOSS_WARP",
+            destination_entity_id: 0,
+        };
+        assert!(discovery.is_valid());
+    }
+
+    #[test]
+    fn test_discovery_event_post_boss_warp_with_dest_entity() {
+        // POST_BOSS_WARP with dest_entity_id is valid
+        let discovery = DiscoveryEvent {
+            entry: make_pos(0x0A0A1000, 100.0, 0.0, 100.0),
+            exit: make_pos(0x0A0A1000, 105.0, 0.0, 105.0), // Same map, small distance
+            transport_type: "POST_BOSS_WARP",
+            destination_entity_id: 755890123, // Has dest entity
+        };
+        assert!(discovery.is_valid());
+    }
+
+    #[test]
+    fn test_discovery_event_post_boss_warp_false_positive() {
+        // POST_BOSS_WARP with same map, small distance, no dest_entity is INVALID
+        // This matches the false positive case from the logs:
+        // entry: (-125.4, 40.9, -350.4), exit: (-119.4, 40.6, -353.5) = ~6m distance
+        let discovery = DiscoveryEvent {
+            entry: make_pos(0x0A0A1000, -125.4, 40.9, -350.4),
+            exit: make_pos(0x0A0A1000, -119.4, 40.6, -353.5),
+            transport_type: "POST_BOSS_WARP",
+            destination_entity_id: 0,
+        };
+        assert!(!discovery.is_valid());
+    }
+
+    #[test]
+    fn test_post_boss_warp_filtered_in_check_warp() {
+        // Full integration test: POST_BOSS_WARP false positive should not emit discovery
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A0A1000, -125.4, 40.9, -350.4)), // Entry
+                Some(make_pos(0x0A0A1000, -125.4, 40.9, -350.4)), // Animation starts
+                Some(make_pos(0x0A0A1000, -119.4, 40.6, -353.5)), // Exit (same map, ~6m)
+            ],
+            vec![Some(0), Some(Animation::PostBossWarp.as_u32()), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        // No dest_entity set (remains 0)
+
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Should NOT emit discovery due to false positive filtering
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(
+            discovery.is_none(),
+            "POST_BOSS_WARP false positive should be filtered"
+        );
+    }
+
+    #[test]
+    fn test_post_boss_warp_valid_with_map_change() {
+        // POST_BOSS_WARP with map change should emit discovery
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A101000, 100.0, 0.0, 100.0)), // Boss arena
+                Some(make_pos(0x0A101000, 100.0, 0.0, 100.0)), // Animation starts
+                Some(make_pos(0x3C5A0000, 200.0, 0.0, 200.0)), // Different map
+            ],
+            vec![Some(0), Some(Animation::PostBossWarp.as_u32()), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        // No dest_entity, but map changes
+
+        let mut tracker = WarpTracker::new();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(
+            discovery.is_some(),
+            "POST_BOSS_WARP with map change should be valid"
+        );
+        assert_eq!(discovery.unwrap().transport_type, "POST_BOSS_WARP");
     }
 }

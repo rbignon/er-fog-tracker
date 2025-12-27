@@ -36,6 +36,14 @@ impl PlayerPosition {
     pub fn pos(&self) -> (f32, f32, f32) {
         (self.x, self.y, self.z)
     }
+
+    /// Calculate 3D distance to another position
+    pub fn distance_to(&self, other: &PlayerPosition) -> f32 {
+        let dx = self.x - other.x;
+        let dy = self.y - other.y;
+        let dz = self.z - other.z;
+        (dx * dx + dy * dy + dz * dz).sqrt()
+    }
 }
 
 // =============================================================================
@@ -144,6 +152,16 @@ mod tests {
     fn test_player_position_pos_tuple() {
         let pos = PlayerPosition::new(0, 1.0, 2.0, 3.0, None);
         assert_eq!(pos.pos(), (1.0, 2.0, 3.0));
+    }
+
+    #[test]
+    fn test_player_position_distance_to() {
+        let pos1 = PlayerPosition::new(0, 0.0, 0.0, 0.0, None);
+        let pos2 = PlayerPosition::new(0, 3.0, 4.0, 0.0, None);
+        assert!((pos1.distance_to(&pos2) - 5.0).abs() < 0.001);
+
+        // Same position = 0 distance
+        assert!((pos1.distance_to(&pos1)).abs() < 0.001);
     }
 
     #[test]
