@@ -12,5 +12,4 @@ mod sp_effect;
 
 pub use game_man::GameMan;
 pub use game_state::GameState;
-pub use memory::MemoryReader;
 pub use sp_effect::SpEffect;
