@@ -135,6 +135,47 @@ impl GameState {
         Some(total)
     }
 
+    /// Debug: dump all key items to find the correct Kindling param_id
+    ///
+    /// Logs all items in key_items inventory with their param_id and quantity.
+    /// Items with quantity == 4 are highlighted (looking for Kindling).
+    pub fn debug_dump_key_items(&self) {
+        use tracing::info;
+
+        let Some((key_items_head, key_items_count)) = self.read_key_items_info() else {
+            info!("[DEBUG] Failed to read key_items_info");
+            return;
+        };
+
+        info!(
+            "[DEBUG] key_items: head=0x{:X}, count={}",
+            key_items_head, key_items_count
+        );
+
+        for i in 0..key_items_count {
+            let entry_addr = key_items_head + (i as usize) * INVENTORY_ENTRY_SIZE;
+
+            let item_id: i32 = PointerChain::new(&[entry_addr + INVENTORY_ENTRY_ITEM_ID_OFFSET])
+                .read()
+                .unwrap_or(0);
+
+            let quantity: u32 = PointerChain::new(&[entry_addr + INVENTORY_ENTRY_QUANTITY_OFFSET])
+                .read()
+                .unwrap_or(0);
+
+            let category = ((item_id >> 28) & 0xF) as u8;
+            let param_id = (item_id & 0x0FFFFFFF) as u32;
+
+            // Highlight items with quantity 4 (likely Kindling)
+            let marker = if quantity == 4 { " <-- QTY 4!" } else { "" };
+
+            info!(
+                "[DEBUG] [{:3}] cat={} param_id={:8} (0x{:08X}) qty={}{}",
+                i, category, param_id, param_id, quantity, marker
+            );
+        }
+    }
+
     /// Read key items inventory info (head pointer and count)
     fn read_key_items_info(&self) -> Option<(usize, u32)> {
         let game_data_man = self.pointers.base_addresses.game_data_man;
