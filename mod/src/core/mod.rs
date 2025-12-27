@@ -7,6 +7,7 @@ pub mod color;
 pub mod constants;
 pub mod entity_utils;
 pub mod map_utils;
+pub mod protocol;
 pub mod traits;
 pub mod types;
 pub mod warp_tracker;

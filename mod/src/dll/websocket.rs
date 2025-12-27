@@ -4,7 +4,6 @@
 // transmission of fog gate discoveries.
 
 use crossbeam_channel::{bounded, Receiver, Sender, TryRecvError};
-use serde::{Deserialize, Serialize};
 use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -15,6 +14,9 @@ use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{connect, Message, WebSocket};
 
 use crate::core::map_utils::format_map_id;
+use crate::core::protocol::{
+    DiscoveryStats, FogExit, Position, PropagatedLink, ServerMessage, ServerResponse,
+};
 
 use super::config::ServerSettings;
 
@@ -32,15 +34,7 @@ pub enum ConnectionStatus {
     Error,
 }
 
-/// Position data for discovery messages
-#[derive(Debug, Clone, Serialize)]
-pub struct Position {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
-/// Messages sent to the WebSocket thread
+/// Messages sent to the WebSocket thread (internal channel)
 #[derive(Debug)]
 pub enum OutgoingMessage {
     /// Send a discovery event (with positions and play region IDs, server resolves zone names)
@@ -68,7 +62,7 @@ pub enum OutgoingMessage {
     Shutdown,
 }
 
-/// Messages received from the WebSocket thread
+/// Messages received from the WebSocket thread (internal channel)
 #[derive(Debug)]
 pub enum IncomingMessage {
     /// Connection status changed
@@ -89,102 +83,6 @@ pub enum IncomingMessage {
     Error(String),
     /// Server sent a ping
     Ping,
-}
-
-/// A propagated link from the server response
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PropagatedLink {
-    pub source: String,
-    pub target: String,
-}
-
-/// A fog gate exit from the current zone
-#[derive(Debug, Clone, Deserialize)]
-pub struct FogExit {
-    /// Target zone name, or "???" if not discovered
-    pub target: String,
-    /// How to get there (direction/description)
-    #[serde(default)]
-    pub description: String,
-    /// If exit is from a different zone in the preexisting group
-    pub from_zone: Option<String>,
-}
-
-/// Discovery statistics from the server
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct DiscoveryStats {
-    /// Number of discovered random links
-    pub discovered: u32,
-    /// Total number of random links
-    pub total: u32,
-}
-
-// =============================================================================
-// PROTOCOL MESSAGES
-// =============================================================================
-
-/// Messages sent to the server
-#[derive(Debug, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-enum ServerMessage {
-    Auth {
-        token: String,
-    },
-    DiscoveryV2 {
-        source_map_id: String,
-        source_pos: Position,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        source_play_region_id: Option<u32>,
-        target_map_id: String,
-        target_pos: Position,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        target_play_region_id: Option<u32>,
-        warp_type: String,
-        /// Destination entity ID (755890xxx for fog rando warps)
-        destination_entity_id: u32,
-    },
-    ZoneQuery {
-        map_id: String,
-        pos: Position,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        play_region_id: Option<u32>,
-    },
-    Pong,
-}
-
-/// Messages received from the server
-#[derive(Debug, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-enum ServerResponse {
-    AuthOk,
-    AuthError {
-        message: String,
-    },
-    DiscoveryV2Ack {
-        propagated: Vec<PropagatedLink>,
-        current_zone: Option<String>,
-        #[serde(default)]
-        exits: Vec<FogExit>,
-        #[serde(default)]
-        stats: DiscoveryStats,
-    },
-    /// Discovery broadcast from host (web UI manual discovery)
-    Discovery {
-        #[serde(default)]
-        propagated: Vec<PropagatedLink>,
-        #[serde(default)]
-        stats: DiscoveryStats,
-    },
-    /// Zone query response (after fast travel)
-    ZoneQueryAck {
-        zone: Option<String>,
-        #[serde(default)]
-        exits: Vec<FogExit>,
-    },
-    Ping,
-    Error {
-        message: String,
-    },
 }
 
 // =============================================================================
