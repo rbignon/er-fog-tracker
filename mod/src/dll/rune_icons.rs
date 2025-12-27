@@ -1,6 +1,8 @@
-//! Great Rune icon textures for the overlay
+//! Icon textures for the overlay
 //!
-//! Handles loading and managing the 14 rune icon textures (7 colored + 7 gray).
+//! Handles loading and managing:
+//! - 14 rune icon textures (7 colored + 7 gray)
+//! - 1 kindling icon texture
 
 use hudhook::imgui::TextureId;
 use hudhook::RenderContext;
@@ -14,6 +16,7 @@ use crate::core::constants::GreatRune;
 // =============================================================================
 
 mod embedded {
+    // Great Rune icons
     pub const GODRICK: &[u8] = include_bytes!("../../assets/runes/godrick.png");
     pub const GODRICK_GRAY: &[u8] = include_bytes!("../../assets/runes/godrick_gray.png");
     pub const RADAHN: &[u8] = include_bytes!("../../assets/runes/radahn.png");
@@ -28,6 +31,9 @@ mod embedded {
     pub const MALENIA_GRAY: &[u8] = include_bytes!("../../assets/runes/malenia_gray.png");
     pub const UNBORN: &[u8] = include_bytes!("../../assets/runes/unborn.png");
     pub const UNBORN_GRAY: &[u8] = include_bytes!("../../assets/runes/unborn_gray.png");
+
+    // Messmer's Kindling icon
+    pub const KINDLING: &[u8] = include_bytes!("../../assets/messmers_kindling.png");
 }
 
 // =============================================================================
@@ -107,6 +113,34 @@ impl RuneTextures {
             GreatRune::Malenia,
             GreatRune::Unborn,
         ]
+    }
+}
+
+// =============================================================================
+// KINDLING TEXTURE
+// =============================================================================
+
+/// Stores the loaded texture ID for the Kindling icon
+pub struct KindlingTexture {
+    texture_id: TextureId,
+}
+
+impl KindlingTexture {
+    /// Load the kindling texture
+    ///
+    /// Call this in `ImguiRenderLoop::initialize()`.
+    pub fn load(render_context: &mut dyn RenderContext) -> Result<Self, String> {
+        debug!("Loading kindling texture");
+
+        let texture_id = decode_and_load(render_context, embedded::KINDLING)
+            .map_err(|e| format!("Failed to load kindling: {}", e))?;
+
+        Ok(Self { texture_id })
+    }
+
+    /// Get the texture ID
+    pub fn texture_id(&self) -> TextureId {
+        self.texture_id
     }
 }
 

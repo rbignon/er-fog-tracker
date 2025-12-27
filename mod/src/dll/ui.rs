@@ -10,7 +10,7 @@ use crate::core::color::parse_hex_color;
 use crate::core::map_utils::format_map_id;
 use crate::core::status_template::{render_template, ContentSpan, TemplateColor, TemplateContext};
 
-use super::rune_icons::RuneTextures;
+use super::rune_icons::{KindlingTexture, RuneTextures};
 use super::tracker::FogRandoTracker;
 use super::websocket::ConnectionStatus;
 
@@ -61,6 +61,17 @@ impl ImguiRenderLoop for FogRandoTracker {
             }
             Err(e) => {
                 error!(error = %e, "Failed to load rune textures");
+            }
+        }
+
+        // Load kindling icon texture
+        match KindlingTexture::load(render_context) {
+            Ok(texture) => {
+                info!("Loaded kindling icon texture");
+                self.kindling_texture = Some(texture);
+            }
+            Err(e) => {
+                error!(error = %e, "Failed to load kindling texture");
             }
         }
     }
@@ -212,6 +223,7 @@ impl FogRandoTracker {
                     // 7 icons + 6 spaces between them
                     7.0 * icon_size + 6.0 * icon_spacing
                 }
+                ContentSpan::KindlingIcon => icon_size,
             })
             .sum()
     }
@@ -242,6 +254,14 @@ impl FogRandoTracker {
                     first = false;
 
                     self.render_rune_icons(ui);
+                }
+                ContentSpan::KindlingIcon => {
+                    if !first {
+                        ui.same_line_with_spacing(0.0, 0.0);
+                    }
+                    first = false;
+
+                    self.render_kindling_icon(ui);
                 }
             }
         }
@@ -277,6 +297,18 @@ impl FogRandoTracker {
                 Image::new(texture_id, [icon_size, icon_size]).build(ui);
             }
         }
+    }
+
+    /// Render the Kindling icon
+    fn render_kindling_icon(&self, ui: &hudhook::imgui::Ui) {
+        let Some(ref texture) = self.kindling_texture else {
+            // Fallback: show text placeholder if texture not loaded
+            ui.text_disabled("[K]");
+            return;
+        };
+
+        let icon_size = self.config.overlay.font_size;
+        Image::new(texture.texture_id(), [icon_size, icon_size]).build(ui);
     }
 
     /// Resolve a TemplateColor to an RGBA value

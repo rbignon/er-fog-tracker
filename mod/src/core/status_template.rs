@@ -5,7 +5,7 @@
 //! # Template syntax
 //!
 //! - Variables: `{zone}`, `{discovered}`, `{total}`, `{progress}`, `{status}`, `{map}`,
-//!   `{deaths}`, `{igt}`, `{runes}`, `{kindling}`, `{rune_icons}`
+//!   `{deaths}`, `{igt}`, `{runes}`, `{kindling}`, `{rune_icons}`, `{kindling_icon}`
 //! - Colors: `{variable:color}` where color is a name or hex code
 //!   - Named colors: `red`, `green`, `blue`, `yellow`, `orange`, `cyan`, `magenta`, `gray`, `white`
 //!   - Hex colors: `#RRGGBB` (e.g., `#FF0000` for red)
@@ -139,13 +139,15 @@ pub struct TextSpan {
     pub color: TemplateColor,
 }
 
-/// A content span that can be either text or special content (like rune icons)
+/// A content span that can be either text or special content (like icons)
 #[derive(Debug, Clone, PartialEq)]
 pub enum ContentSpan {
     /// Text span with optional color
     Text(TextSpan),
     /// Rune icons placeholder (UI layer handles actual rendering)
     RuneIcons,
+    /// Kindling icon placeholder (UI layer handles actual rendering)
+    KindlingIcon,
 }
 
 impl ContentSpan {
@@ -410,6 +412,8 @@ fn substitute_variables(
                     // If server disabled, status is empty - no span added
                 } else if var_name == "rune_icons" {
                     spans.push(ContentSpan::RuneIcons);
+                } else if var_name == "kindling_icon" {
+                    spans.push(ContentSpan::KindlingIcon);
                 } else if let Some(value) = get_variable_value(&var_name, ctx) {
                     if !value.is_empty() {
                         spans.push(ContentSpan::text(value, color));
@@ -1095,6 +1099,41 @@ mod tests {
             result.lines[0].left_text().as_deref(),
             Some("Before  After")
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // Kindling icon tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_kindling_icon_produces_marker() {
+        let ctx = default_ctx();
+        let result = render_template("{kindling_icon}", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0], ContentSpan::KindlingIcon);
+    }
+
+    #[test]
+    fn test_kindling_icon_with_text() {
+        let ctx = default_ctx();
+        let result = render_template("{kindling_icon}{kindling}", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        // Should have: KindlingIcon, "2"
+        assert_eq!(spans.len(), 2);
+        assert_eq!(spans[0], ContentSpan::KindlingIcon);
+        assert_eq!(spans[1].as_text().unwrap().text, "2");
+    }
+
+    #[test]
+    fn test_kindling_icon_not_in_text_output() {
+        let ctx = default_ctx();
+        let result = render_template("K:{kindling_icon}{kindling}", &ctx);
+
+        // left_text() should skip KindlingIcon and only return text
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("K:2"));
     }
 
     #[test]

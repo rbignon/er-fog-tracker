@@ -94,17 +94,18 @@ border_color = "#404040"         # Border color (only used if show_border = true
 
 # Status line template
 # Variables:
-#   {zone}       - Current zone name (or zone_unknown_text if unknown)
-#   {discovered} - Number of discovered random links
-#   {total}      - Total number of random links
-#   {progress}   - Discovery percentage (0-100)
-#   {status}     - Server connection indicator (colored dot)
-#   {map}        - Current map ID (e.g., "m60_44_36_00")
-#   {deaths}     - Total death count for the character
-#   {igt}        - In-game time (format: H:MM:SS)
-#   {runes}      - Number of Great Runes possessed (0-7, deduplicated)
-#   {rune_icons} - Great Rune icons (colored if possessed, grayed if not)
-#   {kindling}   - Number of Messmer's Kindling items
+#   {zone}         - Current zone name (or zone_unknown_text if unknown)
+#   {discovered}   - Number of discovered random links
+#   {total}        - Total number of random links
+#   {progress}     - Discovery percentage (0-100)
+#   {status}       - Server connection indicator (colored dot)
+#   {map}          - Current map ID (e.g., "m60_44_36_00")
+#   {deaths}       - Total death count for the character
+#   {igt}          - In-game time (format: H:MM:SS)
+#   {runes}        - Number of Great Runes possessed (0-7, deduplicated)
+#   {rune_icons}   - Great Rune icons (colored if possessed, grayed if not)
+#   {kindling}     - Number of Messmer's Kindling items
+#   {kindling_icon} - Messmer's Kindling icon
 #
 # Colors (optional, add after variable name with colon):
 #   {variable:color} - Apply color to the variable
@@ -128,6 +129,7 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   "{zone}$>{runes}/7 | K:{kindling}"                   - With Great Runes and Kindling
 #   "{zone}$>{rune_icons}"                               - With Great Rune icons
 #   "{zone}$n{rune_icons} {discovered}/{total}"          - Two lines with rune icons
+#   "{rune_icons} {kindling_icon}{kindling}"             - Rune icons + kindling icon with count
 #
 status_template = "{zone}$>{status} {discovered}/{total}"
 

@@ -27,7 +27,7 @@ use crate::core::warp_tracker::DiscoveryEvent;
 use crate::eldenring::{GameMan, GameState, SpEffect};
 
 use super::config::Config;
-use super::rune_icons::RuneTextures;
+use super::rune_icons::{KindlingTexture, RuneTextures};
 use super::websocket::{ConnectionStatus as WsConnectionStatus, IncomingMessage, WebSocketClient};
 
 // =============================================================================
@@ -177,6 +177,9 @@ pub struct FogRandoTracker {
 
     // Rune icons textures (loaded in initialize())
     pub(crate) rune_textures: Option<RuneTextures>,
+
+    // Kindling icon texture (loaded in initialize())
+    pub(crate) kindling_texture: Option<KindlingTexture>,
 }
 
 impl FogRandoTracker {
@@ -253,6 +256,7 @@ impl FogRandoTracker {
             last_logged_warp_requested: false,
             debug_items_dumped: false,
             rune_textures: None,
+            kindling_texture: None,
         })
     }
 
