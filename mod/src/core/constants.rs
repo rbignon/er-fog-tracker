@@ -82,3 +82,42 @@ pub const GRACE_SPAWN_SPEFFECT_ID: u32 = 106;
 
 /// Offset of death_count in GameDataMan structure
 pub const GAMEDATAMAN_DEATH_COUNT_OFFSET: usize = 0x94;
+
+// =============================================================================
+// INVENTORY READING
+// =============================================================================
+
+/// Item category for Goods (consumables, key items)
+pub const ITEM_CATEGORY_GOODS: u8 = 4;
+
+/// Offset from PlayerGameData to key_items_head pointer
+pub const KEY_ITEMS_HEAD_OFFSET: usize = 0x428;
+
+/// Offset from PlayerGameData to key_items_count
+pub const KEY_ITEMS_COUNT_OFFSET: usize = 0x430;
+
+/// Size of each inventory entry (EquipInventoryDataListEntry)
+pub const INVENTORY_ENTRY_SIZE: usize = 0x18;
+
+/// Offset to item_id within inventory entry
+pub const INVENTORY_ENTRY_ITEM_ID_OFFSET: usize = 0x04;
+
+/// Offset to quantity within inventory entry
+pub const INVENTORY_ENTRY_QUANTITY_OFFSET: usize = 0x08;
+
+// Great Rune param_ids (restored versions)
+pub const GREAT_RUNE_GODRICK: u32 = 191;
+pub const GREAT_RUNE_RADAHN: u32 = 192;
+pub const GREAT_RUNE_MORGOTT: u32 = 193;
+pub const GREAT_RUNE_RYKARD: u32 = 194;
+pub const GREAT_RUNE_MOHG: u32 = 195;
+pub const GREAT_RUNE_MALENIA: u32 = 196;
+pub const GREAT_RUNE_UNBORN: u32 = 10080;
+pub const GREAT_RUNE_MIQUELLA: u32 = 2008000;
+
+// Great Rune param_ids (unrestored versions)
+pub const GREAT_RUNE_UNRESTORED_START: u32 = 8148;
+pub const GREAT_RUNE_UNRESTORED_END: u32 = 8153;
+
+/// Messmer's Kindling param_id
+pub const MESSMERS_KINDLING: u32 = 2007509;

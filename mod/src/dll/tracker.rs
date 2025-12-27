@@ -384,6 +384,16 @@ impl FogRandoTracker {
         self.game_state.read_igt()
     }
 
+    /// Get the Great Runes count from game memory
+    pub fn read_great_runes_count(&self) -> Option<u32> {
+        self.game_state.read_great_runes_count()
+    }
+
+    /// Get the Messmer's Kindling count from game memory
+    pub fn read_kindling_count(&self) -> Option<u32> {
+        self.game_state.read_kindling_count()
+    }
+
     /// Log GameMan warp state changes (with deduplication)
     fn log_warp_debug(&mut self) {
         let warp_requested = self.game_man.is_warp_requested();

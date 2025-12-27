@@ -5,7 +5,7 @@
 //! # Template syntax
 //!
 //! - Variables: `{zone}`, `{discovered}`, `{total}`, `{progress}`, `{status}`, `{map}`,
-//!   `{deaths}`, `{igt}`
+//!   `{deaths}`, `{igt}`, `{runes}`, `{kindling}`
 //! - Markers: `$n` (newline), `$>` (right-align rest of line)
 //!
 //! # Examples
@@ -21,6 +21,10 @@
 //!     server_enabled: true,
 //!     server_connected: true,
 //!     map_id: Some("m60_44_36_00".to_string()),
+//!     deaths: Some(5),
+//!     igt_ms: Some(3600000),
+//!     runes: Some(3),
+//!     kindling: Some(2),
 //! };
 //!
 //! let result = render_template("{zone}$>{status} {discovered}/{total}", &ctx);
@@ -53,6 +57,10 @@ pub struct TemplateContext {
     pub deaths: Option<u32>,
     /// In-game time in milliseconds
     pub igt_ms: Option<u32>,
+    /// Number of Great Runes possessed (deduplicated, 0-8)
+    pub runes: Option<u32>,
+    /// Number of Messmer's Kindling items
+    pub kindling: Option<u32>,
 }
 
 impl Default for TemplateContext {
@@ -67,6 +75,8 @@ impl Default for TemplateContext {
             map_id: None,
             deaths: None,
             igt_ms: None,
+            runes: None,
+            kindling: None,
         }
     }
 }
@@ -213,6 +223,14 @@ fn substitute_variables(template: &str, ctx: &TemplateContext, has_status: &mut 
     let igt_value = ctx.igt_ms.map(format_igt).unwrap_or_default();
     result = result.replace("{igt}", &igt_value);
 
+    // {runes} - Great Runes count
+    let runes_value = ctx.runes.map(|r| r.to_string()).unwrap_or_default();
+    result = result.replace("{runes}", &runes_value);
+
+    // {kindling} - Messmer's Kindling count
+    let kindling_value = ctx.kindling.map(|k| k.to_string()).unwrap_or_default();
+    result = result.replace("{kindling}", &kindling_value);
+
     // {status} - connection indicator with markers for coloring
     if result.contains("{status}") {
         let status_value = if ctx.server_enabled {
@@ -277,6 +295,8 @@ mod tests {
             map_id: Some("m60_44_36_00".to_string()),
             deaths: Some(5),
             igt_ms: Some(3723000), // 1:02:03
+            runes: Some(3),
+            kindling: Some(2),
         }
     }
 
@@ -408,6 +428,55 @@ mod tests {
         };
         let result = render_template("{igt}", &ctx);
         assert_eq!(result.lines[0].left_text(), Some("10:00:00"));
+    }
+
+    // -------------------------------------------------------------------------
+    // Runes and Kindling tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_runes() {
+        let ctx = default_ctx();
+        let result = render_template("Runes: {runes}/8", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("Runes: 3/8"));
+    }
+
+    #[test]
+    fn test_runes_none() {
+        let ctx = TemplateContext {
+            runes: None,
+            ..default_ctx()
+        };
+        let result = render_template("R:{runes}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("R:"));
+    }
+
+    #[test]
+    fn test_kindling() {
+        let ctx = default_ctx();
+        let result = render_template("Kindling: {kindling}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("Kindling: 2"));
+    }
+
+    #[test]
+    fn test_kindling_none() {
+        let ctx = TemplateContext {
+            kindling: None,
+            ..default_ctx()
+        };
+        let result = render_template("K:{kindling}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("K:"));
+    }
+
+    #[test]
+    fn test_runes_and_kindling_combined() {
+        let ctx = TemplateContext {
+            runes: Some(5),
+            kindling: Some(3),
+            ..default_ctx()
+        };
+        let result = render_template("{runes}/8 | K:{kindling}", &ctx);
+        assert_eq!(result.lines[0].left_text(), Some("5/8 | K:3"));
     }
 
     // -------------------------------------------------------------------------

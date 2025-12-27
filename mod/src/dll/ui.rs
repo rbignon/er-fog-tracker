@@ -158,6 +158,8 @@ impl FogRandoTracker {
             map_id,
             deaths: self.read_deaths(),
             igt_ms: self.read_igt(),
+            runes: self.read_great_runes_count(),
+            kindling: self.read_kindling_count(),
         }
     }
 

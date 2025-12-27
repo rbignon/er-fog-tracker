@@ -350,6 +350,206 @@ The unmatched warps are **expected** and fall into these categories:
 }
 ```
 
+## Great Runes & Messmer's Kindling Inventory Reading (2025-12-27)
+
+### Goal
+
+Read the player's possessed Great Runes and Messmer's Kindling count from game memory. This is useful for tracking randomizer progress (which Great Runes have been collected, how many Kindling items found).
+
+### Data Sources Used
+
+- `fromsoftware-rs/crates/eldenring/src/cs/player_game_data.rs` - Rust struct definitions
+- `fromsoftware-rs/crates/eldenring/src/cs/item_id.rs` - ItemId bitfield structure
+- `eldenring_all-in-one_Hexinton-v5.0_ce7.5.ct` - Cheat Engine table for offset verification
+- `eldenring-practice-tool/lib/libeldenring/src/pointers.rs` - Existing pointer chains
+
+### Item ID Format
+
+Items use a 32-bit `ItemId` with a bitfield structure:
+
+| Bits | Field | Description |
+|------|-------|-------------|
+| 28-31 | category | Item category (4 bits) |
+| 0-27 | param_id | Parameter ID (28 bits) |
+
+**Item Categories:**
+
+| Value | Category |
+|-------|----------|
+| 0 | Weapon |
+| 1 | Protector (Armor) |
+| 2 | Accessory (Talisman) |
+| 4 | Goods (Consumables, Key Items) |
+| 8 | Gem (Ashes of War) |
+
+Great Runes and Messmer's Kindling are **Goods** (category 4), so their item_id has the form `0x4xxxxxxx`.
+
+### Great Rune Item IDs
+
+| Item | param_id | Full item_id |
+|------|----------|--------------|
+| Godrick's Great Rune (restored) | 191 | 0x400000BF |
+| Radahn's Great Rune (restored) | 192 | 0x400000C0 |
+| Morgott's Great Rune (restored) | 193 | 0x400000C1 |
+| Rykard's Great Rune (restored) | 194 | 0x400000C2 |
+| Mohg's Great Rune (restored) | 195 | 0x400000C3 |
+| Malenia's Great Rune (restored) | 196 | 0x400000C4 |
+| Godrick's Great Rune (unrestored) | 8148 | 0x40001FD4 |
+| Radahn's Great Rune (unrestored) | 8149 | 0x40001FD5 |
+| Morgott's Great Rune (unrestored) | 8150 | 0x40001FD6 |
+| Rykard's Great Rune (unrestored) | 8151 | 0x40001FD7 |
+| Mohg's Great Rune (unrestored) | 8152 | 0x40001FD8 |
+| Malenia's Great Rune (unrestored) | 8153 | 0x40001FD9 |
+| Great Rune of the Unborn | 10080 | 0x40002760 |
+| Miquella's Great Rune | 2008000 | 0x401EA380 |
+
+**Note:** Restored and unrestored versions should be deduplicated when counting (same rune, different state). Mapping: `(param_id - 8148) + 191` converts unrestored to restored param_id.
+
+### Messmer's Kindling
+
+| Item | param_id | Full item_id |
+|------|----------|--------------|
+| Messmer's Kindling | 2007509 | 0x401EA3D5 |
+
+In randomizer context, multiple Kindling items can exist (quantity > 1 or multiple inventory entries).
+
+### Memory Structure: Key Items Inventory
+
+Great Runes and Kindling are stored in the **key_items** inventory array.
+
+#### Pointer Chain
+
+```
+GameDataMan
+  └→ +0x8 [ptr] → PlayerGameData
+                    └→ +0x2B0 [embedded] → EquipGameData
+                                            └→ +0x158 [embedded] → EquipInventoryData
+                                                                    └→ +0x8 [embedded] → InventoryItemsData
+                                                                                          ├→ +0x18 [ptr] → key_items_head
+                                                                                          └→ +0x20 [u32]   key_items_count
+```
+
+#### Flattened Offsets
+
+From `PlayerGameData`:
+- `key_items_head`: +0x428 (pointer to array)
+- `key_items_count`: +0x430 (u32)
+
+From `GameDataMan`:
+- `PlayerGameData`: +0x8 (pointer)
+
+#### EquipInventoryDataListEntry Structure (0x18 bytes per item)
+
+| Offset | Type | Field | Description |
+|--------|------|-------|-------------|
+| 0x00 | u32 | gaitem_handle | Handle to extended item data |
+| 0x04 | i32 | item_id | Bitfield: category (bits 28-31) + param_id (bits 0-27) |
+| 0x08 | u32 | quantity | Number of this item owned |
+| 0x0C | u32 | sort_id | Acquisition order for sorting |
+| 0x10 | u8 | unk10 | Unknown |
+| 0x11-0x13 | - | padding | Alignment padding |
+| 0x14 | i32 | pot_group | Pot group ID (-1 if not a pot) |
+
+### Equipped Great Rune (Bonus)
+
+The currently equipped Great Rune index can be read directly:
+
+```
+GameDataMan → +0x8 [ptr] → +0xFF [byte]
+```
+
+This gives the equipped Great Rune as a byte value (index into the Great Runes list).
+
+### Algorithm: Reading Possessed Great Runes
+
+```rust
+// 1. Get key_items array
+let player_game_data = read_ptr(game_data_man + 0x8);
+let key_items_head = read_ptr(player_game_data + 0x428);
+let key_items_count = read_u32(player_game_data + 0x430);
+
+// 2. Iterate through key items
+let mut great_runes: HashSet<u32> = HashSet::new();
+let mut kindling_count: u32 = 0;
+
+for i in 0..key_items_count {
+    let entry_addr = key_items_head + i * 0x18;
+    let item_id = read_i32(entry_addr + 0x04);
+    let quantity = read_u32(entry_addr + 0x08);
+
+    // Extract category and param_id
+    let category = ((item_id >> 28) & 0xF) as u8;
+    let param_id = item_id & 0x0FFFFFFF;
+
+    if category != 4 { continue; } // Not a Goods item
+
+    // Check for Great Runes
+    let normalized_param_id = match param_id {
+        191..=196 => param_id,                    // Restored
+        8148..=8153 => param_id - 8148 + 191,     // Unrestored → normalized
+        10080 => 10080,                           // Great Rune of the Unborn
+        2008000 => 2008000,                       // Miquella's Great Rune
+        _ => 0,
+    };
+
+    if normalized_param_id != 0 {
+        great_runes.insert(normalized_param_id);
+    }
+
+    // Check for Messmer's Kindling
+    if param_id == 2007509 {
+        kindling_count += quantity;
+    }
+}
+```
+
+### Cheat Engine Table Verification
+
+Key offsets confirmed from `eldenring_all-in-one_Hexinton-v5.0_ce7.5.ct`:
+
+1. **EquipGameData offset** (line 16645):
+   ```lua
+   local playerGameData = readPointer(gameDataMan + 0x8)
+   local equipGameData = getAddress(playerGameData + 0x2B0)
+   ```
+
+2. **Equipped Great Rune** (lines 3743-3750):
+   ```xml
+   <Description>"GreatRune"</Description>
+   <Address>GameDataMan</Address>
+   <Offsets>
+     <Offset>FF</Offset>
+     <Offset>08</Offset>
+   </Offsets>
+   ```
+
+3. **Inventory hook** (lines 3090-3100):
+   ```asm
+   mov rax,[rdi+28]    ; multiplay_key_items_head
+   mov rax,[rdi+38]    ; normal_items_accessor.head
+   mov rax,[rdi+48]    ; key_items_accessor.head
+   ```
+   These offsets are relative to `InventoryItemsData` structure.
+
+4. **Inventory entry structure** (lines 3244-3253):
+   ```lua
+   -- Entry size: 20 bytes (0x14) - note: actual is 0x18, CE uses simplified view
+   local x = readQword(inv + i*20 + 4)  -- item_id + quantity packed
+   local id = x & 0xFFFFFFFF            -- item_id
+   local count = x >> 32                 -- quantity
+   local kind = (id & 0xF0000000) >> 28 -- category
+   id = id & 0xFFFFFFF                  -- param_id
+   ```
+
+### Implementation Status
+
+- [x] Research complete
+- [x] Pointer chain documented
+- [x] Item IDs identified
+- [ ] Implement in mod (`mod/src/eldenring/inventory.rs`)
+- [ ] Add to tracker session data
+- [ ] Send to server via WebSocket
+
 ## Next Steps
 
 1. [x] ~~Consider parsing MSB files for position-based matching~~ (blocked - format not supported)
@@ -359,7 +559,8 @@ The unmatched warps are **expected** and fall into these categories:
 5. [ ] Integrate lookup into server-side discovery handling
 6. [ ] Test with multiple seeds to validate matching accuracy
 7. [ ] Handle unmatched fog gate traversals gracefully
+8. [ ] Implement Great Runes / Kindling inventory reading in mod
 
 ---
 
-*Last updated: 2025-12-21*
+*Last updated: 2025-12-27*
