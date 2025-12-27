@@ -109,6 +109,7 @@ The mod uses **animation-based detection** for all known teleport types. This is
 | Sending Gate (Red) | `60472` | Portal-style gates |
 | Medal | `50340` | Pureblood Knight's Medal item use |
 | Horned Remains | `60010` | Teleport to Regal Ancestor Spirit (Nokron) |
+| Liurnia Tower Door | `12202126` | Opening the door at the bottom of the inverted tower |
 
 ### Detection Flow
 
