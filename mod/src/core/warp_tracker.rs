@@ -1,0 +1,380 @@
+//! Warp tracking state machine
+//!
+//! This module contains the core logic for detecting fog gate traversals.
+//! It is platform-independent and can be tested without Windows APIs.
+
+use std::time::Instant;
+
+use super::constants::WARP_TIMEOUT;
+use super::entity_utils::get_teleport_type;
+use super::traits::{GameStateReader, WarpDetector};
+use super::types::PlayerPosition;
+
+// =============================================================================
+// PENDING WARP
+// =============================================================================
+
+/// Pending warp event (entry position recorded, waiting for exit)
+#[derive(Clone, Debug)]
+pub struct PendingWarp {
+    /// Entry position when the warp started
+    pub entry: PlayerPosition,
+    /// Entity ID of the warp destination (captured when warp_requested becomes true)
+    pub destination_entity_id: u32,
+    /// Transport type inferred from animation
+    pub transport_type: &'static str,
+    /// When this pending warp was created (for timeout detection)
+    pub created_at: Instant,
+}
+
+impl PendingWarp {
+    /// Check if this pending warp has timed out
+    pub fn is_timed_out(&self) -> bool {
+        self.created_at.elapsed() > WARP_TIMEOUT
+    }
+}
+
+// =============================================================================
+// DISCOVERY EVENT
+// =============================================================================
+
+/// A completed warp discovery ready to be sent to the server
+#[derive(Clone, Debug)]
+pub struct DiscoveryEvent {
+    /// Entry position
+    pub entry: PlayerPosition,
+    /// Exit position
+    pub exit: PlayerPosition,
+    /// Transport type (FOG, WAYGATE, etc.)
+    pub transport_type: &'static str,
+    /// Destination entity ID (755890xxx for fog rando)
+    pub destination_entity_id: u32,
+}
+
+// =============================================================================
+// WARP TRACKER
+// =============================================================================
+
+/// Core warp tracking state machine
+///
+/// This struct contains the platform-independent logic for detecting
+/// fog gate traversals. It uses the GameStateReader and WarpDetector
+/// traits to read game state.
+///
+/// # Detection Strategy
+///
+/// 1. Detect teleport animation start → record entry position
+/// 2. When warp_requested becomes true → capture dest_entity_id
+/// 3. When animation ends + position readable → emit discovery event
+pub struct WarpTracker {
+    /// Pending fog rando warp (entry recorded, waiting for exit)
+    pending_warp: Option<PendingWarp>,
+    /// Whether we were in a teleport animation last frame
+    was_in_teleport_anim: bool,
+    /// Whether position was readable last frame (to detect loading screens)
+    was_position_readable: bool,
+    /// Last logged warp_requested state (for deduplication)
+    last_logged_warp_requested: bool,
+}
+
+impl WarpTracker {
+    /// Create a new WarpTracker
+    pub fn new() -> Self {
+        Self {
+            pending_warp: None,
+            was_in_teleport_anim: false,
+            was_position_readable: false,
+            last_logged_warp_requested: false,
+        }
+    }
+
+    /// Check for fog gate traversals
+    ///
+    /// Call this every frame. Returns a DiscoveryEvent if a warp was completed.
+    ///
+    /// # Arguments
+    ///
+    /// * `game_state` - Reader for player position and animation
+    /// * `warp_detector` - Reader for warp request state
+    ///
+    /// # Returns
+    ///
+    /// * `Some(DiscoveryEvent)` - A warp was completed
+    /// * `None` - No warp completed this frame
+    pub fn check_warp<G: GameStateReader, W: WarpDetector>(
+        &mut self,
+        game_state: &G,
+        warp_detector: &W,
+    ) -> Option<DiscoveryEvent> {
+        let mut discovery = None;
+
+        // Track loading screens
+        let position = game_state.read_position();
+        let position_now_readable = position.is_some();
+
+        // Check for pending warp timeout
+        if let Some(ref pending) = self.pending_warp {
+            if pending.is_timed_out() {
+                self.pending_warp = None;
+            }
+        }
+
+        // Get current animation state
+        let cur_anim = game_state.read_animation();
+        let is_in_teleport_anim = cur_anim.and_then(get_teleport_type).is_some();
+        let transport_type = cur_anim.and_then(get_teleport_type).unwrap_or("OTHER");
+
+        // Entry detection: animation just started
+        if is_in_teleport_anim && !self.was_in_teleport_anim {
+            if let Some(pos) = position.clone() {
+                self.pending_warp = Some(PendingWarp {
+                    entry: pos,
+                    destination_entity_id: 0, // Will be captured when warp_requested becomes true
+                    transport_type,
+                    created_at: Instant::now(),
+                });
+            }
+        }
+
+        // Capture dest_entity_id when available
+        if let Some(ref mut pending) = self.pending_warp {
+            if pending.destination_entity_id == 0 {
+                let dest_entity_id = warp_detector.get_destination_entity_id();
+                if dest_entity_id != 0 {
+                    pending.destination_entity_id = dest_entity_id;
+                }
+            }
+        }
+
+        // Exit detection: animation ended + position readable
+        if !is_in_teleport_anim && self.was_in_teleport_anim {
+            if let Some(pending) = self.pending_warp.take() {
+                if let Some(exit_pos) = position.clone() {
+                    discovery = Some(DiscoveryEvent {
+                        entry: pending.entry,
+                        exit: exit_pos,
+                        transport_type: pending.transport_type,
+                        destination_entity_id: pending.destination_entity_id,
+                    });
+                } else {
+                    // Position not readable yet (still loading) - keep pending
+                    self.pending_warp = Some(pending);
+                }
+            }
+        }
+
+        // Handle delayed completion: pending warp with no animation and position readable
+        if discovery.is_none()
+            && self.pending_warp.is_some()
+            && !is_in_teleport_anim
+            && position_now_readable
+        {
+            if let Some(pending) = self.pending_warp.take() {
+                if let Some(exit_pos) = position {
+                    discovery = Some(DiscoveryEvent {
+                        entry: pending.entry,
+                        exit: exit_pos,
+                        transport_type: pending.transport_type,
+                        destination_entity_id: pending.destination_entity_id,
+                    });
+                }
+            }
+        }
+
+        // Update state for next frame
+        self.was_in_teleport_anim = is_in_teleport_anim;
+        self.was_position_readable = position_now_readable;
+        self.last_logged_warp_requested = warp_detector.is_warp_requested();
+
+        discovery
+    }
+
+    /// Check if we just exited a loading screen (for zone query)
+    ///
+    /// Returns true if position went from unreadable to readable and
+    /// there's no pending warp (to avoid querying when we'll get info from discovery).
+    pub fn just_exited_loading_screen<G: GameStateReader>(&self, game_state: &G) -> bool {
+        let position_now_readable = game_state.read_position().is_some();
+        position_now_readable && !self.was_position_readable && self.pending_warp.is_none()
+    }
+
+    /// Get the current pending warp, if any
+    pub fn pending_warp(&self) -> Option<&PendingWarp> {
+        self.pending_warp.as_ref()
+    }
+
+    /// Check if there's a pending warp
+    pub fn has_pending_warp(&self) -> bool {
+        self.pending_warp.is_some()
+    }
+
+    /// Clear the pending warp (for testing or error recovery)
+    pub fn clear_pending_warp(&mut self) {
+        self.pending_warp = None;
+    }
+}
+
+impl Default for WarpTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// =============================================================================
+// TESTS
+// =============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    use crate::core::constants::ANIM_FOG_WALL;
+    use crate::core::entity_utils::is_fog_rando_entity;
+    use crate::core::traits::mocks::{MockGameState, MockWarpDetector};
+    use crate::core::types::PlayerPosition;
+
+    fn make_pos(map_id: u32, x: f32, y: f32, z: f32) -> PlayerPosition {
+        PlayerPosition::new(map_id, x, y, z, None)
+    }
+
+    #[test]
+    fn test_basic_fog_traversal() {
+        // Simulate: idle → fog animation → loading → position readable
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Frame 0: Limgrave
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Frame 1: Animation starts
+                None,                                          // Frame 2: Loading
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Frame 3: Stormveil
+            ],
+            vec![
+                Some(0),             // Idle
+                Some(ANIM_FOG_WALL), // Fog wall animation starts
+                Some(ANIM_FOG_WALL), // Still in animation
+                Some(0),             // Animation ended
+            ],
+        );
+
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890042, 0x0A0A1000);
+
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        assert!(tracker.check_warp(&game_state, &warp).is_none());
+        game_state.advance_frame();
+
+        // Frame 1: Animation starts, pending warp created
+        assert!(tracker.check_warp(&game_state, &warp).is_none());
+        assert!(tracker.has_pending_warp());
+        game_state.advance_frame();
+
+        // Frame 2: Loading screen
+        assert!(tracker.check_warp(&game_state, &warp).is_none());
+        game_state.advance_frame();
+
+        // Frame 3: Animation ended + position readable → discovery!
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(discovery.is_some());
+
+        let d = discovery.unwrap();
+        assert_eq!(d.entry.map_id, 0x3C2C2400);
+        assert_eq!(d.exit.map_id, 0x0A0A1000);
+        assert_eq!(d.transport_type, "FOG");
+        assert_eq!(d.destination_entity_id, 755890042);
+    }
+
+    #[test]
+    fn test_no_warp_without_animation() {
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+            ],
+            vec![Some(0), Some(0)], // No teleport animation
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        assert!(tracker.check_warp(&game_state, &warp).is_none());
+        game_state.advance_frame();
+        assert!(tracker.check_warp(&game_state, &warp).is_none());
+        assert!(!tracker.has_pending_warp());
+    }
+
+    #[test]
+    fn test_pending_warp_timeout() {
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+            ],
+            vec![Some(ANIM_FOG_WALL), Some(ANIM_FOG_WALL)],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Start animation
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+
+        // Manually set the pending warp to be timed out
+        if let Some(ref mut pending) = tracker.pending_warp {
+            pending.created_at = Instant::now() - Duration::from_secs(60);
+        }
+
+        game_state.advance_frame();
+        tracker.check_warp(&game_state, &warp);
+
+        // Should be cleared due to timeout
+        assert!(!tracker.has_pending_warp());
+    }
+
+    #[test]
+    fn test_dest_entity_captured_delayed() {
+        // Fog rando sets dest_entity_id after animation starts
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
+            ],
+            vec![Some(ANIM_FOG_WALL), Some(ANIM_FOG_WALL), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Animation starts, no entity ID yet
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        assert_eq!(tracker.pending_warp().unwrap().destination_entity_id, 0);
+
+        // Now set the entity ID
+        warp.set_warp(true, 755890123, 0x0A0A1000);
+
+        game_state.advance_frame();
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(
+            tracker.pending_warp().unwrap().destination_entity_id,
+            755890123
+        );
+
+        game_state.advance_frame();
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(discovery.is_some());
+        assert_eq!(discovery.unwrap().destination_entity_id, 755890123);
+    }
+
+    #[test]
+    fn test_is_fog_rando_entity_check() {
+        assert!(is_fog_rando_entity(755890000));
+        assert!(is_fog_rando_entity(755890123));
+        assert!(is_fog_rando_entity(755899999));
+        assert!(!is_fog_rando_entity(12345));
+        assert!(!is_fog_rando_entity(0));
+    }
+}

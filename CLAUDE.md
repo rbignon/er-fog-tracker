@@ -22,17 +22,30 @@ er-fog-tracker/
 │   ├── js/                 # ES6 modules (state.js, graph.js, exploration.js, sync.js)
 │   └── styles/
 ├── server/                 # Backend (Python FastAPI)
-│   ├── fogtracker/            # Main module (api/, websocket.py, zone_resolver.py)
+│   ├── fogtracker/         # Main module (api/, websocket.py, zone_resolver.py)
 │   ├── tests/              # Pytest tests (unit/, integration/)
 │   ├── alembic/            # Database migrations
 │   └── data/               # Zone data files (fog.txt, submaps.txt)
 ├── mod/                    # In-game mod (Rust DLL + Launcher)
 │   └── src/
-│       ├── lib.rs          # DLL entry point (hudhook)
-│       ├── tracker.rs      # Warp detection logic
-│       ├── game_state.rs   # Memory reading
-│       ├── websocket.rs    # Server communication
-│       └── launcher/       # Windows GUI launcher
+│       ├── core/           # Platform-independent logic (testable on Linux)
+│       │   ├── types.rs        # PlayerPosition, WarpInfo, etc.
+│       │   ├── traits.rs       # GameStateReader, WarpDetector, SpEffectChecker
+│       │   ├── constants.rs    # Animation IDs, entity ranges, offsets
+│       │   ├── entity_utils.rs # is_fog_rando_entity, get_teleport_type
+│       │   ├── map_utils.rs    # format_map_id, parse_map_id
+│       │   └── warp_tracker.rs # Warp detection state machine
+│       ├── eldenring/      # Elden Ring memory reading (Windows-only)
+│       │   ├── game_state.rs   # Player position, animation
+│       │   ├── game_man.rs     # Warp detection via GameMan
+│       │   └── sp_effect.rs    # SpEffect reading
+│       ├── dll/            # DLL mod implementation (Windows-only)
+│       │   ├── tracker.rs      # Main tracker logic
+│       │   ├── ui.rs           # ImGui overlay
+│       │   ├── config.rs       # TOML configuration
+│       │   └── websocket.rs    # Server communication
+│       ├── launcher/       # Windows GUI launcher
+│       └── lib.rs          # DLL entry point (hudhook)
 ├── docs/                   # Architecture documentation
 │   └── specs/              # Original design specs
 ├── analysis/               # CLI analysis scripts (not tests)
@@ -108,6 +121,22 @@ Undiscover Zone B
   → Undiscover any zones not in reachable set
 ```
 
+### Mod Architecture (Rust)
+The mod uses a layered architecture for testability:
+- **core/**: Pure logic, no Windows dependencies, testable on Linux
+- **eldenring/**: Memory reading via libeldenring (Windows-only)
+- **dll/**: DLL entry point, UI, config (Windows-only)
+
+Traits in `core/traits.rs` abstract the platform:
+```rust
+pub trait GameStateReader {
+    fn read_position(&self) -> Option<PlayerPosition>;
+    fn read_animation(&self) -> Option<u32>;
+}
+```
+
+Implementations in `eldenring/` satisfy these traits. Tests in `core/` use mocks.
+
 ## Common Tasks
 
 ### Adding a new API endpoint
@@ -116,9 +145,10 @@ Undiscover Zone B
 3. Update `docs/PROTOCOL.md`
 
 ### Adding a new teleport type (mod)
-1. Add variant to `TeleportType` enum in `game_state.rs`
-2. Add detection logic in `tracker.rs`
-3. Update `docs/MOD_INTERNALS.md`
+1. Add constant in `mod/src/core/constants.rs`
+2. Add case in `get_teleport_type()` in `mod/src/core/entity_utils.rs`
+3. Add test in `mod/src/core/entity_utils.rs`
+4. Update `docs/MOD_INTERNALS.md`
 
 ### Database migration
 ```bash
@@ -128,12 +158,23 @@ alembic upgrade head               # Apply
 ```
 
 ### Running tests
+
+**Server (Python):**
 ```bash
 cd server
 pytest                              # Run unit tests
-pytest --cov=fogtracker tests/unit    # With coverage
+pytest --cov=fogtracker tests/unit  # With coverage
 pytest --run-integration            # Integration tests (requires running server)
 ```
+
+**Mod (Rust):**
+```bash
+cd mod
+cargo test                          # Run all tests (works on Linux!)
+cargo test --lib -- --nocapture     # With output
+```
+
+The mod's `core/` module is platform-independent - tests run on Linux without Windows dependencies.
 
 ### Fixing zone resolution issues
 

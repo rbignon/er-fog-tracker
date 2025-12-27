@@ -14,8 +14,9 @@ use tracing::{debug, error, info, trace, warn};
 use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{connect, Message, WebSocket};
 
-use crate::config::ServerSettings;
-use crate::game_state::format_map_id;
+use crate::core::map_utils::format_map_id;
+
+use super::config::ServerSettings;
 
 // =============================================================================
 // TYPES

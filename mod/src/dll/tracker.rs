@@ -6,59 +6,20 @@ use std::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 use windows::Win32::Foundation::HINSTANCE;
 
-use crate::config::Config;
-use crate::game_state::{
-    GameManReader, GameState, PlayerPosition, SpEffectDebugInfo, SpEffectReader,
-};
-use crate::websocket::{
+use crate::core::constants::WARP_TIMEOUT;
+use crate::core::entity_utils::{get_animation_label, get_teleport_type, is_fog_rando_entity};
+use crate::core::traits::{GameStateReader, SpEffectChecker, WarpDetector};
+use crate::core::types::{PlayerPosition, SpEffectDebugInfo};
+use crate::eldenring::{GameMan, GameState, SpEffect};
+
+use super::config::Config;
+use super::websocket::{
     ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient,
 };
 
 // =============================================================================
-// TELEPORT ANIMATION IDS
-// =============================================================================
-
-/// Known teleportation animation IDs
-const ANIM_FOG_WALL: u32 = 60060;
-const ANIM_BACK_TO_ENTRANCE: u32 = 60460;
-const ANIM_WAYGATE: u32 = 60490;
-const ANIM_SENDING_GATE_BLUE: u32 = 60470;
-const ANIM_SENDING_GATE_RED: u32 = 60472;
-const ANIM_MEDAL: u32 = 50340;
-const ANIM_HORNED_REMAINS: u32 = 60010;
-const ANIM_LIURNIA_TOWER_DOOR: u32 = 12202126;
-const ANIM_POST_BOSS_WARP: u32 = 12020210;
-
-/// Check if an animation ID corresponds to a teleportation and return its name
-fn get_teleport_type(anim_id: u32) -> Option<&'static str> {
-    match anim_id {
-        ANIM_FOG_WALL => Some("FOG"),
-        ANIM_BACK_TO_ENTRANCE => Some("BACK_TO_ENTRANCE"),
-        ANIM_WAYGATE => Some("WAYGATE"),
-        ANIM_SENDING_GATE_BLUE | ANIM_SENDING_GATE_RED => Some("SENDING_GATE"),
-        ANIM_MEDAL => Some("MEDAL"),
-        ANIM_HORNED_REMAINS => Some("HORNED_REMAINS"),
-        ANIM_LIURNIA_TOWER_DOOR => Some("LIURNIA_TOWER_DOOR"),
-        ANIM_POST_BOSS_WARP => Some("POST_BOSS_WARP"),
-        _ => None,
-    }
-}
-
-/// Fog Gate Randomizer generates sequential entity IDs in this range
-const FOG_RANDO_ENTITY_MIN: u32 = 755890000;
-const FOG_RANDO_ENTITY_MAX: u32 = 755899999;
-
-/// Check if an entity ID is from Fog Gate Randomizer
-fn is_fog_rando_entity(entity_id: u32) -> bool {
-    entity_id >= FOG_RANDO_ENTITY_MIN && entity_id <= FOG_RANDO_ENTITY_MAX
-}
-
-// =============================================================================
 // PENDING WARP
 // =============================================================================
-
-/// Maximum time a pending warp can stay unresolved before being discarded
-const WARP_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Pending warp event (entry position recorded, waiting for exit)
 #[derive(Clone, Debug)]
@@ -79,8 +40,8 @@ pub(crate) struct PendingWarp {
 /// Fog gate traversal tracking state
 pub struct FogRandoTracker {
     game_state: GameState,
-    sp_effect_reader: SpEffectReader,
-    game_man_reader: GameManReader,
+    sp_effect: SpEffect,
+    game_man: GameMan,
     /// Pending fog rando warp (entry recorded, waiting for exit)
     pending_warp: Option<PendingWarp>,
     /// Whether we were in a teleport animation last frame
@@ -146,10 +107,10 @@ impl FogRandoTracker {
         game_state.wait_for_game_loaded();
 
         // Initialize SpEffect reader for teleporter detection
-        let sp_effect_reader = SpEffectReader::new(game_state.base_addresses());
+        let sp_effect = SpEffect::new(game_state.base_addresses());
 
         // Initialize GameMan reader for warp detection
-        let game_man_reader = GameManReader::new(game_state.base_addresses());
+        let game_man = GameMan::new(game_state.base_addresses());
 
         info!("FogRandoTracker initialized!");
 
@@ -170,8 +131,8 @@ impl FogRandoTracker {
 
         Some(Self {
             game_state,
-            sp_effect_reader,
-            game_man_reader,
+            sp_effect,
+            game_man,
             pending_warp: None,
             was_in_teleport_anim: false,
             show_ui: true,
@@ -286,7 +247,7 @@ impl FogRandoTracker {
         // Capture dest_entity_id when available (happens after animation start for fog gates)
         if let Some(ref mut pending) = self.pending_warp {
             if pending.destination_entity_id == 0 {
-                let dest_entity_id = self.game_man_reader.get_destination_entity_id();
+                let dest_entity_id = self.game_man.get_destination_entity_id();
                 if dest_entity_id != 0 {
                     pending.destination_entity_id = dest_entity_id;
                     debug!(dest_entity_id, "[WARP] Captured destination entity ID");
@@ -465,15 +426,15 @@ impl FogRandoTracker {
 
     /// Get SpEffect debug info for the debug UI section
     pub fn get_speffect_debug(&self) -> SpEffectDebugInfo {
-        self.sp_effect_reader.get_debug_info()
+        self.sp_effect.get_debug_info()
     }
 
     /// Log GameMan warp state changes (with deduplication)
     fn log_warp_debug(&mut self) {
-        let warp_requested = self.game_man_reader.is_warp_requested();
+        let warp_requested = self.game_man.is_warp_requested();
 
         if warp_requested != self.last_logged_warp_requested {
-            let warp_info = self.game_man_reader.get_warp_info();
+            let warp_info = self.game_man.get_warp_info();
             if warp_requested {
                 let dest_entity = warp_info
                     .as_ref()
@@ -530,22 +491,7 @@ impl FogRandoTracker {
         if anim_changed || heartbeat_due {
             match cur_anim {
                 Some(anim_id) => {
-                    // Highlight known animations
-                    let label = match anim_id {
-                        60060 => "FOG_WALL",
-                        60460 => "BACK_TO_ENTRANCE",
-                        60490 => "WAYGATE",
-                        60470 => "SENDING_GATE_BLUE",
-                        60472 => "SENDING_GATE_RED",
-                        50340 => "ITEM_USE_MEDAL",
-                        50230 => "ITEM_USE_MEMORY",
-                        60010 => "HORNED_REMAINS",
-                        12202126 => "LIURNIA_TOWER_DOOR",
-                        12020210 => "POST_BOSS_WARP",
-                        63000 => "SPAWN",
-                        0 => "IDLE?",
-                        _ => "",
-                    };
+                    let label = get_animation_label(anim_id);
                     debug!(anim_id, label, "[ANIM] cur_anim");
                 }
                 None => debug!("[ANIM] cur_anim: None (loading?)"),
@@ -558,7 +504,7 @@ impl FogRandoTracker {
     /// Log SpEffect debug info (with deduplication)
     /// Only logs when state changes or every 5 seconds as a heartbeat
     fn log_speffect_debug(&mut self) {
-        let dbg = self.sp_effect_reader.get_debug_info();
+        let dbg = self.sp_effect.get_debug_info();
         let current_state = (dbg.has_teleport_effect, dbg.active_effects.clone());
 
         // Check if state changed or 5 seconds elapsed

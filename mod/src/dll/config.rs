@@ -7,7 +7,7 @@ use tracing::{debug, error, info};
 use windows::Win32::Foundation::HINSTANCE;
 use windows::Win32::System::LibraryLoader::GetModuleFileNameW;
 
-use crate::hotkey::Hotkey;
+use super::hotkey::Hotkey;
 
 // =============================================================================
 // CONFIGURATION STRUCTURES

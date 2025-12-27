@@ -4,9 +4,10 @@ use hudhook::imgui::{Condition, FontConfig, FontGlyphRanges, FontSource, StyleCo
 use hudhook::{ImguiRenderLoop, RenderContext};
 use tracing::{debug, info};
 
-use crate::config::parse_hex_color;
-use crate::tracker::FogRandoTracker;
-use crate::websocket::ConnectionStatus;
+use crate::core::color::parse_hex_color;
+
+use super::tracker::FogRandoTracker;
+use super::websocket::ConnectionStatus;
 
 // =============================================================================
 // HUDHOOK IMPLEMENTATION

@@ -40,6 +40,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-mod-
 
+      - name: Run tests
+        run: cargo test --lib
+
       - name: Build release (DLL + Launcher)
         run: cargo build --release --features launcher
 
