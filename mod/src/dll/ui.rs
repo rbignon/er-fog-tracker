@@ -1,15 +1,18 @@
 // UI Rendering - ImGui overlay implementation
 
-use hudhook::imgui::{Condition, FontConfig, FontGlyphRanges, FontSource, StyleColor, WindowFlags};
+use hudhook::imgui::{
+    Condition, FontConfig, FontGlyphRanges, FontSource, Image, StyleColor, WindowFlags,
+};
 use hudhook::{ImguiRenderLoop, RenderContext};
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::core::color::parse_hex_color;
 use crate::core::map_utils::format_map_id;
 use crate::core::status_template::{
-    render_template, LineSegment, NamedColor, TemplateColor, TemplateContext, TextSpan,
+    render_template, ContentSpan, NamedColor, TemplateColor, TemplateContext,
 };
 
+use super::rune_icons::RuneTextures;
 use super::tracker::FogRandoTracker;
 use super::websocket::ConnectionStatus;
 
@@ -21,7 +24,7 @@ impl ImguiRenderLoop for FogRandoTracker {
     fn initialize<'a>(
         &'a mut self,
         ctx: &mut hudhook::imgui::Context,
-        _render_context: &'a mut dyn RenderContext,
+        render_context: &'a mut dyn RenderContext,
     ) {
         // Load custom font if data was pre-loaded
         if let Some(ref font_data) = self.font_data {
@@ -50,6 +53,17 @@ impl ImguiRenderLoop for FogRandoTracker {
             info!(size = font_size, "Custom font registered with imgui");
         } else {
             info!("Using default imgui font");
+        }
+
+        // Load rune icon textures
+        match RuneTextures::load(render_context) {
+            Ok(textures) => {
+                info!("Loaded 14 rune icon textures (7 colored + 7 gray)");
+                self.rune_textures = Some(textures);
+            }
+            Err(e) => {
+                error!(error = %e, "Failed to load rune textures");
+            }
         }
     }
 
@@ -174,41 +188,96 @@ impl FogRandoTracker {
             let right_spans = line.right_spans();
 
             // Render left part
-            self.render_spans(ui, left_spans);
+            self.render_content_spans(ui, left_spans);
 
             // Render right part if present
             if let Some(spans) = right_spans {
                 // Calculate width for right alignment
-                let right_text: String = spans.iter().map(|s| s.text.as_str()).collect();
-                let right_width = ui.calc_text_size(&right_text)[0];
+                let right_width = self.calculate_spans_width(ui, spans);
 
                 ui.same_line_with_pos(max_width - right_width);
-                self.render_spans(ui, spans);
+                self.render_content_spans(ui, spans);
             }
         }
     }
 
-    /// Render a sequence of text spans with their respective colors
-    fn render_spans(&self, ui: &hudhook::imgui::Ui, spans: &[TextSpan]) {
+    /// Calculate the total width of content spans (text + icons)
+    fn calculate_spans_width(&self, ui: &hudhook::imgui::Ui, spans: &[ContentSpan]) -> f32 {
+        let icon_size = self.config.overlay.font_size;
+        let icon_spacing = 2.0;
+
+        spans
+            .iter()
+            .map(|span| match span {
+                ContentSpan::Text(text_span) => ui.calc_text_size(&text_span.text)[0],
+                ContentSpan::RuneIcons => {
+                    // 7 icons + 6 spaces between them
+                    7.0 * icon_size + 6.0 * icon_spacing
+                }
+            })
+            .sum()
+    }
+
+    /// Render a sequence of content spans (text and images)
+    fn render_content_spans(&self, ui: &hudhook::imgui::Ui, spans: &[ContentSpan]) {
         let mut first = true;
 
         for span in spans {
-            if span.text.is_empty() {
-                continue;
-            }
+            match span {
+                ContentSpan::Text(text_span) => {
+                    if text_span.text.is_empty() {
+                        continue;
+                    }
 
-            if !first {
-                ui.same_line_with_spacing(0.0, 0.0);
-            }
-            first = false;
+                    if !first {
+                        ui.same_line_with_spacing(0.0, 0.0);
+                    }
+                    first = false;
 
-            let color = self.resolve_template_color(&span.color);
-            ui.text_colored(color, &span.text);
+                    let color = self.resolve_template_color(&text_span.color);
+                    ui.text_colored(color, &text_span.text);
+                }
+                ContentSpan::RuneIcons => {
+                    if !first {
+                        ui.same_line_with_spacing(0.0, 0.0);
+                    }
+                    first = false;
+
+                    self.render_rune_icons(ui);
+                }
+            }
         }
 
         // Handle empty case (need to output something for line to register)
         if first {
             ui.text("");
+        }
+    }
+
+    /// Render the 7 Great Rune icons
+    fn render_rune_icons(&self, ui: &hudhook::imgui::Ui) {
+        let Some(ref textures) = self.rune_textures else {
+            // Fallback: show text placeholder if textures not loaded
+            ui.text_disabled("[runes]");
+            return;
+        };
+
+        let possessed = self.read_great_runes();
+        let icon_size = self.config.overlay.font_size;
+
+        let mut first_icon = true;
+
+        for rune in RuneTextures::runes_in_order() {
+            let is_possessed = possessed.as_ref().is_some_and(|set| set.contains(&rune));
+
+            if let Some(texture_id) = textures.get_texture(rune, is_possessed) {
+                if !first_icon {
+                    ui.same_line_with_spacing(0.0, 2.0); // 2px spacing between icons
+                }
+                first_icon = false;
+
+                Image::new(texture_id, [icon_size, icon_size]).build(ui);
+            }
         }
     }
 

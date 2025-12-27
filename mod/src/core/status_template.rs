@@ -5,7 +5,7 @@
 //! # Template syntax
 //!
 //! - Variables: `{zone}`, `{discovered}`, `{total}`, `{progress}`, `{status}`, `{map}`,
-//!   `{deaths}`, `{igt}`, `{runes}`, `{kindling}`
+//!   `{deaths}`, `{igt}`, `{runes}`, `{kindling}`, `{rune_icons}`
 //! - Colors: `{variable:color}` where color is a name or hex code
 //!   - Named colors: `red`, `green`, `blue`, `yellow`, `orange`, `cyan`, `magenta`, `gray`, `white`
 //!   - Hex colors: `#RRGGBB` (e.g., `#FF0000` for red)
@@ -139,6 +139,30 @@ pub struct TextSpan {
     pub color: TemplateColor,
 }
 
+/// A content span that can be either text or special content (like rune icons)
+#[derive(Debug, Clone, PartialEq)]
+pub enum ContentSpan {
+    /// Text span with optional color
+    Text(TextSpan),
+    /// Rune icons placeholder (UI layer handles actual rendering)
+    RuneIcons,
+}
+
+impl ContentSpan {
+    /// Create a text content span
+    pub fn text(text: String, color: TemplateColor) -> Self {
+        Self::Text(TextSpan { text, color })
+    }
+
+    /// Check if this is a text span
+    pub fn as_text(&self) -> Option<&TextSpan> {
+        match self {
+            Self::Text(span) => Some(span),
+            _ => None,
+        }
+    }
+}
+
 /// Context for template variable substitution
 #[derive(Debug, Clone)]
 pub struct TemplateContext {
@@ -184,13 +208,13 @@ impl Default for TemplateContext {
     }
 }
 
-/// A segment of rendered text within a line
+/// A segment of rendered content within a line
 #[derive(Debug, Clone, PartialEq)]
 pub enum LineSegment {
-    /// Text aligned to the left
-    Left(Vec<TextSpan>),
-    /// Text aligned to the right (content after `$>`)
-    Right(Vec<TextSpan>),
+    /// Content aligned to the left
+    Left(Vec<ContentSpan>),
+    /// Content aligned to the right (content after `$>`)
+    Right(Vec<ContentSpan>),
 }
 
 /// A single rendered line
@@ -201,29 +225,29 @@ pub struct RenderedLine {
 
 impl RenderedLine {
     /// Create a line with only left-aligned content
-    pub fn left_only(spans: Vec<TextSpan>) -> Self {
+    pub fn left_only(spans: Vec<ContentSpan>) -> Self {
         Self {
             segments: vec![LineSegment::Left(spans)],
         }
     }
 
     /// Create a line with left and right aligned content
-    pub fn left_right(left: Vec<TextSpan>, right: Vec<TextSpan>) -> Self {
+    pub fn left_right(left: Vec<ContentSpan>, right: Vec<ContentSpan>) -> Self {
         Self {
             segments: vec![LineSegment::Left(left), LineSegment::Right(right)],
         }
     }
 
-    /// Get the left-aligned spans (if any)
-    pub fn left_spans(&self) -> Option<&[TextSpan]> {
+    /// Get the left-aligned content spans (if any)
+    pub fn left_spans(&self) -> Option<&[ContentSpan]> {
         self.segments.iter().find_map(|s| match s {
             LineSegment::Left(spans) => Some(spans.as_slice()),
             _ => None,
         })
     }
 
-    /// Get the right-aligned spans (if any)
-    pub fn right_spans(&self) -> Option<&[TextSpan]> {
+    /// Get the right-aligned content spans (if any)
+    pub fn right_spans(&self) -> Option<&[ContentSpan]> {
         self.segments.iter().find_map(|s| match s {
             LineSegment::Right(spans) => Some(spans.as_slice()),
             _ => None,
@@ -231,15 +255,27 @@ impl RenderedLine {
     }
 
     /// Get the left-aligned text as a plain string (for compatibility)
+    ///
+    /// Note: This only includes text spans, not special content like rune icons.
     pub fn left_text(&self) -> Option<String> {
-        self.left_spans()
-            .map(|spans| spans.iter().map(|s| s.text.as_str()).collect())
+        self.left_spans().map(|spans| {
+            spans
+                .iter()
+                .filter_map(|s| s.as_text().map(|t| t.text.as_str()))
+                .collect()
+        })
     }
 
     /// Get the right-aligned text as a plain string (for compatibility)
+    ///
+    /// Note: This only includes text spans, not special content like rune icons.
     pub fn right_text(&self) -> Option<String> {
-        self.right_spans()
-            .map(|spans| spans.iter().map(|s| s.text.as_str()).collect())
+        self.right_spans().map(|spans| {
+            spans
+                .iter()
+                .filter_map(|s| s.as_text().map(|t| t.text.as_str()))
+                .collect()
+        })
     }
 }
 
@@ -329,13 +365,13 @@ fn get_variable_value(name: &str, ctx: &TemplateContext) -> Option<String> {
     }
 }
 
-/// Substitute variables in a template string, returning colored spans
+/// Substitute variables in a template string, returning content spans
 fn substitute_variables(
     template: &str,
     ctx: &TemplateContext,
     has_status: &mut bool,
-) -> Vec<TextSpan> {
-    let mut spans: Vec<TextSpan> = Vec::new();
+) -> Vec<ContentSpan> {
+    let mut spans: Vec<ContentSpan> = Vec::new();
     let mut literal_start = 0;
     let chars: Vec<char> = template.chars().collect();
     let mut i = 0;
@@ -350,10 +386,7 @@ fn substitute_variables(
                 if i > literal_start {
                     let literal: String = chars[literal_start..i].iter().collect();
                     if !literal.is_empty() {
-                        spans.push(TextSpan {
-                            text: literal,
-                            color: TemplateColor::Default,
-                        });
+                        spans.push(ContentSpan::text(literal, TemplateColor::Default));
                     }
                 }
 
@@ -372,23 +405,19 @@ fn substitute_variables(
                 if var_name == "status" {
                     if ctx.server_enabled {
                         *has_status = true;
-                        spans.push(TextSpan {
-                            text: "●".to_string(),
-                            color: TemplateColor::Status,
-                        });
+                        spans.push(ContentSpan::text("●".to_string(), TemplateColor::Status));
                     }
                     // If server disabled, status is empty - no span added
+                } else if var_name == "rune_icons" {
+                    spans.push(ContentSpan::RuneIcons);
                 } else if let Some(value) = get_variable_value(&var_name, ctx) {
                     if !value.is_empty() {
-                        spans.push(TextSpan { text: value, color });
+                        spans.push(ContentSpan::text(value, color));
                     }
                 } else {
                     // Unknown variable - keep it as literal
                     let unknown: String = chars[i..=end].iter().collect();
-                    spans.push(TextSpan {
-                        text: unknown,
-                        color: TemplateColor::Default,
-                    });
+                    spans.push(ContentSpan::text(unknown, TemplateColor::Default));
                 }
 
                 literal_start = end + 1;
@@ -403,19 +432,13 @@ fn substitute_variables(
     if literal_start < chars.len() {
         let literal: String = chars[literal_start..].iter().collect();
         if !literal.is_empty() {
-            spans.push(TextSpan {
-                text: literal,
-                color: TemplateColor::Default,
-            });
+            spans.push(ContentSpan::text(literal, TemplateColor::Default));
         }
     }
 
     // If no spans were created, add an empty one
     if spans.is_empty() {
-        spans.push(TextSpan {
-            text: String::new(),
-            color: TemplateColor::Default,
-        });
+        spans.push(ContentSpan::text(String::new(), TemplateColor::Default));
     }
 
     spans
@@ -790,12 +813,15 @@ mod tests {
 
         // Should have 3 spans: "before ", "●", " after"
         assert_eq!(spans.len(), 3);
-        assert_eq!(spans[0].text, "before ");
-        assert_eq!(spans[0].color, TemplateColor::Default);
-        assert_eq!(spans[1].text, "●");
-        assert_eq!(spans[1].color, TemplateColor::Status);
-        assert_eq!(spans[2].text, " after");
-        assert_eq!(spans[2].color, TemplateColor::Default);
+        let s0 = spans[0].as_text().unwrap();
+        let s1 = spans[1].as_text().unwrap();
+        let s2 = spans[2].as_text().unwrap();
+        assert_eq!(s0.text, "before ");
+        assert_eq!(s0.color, TemplateColor::Default);
+        assert_eq!(s1.text, "●");
+        assert_eq!(s1.color, TemplateColor::Status);
+        assert_eq!(s2.text, " after");
+        assert_eq!(s2.color, TemplateColor::Default);
     }
 
     #[test]
@@ -822,9 +848,11 @@ mod tests {
         let right_spans = result.lines[0].right_spans().unwrap();
         // Should be: "●", " ", "42", "/", "100"
         // Actually: "●" (Status), " " (Default), "42" (Default), "/" (Default), "100" (Default)
-        assert!(right_spans
-            .iter()
-            .any(|s| s.text == "●" && s.color == TemplateColor::Status));
+        assert!(right_spans.iter().any(|s| {
+            s.as_text()
+                .map(|t| t.text == "●" && t.color == TemplateColor::Status)
+                .unwrap_or(false)
+        }));
         let right_text = result.lines[0].right_text().unwrap();
         assert!(right_text.contains("42/100"));
     }
@@ -965,8 +993,9 @@ mod tests {
         let spans = result.lines[0].left_spans().unwrap();
 
         assert_eq!(spans.len(), 1);
-        assert_eq!(spans[0].text, "Limgrave");
-        assert_eq!(spans[0].color, TemplateColor::Named(NamedColor::Blue));
+        let s = spans[0].as_text().unwrap();
+        assert_eq!(s.text, "Limgrave");
+        assert_eq!(s.color, TemplateColor::Named(NamedColor::Blue));
     }
 
     #[test]
@@ -976,8 +1005,9 @@ mod tests {
         let spans = result.lines[0].left_spans().unwrap();
 
         assert_eq!(spans.len(), 1);
-        assert_eq!(spans[0].text, "Limgrave");
-        assert_eq!(spans[0].color, TemplateColor::Hex("#FF0000".to_string()));
+        let s = spans[0].as_text().unwrap();
+        assert_eq!(s.text, "Limgrave");
+        assert_eq!(s.color, TemplateColor::Hex("#FF0000".to_string()));
     }
 
     #[test]
@@ -987,8 +1017,9 @@ mod tests {
         let spans = result.lines[0].left_spans().unwrap();
 
         assert_eq!(spans.len(), 1);
-        assert_eq!(spans[0].text, "Limgrave");
-        assert_eq!(spans[0].color, TemplateColor::Discovered);
+        let s = spans[0].as_text().unwrap();
+        assert_eq!(s.text, "Limgrave");
+        assert_eq!(s.color, TemplateColor::Discovered);
     }
 
     #[test]
@@ -998,15 +1029,21 @@ mod tests {
         let spans = result.lines[0].left_spans().unwrap();
 
         // Should have: "Limgrave" (blue), " - " (default), "42" (green), "/" (default), "100" (default)
-        assert!(spans
-            .iter()
-            .any(|s| s.text == "Limgrave" && s.color == TemplateColor::Named(NamedColor::Blue)));
-        assert!(spans
-            .iter()
-            .any(|s| s.text == "42" && s.color == TemplateColor::Named(NamedColor::Green)));
-        assert!(spans
-            .iter()
-            .any(|s| s.text == "100" && s.color == TemplateColor::Default));
+        assert!(spans.iter().any(|s| {
+            s.as_text()
+                .map(|t| t.text == "Limgrave" && t.color == TemplateColor::Named(NamedColor::Blue))
+                .unwrap_or(false)
+        }));
+        assert!(spans.iter().any(|s| {
+            s.as_text()
+                .map(|t| t.text == "42" && t.color == TemplateColor::Named(NamedColor::Green))
+                .unwrap_or(false)
+        }));
+        assert!(spans.iter().any(|s| {
+            s.as_text()
+                .map(|t| t.text == "100" && t.color == TemplateColor::Default)
+                .unwrap_or(false)
+        }));
     }
 
     #[test]
@@ -1016,8 +1053,48 @@ mod tests {
         let spans = result.lines[0].left_spans().unwrap();
 
         assert_eq!(spans.len(), 1);
-        assert_eq!(spans[0].text, "Limgrave");
-        assert_eq!(spans[0].color, TemplateColor::Default);
+        let s = spans[0].as_text().unwrap();
+        assert_eq!(s.text, "Limgrave");
+        assert_eq!(s.color, TemplateColor::Default);
+    }
+
+    // -------------------------------------------------------------------------
+    // Rune icons tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_rune_icons_produces_marker() {
+        let ctx = default_ctx();
+        let result = render_template("{rune_icons}", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0], ContentSpan::RuneIcons);
+    }
+
+    #[test]
+    fn test_rune_icons_with_text() {
+        let ctx = default_ctx();
+        let result = render_template("Runes: {rune_icons} done", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        // Should have: "Runes: ", RuneIcons, " done"
+        assert_eq!(spans.len(), 3);
+        assert_eq!(spans[0].as_text().unwrap().text, "Runes: ");
+        assert_eq!(spans[1], ContentSpan::RuneIcons);
+        assert_eq!(spans[2].as_text().unwrap().text, " done");
+    }
+
+    #[test]
+    fn test_rune_icons_not_in_text_output() {
+        let ctx = default_ctx();
+        let result = render_template("Before {rune_icons} After", &ctx);
+
+        // left_text() should skip RuneIcons and only return text
+        assert_eq!(
+            result.lines[0].left_text().as_deref(),
+            Some("Before  After")
+        );
     }
 
     #[test]

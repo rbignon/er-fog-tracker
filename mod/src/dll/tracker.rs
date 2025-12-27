@@ -6,12 +6,14 @@
 //! - Server communication (via WebSocket adapter)
 //! - Debug logging and UI state
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use tracing::{debug, error, info, warn};
 use windows::Win32::Foundation::HINSTANCE;
 
+use crate::core::constants::GreatRune;
 use crate::core::entity_utils::{get_animation_label, get_teleport_type, is_fog_rando_entity};
 use crate::core::io_traits::{
     ConnectionStatus as CoreConnectionStatus, DiscoveryResult, DiscoverySender, ServerEvent,
@@ -25,6 +27,7 @@ use crate::core::warp_tracker::DiscoveryEvent;
 use crate::eldenring::{GameMan, GameState, SpEffect};
 
 use super::config::Config;
+use super::rune_icons::RuneTextures;
 use super::websocket::{ConnectionStatus as WsConnectionStatus, IncomingMessage, WebSocketClient};
 
 // =============================================================================
@@ -171,6 +174,9 @@ pub struct FogRandoTracker {
 
     // Debug: dump key items once to find Kindling param_id
     debug_items_dumped: bool,
+
+    // Rune icons textures (loaded in initialize())
+    pub(crate) rune_textures: Option<RuneTextures>,
 }
 
 impl FogRandoTracker {
@@ -246,6 +252,7 @@ impl FogRandoTracker {
             last_anim_log_time: Instant::now(),
             last_logged_warp_requested: false,
             debug_items_dumped: false,
+            rune_textures: None,
         })
     }
 
@@ -400,6 +407,11 @@ impl FogRandoTracker {
     /// Get the Great Runes count from game memory
     pub fn read_great_runes_count(&self) -> Option<u32> {
         self.game_state.read_great_runes_count()
+    }
+
+    /// Get the set of possessed Great Runes
+    pub fn read_great_runes(&self) -> Option<HashSet<GreatRune>> {
+        self.game_state.read_great_runes()
     }
 
     /// Get the Messmer's Kindling count from game memory

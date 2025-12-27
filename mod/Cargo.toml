@@ -24,6 +24,7 @@ required-features = ["launcher"]
 [dependencies]
 # --- Utilities ---
 num_enum = "0.7"
+image = { version = "0.25", default-features = false, features = ["png"] }
 once_cell = "1.19.0"
 parking_lot = "0.12.1"
 tracing = "0.1"

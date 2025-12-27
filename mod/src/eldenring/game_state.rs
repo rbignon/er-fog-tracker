@@ -71,11 +71,11 @@ impl GameState {
         self.pointers.igt.read().map(|v| v as u32)
     }
 
-    /// Read the count of possessed Great Runes
+    /// Read the set of possessed Great Runes
     ///
-    /// Returns the number of unique Great Runes (0-7).
+    /// Returns the set of unique Great Runes the player has.
     /// Restored and unrestored versions are deduplicated.
-    pub fn read_great_runes_count(&self) -> Option<u32> {
+    pub fn read_great_runes(&self) -> Option<HashSet<GreatRune>> {
         let (key_items_head, key_items_count) = self.read_key_items_info()?;
 
         let mut found_runes: HashSet<GreatRune> = HashSet::new();
@@ -98,7 +98,15 @@ impl GameState {
             }
         }
 
-        Some(found_runes.len() as u32)
+        Some(found_runes)
+    }
+
+    /// Read the count of possessed Great Runes
+    ///
+    /// Returns the number of unique Great Runes (0-7).
+    /// Restored and unrestored versions are deduplicated.
+    pub fn read_great_runes_count(&self) -> Option<u32> {
+        self.read_great_runes().map(|set| set.len() as u32)
     }
 
     /// Read the count of Messmer's Kindling

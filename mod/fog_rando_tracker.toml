@@ -103,6 +103,7 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   {deaths}     - Total death count for the character
 #   {igt}        - In-game time (format: H:MM:SS)
 #   {runes}      - Number of Great Runes possessed (0-7, deduplicated)
+#   {rune_icons} - Great Rune icons (colored if possessed, grayed if not)
 #   {kindling}   - Number of Messmer's Kindling items
 #
 # Colors (optional, add after variable name with colon):
@@ -125,6 +126,8 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   "{zone}$>{status} {discovered}/{total} | D:{deaths}" - With death counter
 #   "{zone}$>{igt} | {deaths}D"                          - With IGT and deaths
 #   "{zone}$>{runes}/7 | K:{kindling}"                   - With Great Runes and Kindling
+#   "{zone}$>{rune_icons}"                               - With Great Rune icons
+#   "{zone}$n{rune_icons} {discovered}/{total}"          - Two lines with rune icons
 #
 status_template = "{zone}$>{status} {discovered}/{total}"
 
