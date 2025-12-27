@@ -318,11 +318,26 @@ fn websocket_thread(
         let _ = incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Connecting));
 
         match connect_and_authenticate(&ws_url, &settings.mod_token) {
-            Ok(mut socket) => {
+            Ok((mut socket, initial_stats)) => {
                 info!("[WS] Connected and authenticated");
                 let _ =
                     incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Connected));
                 reconnect_delay = Duration::from_secs(1); // Reset on successful connect
+
+                // Send initial stats if provided by server
+                if let Some(stats) = initial_stats {
+                    debug!(
+                        discovered = stats.discovered,
+                        total = stats.total,
+                        "[WS] Initial stats from auth_ok"
+                    );
+                    let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
+                        propagated: vec![],
+                        current_zone: None,
+                        exits: vec![],
+                        stats,
+                    });
+                }
 
                 // Main message loop
                 let result = message_loop(&mut socket, &outgoing_rx, &incoming_tx, &shutdown_flag);
@@ -376,10 +391,12 @@ fn websocket_thread(
 }
 
 /// Connect to the WebSocket server and authenticate
+///
+/// Returns the socket and optional initial stats from auth_ok.
 fn connect_and_authenticate(
     url: &str,
     api_token: &str,
-) -> Result<WebSocket<MaybeTlsStream<TcpStream>>, String> {
+) -> Result<(WebSocket<MaybeTlsStream<TcpStream>>, Option<DiscoveryStats>), String> {
     // tungstenite handles TLS automatically for wss:// URLs
     debug!(url, "[WS] Opening socket");
     let (mut socket, _response) = connect(url).map_err(|e| format!("Connection failed: {}", e))?;
@@ -405,9 +422,9 @@ fn connect_and_authenticate(
                 serde_json::from_str(&text).map_err(|e| format!("JSON parse error: {}", e))?;
 
             match resp {
-                ServerResponse::AuthOk => {
+                ServerResponse::AuthOk { stats } => {
                     info!("[WS] Auth successful");
-                    Ok(socket)
+                    Ok((socket, stats))
                 }
                 ServerResponse::AuthError { message } => {
                     error!(message = %message, "[WS] Auth failed");

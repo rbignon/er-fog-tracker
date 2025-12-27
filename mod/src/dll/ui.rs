@@ -108,10 +108,11 @@ impl ImguiRenderLoop for FogRandoTracker {
             .position([dw - 350.0 * scale, 20.0], Condition::FirstUseEver)
             .flags(window_flags)
             .build(|| {
-                // Enable text wrapping at max_width (token auto-pops when dropped)
-                let _wrap = ui.push_text_wrap_pos_with_pos(max_width);
+                // Header: no text wrap (user controls line breaks with $n)
                 self.render_header(ui, max_width);
                 ui.separator();
+                // Enable text wrapping for the rest of the content
+                let _wrap = ui.push_text_wrap_pos_with_pos(max_width);
                 if self.show_debug {
                     self.render_debug_section(ui);
                     ui.separator();

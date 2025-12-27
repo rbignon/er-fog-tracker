@@ -658,7 +658,8 @@ class ModClient(Client):
 
         # Auth requires a DB session
         async with async_session() as db:
-            user = await authenticate_ws(websocket, db)
+            # Don't send auth_ok yet - we'll include stats after loading the game
+            user = await authenticate_ws(websocket, db, send_auth_ok=False)
             if not user:
                 logger.warning("[MOD] Authentication failed for game %s", game_id)
                 await websocket.close()
@@ -674,6 +675,15 @@ class ModClient(Client):
                 return
 
             logger.info("[MOD] Game access verified: %s (seed=%s)", game.label, game.seed)
+
+            # Compute stats and send auth_ok with stats
+            stats = compute_discovery_stats(game.zone_links or [], game.discovered_zone_links or [])
+            await websocket.send_json(
+                {
+                    "type": "auth_ok",
+                    "stats": {"discovered": stats["discovered"], "total": stats["total"]},
+                }
+            )
 
         # Register in room
         room = manager.get_or_create_room(game_id)

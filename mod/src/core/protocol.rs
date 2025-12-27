@@ -94,8 +94,11 @@ pub enum ServerMessage {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ServerResponse {
-    /// Authentication successful
-    AuthOk,
+    /// Authentication successful (with optional stats)
+    AuthOk {
+        #[serde(default)]
+        stats: Option<DiscoveryStats>,
+    },
     /// Authentication failed
     AuthError { message: String },
     /// Discovery acknowledged (V2 protocol)
@@ -267,9 +270,25 @@ mod tests {
 
     #[test]
     fn test_auth_ok_deserialize() {
+        // Without stats (backwards compatibility)
         let json = r#"{"type": "auth_ok"}"#;
         let resp: ServerResponse = serde_json::from_str(json).unwrap();
-        assert_eq!(resp, ServerResponse::AuthOk);
+        assert_eq!(resp, ServerResponse::AuthOk { stats: None });
+    }
+
+    #[test]
+    fn test_auth_ok_with_stats() {
+        let json = r#"{"type": "auth_ok", "stats": {"discovered": 42, "total": 100}}"#;
+        let resp: ServerResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            resp,
+            ServerResponse::AuthOk {
+                stats: Some(DiscoveryStats {
+                    discovered: 42,
+                    total: 100
+                })
+            }
+        );
     }
 
     #[test]
@@ -434,7 +453,13 @@ mod tests {
     #[test]
     fn test_server_response_roundtrip() {
         let responses = vec![
-            ServerResponse::AuthOk,
+            ServerResponse::AuthOk { stats: None },
+            ServerResponse::AuthOk {
+                stats: Some(DiscoveryStats {
+                    discovered: 10,
+                    total: 50,
+                }),
+            },
             ServerResponse::Ping,
             ServerResponse::AuthError {
                 message: "bad".to_string(),

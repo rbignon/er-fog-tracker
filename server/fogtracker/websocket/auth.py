@@ -18,8 +18,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def authenticate_ws(websocket: WebSocket, db: "AsyncSession") -> User | None:
-    """Wait for auth message and validate token."""
+async def authenticate_ws(
+    websocket: WebSocket, db: "AsyncSession", send_auth_ok: bool = True
+) -> User | None:
+    """Wait for auth message and validate token.
+
+    Args:
+        websocket: The WebSocket connection
+        db: Database session
+        send_auth_ok: If True, send auth_ok immediately. If False, caller is
+            responsible for sending auth_ok (useful when extra data needs to
+            be included, e.g., stats).
+    """
     try:
         logger.debug("[AUTH] Waiting for auth message...")
         data = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
@@ -47,7 +57,8 @@ async def authenticate_ws(websocket: WebSocket, db: "AsyncSession") -> User | No
             return None
 
         logger.info("[AUTH] Success for user %s", user.twitch_username)
-        await websocket.send_json({"type": "auth_ok"})
+        if send_auth_ok:
+            await websocket.send_json({"type": "auth_ok"})
         return user
 
     except TimeoutError:
