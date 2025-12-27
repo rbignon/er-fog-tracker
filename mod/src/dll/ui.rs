@@ -4,13 +4,13 @@ use hudhook::imgui::{
     Condition, FontConfig, FontGlyphRanges, FontSource, Image, StyleColor, WindowFlags,
 };
 use hudhook::{ImguiRenderLoop, RenderContext};
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 use crate::core::color::parse_hex_color;
 use crate::core::map_utils::format_map_id;
 use crate::core::status_template::{render_template, ContentSpan, TemplateColor, TemplateContext};
 
-use super::rune_icons::{DeathTexture, KindlingTexture, RuneTextures};
+use super::icon_atlas::IconAtlas;
 use super::tracker::FogRandoTracker;
 use super::websocket::ConnectionStatus;
 
@@ -53,35 +53,14 @@ impl ImguiRenderLoop for FogRandoTracker {
             info!("Using default imgui font");
         }
 
-        // Load death icon texture FIRST (testing order)
-        match DeathTexture::load(render_context) {
-            Ok(texture) => {
-                info!("Loaded death icon texture");
-                self.death_texture = Some(texture);
+        // Load icon atlas (single texture containing all icons)
+        match IconAtlas::load(render_context) {
+            Ok(atlas) => {
+                info!("Loaded icon atlas texture");
+                self.icon_atlas = Some(atlas);
             }
             Err(e) => {
-                error!(error = %e, "Failed to load death texture");
-            }
-        }
-
-        // Load rune icon textures
-        match RuneTextures::load(render_context) {
-            Ok(textures) => {
-                info!("Loaded 14 rune icon textures (7 colored + 7 gray)");
-                self.rune_textures = Some(textures);
-            }
-            Err(e) => {
-                error!(error = %e, "Failed to load rune textures");
-            }
-        }
-        // Load kindling icon texture
-        match KindlingTexture::load(render_context) {
-            Ok(texture) => {
-                info!("Loaded kindling icon texture");
-                self.kindling_texture = Some(texture);
-            }
-            Err(e) => {
-                error!(error = %e, "Failed to load kindling texture");
+                error!(error = %e, "Failed to load icon atlas");
             }
         }
     }
@@ -301,8 +280,8 @@ impl FogRandoTracker {
 
     /// Render the 7 Great Rune icons
     fn render_rune_icons(&self, ui: &hudhook::imgui::Ui) {
-        let Some(ref textures) = self.rune_textures else {
-            // Fallback: show text placeholder if textures not loaded
+        let Some(ref atlas) = self.icon_atlas else {
+            // Fallback: show text placeholder if atlas not loaded
             ui.text_disabled("[runes]");
             return;
         };
@@ -312,42 +291,49 @@ impl FogRandoTracker {
 
         let mut first_icon = true;
 
-        for rune in RuneTextures::runes_in_order() {
+        for rune in IconAtlas::runes_in_order() {
             let is_possessed = possessed.as_ref().is_some_and(|set| set.contains(&rune));
+            let (uv0, uv1) = atlas.get_rune_uvs(rune, is_possessed);
 
-            if let Some(texture_id) = textures.get_texture(rune, is_possessed) {
-                if !first_icon {
-                    ui.same_line_with_spacing(0.0, 2.0); // 2px spacing between icons
-                }
-                first_icon = false;
-
-                Image::new(texture_id, [icon_size, icon_size]).build(ui);
+            if !first_icon {
+                ui.same_line_with_spacing(0.0, 2.0); // 2px spacing between icons
             }
+            first_icon = false;
+
+            Image::new(atlas.texture_id(), [icon_size, icon_size])
+                .uv(uv0, uv1)
+                .build(ui);
         }
     }
 
     /// Render the Kindling icon
     fn render_kindling_icon(&self, ui: &hudhook::imgui::Ui) {
-        let Some(ref texture) = self.kindling_texture else {
-            // Fallback: show text placeholder if texture not loaded
+        let Some(ref atlas) = self.icon_atlas else {
+            // Fallback: show text placeholder if atlas not loaded
             ui.text_disabled("[K]");
             return;
         };
 
         let icon_size = self.icon_size();
-        Image::new(texture.texture_id(), [icon_size, icon_size]).build(ui);
+        let (uv0, uv1) = atlas.get_kindling_uvs();
+        Image::new(atlas.texture_id(), [icon_size, icon_size])
+            .uv(uv0, uv1)
+            .build(ui);
     }
 
     /// Render the Death icon
     fn render_death_icon(&self, ui: &hudhook::imgui::Ui) {
-        let Some(ref texture) = self.death_texture else {
-            // Fallback: show text placeholder if texture not loaded
+        let Some(ref atlas) = self.icon_atlas else {
+            // Fallback: show text placeholder if atlas not loaded
             ui.text_disabled("[D]");
             return;
         };
 
         let icon_size = self.icon_size();
-        Image::new(texture.texture_id(), [icon_size, icon_size]).build(ui);
+        let (uv0, uv1) = atlas.get_death_uvs();
+        Image::new(atlas.texture_id(), [icon_size, icon_size])
+            .uv(uv0, uv1)
+            .build(ui);
     }
 
     /// Resolve a TemplateColor to an RGBA value

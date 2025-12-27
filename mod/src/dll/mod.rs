@@ -10,8 +10,8 @@
 
 pub mod config;
 pub mod hotkey;
+pub mod icon_atlas;
 pub mod logging;
-pub mod rune_icons;
 pub mod tracker;
 pub mod ui;
 pub mod websocket;
