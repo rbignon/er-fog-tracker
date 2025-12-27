@@ -252,11 +252,32 @@ Client                              Server
    │                                   │
    │─── {"type": "auth", "token":...} ─▶│
    │                                   │
-   │◀─── {"type": "auth_ok"} ──────────│
+   │◀─── {"type": "auth_ok", ...} ─────│
    │         or                        │
    │◀─── {"type": "auth_error", ───────│
    │         "message": "..."}         │
 ```
+
+#### Mod `auth_ok` Response
+
+For mod connections (`/ws/mod/{game_id}`), the `auth_ok` response includes discovery stats:
+
+```json
+{
+  "type": "auth_ok",
+  "stats": {
+    "discovered": 15,
+    "total": 100
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `stats.discovered` | Number of discovered random links |
+| `stats.total` | Total number of random links |
+
+This allows the mod overlay to display accurate progress immediately on connection, without waiting for the first discovery event.
 
 ### Heartbeat
 
