@@ -533,9 +533,17 @@ class ModClient(Client):
             await db.commit()
 
             # Merge all discovery results into one for summary logging
-            merged_result = DiscoveryResult(
-                origin=all_discovery_results[0].origin if all_discovery_results else ""
-            )
+            # Find the result that actually discovered new links (has main_links)
+            # to use its origin for the merged result
+            primary_result = None
+            for dr in all_discovery_results:
+                if dr.main_links:
+                    primary_result = dr
+                    break
+            if not primary_result and all_discovery_results:
+                primary_result = all_discovery_results[0]
+
+            merged_result = DiscoveryResult(origin=primary_result.origin if primary_result else "")
             for dr in all_discovery_results:
                 merged_result.main_links.extend(dr.main_links)
                 merged_result.backprop_links.extend(dr.backprop_links)
@@ -552,10 +560,22 @@ class ModClient(Client):
             game = result.scalar_one_or_none()
 
             # Compute exits from the destination zone
+            # Use the link that actually discovered something new (from primary_result)
             exits = []
             destination_zone = None
             if resolved_links and game:
-                link = resolved_links[0]
+                # Find the link that corresponds to the primary discovery result
+                link = None
+                if primary_result and primary_result.main_links:
+                    # Match resolved_links to the one with the actual discovery
+                    main_target = primary_result.main_links[0].target
+                    for rl in resolved_links:
+                        if rl["target"] == main_target or rl["source"] == main_target:
+                            link = rl
+                            break
+                if not link:
+                    link = resolved_links[0]
+
                 target_display_names = {c[1] for c in target_candidates}
 
                 if link["target"] in target_display_names:

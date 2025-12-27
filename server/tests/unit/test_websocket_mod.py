@@ -977,6 +977,82 @@ class TestDiscoveryV2Handler:
         assert mock_propagate.call_count == 2
 
     @pytest.mark.asyncio
+    async def test_discovery_v2_destination_zone_from_actual_discovery(
+        self, mock_client, sample_zone_links, mock_manager
+    ):
+        """When multiple matches tie with cost 0 but only one discovers new links,
+        destination_zone should be from the one that actually discovered something.
+
+        This tests the fix for the bug where:
+        - Match 1: Erdtree Sanctuary -> Academy Main Entrance (already known)
+        - Match 2: Behind Erdtree Sanctuary -> Grand Library (new discovery)
+        The destination should be Grand Library, not Academy Main Entrance.
+        """
+        mock_game = self._make_mock_game(sample_zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("erdtree_sanctuary", "Erdtree Sanctuary"), ("behind_erdtree", "Behind Erdtree")],
+            [("main_entrance", "Main Entrance"), ("grand_library", "Grand Library")],
+        ]
+
+        # Multiple matches with same cost
+        all_matches = [
+            ("Erdtree Sanctuary", "Main Entrance", {"id": "link1"}),  # Already known
+            ("Behind Erdtree", "Grand Library", {"id": "link2"}),  # New discovery
+        ]
+
+        # First discovery result: already known (no main_links)
+        discovery_result_1 = DiscoveryResult(origin="Erdtree Sanctuary")
+        # main_links is empty because link was already discovered
+
+        # Second discovery result: new discovery (has main_links)
+        discovery_result_2 = DiscoveryResult(origin="Behind Erdtree")
+        discovery_result_2.main_links = [
+            DiscoveredLink("Behind Erdtree", "Grand Library", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
+                return_value=all_matches,
+            ),
+            patch(
+                "fogtracker.websocket.mod.compute_backprop_cost",
+                return_value=0,  # Same cost for all
+            ),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                side_effect=[discovery_result_1, discovery_result_2],
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 2, "total": 3, "percent": 66},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m11_00_00_00",
+                    "target_map_id": "m14_00_00_00",
+                    "source_pos": {"x": -109.9, "y": 32.2, "z": -387.6},
+                    "target_pos": {"x": 89.7, "y": 154.1, "z": -43.7},
+                }
+            )
+
+        call_args = mock_client.send.call_args[0][0]
+        # Should use the zone from the discovery that actually found new links
+        # (Grand Library from discovery_result_2, not Main Entrance from discovery_result_1)
+        assert call_args["current_zone"] == "Grand Library"
+
+    @pytest.mark.asyncio
     async def test_discovery_v2_ignores_unreachable_matches(
         self, mock_client, sample_zone_links, mock_manager
     ):
