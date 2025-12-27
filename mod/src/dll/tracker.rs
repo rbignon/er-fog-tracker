@@ -374,6 +374,16 @@ impl FogRandoTracker {
         self.sp_effect.get_debug_info()
     }
 
+    /// Get the death count from game memory
+    pub fn read_deaths(&self) -> Option<u32> {
+        self.game_state.read_deaths()
+    }
+
+    /// Get the in-game time from game memory (in milliseconds)
+    pub fn read_igt(&self) -> Option<u32> {
+        self.game_state.read_igt()
+    }
+
     /// Log GameMan warp state changes (with deduplication)
     fn log_warp_debug(&mut self) {
         let warp_requested = self.game_man.is_warp_requested();
