@@ -108,8 +108,9 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   {igt}          - In-game time (format: H:MM:SS)
 #   {runes}        - Number of Great Runes possessed (0-7, deduplicated)
 #   {rune_icons}   - Great Rune icons (colored if possessed, grayed if not)
-#   {kindling}     - Number of Messmer's Kindling items
+#   {kindling}      - Number of Messmer's Kindling items
 #   {kindling_icon} - Messmer's Kindling icon
+#   {death_icon}    - Death icon
 #
 # Colors (optional, add after variable name with colon):
 #   {variable:color} - Apply color to the variable
@@ -134,6 +135,7 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   "{zone}$>{rune_icons}"                               - With Great Rune icons
 #   "{zone}$n{rune_icons} {discovered}/{total}"          - Two lines with rune icons
 #   "{rune_icons} {kindling_icon}{kindling}"             - Rune icons + kindling icon with count
+#   "{death_icon}{deaths}"                               - Death icon with count
 #
 status_template = "{zone}$>{status} {discovered}/{total}"
 

@@ -10,7 +10,7 @@ use crate::core::color::parse_hex_color;
 use crate::core::map_utils::format_map_id;
 use crate::core::status_template::{render_template, ContentSpan, TemplateColor, TemplateContext};
 
-use super::rune_icons::{KindlingTexture, RuneTextures};
+use super::rune_icons::{DeathTexture, KindlingTexture, RuneTextures};
 use super::tracker::FogRandoTracker;
 use super::websocket::ConnectionStatus;
 
@@ -72,6 +72,17 @@ impl ImguiRenderLoop for FogRandoTracker {
             }
             Err(e) => {
                 error!(error = %e, "Failed to load kindling texture");
+            }
+        }
+
+        // Load death icon texture
+        match DeathTexture::load(render_context) {
+            Ok(texture) => {
+                info!("Loaded death icon texture");
+                self.death_texture = Some(texture);
+            }
+            Err(e) => {
+                error!(error = %e, "Failed to load death texture");
             }
         }
     }
@@ -232,6 +243,7 @@ impl FogRandoTracker {
                     7.0 * icon_size + 6.0 * icon_spacing
                 }
                 ContentSpan::KindlingIcon => icon_size,
+                ContentSpan::DeathIcon => icon_size,
             })
             .sum()
     }
@@ -270,6 +282,14 @@ impl FogRandoTracker {
                     first = false;
 
                     self.render_kindling_icon(ui);
+                }
+                ContentSpan::DeathIcon => {
+                    if !first {
+                        ui.same_line_with_spacing(0.0, 0.0);
+                    }
+                    first = false;
+
+                    self.render_death_icon(ui);
                 }
             }
         }
@@ -312,6 +332,18 @@ impl FogRandoTracker {
         let Some(ref texture) = self.kindling_texture else {
             // Fallback: show text placeholder if texture not loaded
             ui.text_disabled("[K]");
+            return;
+        };
+
+        let icon_size = self.icon_size();
+        Image::new(texture.texture_id(), [icon_size, icon_size]).build(ui);
+    }
+
+    /// Render the Death icon
+    fn render_death_icon(&self, ui: &hudhook::imgui::Ui) {
+        let Some(ref texture) = self.death_texture else {
+            // Fallback: show text placeholder if texture not loaded
+            ui.text_disabled("[D]");
             return;
         };
 

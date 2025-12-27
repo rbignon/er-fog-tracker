@@ -5,7 +5,7 @@
 //! # Template syntax
 //!
 //! - Variables: `{zone}`, `{discovered}`, `{total}`, `{progress}`, `{status}`, `{map}`,
-//!   `{deaths}`, `{igt}`, `{runes}`, `{kindling}`, `{rune_icons}`, `{kindling_icon}`
+//!   `{deaths}`, `{igt}`, `{runes}`, `{kindling}`, `{rune_icons}`, `{kindling_icon}`, `{death_icon}`
 //! - Colors: `{variable:color}` where color is a name or hex code
 //!   - Named colors: `red`, `green`, `blue`, `yellow`, `orange`, `cyan`, `magenta`, `gray`, `white`
 //!   - Hex colors: `#RRGGBB` (e.g., `#FF0000` for red)
@@ -148,6 +148,8 @@ pub enum ContentSpan {
     RuneIcons,
     /// Kindling icon placeholder (UI layer handles actual rendering)
     KindlingIcon,
+    /// Death icon placeholder (UI layer handles actual rendering)
+    DeathIcon,
 }
 
 impl ContentSpan {
@@ -414,6 +416,8 @@ fn substitute_variables(
                     spans.push(ContentSpan::RuneIcons);
                 } else if var_name == "kindling_icon" {
                     spans.push(ContentSpan::KindlingIcon);
+                } else if var_name == "death_icon" {
+                    spans.push(ContentSpan::DeathIcon);
                 } else if let Some(value) = get_variable_value(&var_name, ctx) {
                     if !value.is_empty() {
                         spans.push(ContentSpan::text(value, color));
@@ -1134,6 +1138,32 @@ mod tests {
 
         // left_text() should skip KindlingIcon and only return text
         assert_eq!(result.lines[0].left_text().as_deref(), Some("K:2"));
+    }
+
+    // -------------------------------------------------------------------------
+    // Death icon tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_death_icon_produces_marker() {
+        let ctx = default_ctx();
+        let result = render_template("{death_icon}", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0], ContentSpan::DeathIcon);
+    }
+
+    #[test]
+    fn test_death_icon_with_text() {
+        let ctx = default_ctx();
+        let result = render_template("{death_icon}{deaths}", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        // Should have: DeathIcon, "5"
+        assert_eq!(spans.len(), 2);
+        assert_eq!(spans[0], ContentSpan::DeathIcon);
+        assert_eq!(spans[1].as_text().unwrap().text, "5");
     }
 
     #[test]

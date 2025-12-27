@@ -34,6 +34,9 @@ mod embedded {
 
     // Messmer's Kindling icon
     pub const KINDLING: &[u8] = include_bytes!("../../assets/messmers_kindling.png");
+
+    // Death icon
+    pub const DEATH: &[u8] = include_bytes!("../../assets/death.png");
 }
 
 // =============================================================================
@@ -134,6 +137,34 @@ impl KindlingTexture {
 
         let texture_id = decode_and_load(render_context, embedded::KINDLING)
             .map_err(|e| format!("Failed to load kindling: {}", e))?;
+
+        Ok(Self { texture_id })
+    }
+
+    /// Get the texture ID
+    pub fn texture_id(&self) -> TextureId {
+        self.texture_id
+    }
+}
+
+// =============================================================================
+// DEATH TEXTURE
+// =============================================================================
+
+/// Stores the loaded texture ID for the Death icon
+pub struct DeathTexture {
+    texture_id: TextureId,
+}
+
+impl DeathTexture {
+    /// Load the death texture
+    ///
+    /// Call this in `ImguiRenderLoop::initialize()`.
+    pub fn load(render_context: &mut dyn RenderContext) -> Result<Self, String> {
+        debug!("Loading death texture");
+
+        let texture_id = decode_and_load(render_context, embedded::DEATH)
+            .map_err(|e| format!("Failed to load death: {}", e))?;
 
         Ok(Self { texture_id })
     }
