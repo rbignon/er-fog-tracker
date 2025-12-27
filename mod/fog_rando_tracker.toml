@@ -91,33 +91,3 @@ undiscovered_color = "#B3B3B3"   # Unknown destinations "???" (gray)
 # Window border
 show_border = false              # Set to true to show a border
 border_color = "#404040"         # Border color (only used if show_border = true)
-
-# =============================================================================
-# SERVER INTEGRATION (fog-tracker)
-# =============================================================================
-#
-# When enabled, the mod will connect to the fog-tracker server and automatically
-# send fog gate traversal discoveries in real-time. This allows viewers to
-# watch the exploration progress on the website.
-#
-# To use this feature:
-# 1. Log in to the fog-tracker website with Twitch
-# 2. Create a new game from your spoiler log
-# 3. Copy the mod token and game ID from the dashboard
-# 4. Fill in the values below
-#
-[server]
-# Enable server connection (true/false)
-enabled = false
-
-# Server WebSocket URL (e.g., "wss://fog-tracker.example.com" or "ws://localhost:8001")
-url = ""
-
-# Your mod token (get this from the fog-tracker website after logging in)
-mod_token = ""
-
-# Game ID (UUID) - get this when you create a game on the website
-game_id = ""
-
-# Automatically reconnect if the connection is lost (true/false)
-auto_reconnect = true
