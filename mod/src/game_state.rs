@@ -119,18 +119,6 @@ const GAMEMAN_LOAD_TARGET_BLOCK_ID_OFFSET: usize = 0xAC8;
 const GRACE_SPAWN_SPEFFECT_ID: u32 = 106;
 
 // =============================================================================
-// CHRINS OFFSETS (from fromsoftware-rs analysis)
-// =============================================================================
-
-/// Offset of tae_queued_use_item within ChrIns structure
-/// This is the ItemId of the item currently being used via TAE animation
-const CHRINS_TAE_QUEUED_USE_ITEM_OFFSET: usize = 0x160;
-
-/// Item ID for Pureblood Knight's Medal (Goods item)
-/// Format: 0x40000000 (Goods prefix) | item_id
-const MEDAL_ITEM_ID: u32 = 0x40000870; // Base ID 2160
-
-// =============================================================================
 // TELEPORT TYPE ENUM
 // =============================================================================
 
@@ -426,24 +414,6 @@ impl SpEffectReader {
         ids.iter().any(|&id| self.has_sp_effect(id))
     }
 
-    /// Read the item ID currently being used via TAE animation
-    ///
-    /// This reads ChrIns.tae_queued_use_item which is set when the player
-    /// uses a consumable item. Returns 0 if no item is being used.
-    pub fn get_queued_use_item(&self) -> u32 {
-        self.get_player_ins()
-            .and_then(|pi| self.read_u32(pi + CHRINS_TAE_QUEUED_USE_ITEM_OFFSET))
-            .unwrap_or(0)
-    }
-
-    /// Check if the player is currently using the Pureblood Knight's Medal
-    ///
-    /// This is more reliable than SpEffect-based detection as it directly
-    /// checks what item is being used via the TAE system.
-    pub fn is_using_medal(&self) -> bool {
-        self.get_queued_use_item() == MEDAL_ITEM_ID
-    }
-
     /// Get debug info about the SpEffect reading chain
     /// Returns a struct with diagnostic information
     pub fn get_debug_info(&self) -> SpEffectDebugInfo {
@@ -557,15 +527,6 @@ impl GameManReader {
     pub fn get_destination_entity_id(&self) -> u32 {
         self.get_game_man_ptr()
             .and_then(|gm| self.read_u32(gm + GAMEMAN_INITIAL_AREA_ENTITY_ID_OFFSET))
-            .unwrap_or(0)
-    }
-
-    /// Get the destination map ID for the current warp
-    ///
-    /// Returns the BlockId (map ID) of the warp destination.
-    pub fn get_destination_map_id(&self) -> u32 {
-        self.get_game_man_ptr()
-            .and_then(|gm| self.read_u32(gm + GAMEMAN_LOAD_TARGET_BLOCK_ID_OFFSET))
             .unwrap_or(0)
     }
 
