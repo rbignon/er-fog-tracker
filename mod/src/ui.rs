@@ -135,6 +135,10 @@ impl FogRandoTracker {
             self.show_debug = !self.show_debug;
             debug!(show_debug = self.show_debug, "Debug toggled");
         }
+        if self.config.keybindings.toggle_exits.is_just_pressed() {
+            self.show_exits = !self.show_exits;
+            debug!(show_exits = self.show_exits, "Exits toggled");
+        }
     }
 
     /// Render header: zone name + server status indicator + stats (right-aligned)
@@ -296,6 +300,17 @@ impl FogRandoTracker {
 
         if self.current_exits.is_empty() {
             ui.text_disabled("No exits available");
+            return;
+        }
+
+        // Show collapsed indicator when exits are hidden
+        if !self.show_exits {
+            let hotkey = self.config.keybindings.toggle_exits.name();
+            ui.text_disabled(format!(
+                "Exits: {} ({} to expand)",
+                self.current_exits.len(),
+                hotkey
+            ));
             return;
         }
 

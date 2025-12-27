@@ -22,6 +22,9 @@ pub struct KeyBindings {
     /// Key to toggle debug info display
     #[serde(default = "default_toggle_debug")]
     pub toggle_debug: Hotkey,
+    /// Key to toggle exits list (fold/unfold)
+    #[serde(default = "default_toggle_exits")]
+    pub toggle_exits: Hotkey,
 }
 
 fn default_toggle_ui() -> Hotkey {
@@ -32,11 +35,16 @@ fn default_toggle_debug() -> Hotkey {
     Hotkey::from_name("f10").expect("f10 is a valid key")
 }
 
+fn default_toggle_exits() -> Hotkey {
+    Hotkey::from_name("f11").expect("f11 is a valid key")
+}
+
 impl Default for KeyBindings {
     fn default() -> Self {
         Self {
             toggle_ui: default_toggle_ui(),
             toggle_debug: default_toggle_debug(),
+            toggle_exits: default_toggle_exits(),
         }
     }
 }

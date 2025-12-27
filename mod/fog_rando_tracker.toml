@@ -55,6 +55,8 @@ log_file = ""
 toggle_ui = "f9"
 # Key to toggle debug info (map_id, server URL, etc.)
 toggle_debug = "f10"
+# Key to fold/unfold exits list
+toggle_exits = "f11"
 
 # =============================================================================
 # OVERLAY SETTINGS
