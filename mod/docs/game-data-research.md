@@ -113,6 +113,7 @@ Source: CE Table (`eldenring_all-in-one_Hexinton-v5.0_ce7.5.ct`)
 | 12020210 | Post-boss warp | **After defeating certain bosses** (e.g., Maliketh). Requires validation. |
 | 12202126 | Divine Tower door | **Liurnia Divine Tower inverted door**. Requires validation. |
 | 68110 | Erdtree burn cutscene | **Burning the Erdtree with Melina** → Crumbling Farum Azula |
+| 67010 | Placidusax lie down | **Lie down to access Placidusax** boss arena |
 
 ### Item Use Animations
 | ID | Description | Usage |

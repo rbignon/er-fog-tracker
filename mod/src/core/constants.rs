@@ -36,6 +36,8 @@ pub enum Animation {
     PostBossWarp = 12020210,
     /// Erdtree burn cutscene warp (Melina sacrifices herself)
     ErdtreeBurn = 68110,
+    /// Placidusax lie down animation (access to boss arena)
+    PlacidusaxLieDown = 67010,
 
     // -------------------------------------------------------------------------
     // Other known animations
@@ -73,6 +75,7 @@ impl Animation {
                 | Self::LiurniaTowerDoor
                 | Self::PostBossWarp
                 | Self::ErdtreeBurn
+                | Self::PlacidusaxLieDown
         )
     }
 
@@ -90,6 +93,7 @@ impl Animation {
             Self::LiurniaTowerDoor => Some("LIURNIA_TOWER_DOOR"),
             Self::PostBossWarp => Some("POST_BOSS_WARP"),
             Self::ErdtreeBurn => Some("ERDTREE_BURN"),
+            Self::PlacidusaxLieDown => Some("PLACIDUSAX_LIE_DOWN"),
             _ => None,
         }
     }
@@ -107,6 +111,7 @@ impl Animation {
             Self::LiurniaTowerDoor => "LIURNIA_TOWER_DOOR",
             Self::PostBossWarp => "POST_BOSS_WARP",
             Self::ErdtreeBurn => "ERDTREE_BURN",
+            Self::PlacidusaxLieDown => "PLACIDUSAX_LIE_DOWN",
             Self::ItemUseMemory => "ITEM_USE_MEMORY",
             Self::Spawn => "SPAWN",
         }

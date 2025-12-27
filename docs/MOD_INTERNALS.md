@@ -112,6 +112,7 @@ The mod uses **animation-based detection** for all known teleport types. This is
 | Liurnia Tower Door | `12202126` | Opening the door at the bottom of the inverted tower. **Requires validation** (see below) |
 | Post Boss Warp | `12020210` | Warp after defeating a boss (e.g., Maliketh). **Requires validation** (see below) |
 | Erdtree Burn | `68110` | Cutscene warp when burning the Erdtree with Melina |
+| Placidusax Lie Down | `67010` | Lie down animation to access Placidusax boss arena |
 
 ### Detection Flow
 
