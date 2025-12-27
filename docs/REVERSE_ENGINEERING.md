@@ -401,7 +401,8 @@ Great Runes and Messmer's Kindling are **Goods** (category 4), so their item_id 
 | Mohg's Great Rune (unrestored) | 8152 | 0x40001FD8 |
 | Malenia's Great Rune (unrestored) | 8153 | 0x40001FD9 |
 | Great Rune of the Unborn | 10080 | 0x40002760 |
-| Miquella's Great Rune | 2008000 | 0x401EA380 |
+
+**Note:** Miquella's Great Rune (param_id 2008000) is NOT counted as it's a DLC story item, not a collectible Great Rune.
 
 **Note:** Restored and unrestored versions should be deduplicated when counting (same rune, different state). Mapping: `(param_id - 8148) + 191` converts unrestored to restored param_id.
 
@@ -409,7 +410,7 @@ Great Runes and Messmer's Kindling are **Goods** (category 4), so their item_id 
 
 | Item | param_id | Full item_id |
 |------|----------|--------------|
-| Messmer's Kindling | 2007509 | 0x401EA3D5 |
+| Messmer's Kindling | 2008021 | 0x401EA3D5 |
 
 In randomizer context, multiple Kindling items can exist (quantity > 1 or multiple inventory entries).
 

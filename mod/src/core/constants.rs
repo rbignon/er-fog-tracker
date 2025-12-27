@@ -113,11 +113,10 @@ pub const GREAT_RUNE_RYKARD: u32 = 194;
 pub const GREAT_RUNE_MOHG: u32 = 195;
 pub const GREAT_RUNE_MALENIA: u32 = 196;
 pub const GREAT_RUNE_UNBORN: u32 = 10080;
-pub const GREAT_RUNE_MIQUELLA: u32 = 2008000;
 
 // Great Rune param_ids (unrestored versions)
 pub const GREAT_RUNE_UNRESTORED_START: u32 = 8148;
 pub const GREAT_RUNE_UNRESTORED_END: u32 = 8153;
 
-/// Messmer's Kindling param_id
-pub const MESSMERS_KINDLING: u32 = 2007509;
+/// Messmer's Kindling param_id (discovered via debug dump)
+pub const MESSMERS_KINDLING: u32 = 2008021;
