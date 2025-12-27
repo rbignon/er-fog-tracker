@@ -167,13 +167,30 @@ def link_exists(
     target: str,
     zone_pairs: list[dict],
 ) -> bool:
-    """Check if a link already exists in discovered_links."""
+    """Check if a link already exists in discovered_links.
+
+    For bidirectional random links, also checks the reverse direction since
+    discovering A→B is equivalent to discovering B→A for the same fog gate.
+    """
     zp_index = build_zone_pairs_index(zone_pairs)
 
     for dl in discovered_links:
         link_id = get_zone_link_id(dl)
         zp = zp_index.get(link_id)
-        if zp and zp["source"] == source and zp["target"] == target:
+        if not zp:
+            continue
+
+        # Direct match
+        if zp["source"] == source and zp["target"] == target:
+            return True
+
+        # For bidirectional random links, also check reverse
+        if (
+            zp["type"] == "random"
+            and not zp.get("is_inherently_one_way", False)
+            and zp["source"] == target
+            and zp["target"] == source
+        ):
             return True
 
     return False

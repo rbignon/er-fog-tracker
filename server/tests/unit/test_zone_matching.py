@@ -561,6 +561,43 @@ class TestLinkExists:
             simple_zone_pairs,
         )
 
+    def test_reverse_direction_for_bidirectional_random(
+        self, simple_zone_pairs, discovered_chapel_to_limgrave
+    ):
+        """Bidirectional random links should be found in reverse direction.
+
+        link-1 is stored as Chapel → Limgrave, but checking Limgrave → Chapel
+        should also return True since random links are bidirectional.
+        """
+        assert link_exists(
+            discovered_chapel_to_limgrave,
+            "Limgrave",
+            "Chapel of Anticipation",
+            simple_zone_pairs,
+        )
+
+    def test_reverse_direction_not_found_for_one_way(self, simple_zone_pairs):
+        """One-way random links should NOT be found in reverse direction.
+
+        link-8 is Sending Gate Origin → Divine Tower (is_inherently_one_way=True).
+        Checking Divine Tower → Sending Gate Origin should return False.
+        """
+        discovered_one_way = [{"zone_link_id": "link-8"}]
+        # Direct direction should be found
+        assert link_exists(
+            discovered_one_way,
+            "Sending Gate Origin",
+            "Divine Tower",
+            simple_zone_pairs,
+        )
+        # Reverse direction should NOT be found (one-way link)
+        assert not link_exists(
+            discovered_one_way,
+            "Divine Tower",
+            "Sending Gate Origin",
+            simple_zone_pairs,
+        )
+
 
 class TestFindZonePairByKeys:
     """Tests for find_zone_pair_by_keys function."""
