@@ -91,6 +91,16 @@ pub struct OverlaySettings {
     /// Border color "#RRGGBB" (only if show_border = true)
     #[serde(default = "default_border_color")]
     pub border_color: String,
+
+    /// Status line template
+    /// Variables: {zone}, {discovered}, {total}, {progress}, {status}, {map}
+    /// Markers: $n = newline, $> = right-align rest of line
+    #[serde(default = "default_status_template")]
+    pub status_template: String,
+
+    /// Text shown when zone is unknown
+    #[serde(default = "default_zone_unknown_text")]
+    pub zone_unknown_text: String,
 }
 
 fn default_font_path() -> String {
@@ -123,6 +133,12 @@ fn default_show_border() -> bool {
 fn default_border_color() -> String {
     "#404040".to_string()
 }
+fn default_status_template() -> String {
+    "{zone}$>{status} {discovered}/{total}".to_string()
+}
+fn default_zone_unknown_text() -> String {
+    "(traverse a fog to identify)".to_string()
+}
 
 impl Default for OverlaySettings {
     fn default() -> Self {
@@ -137,6 +153,8 @@ impl Default for OverlaySettings {
             undiscovered_color: default_undiscovered_color(),
             show_border: default_show_border(),
             border_color: default_border_color(),
+            status_template: default_status_template(),
+            zone_unknown_text: default_zone_unknown_text(),
         }
     }
 }

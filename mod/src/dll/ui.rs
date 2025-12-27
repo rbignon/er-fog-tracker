@@ -5,6 +5,10 @@ use hudhook::{ImguiRenderLoop, RenderContext};
 use tracing::{debug, info};
 
 use crate::core::color::parse_hex_color;
+use crate::core::map_utils::format_map_id;
+use crate::core::status_template::{
+    render_template, split_around_status, LineSegment, TemplateContext,
+};
 
 use super::tracker::FogRandoTracker;
 use super::websocket::ConnectionStatus;
@@ -139,45 +143,90 @@ impl FogRandoTracker {
         }
     }
 
-    /// Render header: zone name + server status indicator + stats (right-aligned)
+    /// Build template context from current tracker state
+    fn build_template_context(&self) -> TemplateContext {
+        let map_id = self.get_current_position().map(|(id, _)| format_map_id(id));
+
+        TemplateContext {
+            zone: self.current_zone().map(String::from),
+            zone_unknown_text: self.config.overlay.zone_unknown_text.clone(),
+            discovered: self.discovery_stats().map(|s| s.discovered).unwrap_or(0),
+            total: self.discovery_stats().map(|s| s.total).unwrap_or(0),
+            server_enabled: self.is_server_enabled(),
+            server_connected: matches!(self.ws_status(), ConnectionStatus::Connected),
+            map_id,
+        }
+    }
+
+    /// Render header using the configurable status template
     fn render_header(&self, ui: &hudhook::imgui::Ui, max_width: f32) {
-        // Zone name (or placeholder)
-        let zone_text = self
-            .current_zone()
-            .unwrap_or("(traverse a fog to identify)");
+        let ctx = self.build_template_context();
+        let rendered = render_template(&self.config.overlay.status_template, &ctx);
+        let (status_color, _) = self.get_status_indicator();
 
-        // Build right-aligned status text: "● X/Y" or "X/Y"
-        let mut status_text = String::new();
-        if self.is_server_enabled() {
-            status_text.push_str("● ");
-        }
-        if let Some(stats) = self.discovery_stats() {
-            status_text.push_str(&format!("{}/{}", stats.discovered, stats.total));
-        }
+        for line in &rendered.lines {
+            // Get left and right parts
+            let left_text = line
+                .segments
+                .iter()
+                .find_map(|s| match s {
+                    LineSegment::Left(t) => Some(t.as_str()),
+                    _ => None,
+                })
+                .unwrap_or("");
 
-        // Calculate positions for right alignment
-        let status_width = if !status_text.is_empty() {
-            ui.calc_text_size(&status_text)[0]
-        } else {
-            0.0
-        };
+            let right_text = line.segments.iter().find_map(|s| match s {
+                LineSegment::Right(t) => Some(t.as_str()),
+                _ => None,
+            });
 
-        // Zone name on the left
-        ui.text(zone_text);
+            // Render left part with status indicator coloring
+            self.render_text_with_status(ui, left_text, status_color);
 
-        // Status on the right (same line)
-        if !status_text.is_empty() {
-            ui.same_line_with_pos(max_width - status_width);
-            if self.is_server_enabled() {
-                let (dot_color, _) = self.get_status_indicator();
-                ui.text_colored(dot_color, "●");
-                ui.same_line();
-                if let Some(stats) = self.discovery_stats() {
-                    ui.text(format!("{}/{}", stats.discovered, stats.total));
-                }
-            } else if let Some(stats) = self.discovery_stats() {
-                ui.text(format!("{}/{}", stats.discovered, stats.total));
+            // Render right part if present
+            if let Some(right) = right_text {
+                // Calculate width for right alignment (use clean text without markers)
+                let (before, has_status, after) = split_around_status(right);
+                let clean_right = if has_status {
+                    format!("{}●{}", before, after)
+                } else {
+                    right.to_string()
+                };
+                let right_width = ui.calc_text_size(&clean_right)[0];
+
+                ui.same_line_with_pos(max_width - right_width);
+                self.render_text_with_status(ui, right, status_color);
             }
+        }
+    }
+
+    /// Render text with colored status indicator
+    ///
+    /// Detects the status indicator marker and renders it with the appropriate color.
+    fn render_text_with_status(&self, ui: &hudhook::imgui::Ui, text: &str, status_color: [f32; 4]) {
+        let (before, has_status, after) = split_around_status(text);
+
+        if !before.is_empty() {
+            ui.text(&before);
+            if has_status || !after.is_empty() {
+                ui.same_line_with_spacing(0.0, 0.0);
+            }
+        }
+
+        if has_status {
+            ui.text_colored(status_color, "●");
+            if !after.is_empty() {
+                ui.same_line_with_spacing(0.0, 0.0);
+            }
+        }
+
+        if !after.is_empty() {
+            ui.text(&after);
+        }
+
+        // Handle empty text case (need to output something for line to register)
+        if before.is_empty() && !has_status && after.is_empty() {
+            ui.text("");
         }
     }
 
@@ -302,11 +351,13 @@ impl FogRandoTracker {
 
         // Show collapsed indicator when exits are hidden
         if !self.show_exits {
+            let exits = self.current_exits();
+            let discovered = exits.iter().filter(|e| e.target != "???").count();
+            let total = exits.len();
             let hotkey = self.config.keybindings.toggle_exits.name();
             ui.text_disabled(format!(
-                "Exits: {} ({} to expand)",
-                self.current_exits().len(),
-                hotkey
+                "Exits: {}/{} ({} to expand)",
+                discovered, total, hotkey
             ));
             return;
         }

@@ -91,3 +91,25 @@ undiscovered_color = "#B3B3B3"   # Unknown destinations "???" (gray)
 # Window border
 show_border = false              # Set to true to show a border
 border_color = "#404040"         # Border color (only used if show_border = true)
+
+# Status line template
+# Variables:
+#   {zone}       - Current zone name (or zone_unknown_text if unknown)
+#   {discovered} - Number of discovered random links
+#   {total}      - Total number of random links
+#   {progress}   - Discovery percentage (0-100)
+#   {status}     - Server connection indicator (colored dot)
+#   {map}        - Current map ID (e.g., "m60_44_36_00")
+# Markers:
+#   $n - Newline (for multi-line status)
+#   $> - Right-align the rest of the line
+#
+# Examples:
+#   "{zone}$>{status} {discovered}/{total}"     - Zone left, stats right (default)
+#   "{zone} | {progress}%"                      - Simple single line
+#   "{zone}$n{discovered}/{total} discovered"  - Two lines
+#
+status_template = "{zone}$>{status} {discovered}/{total}"
+
+# Text shown when zone is unknown (before first fog traversal)
+zone_unknown_text = "(traverse a fog to identify)"
