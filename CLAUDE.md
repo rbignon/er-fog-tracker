@@ -29,21 +29,8 @@ er-fog-tracker/
 ├── mod/                    # In-game mod (Rust DLL + Launcher)
 │   └── src/
 │       ├── core/           # Platform-independent logic (testable on Linux)
-│       │   ├── types.rs        # PlayerPosition, WarpInfo, etc.
-│       │   ├── traits.rs       # GameStateReader, WarpDetector, SpEffectChecker
-│       │   ├── constants.rs    # Animation IDs, entity ranges, offsets
-│       │   ├── entity_utils.rs # is_fog_rando_entity, get_teleport_type
-│       │   ├── map_utils.rs    # format_map_id, parse_map_id
-│       │   └── warp_tracker.rs # Warp detection state machine
 │       ├── eldenring/      # Elden Ring memory reading (Windows-only)
-│       │   ├── game_state.rs   # Player position, animation
-│       │   ├── game_man.rs     # Warp detection via GameMan
-│       │   └── sp_effect.rs    # SpEffect reading
 │       ├── dll/            # DLL mod implementation (Windows-only)
-│       │   ├── tracker.rs      # Main tracker logic
-│       │   ├── ui.rs           # ImGui overlay
-│       │   ├── config.rs       # TOML configuration
-│       │   └── websocket.rs    # Server communication
 │       ├── launcher/       # Windows GUI launcher
 │       └── lib.rs          # DLL entry point (hudhook)
 ├── docs/                   # Architecture documentation
@@ -150,11 +137,23 @@ Implementations in `eldenring/` satisfy these traits. Tests in `core/` use mocks
 3. Add test in `mod/src/core/entity_utils.rs`
 4. Update `docs/MOD_INTERNALS.md`
 
+### Linting and Formatting
+
+Pre-commit hooks handle linting and formatting:
+
+```bash
+pre-commit run --all-files          # Run all hooks manually
+```
+
+Hooks: `ruff` + `ruff-format` (Python), `eslint` + `prettier` (JS), `rustfmt` (Rust)
+
 ### Database migration
+
 ```bash
 cd server
 alembic revision -m "description"  # Create migration
 alembic upgrade head               # Apply
+alembic downgrade -1               # Rollback one migration
 ```
 
 ### Running tests
@@ -162,9 +161,12 @@ alembic upgrade head               # Apply
 **Server (Python):**
 ```bash
 cd server
-pytest                              # Run unit tests
-pytest --cov=fogtracker tests/unit  # With coverage
-pytest --run-integration            # Integration tests (requires running server)
+pytest                                                    # Run unit tests
+pytest tests/unit/test_zone_matching.py                   # Run specific file
+pytest tests/unit/test_zone_matching.py::TestNamesMatch   # Run specific class
+pytest tests/unit/test_zone_matching.py::TestNamesMatch::test_exact_match  # Specific test
+pytest --cov=fogtracker tests/unit                        # With coverage
+pytest --run-integration                                  # Integration tests (requires running server)
 ```
 
 **Mod (Rust):**
