@@ -210,9 +210,17 @@ impl FogRandoTracker {
         }
     }
 
+    /// Get effective icon size (from config or fallback to font_size)
+    fn icon_size(&self) -> f32 {
+        self.config
+            .overlay
+            .icon_size
+            .unwrap_or(self.config.overlay.font_size)
+    }
+
     /// Calculate the total width of content spans (text + icons)
     fn calculate_spans_width(&self, ui: &hudhook::imgui::Ui, spans: &[ContentSpan]) -> f32 {
-        let icon_size = self.config.overlay.font_size;
+        let icon_size = self.icon_size();
         let icon_spacing = 2.0;
 
         spans
@@ -281,7 +289,7 @@ impl FogRandoTracker {
         };
 
         let possessed = self.read_great_runes();
-        let icon_size = self.config.overlay.font_size;
+        let icon_size = self.icon_size();
 
         let mut first_icon = true;
 
@@ -307,7 +315,7 @@ impl FogRandoTracker {
             return;
         };
 
-        let icon_size = self.config.overlay.font_size;
+        let icon_size = self.icon_size();
         Image::new(texture.texture_id(), [icon_size, icon_size]).build(ui);
     }
 

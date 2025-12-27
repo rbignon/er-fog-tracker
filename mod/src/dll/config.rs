@@ -101,6 +101,11 @@ pub struct OverlaySettings {
     /// Text shown when zone is unknown
     #[serde(default = "default_zone_unknown_text")]
     pub zone_unknown_text: String,
+
+    /// Icon size in pixels (for rune_icons, kindling_icon)
+    /// If not set, uses font_size
+    #[serde(default)]
+    pub icon_size: Option<f32>,
 }
 
 fn default_font_path() -> String {
@@ -155,6 +160,7 @@ impl Default for OverlaySettings {
             border_color: default_border_color(),
             status_template: default_status_template(),
             zone_unknown_text: default_zone_unknown_text(),
+            icon_size: None,
         }
     }
 }
