@@ -20,7 +20,7 @@ use crate::core::constants::GreatRune;
 pub const ATLAS_WIDTH: u32 = 1152;
 pub const ATLAS_HEIGHT: u32 = 256;
 pub const ICON_SIZE: u32 = 128;
-pub const ICONS_PER_ROW: u32 = 9;
+pub const _ICONS_PER_ROW: u32 = 9;
 
 // Icon indices (column in the atlas)
 pub const ICON_GODRICK: u32 = 0;

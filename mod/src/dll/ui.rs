@@ -4,7 +4,7 @@ use hudhook::imgui::{
     Condition, FontConfig, FontGlyphRanges, FontSource, Image, StyleColor, WindowFlags,
 };
 use hudhook::{ImguiRenderLoop, RenderContext};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::core::color::parse_hex_color;
 use crate::core::map_utils::format_map_id;
@@ -228,7 +228,30 @@ impl FogRandoTracker {
 
     /// Render a sequence of content spans (text and images)
     fn render_content_spans(&self, ui: &hudhook::imgui::Ui, spans: &[ContentSpan]) {
+        let icon_size = self.icon_size();
+        let font_height = ui.text_line_height();
+
+        // Check if line has any icons to determine if vertical centering is needed
+        let has_icons = spans.iter().any(|s| {
+            matches!(
+                s,
+                ContentSpan::RuneIcons | ContentSpan::KindlingIcon | ContentSpan::DeathIcon
+            )
+        });
+
+        // Calculate vertical offsets for centering
+        let (text_y_offset, icon_y_offset) = if has_icons {
+            let line_height = icon_size.max(font_height);
+            (
+                (line_height - font_height) / 2.0,
+                (line_height - icon_size) / 2.0,
+            )
+        } else {
+            (0.0, 0.0)
+        };
+
         let mut first = true;
+        let start_y = ui.cursor_pos()[1];
 
         for span in spans {
             match span {
@@ -242,6 +265,12 @@ impl FogRandoTracker {
                     }
                     first = false;
 
+                    // Apply vertical offset for centering text
+                    if text_y_offset > 0.0 {
+                        let [x, _] = ui.cursor_pos();
+                        ui.set_cursor_pos([x, start_y + text_y_offset]);
+                    }
+
                     let color = self.resolve_template_color(&text_span.color);
                     ui.text_colored(color, &text_span.text);
                 }
@@ -251,13 +280,24 @@ impl FogRandoTracker {
                     }
                     first = false;
 
-                    self.render_rune_icons(ui);
+                    // Apply vertical offset for centering icons
+                    if icon_y_offset > 0.0 {
+                        let [x, _] = ui.cursor_pos();
+                        ui.set_cursor_pos([x, start_y + icon_y_offset]);
+                    }
+
+                    self.render_rune_icons(ui, start_y + icon_y_offset);
                 }
                 ContentSpan::KindlingIcon => {
                     if !first {
                         ui.same_line_with_spacing(0.0, 0.0);
                     }
                     first = false;
+
+                    if icon_y_offset > 0.0 {
+                        let [x, _] = ui.cursor_pos();
+                        ui.set_cursor_pos([x, start_y + icon_y_offset]);
+                    }
 
                     self.render_kindling_icon(ui);
                 }
@@ -266,6 +306,11 @@ impl FogRandoTracker {
                         ui.same_line_with_spacing(0.0, 0.0);
                     }
                     first = false;
+
+                    if icon_y_offset > 0.0 {
+                        let [x, _] = ui.cursor_pos();
+                        ui.set_cursor_pos([x, start_y + icon_y_offset]);
+                    }
 
                     self.render_death_icon(ui);
                 }
@@ -279,7 +324,7 @@ impl FogRandoTracker {
     }
 
     /// Render the 7 Great Rune icons
-    fn render_rune_icons(&self, ui: &hudhook::imgui::Ui) {
+    fn render_rune_icons(&self, ui: &hudhook::imgui::Ui, target_y: f32) {
         let Some(ref atlas) = self.icon_atlas else {
             // Fallback: show text placeholder if atlas not loaded
             ui.text_disabled("[runes]");
@@ -297,11 +342,15 @@ impl FogRandoTracker {
 
             if !first_icon {
                 ui.same_line_with_spacing(0.0, 2.0); // 2px spacing between icons
+                                                     // Restore Y position after same_line (which resets to line start)
+                let [x, _] = ui.cursor_pos();
+                ui.set_cursor_pos([x, target_y]);
             }
             first_icon = false;
 
             Image::new(atlas.texture_id(), [icon_size, icon_size])
-                .uv(uv0, uv1)
+                .uv0(uv0)
+                .uv1(uv1)
                 .build(ui);
         }
     }
@@ -317,7 +366,8 @@ impl FogRandoTracker {
         let icon_size = self.icon_size();
         let (uv0, uv1) = atlas.get_kindling_uvs();
         Image::new(atlas.texture_id(), [icon_size, icon_size])
-            .uv(uv0, uv1)
+            .uv0(uv0)
+            .uv1(uv1)
             .build(ui);
     }
 
@@ -332,7 +382,8 @@ impl FogRandoTracker {
         let icon_size = self.icon_size();
         let (uv0, uv1) = atlas.get_death_uvs();
         Image::new(atlas.texture_id(), [icon_size, icon_size])
-            .uv(uv0, uv1)
+            .uv0(uv0)
+            .uv1(uv1)
             .build(ui);
     }
 
