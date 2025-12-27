@@ -148,21 +148,15 @@ Fast travel (via map menu) is **not tracked** by the mod. It uses `warp_requeste
 
 The `POST_BOSS_WARP` animation (`12020210`) can be triggered without an actual warp occurring (e.g., during cutscenes or visual transitions after defeating a boss). To filter these false positives, discoveries with this transport type are validated before being sent to the server.
 
-A `POST_BOSS_WARP` discovery is considered **valid** if at least one of these conditions is met:
-- **Different map**: Entry and exit are on different maps
-- **Significant distance**: Entry and exit are ≥20m apart (even on the same map)
-- **Destination entity**: `destination_entity_id` is non-zero
-
-If none of these conditions are met, the discovery is discarded as a false positive.
+A `POST_BOSS_WARP` discovery is considered **valid** only if `warp_requested` was true at some point during the warp. The tracker monitors `GameMan.warp_requested` each frame while a warp is pending and records if it ever becomes true.
 
 **Example false positive** (filtered):
 ```
 Animation: POST_BOSS_WARP (12020210)
 Entry: m11_05_00_00 (-125.4, 40.9, -350.4)
 Exit:  m11_05_00_00 (-119.4, 40.6, -353.5)
-Distance: ~6.7m < 20m
-dest_entity_id: 0
-→ Discarded (same map, short distance, no entity)
+warp_requested: never true
+→ Discarded (no warp was actually requested by the game)
 ```
 
 Other teleport types (FOG, WAYGATE, MEDAL, etc.) are always valid because their animations are only played during actual warps.

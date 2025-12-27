@@ -255,6 +255,7 @@ mod tests {
             exit: make_pos(0x0A0A1000, 200.0, 0.0, 200.0),
             transport_type: "FOG",
             destination_entity_id: 755890042,
+            warp_was_requested: false,
         }
     }
 

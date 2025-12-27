@@ -66,17 +66,14 @@ This provides:
 
 The `POST_BOSS_WARP` animation (`12020210`) can trigger without an actual warp (e.g., cutscenes, visual transitions). To filter false positives, discoveries with this transport type require validation.
 
-A `POST_BOSS_WARP` is **valid** if at least one condition is met:
-- Different map (entry vs exit)
-- Significant distance ≥20m
-- `dest_entity_id != 0`
+A `POST_BOSS_WARP` is **valid** only if `warp_requested` was true at some point during the warp.
 
 ```
 Example false positive (filtered):
   Animation: 12020210 (POST_BOSS_WARP)
   Entry: m11_05_00_00 (-125.4, 40.9, -350.4)
   Exit:  m11_05_00_00 (-119.4, 40.6, -353.5)
-  Distance: ~6.7m < 20m, dest_entity_id: 0
+  warp_requested: never true
   → Discarded
 ```
 
