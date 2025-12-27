@@ -229,7 +229,7 @@ mod tests {
     use super::*;
     use std::time::Duration;
 
-    use crate::core::constants::ANIM_FOG_WALL;
+    use crate::core::constants::Animation;
     use crate::core::entity_utils::is_fog_rando_entity;
     use crate::core::traits::mocks::{MockGameState, MockWarpDetector};
     use crate::core::types::PlayerPosition;
@@ -249,10 +249,10 @@ mod tests {
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Frame 3: Stormveil
             ],
             vec![
-                Some(0),             // Idle
-                Some(ANIM_FOG_WALL), // Fog wall animation starts
-                Some(ANIM_FOG_WALL), // Still in animation
-                Some(0),             // Animation ended
+                Some(0),                           // Idle
+                Some(Animation::FogWall.as_u32()), // Fog wall animation starts
+                Some(Animation::FogWall.as_u32()), // Still in animation
+                Some(0),                           // Animation ended
             ],
         );
 
@@ -311,7 +311,10 @@ mod tests {
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
             ],
-            vec![Some(ANIM_FOG_WALL), Some(ANIM_FOG_WALL)],
+            vec![
+                Some(Animation::FogWall.as_u32()),
+                Some(Animation::FogWall.as_u32()),
+            ],
         );
 
         let warp = MockWarpDetector::new();
@@ -342,7 +345,11 @@ mod tests {
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
             ],
-            vec![Some(ANIM_FOG_WALL), Some(ANIM_FOG_WALL), Some(0)],
+            vec![
+                Some(Animation::FogWall.as_u32()),
+                Some(Animation::FogWall.as_u32()),
+                Some(0),
+            ],
         );
 
         let warp = MockWarpDetector::new();
@@ -380,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_waygate_animation() {
-        use crate::core::constants::ANIM_WAYGATE;
+        use crate::core::constants::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -388,7 +395,7 @@ mod tests {
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Animation starts
                 Some(make_pos(0x3C3A3800, 500.0, 0.0, 500.0)), // Liurnia
             ],
-            vec![Some(0), Some(ANIM_WAYGATE), Some(0)],
+            vec![Some(0), Some(Animation::Waygate.as_u32()), Some(0)],
         );
 
         let warp = MockWarpDetector::new();
@@ -412,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_sending_gate_animation() {
-        use crate::core::constants::ANIM_SENDING_GATE_BLUE;
+        use crate::core::constants::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -420,7 +427,7 @@ mod tests {
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
             ],
-            vec![Some(0), Some(ANIM_SENDING_GATE_BLUE), Some(0)],
+            vec![Some(0), Some(Animation::SendingGateBlue.as_u32()), Some(0)],
         );
 
         let warp = MockWarpDetector::new();
@@ -444,7 +451,7 @@ mod tests {
 
     #[test]
     fn test_medal_animation() {
-        use crate::core::constants::ANIM_MEDAL;
+        use crate::core::constants::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -452,7 +459,7 @@ mod tests {
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
             ],
-            vec![Some(0), Some(ANIM_MEDAL), Some(0)],
+            vec![Some(0), Some(Animation::Medal.as_u32()), Some(0)],
         );
 
         let warp = MockWarpDetector::new();
@@ -474,7 +481,7 @@ mod tests {
     #[test]
     fn test_back_to_entrance_animation() {
         // Animation 60460: ground teleporter after defeating dungeon boss
-        use crate::core::constants::ANIM_BACK_TO_ENTRANCE;
+        use crate::core::constants::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -482,7 +489,7 @@ mod tests {
                 Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Animation starts
                 Some(make_pos(0x3C2C2400, 200.0, 0.0, 200.0)), // Dungeon entrance
             ],
-            vec![Some(0), Some(ANIM_BACK_TO_ENTRANCE), Some(0)],
+            vec![Some(0), Some(Animation::BackToEntrance.as_u32()), Some(0)],
         );
 
         let warp = MockWarpDetector::new();
@@ -512,7 +519,7 @@ mod tests {
     #[test]
     fn test_horned_remains_animation() {
         // Animation 60010: Horned Remains item teleport (e.g., Nokron -> Farum Azula)
-        use crate::core::constants::ANIM_HORNED_REMAINS;
+        use crate::core::constants::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -520,7 +527,7 @@ mod tests {
                 Some(make_pos(0x3C323000, 100.0, 0.0, 100.0)), // Animation starts
                 Some(make_pos(0x3C0C1000, 500.0, 0.0, 500.0)), // Farum Azula
             ],
-            vec![Some(0), Some(ANIM_HORNED_REMAINS), Some(0)],
+            vec![Some(0), Some(Animation::HornedRemains.as_u32()), Some(0)],
         );
 
         let warp = MockWarpDetector::new();
@@ -547,7 +554,7 @@ mod tests {
     #[test]
     fn test_liurnia_tower_door_animation() {
         // Animation 12202126: Divine Tower of Liurnia inverted door teleport
-        use crate::core::constants::ANIM_LIURNIA_TOWER_DOOR;
+        use crate::core::constants::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -555,7 +562,7 @@ mod tests {
                 Some(make_pos(0x3C3A1000, 100.0, 0.0, 100.0)), // Door opens
                 Some(make_pos(0x3C3A1000, 100.0, 50.0, 100.0)), // Tower top (same map, different pos)
             ],
-            vec![Some(0), Some(ANIM_LIURNIA_TOWER_DOOR), Some(0)],
+            vec![Some(0), Some(Animation::LiurniaTowerDoor.as_u32()), Some(0)],
         );
 
         let warp = MockWarpDetector::new();
@@ -582,7 +589,7 @@ mod tests {
     #[test]
     fn test_post_boss_warp_animation() {
         // Animation 12020210: warp after defeating certain bosses (e.g., Maliketh)
-        use crate::core::constants::ANIM_POST_BOSS_WARP;
+        use crate::core::constants::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -590,7 +597,7 @@ mod tests {
                 Some(make_pos(0x0A101000, 100.0, 0.0, 100.0)), // Cutscene/warp
                 Some(make_pos(0x3C5A0000, 200.0, 0.0, 200.0)), // Crumbling Farum Azula
             ],
-            vec![Some(0), Some(ANIM_POST_BOSS_WARP), Some(0)],
+            vec![Some(0), Some(Animation::PostBossWarp.as_u32()), Some(0)],
         );
 
         let warp = MockWarpDetector::new();
@@ -627,10 +634,10 @@ mod tests {
             ],
             vec![
                 Some(0),
-                Some(ANIM_FOG_WALL),
-                Some(0),             // First warp completes
-                Some(ANIM_FOG_WALL), // Second warp starts immediately
-                Some(0),             // Second warp completes
+                Some(Animation::FogWall.as_u32()),
+                Some(0),                           // First warp completes
+                Some(Animation::FogWall.as_u32()), // Second warp starts immediately
+                Some(0),                           // Second warp completes
             ],
         );
 
@@ -676,7 +683,7 @@ mod tests {
                 None,                                          // Still unreadable during animation
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Now readable
             ],
-            vec![Some(0), Some(ANIM_FOG_WALL), Some(0)],
+            vec![Some(0), Some(Animation::FogWall.as_u32()), Some(0)],
         );
 
         let warp = MockWarpDetector::new();
@@ -709,7 +716,7 @@ mod tests {
             ],
             vec![
                 Some(0),
-                Some(ANIM_FOG_WALL),
+                Some(Animation::FogWall.as_u32()),
                 Some(0), // Animation ended
                 Some(0),
                 Some(0),
@@ -812,7 +819,10 @@ mod tests {
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
             ],
-            vec![Some(ANIM_FOG_WALL), Some(ANIM_FOG_WALL)],
+            vec![
+                Some(Animation::FogWall.as_u32()),
+                Some(Animation::FogWall.as_u32()),
+            ],
         );
 
         let warp = MockWarpDetector::new();
@@ -834,7 +844,7 @@ mod tests {
                 Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Animation
                 Some(make_pos(0x0A0A1000, 500.0, 50.0, 500.0)), // Position B (same map!)
             ],
-            vec![Some(0), Some(ANIM_FOG_WALL), Some(0)],
+            vec![Some(0), Some(Animation::FogWall.as_u32()), Some(0)],
         );
 
         let warp = MockWarpDetector::new();
@@ -866,7 +876,7 @@ mod tests {
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
             ],
-            vec![Some(0), Some(ANIM_FOG_WALL), Some(0)],
+            vec![Some(0), Some(Animation::FogWall.as_u32()), Some(0)],
         );
 
         let warp = MockWarpDetector::new();

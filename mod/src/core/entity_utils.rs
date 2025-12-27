@@ -3,7 +3,7 @@
 //! Functions for identifying and classifying game entities,
 //! particularly fog gate randomizer entities and teleport animations.
 
-use super::constants::*;
+use super::constants::{Animation, FOG_RANDO_ENTITY_MAX, FOG_RANDO_ENTITY_MIN};
 
 /// Check if an entity ID is from Fog Gate Randomizer
 ///
@@ -37,46 +37,40 @@ pub fn is_fog_rando_entity(entity_id: u32) -> bool {
 /// assert_eq!(get_teleport_type(12345), None);
 /// ```
 pub fn get_teleport_type(anim_id: u32) -> Option<&'static str> {
-    match anim_id {
-        ANIM_FOG_WALL => Some("FOG"),
-        ANIM_BACK_TO_ENTRANCE => Some("BACK_TO_ENTRANCE"),
-        ANIM_WAYGATE => Some("WAYGATE"),
-        ANIM_SENDING_GATE_BLUE | ANIM_SENDING_GATE_RED => Some("SENDING_GATE"),
-        ANIM_MEDAL => Some("MEDAL"),
-        ANIM_HORNED_REMAINS => Some("HORNED_REMAINS"),
-        ANIM_LIURNIA_TOWER_DOOR => Some("LIURNIA_TOWER_DOOR"),
-        ANIM_POST_BOSS_WARP => Some("POST_BOSS_WARP"),
-        _ => None,
+    // Special case: both sending gates return "SENDING_GATE"
+    if anim_id == Animation::SendingGateBlue.as_u32()
+        || anim_id == Animation::SendingGateRed.as_u32()
+    {
+        return Some("SENDING_GATE");
     }
+
+    Animation::from_anim_id(anim_id).and_then(|a| a.teleport_label())
 }
 
 /// Check if an animation ID is a teleportation animation
 ///
-/// This is a convenience wrapper around `get_teleport_type`.
+/// Returns true only for teleport animations, not for other known animations.
 pub fn is_teleport_animation(anim_id: u32) -> bool {
-    get_teleport_type(anim_id).is_some()
+    Animation::from_anim_id(anim_id)
+        .map(|a| a.is_teleport())
+        .unwrap_or(false)
 }
 
 /// Get a human-readable label for an animation ID
 ///
-/// Returns a label for known animations (teleport and common animations),
+/// Returns a label for known animations, "IDLE?" for 0,
 /// or an empty string for unknown animations.
 pub fn get_animation_label(anim_id: u32) -> &'static str {
-    match anim_id {
-        ANIM_FOG_WALL => "FOG_WALL",
-        ANIM_BACK_TO_ENTRANCE => "BACK_TO_ENTRANCE",
-        ANIM_WAYGATE => "WAYGATE",
-        ANIM_SENDING_GATE_BLUE => "SENDING_GATE_BLUE",
-        ANIM_SENDING_GATE_RED => "SENDING_GATE_RED",
-        ANIM_MEDAL => "ITEM_USE_MEDAL",
-        ANIM_HORNED_REMAINS => "HORNED_REMAINS",
-        ANIM_LIURNIA_TOWER_DOOR => "LIURNIA_TOWER_DOOR",
-        ANIM_POST_BOSS_WARP => "POST_BOSS_WARP",
-        50230 => "ITEM_USE_MEMORY",
-        63000 => "SPAWN",
-        0 => "IDLE?",
-        _ => "",
+    if let Some(anim) = Animation::from_anim_id(anim_id) {
+        return anim.name();
     }
+
+    // Special case: 0 is idle/no animation
+    if anim_id == 0 {
+        return "IDLE?";
+    }
+
+    ""
 }
 
 #[cfg(test)]
@@ -151,6 +145,13 @@ mod tests {
         assert_eq!(get_teleport_type(99999), None);
     }
 
+    #[test]
+    fn test_teleport_type_non_teleport_animations() {
+        // Non-teleport animations should return None
+        assert_eq!(get_teleport_type(50230), None); // ItemUseMemory
+        assert_eq!(get_teleport_type(63000), None); // Spawn
+    }
+
     // =========================================================================
     // is_teleport_animation tests
     // =========================================================================
@@ -161,6 +162,13 @@ mod tests {
         assert!(is_teleport_animation(60490));
         assert!(!is_teleport_animation(0));
         assert!(!is_teleport_animation(12345));
+    }
+
+    #[test]
+    fn test_is_teleport_animation_non_teleport() {
+        // Non-teleport animations should return false
+        assert!(!is_teleport_animation(50230)); // ItemUseMemory
+        assert!(!is_teleport_animation(63000)); // Spawn
     }
 
     // =========================================================================

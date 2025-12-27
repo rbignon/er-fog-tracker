@@ -92,11 +92,11 @@ pub enum TeleportType {
 impl TeleportType {
     /// Animation ID that triggers this event type
     pub fn animation_id(&self) -> Option<u32> {
-        use super::constants::*;
+        use super::constants::Animation;
         match self {
-            Self::FogWall => Some(ANIM_FOG_WALL),
-            Self::Waygate => Some(ANIM_WAYGATE),
-            Self::Medal => Some(ANIM_MEDAL),
+            Self::FogWall => Some(Animation::FogWall.as_u32()),
+            Self::Waygate => Some(Animation::Waygate.as_u32()),
+            Self::Medal => Some(Animation::Medal.as_u32()),
             Self::Coffin => None,
             Self::FastTravel => None,
         }

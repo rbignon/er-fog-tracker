@@ -213,7 +213,7 @@ impl Default for TrackerSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::ANIM_FOG_WALL;
+    use crate::core::constants::Animation;
     use crate::core::io_traits::mocks::MockServerConnection;
     use crate::core::traits::mocks::{MockGameState, MockWarpDetector};
     use crate::core::types::PlayerPosition;
@@ -256,7 +256,7 @@ mod tests {
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Animation starts
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Stormveil
             ],
-            vec![Some(0), Some(ANIM_FOG_WALL), Some(0)],
+            vec![Some(0), Some(Animation::FogWall.as_u32()), Some(0)],
         );
         let warp = MockWarpDetector::new();
         warp.set_warp(true, 755890042, 0x0A0A1000);
@@ -293,7 +293,7 @@ mod tests {
                 Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
             ],
-            vec![Some(0), Some(ANIM_FOG_WALL), Some(0)],
+            vec![Some(0), Some(Animation::FogWall.as_u32()), Some(0)],
         );
         let warp = MockWarpDetector::new();
         warp.set_warp(true, 755890042, 0x0A0A1000);
@@ -401,7 +401,12 @@ mod tests {
                 None,                                          // Loading
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Exit
             ],
-            vec![Some(0), Some(ANIM_FOG_WALL), Some(ANIM_FOG_WALL), Some(0)],
+            vec![
+                Some(0),
+                Some(Animation::FogWall.as_u32()),
+                Some(Animation::FogWall.as_u32()),
+                Some(0),
+            ],
         );
         let warp = MockWarpDetector::new();
         warp.set_warp(true, 755890042, 0x0A0A1000);
@@ -509,7 +514,7 @@ mod tests {
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Stormveil
                 Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Idle
             ],
-            vec![Some(0), Some(ANIM_FOG_WALL), Some(0), Some(0)],
+            vec![Some(0), Some(Animation::FogWall.as_u32()), Some(0), Some(0)],
         );
         let warp = MockWarpDetector::new();
         warp.set_warp(true, 755890042, 0x0A0A1000);
@@ -571,9 +576,9 @@ mod tests {
             ],
             vec![
                 Some(0),
-                Some(ANIM_FOG_WALL),
+                Some(Animation::FogWall.as_u32()),
                 Some(0),
-                Some(ANIM_FOG_WALL),
+                Some(Animation::FogWall.as_u32()),
                 Some(0),
             ],
         );

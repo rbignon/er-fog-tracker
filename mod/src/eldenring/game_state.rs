@@ -10,9 +10,7 @@ use libeldenring::memedit::PointerChain;
 use libeldenring::pointers::Pointers;
 
 use crate::core::constants::{
-    FIELD_AREA_PLAY_REGION_ID_OFFSET, GAMEDATAMAN_DEATH_COUNT_OFFSET, GREAT_RUNE_GODRICK,
-    GREAT_RUNE_MALENIA, GREAT_RUNE_MOHG, GREAT_RUNE_MORGOTT, GREAT_RUNE_RADAHN, GREAT_RUNE_RYKARD,
-    GREAT_RUNE_UNBORN, GREAT_RUNE_UNRESTORED_END, GREAT_RUNE_UNRESTORED_START, INVALID_MAP_ID,
+    GreatRune, FIELD_AREA_PLAY_REGION_ID_OFFSET, GAMEDATAMAN_DEATH_COUNT_OFFSET, INVALID_MAP_ID,
     INVENTORY_ENTRY_ITEM_ID_OFFSET, INVENTORY_ENTRY_QUANTITY_OFFSET, INVENTORY_ENTRY_SIZE,
     ITEM_CATEGORY_GOODS, KEY_ITEMS_COUNT_OFFSET, KEY_ITEMS_HEAD_OFFSET, MESSMERS_KINDLING,
 };
@@ -75,12 +73,12 @@ impl GameState {
 
     /// Read the count of possessed Great Runes
     ///
-    /// Returns the number of unique Great Runes (0-8).
+    /// Returns the number of unique Great Runes (0-7).
     /// Restored and unrestored versions are deduplicated.
     pub fn read_great_runes_count(&self) -> Option<u32> {
         let (key_items_head, key_items_count) = self.read_key_items_info()?;
 
-        let mut found_runes: HashSet<u32> = HashSet::new();
+        let mut found_runes: HashSet<GreatRune> = HashSet::new();
 
         for i in 0..key_items_count {
             let entry_addr = key_items_head + (i as usize) * INVENTORY_ENTRY_SIZE;
@@ -93,9 +91,10 @@ impl GameState {
             let category = ((item_id >> 28) & 0xF) as u8;
             let param_id = (item_id & 0x0FFFFFFF) as u32;
 
-            if category == ITEM_CATEGORY_GOODS && Self::is_great_rune(param_id) {
-                let normalized = Self::normalize_great_rune(param_id);
-                found_runes.insert(normalized);
+            if category == ITEM_CATEGORY_GOODS {
+                if let Some(rune) = GreatRune::from_param_id(param_id) {
+                    found_runes.insert(rune);
+                }
             }
         }
 
@@ -193,31 +192,6 @@ impl GameState {
         }
 
         Some((key_items_head, key_items_count))
-    }
-
-    /// Check if param_id is a Great Rune
-    fn is_great_rune(param_id: u32) -> bool {
-        matches!(
-            param_id,
-            GREAT_RUNE_GODRICK
-                | GREAT_RUNE_RADAHN
-                | GREAT_RUNE_MORGOTT
-                | GREAT_RUNE_RYKARD
-                | GREAT_RUNE_MOHG
-                | GREAT_RUNE_MALENIA
-                | GREAT_RUNE_UNBORN
-                | GREAT_RUNE_UNRESTORED_START..=GREAT_RUNE_UNRESTORED_END
-        )
-    }
-
-    /// Normalize unrestored Great Rune param_id to restored version
-    fn normalize_great_rune(param_id: u32) -> u32 {
-        if (GREAT_RUNE_UNRESTORED_START..=GREAT_RUNE_UNRESTORED_END).contains(&param_id) {
-            // 8148 -> 191, 8149 -> 192, etc.
-            param_id - GREAT_RUNE_UNRESTORED_START + GREAT_RUNE_GODRICK
-        } else {
-            param_id
-        }
     }
 }
 

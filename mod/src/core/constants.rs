@@ -8,32 +8,120 @@ use std::time::Duration;
 // TELEPORT ANIMATION IDS
 // =============================================================================
 
-/// Fog wall traversal animation
-pub const ANIM_FOG_WALL: u32 = 60060;
+/// Known animation IDs in Elden Ring
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Animation {
+    // -------------------------------------------------------------------------
+    // Teleport animations
+    // -------------------------------------------------------------------------
+    /// Fog wall traversal animation
+    FogWall = 60060,
+    /// "Back to entrance" animation (used by some fog gates)
+    BackToEntrance = 60460,
+    /// Waygate teleport animation
+    Waygate = 60490,
+    /// Sending gate (blue variant) animation
+    SendingGateBlue = 60470,
+    /// Sending gate (red variant) animation
+    SendingGateRed = 60472,
+    /// Pureblood Knight's Medal item use animation
+    Medal = 50340,
+    /// Horned Remains teleport animation
+    HornedRemains = 60010,
+    /// Liurnia Divine Tower door teleport animation
+    LiurniaTowerDoor = 12202126,
+    /// Post-boss warp animation (after defeating a boss)
+    PostBossWarp = 12020210,
 
-/// "Back to entrance" animation (used by some fog gates)
-pub const ANIM_BACK_TO_ENTRANCE: u32 = 60460;
+    // -------------------------------------------------------------------------
+    // Other known animations
+    // -------------------------------------------------------------------------
+    /// Memory of Grace item use animation
+    ItemUseMemory = 50230,
+    /// Spawn animation
+    Spawn = 63000,
+}
 
-/// Waygate teleport animation
-pub const ANIM_WAYGATE: u32 = 60490;
+impl Animation {
+    /// Try to convert a raw animation ID to an Animation
+    ///
+    /// Note: Returns None for unknown animations and for 0 (idle/no animation).
+    pub fn from_anim_id(anim_id: u32) -> Option<Self> {
+        match anim_id {
+            // Teleport animations
+            60060 => Some(Self::FogWall),
+            60460 => Some(Self::BackToEntrance),
+            60490 => Some(Self::Waygate),
+            60470 => Some(Self::SendingGateBlue),
+            60472 => Some(Self::SendingGateRed),
+            50340 => Some(Self::Medal),
+            60010 => Some(Self::HornedRemains),
+            12202126 => Some(Self::LiurniaTowerDoor),
+            12020210 => Some(Self::PostBossWarp),
+            // Other animations
+            50230 => Some(Self::ItemUseMemory),
+            63000 => Some(Self::Spawn),
+            _ => None,
+        }
+    }
 
-/// Sending gate (blue variant) animation
-pub const ANIM_SENDING_GATE_BLUE: u32 = 60470;
+    /// Get the raw animation ID
+    pub fn as_u32(self) -> u32 {
+        self as u32
+    }
 
-/// Sending gate (red variant) animation
-pub const ANIM_SENDING_GATE_RED: u32 = 60472;
+    /// Check if this animation is a teleport animation
+    pub fn is_teleport(self) -> bool {
+        matches!(
+            self,
+            Self::FogWall
+                | Self::BackToEntrance
+                | Self::Waygate
+                | Self::SendingGateBlue
+                | Self::SendingGateRed
+                | Self::Medal
+                | Self::HornedRemains
+                | Self::LiurniaTowerDoor
+                | Self::PostBossWarp
+        )
+    }
 
-/// Pureblood Knight's Medal item use animation
-pub const ANIM_MEDAL: u32 = 50340;
+    /// Get a short label for teleport animations (for logging)
+    ///
+    /// Returns None for non-teleport animations.
+    pub fn teleport_label(self) -> Option<&'static str> {
+        match self {
+            Self::FogWall => Some("FOG"),
+            Self::BackToEntrance => Some("BACK_TO_ENTRANCE"),
+            Self::Waygate => Some("WAYGATE"),
+            Self::SendingGateBlue => Some("SENDING_GATE_BLUE"),
+            Self::SendingGateRed => Some("SENDING_GATE_RED"),
+            Self::Medal => Some("MEDAL"),
+            Self::HornedRemains => Some("HORNED_REMAINS"),
+            Self::LiurniaTowerDoor => Some("LIURNIA_TOWER_DOOR"),
+            Self::PostBossWarp => Some("POST_BOSS_WARP"),
+            _ => None,
+        }
+    }
 
-/// Horned Remains teleport animation
-pub const ANIM_HORNED_REMAINS: u32 = 60010;
-
-/// Liurnia Divine Tower door teleport animation
-pub const ANIM_LIURNIA_TOWER_DOOR: u32 = 12202126;
-
-/// Post-boss warp animation (after defeating a boss)
-pub const ANIM_POST_BOSS_WARP: u32 = 12020210;
+    /// Get the full animation name (for debug display)
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::FogWall => "FOG_WALL",
+            Self::BackToEntrance => "BACK_TO_ENTRANCE",
+            Self::Waygate => "WAYGATE",
+            Self::SendingGateBlue => "SENDING_GATE_BLUE",
+            Self::SendingGateRed => "SENDING_GATE_RED",
+            Self::Medal => "ITEM_USE_MEDAL",
+            Self::HornedRemains => "HORNED_REMAINS",
+            Self::LiurniaTowerDoor => "LIURNIA_TOWER_DOOR",
+            Self::PostBossWarp => "POST_BOSS_WARP",
+            Self::ItemUseMemory => "ITEM_USE_MEMORY",
+            Self::Spawn => "SPAWN",
+        }
+    }
+}
 
 // =============================================================================
 // FOG GATE RANDOMIZER ENTITY RANGES
@@ -105,18 +193,66 @@ pub const INVENTORY_ENTRY_ITEM_ID_OFFSET: usize = 0x04;
 /// Offset to quantity within inventory entry
 pub const INVENTORY_ENTRY_QUANTITY_OFFSET: usize = 0x08;
 
-// Great Rune param_ids (restored versions)
-pub const GREAT_RUNE_GODRICK: u32 = 191;
-pub const GREAT_RUNE_RADAHN: u32 = 192;
-pub const GREAT_RUNE_MORGOTT: u32 = 193;
-pub const GREAT_RUNE_RYKARD: u32 = 194;
-pub const GREAT_RUNE_MOHG: u32 = 195;
-pub const GREAT_RUNE_MALENIA: u32 = 196;
-pub const GREAT_RUNE_UNBORN: u32 = 10080;
+// =============================================================================
+// GREAT RUNES
+// =============================================================================
 
-// Great Rune param_ids (unrestored versions)
-pub const GREAT_RUNE_UNRESTORED_START: u32 = 8148;
-pub const GREAT_RUNE_UNRESTORED_END: u32 = 8153;
+/// Great Rune param_ids (restored versions)
+///
+/// Unrestored versions use param_ids 8148-8153, which map to Godrick-Malenia.
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum GreatRune {
+    Godrick = 191,
+    Radahn = 192,
+    Morgott = 193,
+    Rykard = 194,
+    Mohg = 195,
+    Malenia = 196,
+    Unborn = 10080,
+}
+
+/// Range of unrestored Great Rune param_ids (8148-8153 → Godrick-Malenia)
+pub const GREAT_RUNE_UNRESTORED_RANGE: std::ops::RangeInclusive<u32> = 8148..=8153;
+
+impl GreatRune {
+    /// All Great Runes for iteration
+    pub const ALL: &'static [GreatRune] = &[
+        Self::Godrick,
+        Self::Radahn,
+        Self::Morgott,
+        Self::Rykard,
+        Self::Mohg,
+        Self::Malenia,
+        Self::Unborn,
+    ];
+
+    /// Try to match a param_id, normalizing unrestored to restored
+    pub fn from_param_id(param_id: u32) -> Option<Self> {
+        // Normalize unrestored (8148-8153) to restored (191-196)
+        let normalized = if GREAT_RUNE_UNRESTORED_RANGE.contains(&param_id) {
+            param_id - 8148 + 191
+        } else {
+            param_id
+        };
+
+        match normalized {
+            191 => Some(Self::Godrick),
+            192 => Some(Self::Radahn),
+            193 => Some(Self::Morgott),
+            194 => Some(Self::Rykard),
+            195 => Some(Self::Mohg),
+            196 => Some(Self::Malenia),
+            10080 => Some(Self::Unborn),
+            _ => None,
+        }
+    }
+
+    /// Get the raw param_id
+    pub fn as_u32(self) -> u32 {
+        self as u32
+    }
+}
 
 /// Messmer's Kindling param_id (discovered via debug dump)
 pub const MESSMERS_KINDLING: u32 = 2008021;
