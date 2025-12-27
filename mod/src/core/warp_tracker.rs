@@ -39,7 +39,7 @@ impl PendingWarp {
 // =============================================================================
 
 /// A completed warp discovery ready to be sent to the server
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DiscoveryEvent {
     /// Entry position
     pub entry: PlayerPosition,

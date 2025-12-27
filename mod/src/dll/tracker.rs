@@ -1,4 +1,10 @@
-// FogRandoTracker - Fog gate traversal tracking for Fog Gate Randomizer
+//! FogRandoTracker - Fog gate traversal tracking for Fog Gate Randomizer
+//!
+//! This module provides the main DLL tracker that orchestrates:
+//! - Game state reading (via eldenring module)
+//! - Warp detection and discovery (via core::TrackerSession)
+//! - Server communication (via WebSocket adapter)
+//! - Debug logging and UI state
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -6,31 +12,123 @@ use std::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 use windows::Win32::Foundation::HINSTANCE;
 
-use crate::core::constants::WARP_TIMEOUT;
 use crate::core::entity_utils::{get_animation_label, get_teleport_type, is_fog_rando_entity};
+use crate::core::io_traits::{
+    ConnectionStatus as CoreConnectionStatus, DiscoveryResult, DiscoverySender, ServerEvent,
+    ServerEventReceiver, ZoneQueryResult,
+};
+use crate::core::protocol::{DiscoveryStats, FogExit};
+use crate::core::session::{SessionEvent, TrackerSession};
 use crate::core::traits::{GameStateReader, SpEffectChecker, WarpDetector};
-use crate::core::types::{PlayerPosition, SpEffectDebugInfo};
+use crate::core::types::SpEffectDebugInfo;
+use crate::core::warp_tracker::DiscoveryEvent;
 use crate::eldenring::{GameMan, GameState, SpEffect};
 
 use super::config::Config;
-use super::websocket::{
-    ConnectionStatus, DiscoveryStats, FogExit, IncomingMessage, WebSocketClient,
-};
+use super::websocket::{ConnectionStatus as WsConnectionStatus, IncomingMessage, WebSocketClient};
 
 // =============================================================================
-// PENDING WARP
+// WEBSOCKET ADAPTER
 // =============================================================================
 
-/// Pending warp event (entry position recorded, waiting for exit)
-#[derive(Clone, Debug)]
-pub(crate) struct PendingWarp {
-    entry: PlayerPosition,
-    /// Entity ID of the warp destination (captured when warp_requested becomes true)
-    destination_entity_id: u32,
-    /// Transport type inferred from animation
-    transport_type: &'static str,
-    /// When this pending warp was created (for timeout detection)
-    created_at: Instant,
+/// Adapter that bridges WebSocketClient to the core I/O traits
+///
+/// This allows TrackerSession (platform-independent) to communicate
+/// with the WebSocket client (platform-specific).
+struct WebSocketAdapter<'a> {
+    client: &'a mut WebSocketClient,
+}
+
+impl<'a> WebSocketAdapter<'a> {
+    fn new(client: &'a mut WebSocketClient) -> Self {
+        Self { client }
+    }
+
+    /// Convert WebSocket ConnectionStatus to core ConnectionStatus
+    fn convert_status(status: WsConnectionStatus) -> CoreConnectionStatus {
+        match status {
+            WsConnectionStatus::Disconnected => CoreConnectionStatus::Disconnected,
+            WsConnectionStatus::Connecting => CoreConnectionStatus::Connecting,
+            WsConnectionStatus::Connected => CoreConnectionStatus::Connected,
+            WsConnectionStatus::Reconnecting => CoreConnectionStatus::Reconnecting,
+            WsConnectionStatus::Error => CoreConnectionStatus::Error,
+        }
+    }
+}
+
+impl DiscoverySender for WebSocketAdapter<'_> {
+    fn is_connected(&self) -> bool {
+        self.client.is_connected()
+    }
+
+    fn status(&self) -> CoreConnectionStatus {
+        Self::convert_status(self.client.status())
+    }
+
+    fn send_discovery(&self, event: &DiscoveryEvent) {
+        debug!(
+            entry_map = event.entry.map_id_str,
+            entry_pos = format!("({:.1}, {:.1}, {:.1})", event.entry.x, event.entry.y, event.entry.z),
+            entry_region = ?event.entry.play_region_id,
+            exit_map = event.exit.map_id_str,
+            exit_pos = format!("({:.1}, {:.1}, {:.1})", event.exit.x, event.exit.y, event.exit.z),
+            exit_region = ?event.exit.play_region_id,
+            dest_entity = event.destination_entity_id,
+            "[WARP] Sending discovery to server"
+        );
+        self.client.send_discovery_v2(
+            event.entry.map_id,
+            event.entry.pos(),
+            event.entry.play_region_id,
+            event.exit.map_id,
+            event.exit.pos(),
+            event.exit.play_region_id,
+            event.transport_type,
+            event.destination_entity_id,
+        );
+    }
+
+    fn send_zone_query(&self, position: &crate::core::types::PlayerPosition) {
+        info!(
+            map_id = position.map_id_str,
+            x = format!("{:.1}", position.x),
+            y = format!("{:.1}", position.y),
+            z = format!("{:.1}", position.z),
+            "[ZONE_QUERY] Sending after loading screen"
+        );
+        self.client
+            .send_zone_query(position.map_id, position.pos(), position.play_region_id);
+    }
+}
+
+impl ServerEventReceiver for WebSocketAdapter<'_> {
+    fn poll_event(&mut self) -> Option<ServerEvent> {
+        self.client.poll().map(|msg| match msg {
+            IncomingMessage::StatusChanged(status) => {
+                ServerEvent::StatusChanged(Self::convert_status(status))
+            }
+            IncomingMessage::DiscoveryAck {
+                propagated,
+                current_zone,
+                exits,
+                stats,
+            } => ServerEvent::DiscoveryAck(DiscoveryResult {
+                propagated,
+                current_zone,
+                exits,
+                stats,
+            }),
+            IncomingMessage::ZoneQueryAck { zone, exits } => {
+                ServerEvent::ZoneQueryAck(ZoneQueryResult { zone, exits })
+            }
+            IncomingMessage::Error(msg) => ServerEvent::Error(msg),
+            IncomingMessage::Ping => {
+                // Ping is auto-handled by WebSocketClient, but we still need to return something
+                // We'll filter this out in the session
+                ServerEvent::Error("ping".to_string())
+            }
+        })
+    }
 }
 
 // =============================================================================
@@ -38,39 +136,37 @@ pub(crate) struct PendingWarp {
 // =============================================================================
 
 /// Fog gate traversal tracking state
+///
+/// This is the main DLL-side tracker that:
+/// - Owns the platform-specific game readers (GameState, SpEffect, GameMan)
+/// - Owns the WebSocket client
+/// - Delegates warp tracking to TrackerSession
+/// - Handles debug logging (DLL-specific with tracing crate)
 pub struct FogRandoTracker {
+    // Platform-specific game readers
     game_state: GameState,
     sp_effect: SpEffect,
     game_man: GameMan,
-    /// Pending fog rando warp (entry recorded, waiting for exit)
-    pending_warp: Option<PendingWarp>,
-    /// Whether we were in a teleport animation last frame
-    was_in_teleport_anim: bool,
+
+    // Core tracking session (platform-independent)
+    session: TrackerSession,
+
+    // WebSocket client
+    pub(crate) ws_client: WebSocketClient,
+
+    // UI state
     pub(crate) show_ui: bool,
     pub(crate) show_debug: bool,
     pub(crate) show_exits: bool,
     pub(crate) config: Config,
     pub(crate) status_message: Option<(String, Instant)>,
-    pub(crate) ws_client: WebSocketClient,
-    /// Current zone name (resolved by server after fog traversal)
-    pub(crate) current_zone: Option<String>,
-    /// Fog exits from current zone (received from server)
-    pub(crate) current_exits: Vec<FogExit>,
-    /// Discovery statistics from server
-    pub(crate) discovery_stats: Option<DiscoveryStats>,
-    /// Whether position was readable last frame (to detect loading screens)
-    was_position_readable: bool,
-    /// Font data loaded from file (must persist for imgui)
     pub(crate) font_data: Option<Vec<u8>>,
-    /// Last logged SpEffect debug state (to avoid duplicate logs)
+
+    // Debug logging state (DLL-specific, uses tracing)
     last_logged_speffect_state: Option<(bool, Vec<u32>)>,
-    /// Last time we logged SpEffect debug info
     last_speffect_log_time: Instant,
-    /// Last logged animation ID (to avoid duplicate logs)
     last_logged_anim: Option<u32>,
-    /// Last time we logged animation debug info
     last_anim_log_time: Instant,
-    /// Last logged warp_requested state
     last_logged_warp_requested: bool,
 }
 
@@ -133,18 +229,13 @@ impl FogRandoTracker {
             game_state,
             sp_effect,
             game_man,
-            pending_warp: None,
-            was_in_teleport_anim: false,
+            session: TrackerSession::new(),
+            ws_client,
             show_ui: true,
             show_debug: false,
             show_exits: true,
             config,
             status_message: None,
-            ws_client,
-            current_zone: None,
-            current_exits: Vec::new(),
-            discovery_stats: None,
-            was_position_readable: false,
             font_data,
             last_logged_speffect_state: None,
             last_speffect_log_time: Instant::now(),
@@ -156,173 +247,78 @@ impl FogRandoTracker {
 
     /// Check for fog gate randomizer warps each frame
     ///
-    /// Detection strategy:
-    /// 1. Detect teleport animations (fog wall, waygate, sending gate, medal)
-    /// 2. When animation starts → record entry position
-    /// 3. Capture dest_entity_id when warp_requested becomes true (delayed for fog gates)
-    /// 4. When animation ends + position readable → send discovery
+    /// This method delegates warp detection to TrackerSession and handles
+    /// the resulting events (logging, status messages, etc.)
     pub fn check_fog_traversal(&mut self) {
-        // Log SpEffect debug info (with deduplication)
+        // Debug logging (DLL-specific, uses tracing)
         self.log_speffect_debug();
-
-        // Log animation changes (with deduplication)
         self.log_animation_debug();
-
-        // Log GameMan warp state changes
         self.log_warp_debug();
 
-        // Track loading screens - query zone info when exiting a loading screen
-        // (position goes from None to Some). This handles teleportation, death, fast travel, etc.
-        // But only if we don't have a pending warp (to avoid querying when we'll get info from discovery)
-        let position_now_readable = self.game_state.read_position().is_some();
-        if position_now_readable && !self.was_position_readable && self.pending_warp.is_none() {
-            // Just exited a loading screen - query server for current zone
-            if let Some(pos) = self.game_state.read_position() {
-                if self.ws_client.is_connected() {
+        // Create adapter for WebSocket communication
+        let mut adapter = WebSocketAdapter::new(&mut self.ws_client);
+
+        // Delegate to TrackerSession
+        let events = self
+            .session
+            .update(&self.game_state, &self.game_man, &mut adapter);
+
+        // Handle session events
+        for event in events {
+            match event {
+                SessionEvent::DiscoverySent(discovery) => {
                     info!(
-                        map_id = pos.map_id_str,
-                        x = format!("{:.1}", pos.x),
-                        y = format!("{:.1}", pos.y),
-                        z = format!("{:.1}", pos.z),
-                        "[ZONE_QUERY] Sending after loading screen"
-                    );
-                    self.ws_client
-                        .send_zone_query(pos.map_id, pos.pos(), pos.play_region_id);
-                }
-            }
-            // Clear temporarily while waiting for response
-            self.current_zone = None;
-            self.current_exits.clear();
-        }
-        self.was_position_readable = position_now_readable;
-
-        // Check for pending warp timeout (prevents stale warps from hanging indefinitely)
-        if let Some(ref pending) = self.pending_warp {
-            if pending.created_at.elapsed() > WARP_TIMEOUT {
-                warn!(
-                    transport_type = pending.transport_type,
-                    elapsed_secs = pending.created_at.elapsed().as_secs(),
-                    "[WARP] Pending warp timed out, discarding"
-                );
-                self.pending_warp = None;
-            }
-        }
-
-        // =========================================================================
-        // ANIMATION-BASED TELEPORT DETECTION
-        //
-        // 1. Detect animation start → record entry position (dest_entity_id = 0)
-        // 2. When warp_requested becomes true → capture dest_entity_id
-        // 3. Detect animation end + position readable → send discovery
-        // =========================================================================
-        let cur_anim = self.game_state.read_animation();
-        let is_in_teleport_anim = cur_anim.and_then(get_teleport_type).is_some();
-        let transport_type = cur_anim.and_then(get_teleport_type).unwrap_or("OTHER");
-
-        // Entry detection: animation just started
-        if is_in_teleport_anim && !self.was_in_teleport_anim {
-            if let Some(pos) = self.game_state.read_position() {
-                info!(
-                    transport_type,
-                    map_id = pos.map_id_str,
-                    x = format!("{:.1}", pos.x),
-                    y = format!("{:.1}", pos.y),
-                    z = format!("{:.1}", pos.z),
-                    "[WARP] Teleport animation started"
-                );
-                self.pending_warp = Some(PendingWarp {
-                    entry: pos,
-                    destination_entity_id: 0, // Will be captured when warp_requested becomes true
-                    transport_type,
-                    created_at: Instant::now(),
-                });
-            } else {
-                warn!(
-                    transport_type,
-                    "[WARP] Teleport animation started but position unreadable"
-                );
-            }
-        }
-
-        // Capture dest_entity_id when available (happens after animation start for fog gates)
-        if let Some(ref mut pending) = self.pending_warp {
-            if pending.destination_entity_id == 0 {
-                let dest_entity_id = self.game_man.get_destination_entity_id();
-                if dest_entity_id != 0 {
-                    pending.destination_entity_id = dest_entity_id;
-                    debug!(dest_entity_id, "[WARP] Captured destination entity ID");
-                }
-            }
-        }
-
-        // Exit detection: animation ended + position readable
-        if !is_in_teleport_anim && self.was_in_teleport_anim {
-            if let Some(pending) = self.pending_warp.take() {
-                if let Some(exit_pos) = self.game_state.read_position() {
-                    info!(
-                        entry = pending.entry.map_id_str,
-                        exit = exit_pos.map_id_str,
-                        transport_type = pending.transport_type,
-                        dest_entity = pending.destination_entity_id,
+                        entry = discovery.entry.map_id_str,
+                        exit = discovery.exit.map_id_str,
+                        transport_type = discovery.transport_type,
+                        dest_entity = discovery.destination_entity_id,
                         "[WARP] Complete"
                     );
-                    self.send_discovery(&pending, &exit_pos);
-                } else {
-                    // Position not readable yet (still loading) - keep pending
-                    debug!(
-                        entry = pending.entry.map_id_str,
-                        "[WARP] Animation ended but position unreadable, waiting..."
-                    );
-                    self.pending_warp = Some(pending);
                 }
-            }
-        }
-
-        // Also check: if we have a pending warp with no animation and position is readable, send it
-        // This handles cases where the animation ended while position was unreadable
-        if self.pending_warp.is_some() && !is_in_teleport_anim && position_now_readable {
-            if let Some(pending) = self.pending_warp.take() {
-                if let Some(exit_pos) = self.game_state.read_position() {
+                SessionEvent::DiscoveryAcked(result) => {
                     info!(
-                        entry = pending.entry.map_id_str,
-                        exit = exit_pos.map_id_str,
-                        transport_type = pending.transport_type,
-                        dest_entity = pending.destination_entity_id,
-                        "[WARP] Complete (delayed)"
+                        propagated_count = result.propagated.len(),
+                        zone = ?result.current_zone,
+                        exit_count = result.exits.len(),
+                        discovered = result.stats.discovered,
+                        total = result.stats.total,
+                        "Discovery acknowledged by server"
                     );
-                    self.send_discovery(&pending, &exit_pos);
+                }
+                SessionEvent::ZoneQuerySent => {
+                    // Already logged in adapter
+                }
+                SessionEvent::ZoneUpdated(result) => {
+                    info!(
+                        zone = ?result.zone,
+                        exit_count = result.exits.len(),
+                        "Zone query response"
+                    );
+                }
+                SessionEvent::ConnectionChanged(status) => {
+                    info!(status = ?status, "WebSocket status changed");
+                    match status {
+                        CoreConnectionStatus::Connected => {
+                            self.set_status("Server connected".to_string());
+                        }
+                        CoreConnectionStatus::Error => {
+                            if let Some(err) = self.ws_client.last_error() {
+                                self.set_status(format!("Server error: {}", err));
+                            }
+                        }
+                        CoreConnectionStatus::Reconnecting => {
+                            self.set_status("Reconnecting to server...".to_string());
+                        }
+                        _ => {}
+                    }
+                }
+                SessionEvent::ServerError(msg) => {
+                    // Filter out ping "errors" (they're not real errors)
+                    if msg != "ping" {
+                        error!(error = %msg, "WebSocket error");
+                    }
                 }
             }
-        }
-
-        self.was_in_teleport_anim = is_in_teleport_anim;
-    }
-
-    /// Send discovery event to server
-    fn send_discovery(&mut self, pending: &PendingWarp, exit_pos: &PlayerPosition) {
-        if self.ws_client.is_connected() {
-            debug!(
-                entry_map = pending.entry.map_id_str,
-                entry_pos = format!("({:.1}, {:.1}, {:.1})", pending.entry.x, pending.entry.y, pending.entry.z),
-                entry_region = ?pending.entry.play_region_id,
-                exit_map = exit_pos.map_id_str,
-                exit_pos_coords = format!("({:.1}, {:.1}, {:.1})", exit_pos.x, exit_pos.y, exit_pos.z),
-                exit_region = ?exit_pos.play_region_id,
-                dest_entity = pending.destination_entity_id,
-                "[WARP] Sending discovery to server"
-            );
-            self.ws_client.send_discovery_v2(
-                pending.entry.map_id,
-                pending.entry.pos(),
-                pending.entry.play_region_id,
-                exit_pos.map_id,
-                exit_pos.pos(),
-                exit_pos.play_region_id,
-                pending.transport_type,
-                pending.destination_entity_id,
-            );
-        } else {
-            warn!("[WARP] Not connected to server, discovery not sent");
         }
     }
 
@@ -348,74 +344,23 @@ impl FogRandoTracker {
         Some((pos.map_id, pos.map_id_str))
     }
 
-    /// Poll the WebSocket client for incoming messages
-    pub fn poll_websocket(&mut self) {
-        while let Some(msg) = self.ws_client.poll() {
-            match msg {
-                IncomingMessage::StatusChanged(status) => {
-                    info!(status = ?status, "WebSocket status changed");
-                    match status {
-                        ConnectionStatus::Connected => {
-                            self.set_status("Server connected".to_string());
-                        }
-                        ConnectionStatus::Error => {
-                            if let Some(err) = self.ws_client.last_error() {
-                                self.set_status(format!("Server error: {}", err));
-                            }
-                        }
-                        ConnectionStatus::Reconnecting => {
-                            self.set_status("Reconnecting to server...".to_string());
-                        }
-                        _ => {}
-                    }
-                }
-                IncomingMessage::DiscoveryAck {
-                    propagated,
-                    current_zone,
-                    exits,
-                    stats,
-                } => {
-                    info!(
-                        propagated_count = propagated.len(),
-                        zone = ?current_zone,
-                        exit_count = exits.len(),
-                        discovered = stats.discovered,
-                        total = stats.total,
-                        "Discovery acknowledged by server"
-                    );
-                    // Update current zone, exits, and stats
-                    if current_zone.is_some() {
-                        self.current_zone = current_zone;
-                        self.current_exits = exits;
-                    }
-                    // Always update stats (even if zone resolution failed)
-                    if stats.total > 0 {
-                        self.discovery_stats = Some(stats);
-                    }
-                }
-                IncomingMessage::ZoneQueryAck { zone, exits } => {
-                    info!(
-                        zone = ?zone,
-                        exit_count = exits.len(),
-                        "Zone query response"
-                    );
-                    if zone.is_some() {
-                        self.current_zone = zone;
-                        self.current_exits = exits;
-                    }
-                }
-                IncomingMessage::Error(err) => {
-                    error!(error = %err, "WebSocket error");
-                }
-                IncomingMessage::Ping => {
-                    // Auto-handled by poll()
-                }
-            }
-        }
+    /// Get current zone name (from session state)
+    pub fn current_zone(&self) -> Option<&str> {
+        self.session.current_zone()
+    }
+
+    /// Get fog exits from current zone (from session state)
+    pub fn current_exits(&self) -> &[FogExit] {
+        self.session.exits()
+    }
+
+    /// Get discovery statistics (from session state)
+    pub fn discovery_stats(&self) -> Option<&DiscoveryStats> {
+        self.session.stats()
     }
 
     /// Get the WebSocket connection status
-    pub fn ws_status(&self) -> ConnectionStatus {
+    pub fn ws_status(&self) -> WsConnectionStatus {
         self.ws_client.status()
     }
 
