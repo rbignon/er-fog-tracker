@@ -6,6 +6,10 @@
 //!
 //! - Variables: `{zone}`, `{discovered}`, `{total}`, `{progress}`, `{status}`, `{map}`,
 //!   `{deaths}`, `{igt}`, `{runes}`, `{kindling}`
+//! - Colors: `{variable:color}` where color is a name or hex code
+//!   - Named colors: `red`, `green`, `blue`, `yellow`, `orange`, `cyan`, `magenta`, `gray`, `white`
+//!   - Hex colors: `#RRGGBB` (e.g., `#FF0000` for red)
+//!   - Config colors: `discovered`, `undiscovered`, `disabled` (reference overlay config)
 //! - Markers: `$n` (newline), `$>` (right-align rest of line)
 //!
 //! # Examples
@@ -27,7 +31,12 @@
 //!     kindling: Some(2),
 //! };
 //!
+//! // Simple template
 //! let result = render_template("{zone}$>{status} {discovered}/{total}", &ctx);
+//! assert_eq!(result.lines.len(), 1);
+//!
+//! // With colors
+//! let result = render_template("{zone:blue}$>{discovered:green}/{total}", &ctx);
 //! assert_eq!(result.lines.len(), 1);
 //! ```
 
@@ -35,6 +44,100 @@
 /// The UI layer should detect this and apply the appropriate color.
 pub const STATUS_MARKER_START: char = '\x01';
 pub const STATUS_MARKER_END: char = '\x02';
+
+/// Color specification for template text
+#[derive(Debug, Clone, PartialEq)]
+pub enum TemplateColor {
+    /// Default text color (from config text_color)
+    Default,
+    /// Status indicator color (dynamic based on connection state)
+    Status,
+    /// Reference to config discovered_color
+    Discovered,
+    /// Reference to config undiscovered_color
+    Undiscovered,
+    /// Reference to config text_disabled_color
+    Disabled,
+    /// Named color
+    Named(NamedColor),
+    /// Hex color (#RRGGBB)
+    Hex(String),
+}
+
+/// Predefined named colors
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum NamedColor {
+    Red,
+    Green,
+    Blue,
+    Yellow,
+    Orange,
+    Cyan,
+    Magenta,
+    Gray,
+    White,
+}
+
+impl NamedColor {
+    /// Convert to RGBA values
+    pub fn to_rgba(self) -> [f32; 4] {
+        match self {
+            NamedColor::Red => [1.0, 0.0, 0.0, 1.0],
+            NamedColor::Green => [0.0, 1.0, 0.0, 1.0],
+            NamedColor::Blue => [0.4, 0.6, 1.0, 1.0], // Lighter blue for readability
+            NamedColor::Yellow => [1.0, 1.0, 0.0, 1.0],
+            NamedColor::Orange => [1.0, 0.65, 0.0, 1.0],
+            NamedColor::Cyan => [0.0, 1.0, 1.0, 1.0],
+            NamedColor::Magenta => [1.0, 0.0, 1.0, 1.0],
+            NamedColor::Gray => [0.5, 0.5, 0.5, 1.0],
+            NamedColor::White => [1.0, 1.0, 1.0, 1.0],
+        }
+    }
+}
+
+/// Parse a color string into a TemplateColor
+///
+/// Accepts:
+/// - Named colors: "red", "green", "blue", etc.
+/// - Config references: "discovered", "undiscovered", "disabled"
+/// - Hex colors: "#RRGGBB" or "RRGGBB"
+pub fn parse_template_color(color_str: &str) -> Option<TemplateColor> {
+    let color_lower = color_str.to_lowercase();
+    match color_lower.as_str() {
+        // Named colors
+        "red" => Some(TemplateColor::Named(NamedColor::Red)),
+        "green" => Some(TemplateColor::Named(NamedColor::Green)),
+        "blue" => Some(TemplateColor::Named(NamedColor::Blue)),
+        "yellow" => Some(TemplateColor::Named(NamedColor::Yellow)),
+        "orange" => Some(TemplateColor::Named(NamedColor::Orange)),
+        "cyan" => Some(TemplateColor::Named(NamedColor::Cyan)),
+        "magenta" | "purple" => Some(TemplateColor::Named(NamedColor::Magenta)),
+        "gray" | "grey" => Some(TemplateColor::Named(NamedColor::Gray)),
+        "white" => Some(TemplateColor::Named(NamedColor::White)),
+        // Config references
+        "discovered" => Some(TemplateColor::Discovered),
+        "undiscovered" => Some(TemplateColor::Undiscovered),
+        "disabled" => Some(TemplateColor::Disabled),
+        // Hex color
+        _ => {
+            let hex = color_str.trim_start_matches('#');
+            if hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
+                Some(TemplateColor::Hex(format!("#{}", hex.to_uppercase())))
+            } else {
+                None
+            }
+        }
+    }
+}
+
+/// A span of text with optional color
+#[derive(Debug, Clone, PartialEq)]
+pub struct TextSpan {
+    /// The text content
+    pub text: String,
+    /// Optional color for this span
+    pub color: TemplateColor,
+}
 
 /// Context for template variable substitution
 #[derive(Debug, Clone)]
@@ -85,9 +188,9 @@ impl Default for TemplateContext {
 #[derive(Debug, Clone, PartialEq)]
 pub enum LineSegment {
     /// Text aligned to the left
-    Left(String),
+    Left(Vec<TextSpan>),
     /// Text aligned to the right (content after `$>`)
-    Right(String),
+    Right(Vec<TextSpan>),
 }
 
 /// A single rendered line
@@ -98,33 +201,45 @@ pub struct RenderedLine {
 
 impl RenderedLine {
     /// Create a line with only left-aligned content
-    pub fn left_only(text: String) -> Self {
+    pub fn left_only(spans: Vec<TextSpan>) -> Self {
         Self {
-            segments: vec![LineSegment::Left(text)],
+            segments: vec![LineSegment::Left(spans)],
         }
     }
 
     /// Create a line with left and right aligned content
-    pub fn left_right(left: String, right: String) -> Self {
+    pub fn left_right(left: Vec<TextSpan>, right: Vec<TextSpan>) -> Self {
         Self {
             segments: vec![LineSegment::Left(left), LineSegment::Right(right)],
         }
     }
 
-    /// Get the left-aligned text (if any)
-    pub fn left_text(&self) -> Option<&str> {
+    /// Get the left-aligned spans (if any)
+    pub fn left_spans(&self) -> Option<&[TextSpan]> {
         self.segments.iter().find_map(|s| match s {
-            LineSegment::Left(text) => Some(text.as_str()),
+            LineSegment::Left(spans) => Some(spans.as_slice()),
             _ => None,
         })
     }
 
-    /// Get the right-aligned text (if any)
-    pub fn right_text(&self) -> Option<&str> {
+    /// Get the right-aligned spans (if any)
+    pub fn right_spans(&self) -> Option<&[TextSpan]> {
         self.segments.iter().find_map(|s| match s {
-            LineSegment::Right(text) => Some(text.as_str()),
+            LineSegment::Right(spans) => Some(spans.as_slice()),
             _ => None,
         })
+    }
+
+    /// Get the left-aligned text as a plain string (for compatibility)
+    pub fn left_text(&self) -> Option<String> {
+        self.left_spans()
+            .map(|spans| spans.iter().map(|s| s.text.as_str()).collect())
+    }
+
+    /// Get the right-aligned text as a plain string (for compatibility)
+    pub fn right_text(&self) -> Option<String> {
+        self.right_spans()
+            .map(|spans| spans.iter().map(|s| s.text.as_str()).collect())
     }
 }
 
@@ -185,64 +300,125 @@ fn format_igt(ms: u32) -> String {
     format!("{:01}:{:02}:{:02}", hours, minutes, seconds)
 }
 
-/// Substitute variables in a template string
-fn substitute_variables(template: &str, ctx: &TemplateContext, has_status: &mut bool) -> String {
-    let mut result = template.to_string();
+/// Get the value for a variable name
+fn get_variable_value(name: &str, ctx: &TemplateContext) -> Option<String> {
+    match name {
+        "zone" => Some(
+            ctx.zone
+                .as_deref()
+                .unwrap_or(&ctx.zone_unknown_text)
+                .to_string(),
+        ),
+        "discovered" => Some(ctx.discovered.to_string()),
+        "total" => Some(ctx.total.to_string()),
+        "progress" => {
+            let progress = if ctx.total > 0 {
+                (ctx.discovered * 100) / ctx.total
+            } else {
+                0
+            };
+            Some(progress.to_string())
+        }
+        "map" => Some(ctx.map_id.as_deref().unwrap_or("").to_string()),
+        "deaths" => Some(ctx.deaths.map(|d| d.to_string()).unwrap_or_default()),
+        "igt" => Some(ctx.igt_ms.map(format_igt).unwrap_or_default()),
+        "runes" => Some(ctx.runes.map(|r| r.to_string()).unwrap_or_default()),
+        "kindling" => Some(ctx.kindling.map(|k| k.to_string()).unwrap_or_default()),
+        "status" => None, // Special handling
+        _ => None,
+    }
+}
 
-    // {zone} - zone name or unknown text
-    let zone_value = ctx
-        .zone
-        .as_deref()
-        .unwrap_or(&ctx.zone_unknown_text)
-        .to_string();
-    result = result.replace("{zone}", &zone_value);
+/// Substitute variables in a template string, returning colored spans
+fn substitute_variables(
+    template: &str,
+    ctx: &TemplateContext,
+    has_status: &mut bool,
+) -> Vec<TextSpan> {
+    let mut spans: Vec<TextSpan> = Vec::new();
+    let mut literal_start = 0;
+    let chars: Vec<char> = template.chars().collect();
+    let mut i = 0;
 
-    // {discovered}
-    result = result.replace("{discovered}", &ctx.discovered.to_string());
+    while i < chars.len() {
+        if chars[i] == '{' {
+            // Find the closing brace
+            if let Some(end) = chars[i..].iter().position(|&c| c == '}') {
+                let end = i + end;
 
-    // {total}
-    result = result.replace("{total}", &ctx.total.to_string());
+                // Add any literal text before this variable
+                if i > literal_start {
+                    let literal: String = chars[literal_start..i].iter().collect();
+                    if !literal.is_empty() {
+                        spans.push(TextSpan {
+                            text: literal,
+                            color: TemplateColor::Default,
+                        });
+                    }
+                }
 
-    // {progress} - percentage (0 if total is 0)
-    let progress = if ctx.total > 0 {
-        (ctx.discovered * 100) / ctx.total
-    } else {
-        0
-    };
-    result = result.replace("{progress}", &progress.to_string());
+                // Parse the variable content: "name" or "name:color"
+                let content: String = chars[i + 1..end].iter().collect();
+                let (var_name, color) = if let Some(colon_pos) = content.find(':') {
+                    let name = &content[..colon_pos];
+                    let color_str = &content[colon_pos + 1..];
+                    let color = parse_template_color(color_str).unwrap_or(TemplateColor::Default);
+                    (name.to_string(), color)
+                } else {
+                    (content.clone(), TemplateColor::Default)
+                };
 
-    // {map} - map ID or empty
-    let map_value = ctx.map_id.as_deref().unwrap_or("");
-    result = result.replace("{map}", map_value);
+                // Get the variable value and create span
+                if var_name == "status" {
+                    if ctx.server_enabled {
+                        *has_status = true;
+                        spans.push(TextSpan {
+                            text: "●".to_string(),
+                            color: TemplateColor::Status,
+                        });
+                    }
+                    // If server disabled, status is empty - no span added
+                } else if let Some(value) = get_variable_value(&var_name, ctx) {
+                    if !value.is_empty() {
+                        spans.push(TextSpan { text: value, color });
+                    }
+                } else {
+                    // Unknown variable - keep it as literal
+                    let unknown: String = chars[i..=end].iter().collect();
+                    spans.push(TextSpan {
+                        text: unknown,
+                        color: TemplateColor::Default,
+                    });
+                }
 
-    // {deaths} - death count
-    let deaths_value = ctx.deaths.map(|d| d.to_string()).unwrap_or_default();
-    result = result.replace("{deaths}", &deaths_value);
-
-    // {igt} - in-game time formatted as H:MM:SS
-    let igt_value = ctx.igt_ms.map(format_igt).unwrap_or_default();
-    result = result.replace("{igt}", &igt_value);
-
-    // {runes} - Great Runes count
-    let runes_value = ctx.runes.map(|r| r.to_string()).unwrap_or_default();
-    result = result.replace("{runes}", &runes_value);
-
-    // {kindling} - Messmer's Kindling count
-    let kindling_value = ctx.kindling.map(|k| k.to_string()).unwrap_or_default();
-    result = result.replace("{kindling}", &kindling_value);
-
-    // {status} - connection indicator with markers for coloring
-    if result.contains("{status}") {
-        let status_value = if ctx.server_enabled {
-            *has_status = true;
-            format!("{}●{}", STATUS_MARKER_START, STATUS_MARKER_END)
-        } else {
-            String::new()
-        };
-        result = result.replace("{status}", &status_value);
+                literal_start = end + 1;
+                i = end + 1;
+                continue;
+            }
+        }
+        i += 1;
     }
 
-    result
+    // Add any remaining literal text
+    if literal_start < chars.len() {
+        let literal: String = chars[literal_start..].iter().collect();
+        if !literal.is_empty() {
+            spans.push(TextSpan {
+                text: literal,
+                color: TemplateColor::Default,
+            });
+        }
+    }
+
+    // If no spans were created, add an empty one
+    if spans.is_empty() {
+        spans.push(TextSpan {
+            text: String::new(),
+            color: TemplateColor::Default,
+        });
+    }
+
+    spans
 }
 
 /// Extract the status indicator from rendered text for separate coloring
@@ -309,7 +485,7 @@ mod tests {
         let ctx = default_ctx();
         let result = render_template("{zone}", &ctx);
         assert_eq!(result.lines.len(), 1);
-        assert_eq!(result.lines[0].left_text(), Some("Limgrave"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Limgrave"));
     }
 
     #[test]
@@ -320,21 +496,24 @@ mod tests {
             ..default_ctx()
         };
         let result = render_template("{zone}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("(unknown zone)"));
+        assert_eq!(
+            result.lines[0].left_text().as_deref(),
+            Some("(unknown zone)")
+        );
     }
 
     #[test]
     fn test_discovered_total() {
         let ctx = default_ctx();
         let result = render_template("{discovered}/{total}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("42/100"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("42/100"));
     }
 
     #[test]
     fn test_progress() {
         let ctx = default_ctx();
         let result = render_template("{progress}%", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("42%"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("42%"));
     }
 
     #[test]
@@ -344,14 +523,17 @@ mod tests {
             ..default_ctx()
         };
         let result = render_template("{progress}%", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("0%"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("0%"));
     }
 
     #[test]
     fn test_map_id() {
         let ctx = default_ctx();
         let result = render_template("Map: {map}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("Map: m60_44_36_00"));
+        assert_eq!(
+            result.lines[0].left_text().as_deref(),
+            Some("Map: m60_44_36_00")
+        );
     }
 
     #[test]
@@ -361,14 +543,14 @@ mod tests {
             ..default_ctx()
         };
         let result = render_template("Map: {map}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("Map: "));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Map: "));
     }
 
     #[test]
     fn test_deaths() {
         let ctx = default_ctx();
         let result = render_template("Deaths: {deaths}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("Deaths: 5"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Deaths: 5"));
     }
 
     #[test]
@@ -378,14 +560,14 @@ mod tests {
             ..default_ctx()
         };
         let result = render_template("Deaths: {deaths}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("Deaths: "));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Deaths: "));
     }
 
     #[test]
     fn test_igt() {
         let ctx = default_ctx();
         let result = render_template("IGT: {igt}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("IGT: 1:02:03"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("IGT: 1:02:03"));
     }
 
     #[test]
@@ -395,7 +577,7 @@ mod tests {
             ..default_ctx()
         };
         let result = render_template("IGT: {igt}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("IGT: "));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("IGT: "));
     }
 
     #[test]
@@ -406,28 +588,28 @@ mod tests {
             ..default_ctx()
         };
         let result = render_template("{igt}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("0:00:00"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("0:00:00"));
 
         let ctx = TemplateContext {
             igt_ms: Some(59999), // 59.999 seconds
             ..default_ctx()
         };
         let result = render_template("{igt}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("0:00:59"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("0:00:59"));
 
         let ctx = TemplateContext {
             igt_ms: Some(3661000), // 1:01:01
             ..default_ctx()
         };
         let result = render_template("{igt}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("1:01:01"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("1:01:01"));
 
         let ctx = TemplateContext {
             igt_ms: Some(36000000), // 10:00:00
             ..default_ctx()
         };
         let result = render_template("{igt}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("10:00:00"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("10:00:00"));
     }
 
     // -------------------------------------------------------------------------
@@ -438,7 +620,7 @@ mod tests {
     fn test_runes() {
         let ctx = default_ctx();
         let result = render_template("Runes: {runes}/8", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("Runes: 3/8"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Runes: 3/8"));
     }
 
     #[test]
@@ -448,14 +630,14 @@ mod tests {
             ..default_ctx()
         };
         let result = render_template("R:{runes}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("R:"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("R:"));
     }
 
     #[test]
     fn test_kindling() {
         let ctx = default_ctx();
         let result = render_template("Kindling: {kindling}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("Kindling: 2"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Kindling: 2"));
     }
 
     #[test]
@@ -465,7 +647,7 @@ mod tests {
             ..default_ctx()
         };
         let result = render_template("K:{kindling}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("K:"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("K:"));
     }
 
     #[test]
@@ -476,7 +658,7 @@ mod tests {
             ..default_ctx()
         };
         let result = render_template("{runes}/8 | K:{kindling}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("5/8 | K:3"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("5/8 | K:3"));
     }
 
     // -------------------------------------------------------------------------
@@ -500,7 +682,7 @@ mod tests {
         };
         let result = render_template("{status}", &ctx);
         assert!(!result.has_status_indicator);
-        assert_eq!(result.lines[0].left_text(), Some(""));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some(""));
     }
 
     #[test]
@@ -522,15 +704,15 @@ mod tests {
         let ctx = default_ctx();
         let result = render_template("{zone}$>{discovered}/{total}", &ctx);
         assert_eq!(result.lines.len(), 1);
-        assert_eq!(result.lines[0].left_text(), Some("Limgrave"));
-        assert_eq!(result.lines[0].right_text(), Some("42/100"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Limgrave"));
+        assert_eq!(result.lines[0].right_text().as_deref(), Some("42/100"));
     }
 
     #[test]
     fn test_right_alignment_with_status() {
         let ctx = default_ctx();
         let result = render_template("{zone}$>{status} {discovered}/{total}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("Limgrave"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Limgrave"));
         let right = result.lines[0].right_text().unwrap();
         assert!(right.contains('●'));
         assert!(right.contains("42/100"));
@@ -541,7 +723,10 @@ mod tests {
         let ctx = default_ctx();
         let result = render_template("{zone} - {discovered}/{total}", &ctx);
         assert_eq!(result.lines.len(), 1);
-        assert_eq!(result.lines[0].left_text(), Some("Limgrave - 42/100"));
+        assert_eq!(
+            result.lines[0].left_text().as_deref(),
+            Some("Limgrave - 42/100")
+        );
         assert_eq!(result.lines[0].right_text(), None);
     }
 
@@ -554,8 +739,8 @@ mod tests {
         let ctx = default_ctx();
         let result = render_template("{zone}$n{discovered}/{total}", &ctx);
         assert_eq!(result.lines.len(), 2);
-        assert_eq!(result.lines[0].left_text(), Some("Limgrave"));
-        assert_eq!(result.lines[1].left_text(), Some("42/100"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Limgrave"));
+        assert_eq!(result.lines[1].left_text().as_deref(), Some("42/100"));
     }
 
     #[test]
@@ -563,9 +748,12 @@ mod tests {
         let ctx = default_ctx();
         let result = render_template("{zone}$>{status}$n{discovered}/{total} discovered", &ctx);
         assert_eq!(result.lines.len(), 2);
-        assert_eq!(result.lines[0].left_text(), Some("Limgrave"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Limgrave"));
         assert!(result.lines[0].right_text().unwrap().contains('●'));
-        assert_eq!(result.lines[1].left_text(), Some("42/100 discovered"));
+        assert_eq!(
+            result.lines[1].left_text().as_deref(),
+            Some("42/100 discovered")
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -576,11 +764,14 @@ mod tests {
     fn test_extract_status_indicator() {
         let ctx = default_ctx();
         let result = render_template("{status} test", &ctx);
+        // With the new span-based system, status is rendered as a separate span
+        // The extract_status_indicator function works with legacy marker-based strings
         let text = result.lines[0].left_text().unwrap();
 
-        let (cleaned, indicator) = extract_status_indicator(text);
-        assert_eq!(indicator, Some("●"));
-        assert_eq!(cleaned, " test");
+        // In the new system, the text is "● test" without markers
+        // The legacy function won't find markers, so we test the actual content
+        assert!(text.contains('●'));
+        assert!(text.contains("test"));
     }
 
     #[test]
@@ -594,12 +785,17 @@ mod tests {
     fn test_split_around_status() {
         let ctx = default_ctx();
         let result = render_template("before {status} after", &ctx);
-        let text = result.lines[0].left_text().unwrap();
+        // With new span-based system, we check spans directly
+        let spans = result.lines[0].left_spans().unwrap();
 
-        let (before, has, after) = split_around_status(text);
-        assert!(has);
-        assert_eq!(before, "before ");
-        assert_eq!(after, " after");
+        // Should have 3 spans: "before ", "●", " after"
+        assert_eq!(spans.len(), 3);
+        assert_eq!(spans[0].text, "before ");
+        assert_eq!(spans[0].color, TemplateColor::Default);
+        assert_eq!(spans[1].text, "●");
+        assert_eq!(spans[1].color, TemplateColor::Status);
+        assert_eq!(spans[2].text, " after");
+        assert_eq!(spans[2].color, TemplateColor::Default);
     }
 
     #[test]
@@ -620,13 +816,17 @@ mod tests {
         let result = render_template("{zone}$>{status} {discovered}/{total}", &ctx);
 
         assert_eq!(result.lines.len(), 1);
-        assert_eq!(result.lines[0].left_text(), Some("Limgrave"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Limgrave"));
 
-        let right = result.lines[0].right_text().unwrap();
-        let (before, has_indicator, after) = split_around_status(right);
-        assert!(has_indicator);
-        assert_eq!(before, "");
-        assert_eq!(after, " 42/100");
+        // Check right side spans
+        let right_spans = result.lines[0].right_spans().unwrap();
+        // Should be: "●", " ", "42", "/", "100"
+        // Actually: "●" (Status), " " (Default), "42" (Default), "/" (Default), "100" (Default)
+        assert!(right_spans
+            .iter()
+            .any(|s| s.text == "●" && s.color == TemplateColor::Status));
+        let right_text = result.lines[0].right_text().unwrap();
+        assert!(right_text.contains("42/100"));
     }
 
     // -------------------------------------------------------------------------
@@ -638,14 +838,14 @@ mod tests {
         let ctx = default_ctx();
         let result = render_template("", &ctx);
         assert_eq!(result.lines.len(), 1);
-        assert_eq!(result.lines[0].left_text(), Some(""));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some(""));
     }
 
     #[test]
     fn test_literal_text_only() {
         let ctx = default_ctx();
         let result = render_template("Hello World", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("Hello World"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("Hello World"));
     }
 
     #[test]
@@ -653,13 +853,177 @@ mod tests {
         let ctx = default_ctx();
         let result = render_template("{unknown}", &ctx);
         // Unknown variables are not substituted
-        assert_eq!(result.lines[0].left_text(), Some("{unknown}"));
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("{unknown}"));
     }
 
     #[test]
     fn test_multiple_same_variable() {
         let ctx = default_ctx();
         let result = render_template("{zone} | {zone}", &ctx);
-        assert_eq!(result.lines[0].left_text(), Some("Limgrave | Limgrave"));
+        assert_eq!(
+            result.lines[0].left_text().as_deref(),
+            Some("Limgrave | Limgrave")
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Color parsing tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_parse_named_colors() {
+        assert_eq!(
+            parse_template_color("red"),
+            Some(TemplateColor::Named(NamedColor::Red))
+        );
+        assert_eq!(
+            parse_template_color("GREEN"),
+            Some(TemplateColor::Named(NamedColor::Green))
+        );
+        assert_eq!(
+            parse_template_color("Blue"),
+            Some(TemplateColor::Named(NamedColor::Blue))
+        );
+        assert_eq!(
+            parse_template_color("yellow"),
+            Some(TemplateColor::Named(NamedColor::Yellow))
+        );
+        assert_eq!(
+            parse_template_color("orange"),
+            Some(TemplateColor::Named(NamedColor::Orange))
+        );
+        assert_eq!(
+            parse_template_color("cyan"),
+            Some(TemplateColor::Named(NamedColor::Cyan))
+        );
+        assert_eq!(
+            parse_template_color("magenta"),
+            Some(TemplateColor::Named(NamedColor::Magenta))
+        );
+        assert_eq!(
+            parse_template_color("purple"),
+            Some(TemplateColor::Named(NamedColor::Magenta))
+        );
+        assert_eq!(
+            parse_template_color("gray"),
+            Some(TemplateColor::Named(NamedColor::Gray))
+        );
+        assert_eq!(
+            parse_template_color("grey"),
+            Some(TemplateColor::Named(NamedColor::Gray))
+        );
+        assert_eq!(
+            parse_template_color("white"),
+            Some(TemplateColor::Named(NamedColor::White))
+        );
+    }
+
+    #[test]
+    fn test_parse_config_colors() {
+        assert_eq!(
+            parse_template_color("discovered"),
+            Some(TemplateColor::Discovered)
+        );
+        assert_eq!(
+            parse_template_color("undiscovered"),
+            Some(TemplateColor::Undiscovered)
+        );
+        assert_eq!(
+            parse_template_color("disabled"),
+            Some(TemplateColor::Disabled)
+        );
+    }
+
+    #[test]
+    fn test_parse_hex_colors() {
+        assert_eq!(
+            parse_template_color("#FF0000"),
+            Some(TemplateColor::Hex("#FF0000".to_string()))
+        );
+        assert_eq!(
+            parse_template_color("#00ff00"),
+            Some(TemplateColor::Hex("#00FF00".to_string()))
+        );
+        assert_eq!(
+            parse_template_color("0088FF"),
+            Some(TemplateColor::Hex("#0088FF".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_parse_invalid_colors() {
+        assert_eq!(parse_template_color("invalid"), None);
+        assert_eq!(parse_template_color("#FFF"), None); // Too short
+        assert_eq!(parse_template_color("#GGGGGG"), None); // Invalid hex
+        assert_eq!(parse_template_color(""), None);
+    }
+
+    #[test]
+    fn test_variable_with_named_color() {
+        let ctx = default_ctx();
+        let result = render_template("{zone:blue}", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].text, "Limgrave");
+        assert_eq!(spans[0].color, TemplateColor::Named(NamedColor::Blue));
+    }
+
+    #[test]
+    fn test_variable_with_hex_color() {
+        let ctx = default_ctx();
+        let result = render_template("{zone:#FF0000}", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].text, "Limgrave");
+        assert_eq!(spans[0].color, TemplateColor::Hex("#FF0000".to_string()));
+    }
+
+    #[test]
+    fn test_variable_with_config_color() {
+        let ctx = default_ctx();
+        let result = render_template("{zone:discovered}", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].text, "Limgrave");
+        assert_eq!(spans[0].color, TemplateColor::Discovered);
+    }
+
+    #[test]
+    fn test_multiple_variables_with_colors() {
+        let ctx = default_ctx();
+        let result = render_template("{zone:blue} - {discovered:green}/{total}", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        // Should have: "Limgrave" (blue), " - " (default), "42" (green), "/" (default), "100" (default)
+        assert!(spans
+            .iter()
+            .any(|s| s.text == "Limgrave" && s.color == TemplateColor::Named(NamedColor::Blue)));
+        assert!(spans
+            .iter()
+            .any(|s| s.text == "42" && s.color == TemplateColor::Named(NamedColor::Green)));
+        assert!(spans
+            .iter()
+            .any(|s| s.text == "100" && s.color == TemplateColor::Default));
+    }
+
+    #[test]
+    fn test_invalid_color_falls_back_to_default() {
+        let ctx = default_ctx();
+        let result = render_template("{zone:notacolor}", &ctx);
+        let spans = result.lines[0].left_spans().unwrap();
+
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].text, "Limgrave");
+        assert_eq!(spans[0].color, TemplateColor::Default);
+    }
+
+    #[test]
+    fn test_named_color_to_rgba() {
+        assert_eq!(NamedColor::Red.to_rgba(), [1.0, 0.0, 0.0, 1.0]);
+        assert_eq!(NamedColor::Green.to_rgba(), [0.0, 1.0, 0.0, 1.0]);
+        assert_eq!(NamedColor::White.to_rgba(), [1.0, 1.0, 1.0, 1.0]);
     }
 }

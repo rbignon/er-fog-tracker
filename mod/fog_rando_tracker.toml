@@ -104,12 +104,22 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   {igt}        - In-game time (format: H:MM:SS)
 #   {runes}      - Number of Great Runes possessed (0-7, deduplicated)
 #   {kindling}   - Number of Messmer's Kindling items
+#
+# Colors (optional, add after variable name with colon):
+#   {variable:color} - Apply color to the variable
+#   Named colors: red, green, blue, yellow, orange, cyan, magenta, gray, white
+#   Config colors: discovered, undiscovered, disabled (uses overlay colors)
+#   Hex colors: #RRGGBB (e.g., #FF0000 for red)
+#
 # Markers:
 #   $n - Newline (for multi-line status)
 #   $> - Right-align the rest of the line
 #
 # Examples:
 #   "{zone}$>{status} {discovered}/{total}"              - Zone left, stats right (default)
+#   "{zone:blue}$>{status} {discovered}/{total}"         - Zone in blue
+#   "{zone:discovered}$>{discovered:green}/{total}"      - Zone in discovered color, count in green
+#   "{zone:#0088FF}$>{status} {discovered}/{total}"      - Zone in custom hex color
 #   "{zone} | {progress}%"                               - Simple single line
 #   "{zone}$n{discovered}/{total} discovered"            - Two lines
 #   "{zone}$>{status} {discovered}/{total} | D:{deaths}" - With death counter

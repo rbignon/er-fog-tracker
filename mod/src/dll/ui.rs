@@ -7,7 +7,7 @@ use tracing::{debug, info};
 use crate::core::color::parse_hex_color;
 use crate::core::map_utils::format_map_id;
 use crate::core::status_template::{
-    render_template, split_around_status, LineSegment, TemplateContext,
+    render_template, LineSegment, NamedColor, TemplateColor, TemplateContext, TextSpan,
 };
 
 use super::tracker::FogRandoTracker;
@@ -167,71 +167,70 @@ impl FogRandoTracker {
     fn render_header(&self, ui: &hudhook::imgui::Ui, max_width: f32) {
         let ctx = self.build_template_context();
         let rendered = render_template(&self.config.overlay.status_template, &ctx);
-        let (status_color, _) = self.get_status_indicator();
 
         for line in &rendered.lines {
-            // Get left and right parts
-            let left_text = line
-                .segments
-                .iter()
-                .find_map(|s| match s {
-                    LineSegment::Left(t) => Some(t.as_str()),
-                    _ => None,
-                })
-                .unwrap_or("");
+            // Get left and right spans
+            let left_spans = line.left_spans().unwrap_or(&[]);
+            let right_spans = line.right_spans();
 
-            let right_text = line.segments.iter().find_map(|s| match s {
-                LineSegment::Right(t) => Some(t.as_str()),
-                _ => None,
-            });
-
-            // Render left part with status indicator coloring
-            self.render_text_with_status(ui, left_text, status_color);
+            // Render left part
+            self.render_spans(ui, left_spans);
 
             // Render right part if present
-            if let Some(right) = right_text {
-                // Calculate width for right alignment (use clean text without markers)
-                let (before, has_status, after) = split_around_status(right);
-                let clean_right = if has_status {
-                    format!("{}●{}", before, after)
-                } else {
-                    right.to_string()
-                };
-                let right_width = ui.calc_text_size(&clean_right)[0];
+            if let Some(spans) = right_spans {
+                // Calculate width for right alignment
+                let right_text: String = spans.iter().map(|s| s.text.as_str()).collect();
+                let right_width = ui.calc_text_size(&right_text)[0];
 
                 ui.same_line_with_pos(max_width - right_width);
-                self.render_text_with_status(ui, right, status_color);
+                self.render_spans(ui, spans);
             }
         }
     }
 
-    /// Render text with colored status indicator
-    ///
-    /// Detects the status indicator marker and renders it with the appropriate color.
-    fn render_text_with_status(&self, ui: &hudhook::imgui::Ui, text: &str, status_color: [f32; 4]) {
-        let (before, has_status, after) = split_around_status(text);
+    /// Render a sequence of text spans with their respective colors
+    fn render_spans(&self, ui: &hudhook::imgui::Ui, spans: &[TextSpan]) {
+        let mut first = true;
 
-        if !before.is_empty() {
-            ui.text(&before);
-            if has_status || !after.is_empty() {
+        for span in spans {
+            if span.text.is_empty() {
+                continue;
+            }
+
+            if !first {
                 ui.same_line_with_spacing(0.0, 0.0);
             }
+            first = false;
+
+            let color = self.resolve_template_color(&span.color);
+            ui.text_colored(color, &span.text);
         }
 
-        if has_status {
-            ui.text_colored(status_color, "●");
-            if !after.is_empty() {
-                ui.same_line_with_spacing(0.0, 0.0);
-            }
-        }
-
-        if !after.is_empty() {
-            ui.text(&after);
-        }
-
-        // Handle empty text case (need to output something for line to register)
-        if before.is_empty() && !has_status && after.is_empty() {
+        // Handle empty case (need to output something for line to register)
+        if first {
             ui.text("");
+        }
+    }
+
+    /// Resolve a TemplateColor to an RGBA value
+    fn resolve_template_color(&self, color: &TemplateColor) -> [f32; 4] {
+        match color {
+            TemplateColor::Default => parse_hex_color(&self.config.overlay.text_color, 1.0),
+            TemplateColor::Status => {
+                let (status_color, _) = self.get_status_indicator();
+                status_color
+            }
+            TemplateColor::Discovered => {
+                parse_hex_color(&self.config.overlay.discovered_color, 1.0)
+            }
+            TemplateColor::Undiscovered => {
+                parse_hex_color(&self.config.overlay.undiscovered_color, 1.0)
+            }
+            TemplateColor::Disabled => {
+                parse_hex_color(&self.config.overlay.text_disabled_color, 1.0)
+            }
+            TemplateColor::Named(named) => named.to_rgba(),
+            TemplateColor::Hex(hex) => parse_hex_color(hex, 1.0),
         }
     }
 
