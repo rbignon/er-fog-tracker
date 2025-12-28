@@ -2,6 +2,8 @@
 
 This document describes the data model for the fog gate graph, including zones, links, discoveries, and how they're stored.
 
+> **Note:** This document uses the **API format (snake_case)**. The frontend transforms these to camelCase via `web/js/api.js` (e.g., `is_boss` → `isBoss`, `source_key` → `sourceKey`).
+
 ## Concepts
 
 ### Zone (Node)
@@ -10,19 +12,21 @@ A zone represents an area in Elden Ring. It's a node in the graph.
 
 ```json
 {
-  "id": "Limgrave - Church of Elleh",
-  "isBoss": false,
-  "scaling": 10,
-  "isHub": false
+  "id": "92933e09-26b6-4448-bf49-e39a37d72b9f",
+  "name": "Limgrave - Church of Elleh",
+  "is_boss": false,
+  "scaling": "tier 1, previously 6"
 }
 ```
 
 | Field | Description |
 |-------|-------------|
-| `id` | Display name (unique identifier) |
-| `isBoss` | True if this zone contains a boss |
-| `scaling` | Enemy scaling level (higher = harder) |
-| `isHub` | True if this is a hub node (3+ connections) |
+| `id` | UUID (unique identifier) |
+| `name` | Display name of the zone |
+| `is_boss` | True if this zone contains a boss (detected via `<<<<<` in spoiler log) |
+| `scaling` | Scaling info from spoiler log (text field, e.g., "tier 1, previously 6") |
+
+> **Frontend note:** The frontend renames `id` → `uuid` and `name` → `id` for internal use. It also computes `isHub` dynamically (true if zone has 3+ distinct connections).
 
 ### Zone Link
 
@@ -33,14 +37,16 @@ A zone link represents a fog gate connection between two zones.
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "source": "Limgrave - Church of Elleh",
   "source_id": "uuid-of-source-zone",
+  "source_key": "1101_ChurchOfElleh_Exit1",
   "target": "Liurnia - Academy Gate Town",
   "target_id": "uuid-of-target-zone",
+  "target_key": "1205_AcademyGateTown_Entry1",
   "type": "random",
-  "oneWay": false,
+  "is_one_way": false,
   "source_details": "After the boss room",
   "target_details": "Near the Site of Grace",
-  "source_key": "1101_ChurchOfElleh_Exit1",
-  "target_key": "1205_AcademyGateTown_Entry1"
+  "required_item": "Academy Glintstone Key",
+  "required_item_from": "Liurnia - Behind Caria Manor;Liurnia - Temple Quarter"
 }
 ```
 
@@ -49,14 +55,16 @@ A zone link represents a fog gate connection between two zones.
 | `id` | UUID for this specific link |
 | `source` | Source zone display name |
 | `source_id` | UUID of the source zone |
+| `source_key` | Internal zone key for source (from fog.txt) |
 | `target` | Target zone display name |
 | `target_id` | UUID of the target zone |
+| `target_key` | Internal zone key for target (from fog.txt) |
 | `type` | `random` (randomized gate) or `preexisting` (always there) |
-| `oneWay` | True if link can only be traversed in one direction |
+| `is_one_way` | True if link can only be traversed in one direction |
 | `source_details` | Description of exit location (from spoiler log) |
 | `target_details` | Description of entry location (from spoiler log) |
-| `source_key` | Internal zone key for source (from fog.txt) |
-| `target_key` | Internal zone key for target (from fog.txt) |
+| `required_item` | Key item required to traverse this link (optional) |
+| `required_item_from` | Semicolon-separated list of zones where the required item can be found (optional) |
 
 ## Link Types
 
@@ -306,26 +314,26 @@ The graph is rendered using D3.js force simulation.
 
 ### Node Sizing
 
-Based on scaling level:
-- Low scaling (1-20): Small circle
-- Medium scaling (21-80): Medium circle
-- High scaling (81+): Large circle
+Node size is based on `is_boss`:
+- Regular nodes: 7px radius
+- Boss nodes: 10px radius
 
-Boss nodes have a special marker (skull icon or different shape).
+Boss nodes also have a distinct color (CSS class `boss`).
 
 ## Link Index
 
-The client maintains an index for efficient link lookups:
+The client maintains an index for efficient link lookups (built in `web/js/state.js`):
 
 ```javascript
 {
-  byId: Map<uuid, link>,           // Direct lookup by UUID
-  byNodes: Map<"A|B", link[]>,     // All links between two nodes
-  bySourceTarget: Map<"A→B", link> // Specific direction lookup
+  byId: Map<linkId, link>,              // Direct lookup by UUID
+  byEndpoints: Map<"source|target", linkId[]>  // All link IDs between two nodes
 }
 ```
 
+For bidirectional links (`is_one_way: false`), both directions are indexed in `byEndpoints` (e.g., both `"A|B"` and `"B|A"` point to the same link ID).
+
 This enables:
-- Fast check if link is discovered
-- Finding all links between two nodes
-- Bidirectional link handling
+- Fast check if link is discovered (`byId.get(linkId)`)
+- Finding all links between two nodes (`byEndpoints.get("A|B")`)
+- Resolving link IDs to full link objects
