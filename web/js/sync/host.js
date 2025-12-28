@@ -5,6 +5,7 @@
 import { TIMING, WS } from '../constants.js';
 import * as State from '../state.js';
 import * as Auth from '../auth.js';
+import { navigate } from '../router.js';
 import {
     getWsUrl,
     getGameWs,
@@ -578,6 +579,7 @@ export async function connectAsHost(gameId) {
                 console.log('[HOST] Session replaced by another tab, not reconnecting');
                 import('../toast.js').then(Toast => Toast.warning('Session replaced by another browser tab'));
                 State.setSyncState(false, false, null);
+                navigate('/dashboard');
                 return;
             }
             if (State.isSyncConnected() && getCurrentGameId() === gameId) {
