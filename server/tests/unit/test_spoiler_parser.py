@@ -253,19 +253,19 @@ class TestParseConnectionLine:
             "  Random: Divine Bridge (using the sending gate) --> Isolated Tower (warp destination)"
         )
         assert conn is not None
-        assert conn.is_inherently_one_way is True
+        assert conn.is_one_way is True
 
     def test_one_way_abducted(self):
         conn = _parse_connection_line(
             "  Random: Roundtable Hold (abducted by maiden) --> Volcano Manor"
         )
         assert conn is not None
-        assert conn.is_inherently_one_way is True
+        assert conn.is_one_way is True
 
     def test_bidirectional_fog_gate(self):
         conn = _parse_connection_line("  Random: Limgrave (near beach) --> Caelid (at the border)")
         assert conn is not None
-        assert conn.is_inherently_one_way is False
+        assert conn.is_one_way is False
 
     def test_non_connection_returns_none(self):
         conn = _parse_connection_line("Limgrave")
@@ -423,7 +423,7 @@ class TestOneWayDetection:
         line = f"  Random: Origin ({description}) --> Destination"
         conn = _parse_connection_line(line)
         assert conn is not None
-        assert conn.is_inherently_one_way is expected_one_way
+        assert conn.is_one_way is expected_one_way
 
     def test_zone_name_containing_sending_gate_is_not_one_way(self):
         """Zone names containing 'Sending Gate' should NOT make a link one-way.
@@ -440,7 +440,7 @@ class TestOneWayDetection:
         assert conn is not None
         assert conn.source == "After Mohg, Lord of Blood"
         assert conn.target == "Volcano Manor - Hallway Opposite Sending Gate"
-        assert conn.is_inherently_one_way is False
+        assert conn.is_one_way is False
 
     def test_actual_sending_gate_usage_is_one_way(self):
         """Using a sending gate (in details) should be one-way."""
@@ -450,7 +450,7 @@ class TestOneWayDetection:
         )
         conn = _parse_connection_line(line)
         assert conn is not None
-        assert conn.is_inherently_one_way is True
+        assert conn.is_one_way is True
 
     def test_return_to_entrance_fog_gate_is_bidirectional(self):
         """Boss exit fog gates (return to entrance) are bidirectional in randomizer.
@@ -470,7 +470,7 @@ class TestOneWayDetection:
         assert (
             conn.target == "Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness"
         )
-        assert conn.is_inherently_one_way is False
+        assert conn.is_one_way is False
 
     def test_preexisting_drop_down_is_one_way(self):
         """Preexisting links with 'dropping' in description should be one-way.
@@ -487,7 +487,7 @@ class TestOneWayDetection:
         assert conn.conn_type == "preexisting"
         assert conn.source == "Ashen Leyndell - Queen's Bedchamber"
         assert conn.target == "Ashen Leyndell"
-        assert conn.is_inherently_one_way is True  # Drop-down = one-way
+        assert conn.is_one_way is True  # Drop-down = one-way
 
     def test_preexisting_elevator_is_bidirectional(self):
         """Preexisting links with elevator should be bidirectional."""
@@ -495,7 +495,7 @@ class TestOneWayDetection:
         conn = _parse_connection_line(line)
         assert conn is not None
         assert conn.conn_type == "preexisting"
-        assert conn.is_inherently_one_way is False  # Elevator = bidirectional
+        assert conn.is_one_way is False  # Elevator = bidirectional
 
 
 class TestDataclasses:
@@ -511,7 +511,7 @@ class TestDataclasses:
         assert conn.conn_type == "random"
         assert conn.source_details == ""
         assert conn.target_details == ""
-        assert conn.is_inherently_one_way is False
+        assert conn.is_one_way is False
 
     def test_parse_result_defaults(self):
         result = ParseResult(seed=12345)
@@ -567,7 +567,7 @@ class TestWithRealSpoilerLogs:
 
     def test_has_one_way_connections(self, spoiler_log_1078869800):
         result = parse_spoiler_log(spoiler_log_1078869800)
-        one_way = [c for c in result.connections if c.is_inherently_one_way]
+        one_way = [c for c in result.connections if c.is_one_way]
         # Real spoiler logs typically have some one-way connections (sending gates, etc.)
         assert len(one_way) > 0
 

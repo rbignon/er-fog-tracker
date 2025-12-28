@@ -154,33 +154,16 @@ export function isOverlayMode() {
 /**
  * Compute one-way property on links.
  *
- * Logic:
- * - Preexisting links: one-way if no reverse link exists in the data
- * - Random links: one-way only if marked as isInherentlyOneWay (teleports, warps, etc.)
- *   Otherwise assumed bidirectional (fog gates can be traversed both ways)
+ * All links are bidirectional unless marked as isOneWay
+ * (sending gates, coffins, drop-downs, etc.)
  */
 function computeOneWayLinks(links) {
     if (!links || links.length === 0) return;
 
-    // Build set of all link pairs for reverse lookup
-    const linkPairs = new Set();
+    // All links are bidirectional unless explicitly marked as one-way
+    // (sending gates, coffins, drop-downs, etc.)
     links.forEach(l => {
-        const { sourceId, targetId } = getLinkEndpoints(l);
-        linkPairs.add(`${sourceId}|${targetId}`);
-    });
-
-    links.forEach(l => {
-        const { sourceId, targetId } = getLinkEndpoints(l);
-        const hasReverse = linkPairs.has(`${targetId}|${sourceId}`);
-
-        if (l.type === 'random') {
-            // Random links are bidirectional unless explicitly marked as one-way
-            // (teleports, sending gates, abductions, etc.)
-            l.oneWay = l.isInherentlyOneWay === true;
-        } else {
-            // Preexisting links: one-way if no reverse exists
-            l.oneWay = !hasReverse;
-        }
+        l.oneWay = l.isOneWay === true;
     });
 }
 

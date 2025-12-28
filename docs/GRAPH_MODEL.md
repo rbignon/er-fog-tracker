@@ -92,7 +92,7 @@ Most fog gates can be traversed in both directions:
 Zone A ◄─────────► Zone B
 ```
 
-When you traverse A→B, both directions become usable.
+When you traverse A→B, both directions become usable. This is the default for all link types (random and preexisting).
 
 ### One-Way (Unidirectional)
 
@@ -103,12 +103,15 @@ Zone A ──────────► Zone B
          (no return)
 ```
 
-**Detection in spoiler log**: Keywords like "(sending gate)" or "(coffin)" indicate one-way links.
+**Detection in spoiler log**: The `is_one_way` field is set to `true` when keywords like "(sending gate)", "(coffin)", or "(dropping)" are detected in the spoiler log.
 
 **One-way triggers**:
 - Sending gates (teleport with no return)
 - Coffins (one-way transport)
+- Drop-downs (can't climb back up)
 - Some boss fog walls (enter but can't exit)
+
+**Unified logic**: Both random and preexisting links use the same `is_one_way` field. A link is bidirectional unless explicitly marked as one-way. The absence of a reverse link does NOT imply one-way (doors and elevators are bidirectional even without explicit reverse entries).
 
 **Impact**:
 - Undiscovery: Can reach A from B? Only if bidirectional

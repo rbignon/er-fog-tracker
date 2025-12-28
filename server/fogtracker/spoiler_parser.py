@@ -161,7 +161,7 @@ class ConnectionInfo:
     target_key: str | None = None  # Internal zone key (from fog.txt)
     required_item: str | None = None  # Name of required item (e.g., "Academy Glintstone Key")
     required_item_from: str | None = None  # Zones where the item can be found
-    is_inherently_one_way: bool = False
+    is_one_way: bool = False  # True for sending gates, coffins, drop-downs, etc.
 
 
 @dataclass
@@ -305,18 +305,16 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
     # Zone names like "Volcano Manor - Hallway Opposite Sending Gate" should not
     # trigger one-way detection just because they contain pattern keywords.
     details_text = f"{source_details} {target_details}"
-    is_inherently_one_way = False
+    is_one_way = False
 
     # Check patterns that always indicate one-way (applies to both random and preexisting)
     # This catches drop-downs, sending gates, coffins, etc.
     if any(pattern.search(details_text) for pattern in ALWAYS_ONE_WAY_PATTERNS):
-        is_inherently_one_way = True
+        is_one_way = True
     # Check "arriving" - only one-way if source details contain teleport mechanism
     # This is specific to random links (fog gates with teleport mechanisms)
     elif conn_type == "random" and re.search(r"arriving (at|in|from)", details_text, re.IGNORECASE):
-        is_inherently_one_way = any(
-            pattern.search(source_details) for pattern in TELEPORT_SOURCE_PATTERNS
-        )
+        is_one_way = any(pattern.search(source_details) for pattern in TELEPORT_SOURCE_PATTERNS)
 
     # Extract required item name from details
     required_item = _extract_required_item(source_details, target_details)
@@ -332,7 +330,7 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
         target_details=target_details,
         required_item=required_item,
         required_item_from=required_item_from,
-        is_inherently_one_way=is_inherently_one_way,
+        is_one_way=is_one_way,
     )
 
 
@@ -498,7 +496,7 @@ def enrich_connections_with_zone_keys(
                 target_key=target_key,
                 required_item=conn.required_item,
                 required_item_from=conn.required_item_from,
-                is_inherently_one_way=conn.is_inherently_one_way,
+                is_one_way=conn.is_one_way,
             )
         )
 

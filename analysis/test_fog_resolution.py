@@ -289,7 +289,7 @@ def test_fog_resolution(
                 else:
                     marker = ""
                 # Use → for one-way links, ↔ for bidirectional
-                arrow = "→" if pair.get("is_inherently_one_way") else "↔"
+                arrow = "→" if pair.get("is_one_way") else "↔"
                 print(f"    - '{src}' {arrow} '{tgt}'{marker}")
             print()
 

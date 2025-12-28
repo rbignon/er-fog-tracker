@@ -187,7 +187,7 @@ Parse a spoiler log and return structured data.
       "target_details": "arriving at entrance",
       "required_item": "Academy Glintstone Key",
       "required_item_from": "Raya Lucaria; Liurnia",
-      "is_inherently_one_way": false
+      "is_one_way": false
     }
   ]
 }

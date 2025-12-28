@@ -173,7 +173,7 @@ export function transformLinksFromApi(links) {
         targetDetails: link.target_details || '',
         requiredItem: link.required_item || null,
         requiredItemFrom: link.required_item_from || null,
-        isInherentlyOneWay: link.is_inherently_one_way || false,
+        isOneWay: link.is_one_way || false,
     }));
 }
 
@@ -213,7 +213,7 @@ export function transformLinksToApi(links, getLinkEndpoints) {
             target_details: link.targetDetails || null,
             required_item: link.requiredItem || null,
             required_item_from: link.requiredItemFrom || null,
-            is_inherently_one_way: link.isInherentlyOneWay || false,
+            is_one_way: link.isOneWay || false,
         };
     });
 }

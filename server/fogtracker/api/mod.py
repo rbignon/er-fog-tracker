@@ -144,7 +144,9 @@ async def create_game(
             type=conn.conn_type,
             source_details=conn.source_details or None,
             target_details=conn.target_details or None,
-            is_inherently_one_way=conn.is_inherently_one_way,
+            required_item=conn.required_item,
+            required_item_from=conn.required_item_from,
+            is_one_way=conn.is_one_way,
         ).model_dump()
         for conn in enriched_connections
     ]

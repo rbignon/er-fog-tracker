@@ -50,7 +50,7 @@ Optional areas:
         assert random_link["target"] == "Limgrave"
         assert random_link["source_details"] == "before boss"
         assert random_link["target_details"] == "at start"
-        assert random_link["is_inherently_one_way"] is False
+        assert random_link["is_one_way"] is False
 
         # Check second link (preexisting)
         preexisting_link = next(lk for lk in data["zone_links"] if lk["type"] == "preexisting")
@@ -124,7 +124,7 @@ Optional areas:
 
         # Check one-way flag
         link = data["zone_links"][0]
-        assert link["is_inherently_one_way"] is True
+        assert link["is_one_way"] is True
 
     def test_parse_boss_zone(self):
         """Test parsing a spoiler log with boss zones."""
@@ -224,7 +224,7 @@ B
         assert "target_details" in link
         assert "required_item" in link
         assert "required_item_from" in link
-        assert "is_inherently_one_way" in link
+        assert "is_one_way" in link
 
     def test_parse_required_item_detected(self):
         """Test that required items are detected and returned."""

@@ -36,14 +36,6 @@ def names_match(a: str, b: str) -> bool:
     return a == b or strip_parenthetical(a) == b or a == strip_parenthetical(b)
 
 
-def is_one_way(link: dict, all_links: list[dict]) -> bool:
-    """A link is one-way if no reverse link exists."""
-    return not any(
-        other["source"] == link["target"] and other["target"] == link["source"]
-        for other in all_links
-    )
-
-
 def build_preexisting_adjacency(
     zone_pairs: list[dict],
 ) -> dict[str, list[tuple[str, bool]]]:
@@ -51,22 +43,14 @@ def build_preexisting_adjacency(
     Build adjacency list for preexisting links only.
     Returns dict[source] -> list of (destination, is_bidirectional)
 
-    A preexisting link is bidirectional unless:
-    1. It is marked as inherently one-way (is_inherently_one_way: true), OR
-    2. No reverse link exists in zone_pairs (asymmetric definition in fog.txt)
-
+    A link is bidirectional unless marked as one-way (is_one_way: true).
     Most preexisting links (e.g., elevators, doors) are bidirectional.
     """
     adj: dict[str, list[tuple[str, bool]]] = defaultdict(list)
 
     for pair in zone_pairs:
         if pair["type"] == "preexisting":
-            # A preexisting link is one-way if:
-            # 1. It is marked as inherently one-way, OR
-            # 2. No reverse link exists (consistent with build_full_adjacency)
-            is_bidir = not pair.get("is_inherently_one_way", False) and not is_one_way(
-                pair, zone_pairs
-            )
+            is_bidir = not pair.get("is_one_way", False)
             adj[pair["source"]].append((pair["target"], is_bidir))
             if is_bidir:
                 adj[pair["target"]].append((pair["source"], True))
@@ -81,28 +65,19 @@ def build_full_adjacency(
     Build adjacency list for ALL links (random and preexisting).
     Returns dict[source] -> list of (destination, is_bidirectional, pair)
 
-    Random links are bidirectional UNLESS marked as inherently one-way
-    (e.g., sending gates, abductions).
-    Preexisting links are bidirectional only if a reverse link exists.
+    All links are bidirectional unless marked as one-way (is_one_way: true).
+    One-way links include sending gates, coffins, drop-downs, etc.
     """
     adj: dict[str, list[tuple[str, bool, dict]]] = defaultdict(list)
 
     for pair in zone_pairs:
         source = pair["source"]
         dest = pair["target"]
+        is_bidir = not pair.get("is_one_way", False)
 
-        if pair["type"] == "random":
-            # Random links are bidirectional UNLESS marked as inherently one-way
-            is_bidir = not pair.get("is_inherently_one_way", False)
-            adj[source].append((dest, is_bidir, pair))
-            if is_bidir:
-                adj[dest].append((source, True, pair))
-        else:
-            # Preexisting links: one-way unless reverse exists
-            is_bidir = not is_one_way(pair, zone_pairs)
-            adj[source].append((dest, is_bidir, pair))
-            if is_bidir:
-                adj[dest].append((source, True, pair))
+        adj[source].append((dest, is_bidir, pair))
+        if is_bidir:
+            adj[dest].append((source, True, pair))
 
     return adj
 
@@ -187,7 +162,7 @@ def link_exists(
         # For bidirectional random links, also check reverse
         if (
             zp["type"] == "random"
-            and not zp.get("is_inherently_one_way", False)
+            and not zp.get("is_one_way", False)
             and zp["source"] == target
             and zp["target"] == source
         ):
@@ -259,7 +234,7 @@ def find_zone_pair_by_keys(
         # For random (bidirectional) links, check reverse
         if (
             pair["type"] == "random"
-            and not pair.get("is_inherently_one_way", False)
+            and not pair.get("is_one_way", False)
             and pair_source_key == target_key
             and pair_target_key == source_key
         ):
@@ -878,7 +853,7 @@ def compute_zone_exits(
         to_zone = None
         description = None
 
-        is_one_way_link = pair.get("is_inherently_one_way", False)
+        is_one_way_link = pair.get("is_one_way", False)
 
         if pair_source in merged_zones:
             from_zone = pair_source

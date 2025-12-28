@@ -29,7 +29,6 @@ from fogtracker.zone_matching import (
     get_zones_via_preexisting,
     is_accessible_from_start,
     is_link_discovered,
-    is_one_way,
     link_exists,
     names_match,
     strip_parenthetical,
@@ -94,25 +93,6 @@ class TestNamesMatch:
     def test_case_sensitive(self):
         # Current implementation is case-sensitive
         assert not names_match("Limgrave", "limgrave")
-
-
-class TestIsOneWay:
-    """Tests for is_one_way function."""
-
-    def test_bidirectional_link(self, simple_zone_pairs):
-        # Limgrave <-> Stormveil Castle has reverse link
-        limgrave_to_stormveil = simple_zone_pairs[1]  # link-2
-        assert not is_one_way(limgrave_to_stormveil, simple_zone_pairs)
-
-    def test_one_way_random_link(self, simple_zone_pairs):
-        # Chapel -> Limgrave has no reverse (random link)
-        chapel_to_limgrave = simple_zone_pairs[0]  # link-1
-        assert is_one_way(chapel_to_limgrave, simple_zone_pairs)
-
-    def test_inherently_one_way_sending_gate(self, simple_zone_pairs):
-        # Sending Gate Origin -> Divine Tower is one-way
-        sending_gate = simple_zone_pairs[7]  # link-8
-        assert is_one_way(sending_gate, simple_zone_pairs)
 
 
 class TestBuildPreexistingAdjacency:
@@ -579,7 +559,7 @@ class TestLinkExists:
     def test_reverse_direction_not_found_for_one_way(self, simple_zone_pairs):
         """One-way random links should NOT be found in reverse direction.
 
-        link-8 is Sending Gate Origin → Divine Tower (is_inherently_one_way=True).
+        link-8 is Sending Gate Origin → Divine Tower (is_one_way=True).
         Checking Divine Tower → Sending Gate Origin should return False.
         """
         discovered_one_way = [{"zone_link_id": "link-8"}]
@@ -626,7 +606,7 @@ class TestFindZonePairByKeys:
                 "source_key": "limgrave",
                 "target_key": "caelid",
                 "type": "random",
-                "is_inherently_one_way": False,
+                "is_one_way": False,
             }
         ]
         result = find_zone_pair_by_keys(pairs, "caelid", "limgrave")
@@ -642,7 +622,7 @@ class TestFindZonePairByKeys:
                 "source_key": "origin",
                 "target_key": "destination",
                 "type": "random",
-                "is_inherently_one_way": True,
+                "is_one_way": True,
             }
         ]
         result = find_zone_pair_by_keys(pairs, "destination", "origin")
@@ -1022,7 +1002,7 @@ class TestComputeZoneExits:
                 "type": "random",
                 "source_details": "at the front of Astel's arena",
                 "target_details": "after Loretta's arena",
-                "is_inherently_one_way": False,
+                "is_one_way": False,
             },
             {
                 "id": "link-afterloretta-elphael",
@@ -1031,7 +1011,7 @@ class TestComputeZoneExits:
                 "type": "preexisting",
                 "source_details": None,
                 "target_details": "at the elevator",
-                "is_inherently_one_way": False,
+                "is_one_way": False,
             },
             {
                 "id": "link-elphael-afterloretta",
@@ -1040,7 +1020,7 @@ class TestComputeZoneExits:
                 "type": "preexisting",
                 "source_details": "at the elevator",
                 "target_details": None,
-                "is_inherently_one_way": False,
+                "is_one_way": False,
             },
             {
                 "id": "link-elphael-malenia",
@@ -1049,7 +1029,7 @@ class TestComputeZoneExits:
                 "type": "random",
                 "source_details": "before Malenia's arena",
                 "target_details": "before Fallingstar Beast",
-                "is_inherently_one_way": False,
+                "is_one_way": False,
             },
         ]
 
@@ -1078,12 +1058,13 @@ class TestComputeZoneExits:
         malenia_exit = next(e for e in exits if e["description"] == "before Malenia's arena")
         assert malenia_exit["from_zone"] is None  # Same as current zone
 
-    def test_preexisting_one_way_without_reverse_link(self):
+    def test_preexisting_bidirectional_door(self):
         """
-        Test that a preexisting link without reverse is treated as one-way.
+        Test that a preexisting link (door) is bidirectional by default.
 
-        Bug fix: Leyndell -> Leyndell - before Divine Tower is a one-way door.
-        Without an explicit reverse link, we should NOT be able to go back.
+        Doors like "opening the heavy door" are bidirectional in the game,
+        so they should be traversable in both directions unless explicitly
+        marked as one-way (e.g., drop-downs).
         """
         zone_pairs = [
             {
@@ -1093,7 +1074,7 @@ class TestComputeZoneExits:
                 "type": "random",
                 "source_details": "at the side path",
                 "target_details": "at the base of the elevator",
-                "is_inherently_one_way": False,
+                "is_one_way": False,
             },
             {
                 "id": "link-leyndell-pretower",
@@ -1102,20 +1083,46 @@ class TestComputeZoneExits:
                 "type": "preexisting",
                 "source_details": None,
                 "target_details": "opening the heavy door",
-                "is_inherently_one_way": False,  # No reverse link = one-way!
+                "is_one_way": False,  # Door = bidirectional
             },
         ]
 
-        # From "Leyndell - before Divine Tower", we should NOT see Leyndell
-        # because the preexisting link is one-way (no reverse link exists)
+        # From "Leyndell - before Divine Tower", we CAN go back to Leyndell
+        # because doors are bidirectional
         merged = get_zones_via_preexisting(zone_pairs, "Leyndell - before Divine Tower")
         assert "Leyndell - before Divine Tower" in merged
-        assert "Leyndell" not in merged  # One-way door, cannot go back
+        assert "Leyndell" in merged  # Door is bidirectional
 
-        # From Leyndell, we CAN see "Leyndell - before Divine Tower"
+        # From Leyndell, we CAN also go to "Leyndell - before Divine Tower"
         merged_from_leyndell = get_zones_via_preexisting(zone_pairs, "Leyndell")
         assert "Leyndell" in merged_from_leyndell
         assert "Leyndell - before Divine Tower" in merged_from_leyndell
+
+    def test_preexisting_one_way_drop_down(self):
+        """
+        Test that a preexisting link marked as one-way (drop-down) is not bidirectional.
+        """
+        zone_pairs = [
+            {
+                "id": "link-drop-down",
+                "source": "Upper Area",
+                "target": "Lower Area",
+                "type": "preexisting",
+                "source_details": None,
+                "target_details": "dropping down",
+                "is_one_way": True,  # Drop-down = one-way
+            },
+        ]
+
+        # From "Lower Area", we CANNOT go back to "Upper Area"
+        merged = get_zones_via_preexisting(zone_pairs, "Lower Area")
+        assert "Lower Area" in merged
+        assert "Upper Area" not in merged  # Cannot go back up
+
+        # From "Upper Area", we CAN go to "Lower Area"
+        merged_from_upper = get_zones_via_preexisting(zone_pairs, "Upper Area")
+        assert "Upper Area" in merged_from_upper
+        assert "Lower Area" in merged_from_upper
 
 
 class TestBackpropPreexistingPropagation:

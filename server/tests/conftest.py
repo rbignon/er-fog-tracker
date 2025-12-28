@@ -60,7 +60,7 @@ def simple_zone_pairs() -> list[dict]:
             "type": "random",
             "source_details": "before Grafted Scion's arena",
             "target_details": "at the start",
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-2",
@@ -69,7 +69,7 @@ def simple_zone_pairs() -> list[dict]:
             "type": "preexisting",
             "source_details": None,
             "target_details": "at the main gate",
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-3",
@@ -78,7 +78,7 @@ def simple_zone_pairs() -> list[dict]:
             "type": "preexisting",
             "source_details": None,
             "target_details": "back to Limgrave",
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-4",
@@ -87,7 +87,7 @@ def simple_zone_pairs() -> list[dict]:
             "type": "random",
             "source_details": "near the beach",
             "target_details": "arriving from the west",
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-5",
@@ -96,7 +96,7 @@ def simple_zone_pairs() -> list[dict]:
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-6",
@@ -105,7 +105,7 @@ def simple_zone_pairs() -> list[dict]:
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-7",
@@ -114,7 +114,7 @@ def simple_zone_pairs() -> list[dict]:
             "type": "random",
             "source_details": None,
             "target_details": None,
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-8",
@@ -123,7 +123,7 @@ def simple_zone_pairs() -> list[dict]:
             "type": "random",
             "source_details": "using the sending gate",
             "target_details": "warp destination",
-            "is_inherently_one_way": True,
+            "is_one_way": True,
         },
     ]
 
@@ -186,7 +186,7 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
             "type": "random",
             "source_details": None,
             "target_details": None,
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-a-b",
@@ -195,7 +195,7 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
             "type": "random",
             "source_details": None,
             "target_details": None,
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-b-c",
@@ -204,7 +204,7 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-c-b",
@@ -213,7 +213,7 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         # Preexisting from C to Boss (should be discovered after backprop)
         {
@@ -223,7 +223,7 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         {
             "id": "link-boss-c",
@@ -232,7 +232,7 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
         # The discovery link: C -> Destination
         {
@@ -242,6 +242,6 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
             "type": "random",
             "source_details": None,
             "target_details": None,
-            "is_inherently_one_way": False,
+            "is_one_way": False,
         },
     ]

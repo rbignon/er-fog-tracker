@@ -27,7 +27,7 @@ class ZoneLink(BaseModel):
     target_details: str | None = Field(default=None, max_length=500)
     required_item: str | None = Field(default=None, max_length=255)  # Required item name
     required_item_from: str | None = Field(default=None, max_length=2000)  # Zones where item found
-    is_inherently_one_way: bool = False
+    is_one_way: bool = False  # True for sending gates, coffins, drop-downs, etc.
 
 
 # Keep ZonePair as alias for backward compatibility during transition
