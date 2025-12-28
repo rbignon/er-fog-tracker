@@ -87,7 +87,7 @@ impl DiscoverySender for WebSocketAdapter<'_> {
             event.exit.map_id,
             event.exit.pos(),
             event.exit.play_region_id,
-            event.transport_type,
+            &event.transport_type,
             event.destination_entity_id,
         );
     }

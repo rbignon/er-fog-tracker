@@ -11,6 +11,7 @@ from fogtracker.spoiler_parser import (
     SpoilerParseError,
     ZoneInfo,
     _extract_area_and_details,
+    _extract_required_item,
     _parse_area_line,
     _parse_connection_line,
     _should_skip_line,
@@ -97,6 +98,94 @@ class TestExtractAreaAndDetails:
         )
         assert area == "Farum Azula Rooftop and Bridge"
         assert details == "lying down in front of the tempest"
+
+
+class TestExtractRequiredItem:
+    """Tests for _extract_required_item function."""
+
+    def test_no_item(self):
+        assert _extract_required_item("at the main gate", "arriving from the west") is None
+
+    def test_academy_glintstone_key(self):
+        assert (
+            _extract_required_item("", "using the Academy Glintstone Key")
+            == "Academy Glintstone Key"
+        )
+
+    def test_pureblood_medal(self):
+        assert (
+            _extract_required_item("using the Pureblood Knight's Medal", "")
+            == "Pureblood Knight's Medal"
+        )
+
+    def test_dectus_medallion(self):
+        assert (
+            _extract_required_item("at the Grand Lift of Dectus", "using Dectus Medallion")
+            == "Dectus Medallion"
+        )
+
+    def test_rold_medallion(self):
+        assert (
+            _extract_required_item("at the Grand Lift of Rold", "using Rold Medallion")
+            == "Rold Medallion"
+        )
+
+    def test_haligtree_medallion(self):
+        assert (
+            _extract_required_item("using the Haligtree Secret Medallion", "")
+            == "Haligtree Secret Medallion"
+        )
+
+    def test_carian_inverted_statue(self):
+        assert (
+            _extract_required_item("using the Carian Inverted Statue", "")
+            == "Carian Inverted Statue"
+        )
+
+    def test_discarded_palace_key(self):
+        assert (
+            _extract_required_item("", "using the Discarded Palace Key") == "Discarded Palace Key"
+        )
+
+    def test_drawing_room_key(self):
+        assert _extract_required_item("using the Drawing-Room Key", "") == "Drawing-Room Key"
+
+    def test_rusty_key(self):
+        assert _extract_required_item("using the Rusty Key", "") == "Rusty Key"
+
+    def test_hole_laden_necklace(self):
+        assert _extract_required_item("using the Hole-Laden Necklace", "") == "Hole-Laden Necklace"
+
+    def test_o_mother(self):
+        assert _extract_required_item("using O Mother", "") == "O Mother"
+
+    def test_cursemark_of_death(self):
+        assert _extract_required_item("", "using Cursemark of Death") == "Cursemark of Death"
+
+    def test_dark_moon_ring(self):
+        assert _extract_required_item("using the Dark Moon Ring", "") == "Dark Moon Ring"
+
+    def test_well_depths_key(self):
+        assert _extract_required_item("using the Well Depths Key", "") == "Well Depths Key"
+
+    def test_burning_sealing_tree(self):
+        result = _extract_required_item("after burning the Sealing Tree", "")
+        assert result == "burning the Sealing Tree"
+
+    def test_great_runes(self):
+        result = _extract_required_item("", "after acquiring enough Great Runes")
+        assert result == "acquiring enough Great Runes"
+
+    def test_item_in_source_details(self):
+        """Item mentioned in source details."""
+        assert (
+            _extract_required_item("using the Academy Glintstone Key", "warp destination")
+            == "Academy Glintstone Key"
+        )
+
+    def test_item_in_target_details(self):
+        """Item mentioned in target details."""
+        assert _extract_required_item("at the entrance", "using Rold Medallion") == "Rold Medallion"
 
 
 class TestParseAreaLine:

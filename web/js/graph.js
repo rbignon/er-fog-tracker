@@ -2,7 +2,7 @@
 // GRAPH - D3.js rendering, simulation, interactions
 // ============================================================
 
-import { extractRequiredItemFromDescription, parseRequiredItemZones } from './keyItems.js';
+import { parseRequiredItemZones } from './keyItems.js';
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
 import * as PositionManager from './positionManager.js';
@@ -127,7 +127,7 @@ export function renderGraph(preservePositions = false) {
         .join('path')
         .attr('class', d => {
             let cls = `link ${d.type}`;
-            if (d.requiredItemFrom) cls += ' requires-item';
+            if (d.requiredItem) cls += ' requires-item';
             return cls;
         });
 
@@ -453,7 +453,7 @@ function updateStatsDisplay(nodes, links, graphData, explorationMode, exploratio
     }
 
     // Requires Key Item legend
-    const hasRequiredItems = links.some(l => l.requiredItemFrom);
+    const hasRequiredItems = links.some(l => l.requiredItem);
     document.getElementById('legend-requires-item').classList.toggle('hidden', !hasRequiredItems);
 
     // Seed display
@@ -935,25 +935,21 @@ function buildTooltipContent(
             const fromDetails = isReversed ? relevantLink.targetDetails || '' : relevantLink.sourceDetails || '';
             const toDetails = isReversed ? relevantLink.sourceDetails || '' : relevantLink.targetDetails || '';
 
-            html += `<div class="conn-item ${relevantLink.type}${relevantLink.requiredItemFrom ? ' has-requirement' : ''}">`;
+            html += `<div class="conn-item ${relevantLink.type}${relevantLink.requiredItem ? ' has-requirement' : ''}">`;
             html += `← ${fromNodeId}`;
             // Show where we depart FROM (not where we arrive - that would be a spoiler)
             if (fromDetails) {
                 html += `<div class="conn-details expanded">From: ${fromDetails}</div>`;
             }
 
-            // Required item info - extract from description or show zones
-            const requiredItem = extractRequiredItemFromDescription(fromDetails, toDetails);
-            if (requiredItem) {
-                html += `<div class="requires-info">🔑 Requires: ${requiredItem}`;
+            // Required item info
+            if (relevantLink.requiredItem) {
+                html += `<div class="requires-info">🔑 Requires: ${relevantLink.requiredItem}`;
                 if (relevantLink.requiredItemFrom) {
                     const zones = parseRequiredItemZones(relevantLink.requiredItemFrom);
                     html += `<span class="zones-hint" title="${zones.join(', ')}"> (hover for locations)</span>`;
                 }
                 html += `</div>`;
-            } else if (relevantLink.requiredItemFrom) {
-                const zones = parseRequiredItemZones(relevantLink.requiredItemFrom);
-                html += `<div class="requires-info">🔑 Requires item <span class="zones-hint" title="${zones.join(', ')}">(hover for locations)</span></div>`;
             }
 
             html += '</div>';
@@ -1092,8 +1088,6 @@ function buildConnectionsList(
         const fromDetails = reversed ? link.targetDetails || '' : link.sourceDetails || '';
         const toDetails = reversed ? link.sourceDetails || '' : link.targetDetails || '';
 
-        const hasReq = link.requiredItemFrom;
-
         // Check if THIS SPECIFIC link is discovered (not just any link between endpoints)
         // This prevents parallel links (e.g., preexisting + random) from all showing as
         // discovered when only one was traversed
@@ -1114,7 +1108,7 @@ function buildConnectionsList(
             }
         }
 
-        html += `<div class="conn-item ${link.type}${hasReq ? ' has-requirement' : ''}">`;
+        html += `<div class="conn-item ${link.type}${link.requiredItem ? ' has-requirement' : ''}">`;
         html += direction === 'incoming' ? `← ${displayName}` : `→ ${displayName}`;
 
         // Details: show arrival details (toDetails) for incoming, departure details (fromDetails) for outgoing
@@ -1137,18 +1131,14 @@ function buildConnectionsList(
             html += `</div>`;
         }
 
-        // Required item info - extract from description or show zones on hover
-        const requiredItem = extractRequiredItemFromDescription(fromDetails, toDetails);
-        if (requiredItem) {
-            html += `<div class="requires-info">🔑 Requires: ${requiredItem}`;
-            if (hasReq) {
+        // Required item info
+        if (link.requiredItem) {
+            html += `<div class="requires-info">🔑 Requires: ${link.requiredItem}`;
+            if (link.requiredItemFrom) {
                 const zones = parseRequiredItemZones(link.requiredItemFrom);
                 html += `<span class="zones-hint" title="${zones.join(', ')}"> (hover for locations)</span>`;
             }
             html += `</div>`;
-        } else if (hasReq) {
-            const zones = parseRequiredItemZones(link.requiredItemFrom);
-            html += `<div class="requires-info">🔑 Requires item <span class="zones-hint" title="${zones.join(', ')}">(hover for locations)</span></div>`;
         }
 
         html += `</div>`;

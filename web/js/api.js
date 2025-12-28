@@ -136,6 +136,89 @@ export async function parseSpoilerLog(spoilerLog) {
 }
 
 // =============================================================================
+// Data Transformation (API snake_case → Frontend camelCase)
+// =============================================================================
+
+/**
+ * Transform zones from API format to frontend format.
+ * @param {Array} zones - Zones from API (snake_case)
+ * @returns {Array} Zones in frontend format (camelCase)
+ */
+export function transformZonesFromApi(zones) {
+    return zones.map((zone, index) => ({
+        id: zone.name,
+        uuid: zone.id,
+        isBoss: zone.is_boss || false,
+        scaling: zone.scaling || null,
+        order: index,
+    }));
+}
+
+/**
+ * Transform zone links from API format to frontend format.
+ * @param {Array} links - Links from API (snake_case)
+ * @returns {Array} Links in frontend format (camelCase)
+ */
+export function transformLinksFromApi(links) {
+    return links.map(link => ({
+        id: link.id,
+        source: link.source,
+        sourceId: link.source_id || null,
+        sourceKey: link.source_key || null,
+        target: link.target,
+        targetId: link.target_id || null,
+        targetKey: link.target_key || null,
+        type: link.type,
+        sourceDetails: link.source_details || '',
+        targetDetails: link.target_details || '',
+        requiredItem: link.required_item || null,
+        requiredItemFrom: link.required_item_from || null,
+        isInherentlyOneWay: link.is_inherently_one_way || false,
+    }));
+}
+
+/**
+ * Transform zones from frontend format to API format.
+ * @param {Array} nodes - Nodes in frontend format (camelCase)
+ * @returns {Array} Zones in API format (snake_case)
+ */
+export function transformZonesToApi(nodes) {
+    return nodes.map(node => ({
+        id: node.uuid || node.id,
+        name: node.id,
+        is_boss: node.isBoss || false,
+        scaling: node.scaling || null,
+    }));
+}
+
+/**
+ * Transform zone links from frontend format to API format.
+ * @param {Array} links - Links in frontend format (camelCase)
+ * @param {Function} getLinkEndpoints - Function to resolve link endpoints
+ * @returns {Array} Links in API format (snake_case)
+ */
+export function transformLinksToApi(links, getLinkEndpoints) {
+    return links.map(link => {
+        const { sourceId, targetId } = getLinkEndpoints(link);
+        return {
+            id: link.id,
+            source: sourceId,
+            source_id: link.sourceId || null,
+            source_key: link.sourceKey || null,
+            target: targetId,
+            target_id: link.targetId || null,
+            target_key: link.targetKey || null,
+            type: link.type || 'random',
+            source_details: link.sourceDetails || null,
+            target_details: link.targetDetails || null,
+            required_item: link.requiredItem || null,
+            required_item_from: link.requiredItemFrom || null,
+            is_inherently_one_way: link.isInherentlyOneWay || false,
+        };
+    });
+}
+
+// =============================================================================
 // Users API (public)
 // =============================================================================
 
@@ -211,6 +294,10 @@ export async function undiscoverZone(gameId, zone) {
 
 export default {
     parseSpoilerLog,
+    transformZonesFromApi,
+    transformLinksFromApi,
+    transformZonesToApi,
+    transformLinksToApi,
     createGame,
     getGame,
     getMyGames,

@@ -265,7 +265,7 @@ async function initViewerMode(gameId) {
  * Convert server game data to client graph format.
  */
 async function convertServerDataToGraph(game) {
-    const { extractRequiredItemFromDescription } = await import('./keyItems.js');
+    const { transformLinksFromApi } = await import('./api.js');
 
     // Build zone metadata map if available
     // Note: zones have UUID id but links use zone names, so key by name
@@ -274,6 +274,7 @@ async function convertServerDataToGraph(game) {
         for (const zone of game.zones) {
             if (zone.name) {
                 zoneMetadata.set(zone.name, {
+                    uuid: zone.id,
                     isBoss: zone.is_boss || false,
                     scaling: zone.scaling || null,
                 });
@@ -281,15 +282,17 @@ async function convertServerDataToGraph(game) {
         }
     }
 
-    const nodes = new Map();
-    const links = [];
+    // Transform links using centralized function (required_item comes from API)
+    const links = transformLinksFromApi(game.zone_links);
 
-    for (const link of game.zone_links) {
-        // Add nodes with metadata if available
+    // Build nodes from links (zones might not include all nodes)
+    const nodes = new Map();
+    for (const link of links) {
         if (!nodes.has(link.source)) {
             const meta = zoneMetadata.get(link.source) || {};
             nodes.set(link.source, {
                 id: link.source,
+                uuid: meta.uuid || null,
                 isBoss: meta.isBoss || false,
                 scaling: meta.scaling || null,
             });
@@ -298,25 +301,11 @@ async function convertServerDataToGraph(game) {
             const meta = zoneMetadata.get(link.target) || {};
             nodes.set(link.target, {
                 id: link.target,
+                uuid: meta.uuid || null,
                 isBoss: meta.isBoss || false,
                 scaling: meta.scaling || null,
             });
         }
-
-        // Check for required key items
-        const requiredItemFrom = extractRequiredItemFromDescription(link.source_details, link.target_details);
-
-        // Add link
-        links.push({
-            id: link.id,
-            source: link.source,
-            target: link.target,
-            type: link.type,
-            sourceDetails: link.source_details,
-            targetDetails: link.target_details,
-            requiredItemFrom,
-            isInherentlyOneWay: link.is_inherently_one_way || false,
-        });
     }
 
     return {

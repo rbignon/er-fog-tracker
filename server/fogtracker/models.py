@@ -25,6 +25,8 @@ class ZoneLink(BaseModel):
     type: str = Field(pattern="^(random|preexisting)$")
     source_details: str | None = Field(default=None, max_length=500)
     target_details: str | None = Field(default=None, max_length=500)
+    required_item: str | None = Field(default=None, max_length=255)  # Required item name
+    required_item_from: str | None = Field(default=None, max_length=2000)  # Zones where item found
     is_inherently_one_way: bool = False
 
 

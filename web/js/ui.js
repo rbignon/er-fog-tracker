@@ -2,7 +2,7 @@
 // UI - Upload, header controls, modals, search
 // ============================================================
 
-import { parseSpoilerLog } from './api.js';
+import { parseSpoilerLog, transformZonesFromApi, transformLinksFromApi } from './api.js';
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
 import * as Toast from './toast.js';
@@ -60,24 +60,10 @@ async function processSpoilerLogText(text) {
 
     // Transform API response to frontend format
     const parsedData = {
-        nodes: apiData.zones.map((zone, index) => ({
-            id: zone.name,
-            isBoss: zone.is_boss || false,
-            scaling: zone.scaling || null,
-            order: index,
-        })),
-        links: apiData.zone_links.map(link => ({
-            id: link.id,
-            source: link.source,
-            target: link.target,
-            type: link.type,
-            sourceDetails: link.source_details || '',
-            targetDetails: link.target_details || '',
-            requiredItemFrom: link.required_item_from || null,
-            isInherentlyOneWay: link.is_inherently_one_way || false,
-        })),
+        nodes: transformZonesFromApi(apiData.zones),
+        links: transformLinksFromApi(apiData.zone_links),
         metadata: {
-            seed: String(apiData.seed),
+            seed: apiData.seed,
         },
     };
 
@@ -93,7 +79,7 @@ async function processSpoilerLogText(text) {
     searchInput.value = '';
 
     // Set seed BEFORE render so exploration state can be loaded
-    const newSeed = parsedData.metadata?.seed || 'unknown';
+    const newSeed = parsedData.metadata.seed;
     State.setSeed(newSeed);
 
     // Check if we already have saved graph data for this seed (preserves UUIDs)

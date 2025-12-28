@@ -4,6 +4,7 @@
 
 import * as Auth from '../auth.js';
 import * as Api from '../api.js';
+import { transformZonesFromApi, transformLinksFromApi, transformZonesToApi, transformLinksToApi } from '../api.js';
 import { navigate } from '../router.js';
 import * as Toast from '../toast.js';
 import { getLinkEndpoints } from '../state.js';
@@ -71,24 +72,10 @@ async function handleFileSelect(file) {
 
         // Store in format expected by createGame
         parsedData = {
-            seed: String(apiData.seed),
+            seed: apiData.seed,
             graphData: {
-                nodes: apiData.zones.map((zone, index) => ({
-                    id: zone.name,
-                    isBoss: zone.is_boss || false,
-                    scaling: zone.scaling || null,
-                    order: index,
-                })),
-                links: apiData.zone_links.map(link => ({
-                    id: link.id,
-                    source: link.source,
-                    target: link.target,
-                    type: link.type,
-                    sourceDetails: link.source_details || '',
-                    targetDetails: link.target_details || '',
-                    requiredItemFrom: link.required_item_from || null,
-                    isInherentlyOneWay: link.is_inherently_one_way || false,
-                })),
+                nodes: transformZonesFromApi(apiData.zones),
+                links: transformLinksFromApi(apiData.zone_links),
             },
         };
 
@@ -124,26 +111,9 @@ async function createGame() {
     const errorEl = document.getElementById('new-game-error');
     const createBtn = document.getElementById('create-game-btn');
 
-    // Convert graph data to zone_links format
-    const zonePairs = parsedData.graphData.links.map(link => {
-        const { sourceId, targetId } = getLinkEndpoints(link);
-        return {
-            id: link.id,
-            source: sourceId,
-            target: targetId,
-            type: link.type || 'random',
-            source_details: link.sourceDetails || null,
-            target_details: link.targetDetails || null,
-            is_inherently_one_way: link.isInherentlyOneWay || false,
-        };
-    });
-
-    // Convert graph data to zones format (node metadata)
-    const zones = parsedData.graphData.nodes.map(node => ({
-        id: node.id,
-        is_boss: node.isBoss || false,
-        scaling: node.scaling || null,
-    }));
+    // Convert graph data to API format
+    const zonePairs = transformLinksToApi(parsedData.graphData.links, getLinkEndpoints);
+    const zones = transformZonesToApi(parsedData.graphData.nodes);
 
     createBtn.disabled = true;
     createBtn.textContent = 'Creating...';

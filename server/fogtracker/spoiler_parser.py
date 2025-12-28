@@ -43,6 +43,30 @@ TELEPORT_SOURCE_PATTERNS = [
     re.compile(r"lying down", re.IGNORECASE),
 ]
 
+# Known key items that can be mentioned in fog log descriptions
+KNOWN_KEY_ITEMS = [
+    "Hole-Laden Necklace",
+    "Discarded Palace Key",
+    "Carian Inverted Statue",
+    "Drawing-Room Key",
+    "Pureblood Knight's Medal",
+    "O Mother",
+    "Rusty Key",
+    "Academy Glintstone Key",
+    "Dectus Medallion",
+    "Haligtree Secret Medallion",
+    "Rold Medallion",
+    "Cursemark of Death",
+    "Dark Moon Ring",
+    "Well Depths Key",
+]
+
+# Known actions that require items (not items themselves but indicate item requirements)
+KNOWN_ACTIONS = [
+    "burning the Sealing Tree",
+    "acquiring enough Great Runes",
+]
+
 # Patterns to skip (metadata lines)
 SKIP_PATTERNS = [
     re.compile(r"^Options and seed:"),
@@ -135,7 +159,8 @@ class ConnectionInfo:
     target_details: str = ""
     source_key: str | None = None  # Internal zone key (from fog.txt)
     target_key: str | None = None  # Internal zone key (from fog.txt)
-    required_item_from: str | None = None
+    required_item: str | None = None  # Name of required item (e.g., "Academy Glintstone Key")
+    required_item_from: str | None = None  # Zones where the item can be found
     is_inherently_one_way: bool = False
 
 
@@ -214,6 +239,32 @@ def _extract_area_and_details(text: str) -> tuple[str, str]:
     return text.strip(), ""
 
 
+def _extract_required_item(source_details: str, target_details: str) -> str | None:
+    """Extract key item or action name from connection details.
+
+    Args:
+        source_details: The source details text
+        target_details: The target details text
+
+    Returns:
+        The item/action name if found, None otherwise
+    """
+    text = f"{source_details} {target_details}"
+
+    # Check for known key items
+    for item in KNOWN_KEY_ITEMS:
+        if item in text:
+            return item
+
+    # Check for known actions (case-insensitive)
+    text_lower = text.lower()
+    for action in KNOWN_ACTIONS:
+        if action.lower() in text_lower:
+            return action
+
+    return None
+
+
 def _parse_connection_line(line: str) -> ConnectionInfo | None:
     """Parse a connection line (Random: or Preexisting:)."""
     trimmed = line.strip()
@@ -267,6 +318,9 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
             pattern.search(source_details) for pattern in TELEPORT_SOURCE_PATTERNS
         )
 
+    # Extract required item name from details
+    required_item = _extract_required_item(source_details, target_details)
+
     return ConnectionInfo(
         id=str(uuid4()),
         source=clean_source,
@@ -276,6 +330,7 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
         conn_type=conn_type,
         source_details=source_details,
         target_details=target_details,
+        required_item=required_item,
         required_item_from=required_item_from,
         is_inherently_one_way=is_inherently_one_way,
     )
@@ -428,7 +483,7 @@ def enrich_connections_with_zone_keys(
         if not target_key:
             target_key = resolver.lookup_by_display_name(conn.target)
 
-        # Create enriched connection (preserve source_id/target_id from original)
+        # Create enriched connection (preserve all fields from original)
         enriched.append(
             ConnectionInfo(
                 id=conn.id,
@@ -441,6 +496,7 @@ def enrich_connections_with_zone_keys(
                 target_details=conn.target_details,
                 source_key=source_key,
                 target_key=target_key,
+                required_item=conn.required_item,
                 required_item_from=conn.required_item_from,
                 is_inherently_one_way=conn.is_inherently_one_way,
             )

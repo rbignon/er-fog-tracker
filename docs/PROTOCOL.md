@@ -151,6 +151,58 @@ If game already exists (same seed + run_id):
 
 ---
 
+### Spoiler Endpoints (`/api/spoiler/*`)
+
+Public endpoints for parsing spoiler logs (no authentication required).
+
+#### `POST /api/spoiler/parse`
+Parse a spoiler log and return structured data.
+
+**Request Body**:
+```json
+{
+  "spoiler_log": "Options and seed:12345 ..."
+}
+```
+
+**Response**:
+```json
+{
+  "seed": 12345,
+  "zones": [
+    {
+      "id": "uuid",
+      "name": "Limgrave",
+      "is_boss": false,
+      "scaling": "1-20"
+    }
+  ],
+  "zone_links": [
+    {
+      "id": "uuid",
+      "source": "Limgrave",
+      "target": "Stormveil Castle",
+      "type": "random",
+      "source_details": "at the main gate",
+      "target_details": "arriving at entrance",
+      "required_item": "Academy Glintstone Key",
+      "required_item_from": "Raya Lucaria; Liurnia",
+      "is_inherently_one_way": false
+    }
+  ]
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `required_item` | Name of required item (null if none) |
+| `required_item_from` | Zones where item can be found (null if none) |
+
+**Errors**:
+- 400: Invalid spoiler log format
+
+---
+
 ### Game Endpoints (`/api/games/*`)
 
 #### `GET /api/games/{game_id}`
