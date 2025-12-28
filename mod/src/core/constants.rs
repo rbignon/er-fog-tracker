@@ -231,3 +231,7 @@ impl GreatRune {
 
 /// Messmer's Kindling param_id (discovered via debug dump)
 pub const MESSMERS_KINDLING: u32 = 2008021;
+
+/// Extra slots to scan beyond key_items_count
+/// The count field can be inaccurate, so we scan a buffer beyond it
+pub const INVENTORY_SCAN_BUFFER: u32 = 20;
