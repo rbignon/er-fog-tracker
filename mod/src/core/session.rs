@@ -213,7 +213,7 @@ impl Default for TrackerSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::Animation;
+    use crate::core::animations::Animation;
     use crate::core::io_traits::mocks::MockServerConnection;
     use crate::core::traits::mocks::{MockGameState, MockWarpDetector};
     use crate::core::types::PlayerPosition;
@@ -275,7 +275,9 @@ mod tests {
         // Frame 2: Animation ends, discovery sent
         let events = session.update(&game_state, &warp, &mut server);
         assert_eq!(events.len(), 1);
-        assert!(matches!(&events[0], SessionEvent::DiscoverySent(d) if d.transport_type == "FOG"));
+        assert!(
+            matches!(&events[0], SessionEvent::DiscoverySent(d) if d.transport_type == "FogWall")
+        );
 
         // Verify discovery was sent to server
         assert_eq!(server.discovery_count(), 1);

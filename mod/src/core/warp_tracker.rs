@@ -5,8 +5,9 @@
 
 use std::time::Instant;
 
+use super::animations::get_teleport_type;
 use super::constants::WARP_TIMEOUT;
-use super::entity_utils::{get_teleport_type, is_fog_rando_entity};
+use super::entity_utils::is_fog_rando_entity;
 use super::traits::{GameStateReader, WarpDetector};
 use super::types::PlayerPosition;
 
@@ -22,7 +23,7 @@ pub struct PendingWarp {
     /// Entity ID of the warp destination (captured when warp_requested becomes true)
     pub destination_entity_id: u32,
     /// Transport type inferred from animation
-    pub transport_type: &'static str,
+    pub transport_type: String,
     /// When this pending warp was created (for timeout detection)
     pub created_at: Instant,
     /// Whether warp_requested was true at any point during this warp
@@ -47,8 +48,8 @@ pub struct DiscoveryEvent {
     pub entry: PlayerPosition,
     /// Exit position
     pub exit: PlayerPosition,
-    /// Transport type (FOG, WAYGATE, etc.)
-    pub transport_type: &'static str,
+    /// Transport type (FogWall, Waygate, etc.)
+    pub transport_type: String,
     /// Destination entity ID (755890xxx for fog rando)
     pub destination_entity_id: u32,
     /// Whether warp_requested was true at any point during this warp
@@ -60,7 +61,7 @@ impl DiscoveryEvent {
     ///
     /// A discovery is valid if `warp_requested` was true at some point during
     /// the warp. This filters out false positives like cutscene animations
-    /// (POST_BOSS_WARP, LIURNIA_TOWER_DOOR) that can play without an actual warp.
+    /// (PostBossWarp, LiurniaTowerDoor) that can play without an actual warp.
     ///
     /// Previously, we only required this for specific animation types, but
     /// empirical data shows that ALL valid warps have `warp_requested=true`,
@@ -146,7 +147,9 @@ impl WarpTracker {
         // Get current animation and warp state
         let cur_anim = game_state.read_animation();
         let is_in_teleport_anim = cur_anim.and_then(get_teleport_type).is_some();
-        let transport_type = cur_anim.and_then(get_teleport_type).unwrap_or("UNKNOWN");
+        let transport_type = cur_anim
+            .and_then(get_teleport_type)
+            .unwrap_or_else(|| "UNKNOWN".to_string());
 
         let is_warp_requested = warp_detector.is_warp_requested();
         let dest_entity_id = warp_detector.get_destination_entity_id();
@@ -177,7 +180,7 @@ impl WarpTracker {
                 self.pending_warp = Some(PendingWarp {
                     entry: pos,
                     destination_entity_id: dest_entity_id,
-                    transport_type: "FOG_RANDO", // Unknown animation, but fog rando entity
+                    transport_type: "FOG_RANDO".to_string(), // Unknown animation, but fog rando entity
                     created_at: Instant::now(),
                     warp_was_requested: true, // Already true since that's how we triggered
                 });
@@ -239,7 +242,7 @@ impl WarpTracker {
         self.was_position_readable = position_now_readable;
         self.was_warp_requested = is_warp_requested;
 
-        // Filter out false positives (e.g., POST_BOSS_WARP without actual warp)
+        // Filter out false positives (e.g., PostBossWarp without actual warp)
         discovery.filter(|d| d.is_valid())
     }
 
@@ -283,7 +286,7 @@ mod tests {
     use super::*;
     use std::time::Duration;
 
-    use crate::core::constants::Animation;
+    use crate::core::animations::Animation;
     use crate::core::entity_utils::is_fog_rando_entity;
     use crate::core::traits::mocks::{MockGameState, MockWarpDetector};
     use crate::core::types::PlayerPosition;
@@ -336,7 +339,7 @@ mod tests {
         let d = discovery.unwrap();
         assert_eq!(d.entry.map_id, 0x3C2C2400);
         assert_eq!(d.exit.map_id, 0x0A0A1000);
-        assert_eq!(d.transport_type, "FOG");
+        assert_eq!(d.transport_type, "FogWall");
         assert_eq!(d.destination_entity_id, 755890042);
     }
 
@@ -442,7 +445,7 @@ mod tests {
 
     #[test]
     fn test_waygate_animation() {
-        use crate::core::constants::Animation;
+        use crate::core::animations::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -463,18 +466,18 @@ mod tests {
 
         tracker.check_warp(&game_state, &warp);
         assert!(tracker.has_pending_warp());
-        assert_eq!(tracker.pending_warp().unwrap().transport_type, "WAYGATE");
+        assert_eq!(tracker.pending_warp().unwrap().transport_type, "Waygate");
 
         game_state.advance_frame();
         let discovery = tracker.check_warp(&game_state, &warp);
 
         assert!(discovery.is_some());
-        assert_eq!(discovery.unwrap().transport_type, "WAYGATE");
+        assert_eq!(discovery.unwrap().transport_type, "Waygate");
     }
 
     #[test]
     fn test_sending_gate_animation() {
-        use crate::core::constants::Animation;
+        use crate::core::animations::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -498,19 +501,19 @@ mod tests {
         tracker.check_warp(&game_state, &warp);
         assert_eq!(
             tracker.pending_warp().unwrap().transport_type,
-            "SENDING_GATE"
+            "SendingGateBlue"
         );
 
         game_state.advance_frame();
         let discovery = tracker.check_warp(&game_state, &warp);
 
         assert!(discovery.is_some());
-        assert_eq!(discovery.unwrap().transport_type, "SENDING_GATE");
+        assert_eq!(discovery.unwrap().transport_type, "SendingGateBlue");
     }
 
     #[test]
     fn test_medal_animation() {
-        use crate::core::constants::Animation;
+        use crate::core::animations::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -531,19 +534,19 @@ mod tests {
         // Frame 1: Animation starts, warp_requested becomes true
         warp.set_warp(true, 755890200, 0x0A0A1000);
         tracker.check_warp(&game_state, &warp);
-        assert_eq!(tracker.pending_warp().unwrap().transport_type, "MEDAL");
+        assert_eq!(tracker.pending_warp().unwrap().transport_type, "Medal");
 
         game_state.advance_frame();
         let discovery = tracker.check_warp(&game_state, &warp);
 
         assert!(discovery.is_some());
-        assert_eq!(discovery.unwrap().transport_type, "MEDAL");
+        assert_eq!(discovery.unwrap().transport_type, "Medal");
     }
 
     #[test]
     fn test_back_to_entrance_animation() {
         // Animation 60460: ground teleporter after defeating dungeon boss
-        use crate::core::constants::Animation;
+        use crate::core::animations::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -565,7 +568,7 @@ mod tests {
         tracker.check_warp(&game_state, &warp);
         assert_eq!(
             tracker.pending_warp().unwrap().transport_type,
-            "BACK_TO_ENTRANCE"
+            "BackToEntrance"
         );
 
         game_state.advance_frame();
@@ -573,7 +576,7 @@ mod tests {
 
         assert!(discovery.is_some());
         let d = discovery.unwrap();
-        assert_eq!(d.transport_type, "BACK_TO_ENTRANCE");
+        assert_eq!(d.transport_type, "BackToEntrance");
         assert_eq!(d.entry.map_id, 0x0A0A1000);
         assert_eq!(d.exit.map_id, 0x3C2C2400);
     }
@@ -581,7 +584,7 @@ mod tests {
     #[test]
     fn test_horned_remains_animation() {
         // Animation 60010: Horned Remains item teleport (e.g., Nokron -> Farum Azula)
-        use crate::core::constants::Animation;
+        use crate::core::animations::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -603,20 +606,20 @@ mod tests {
         tracker.check_warp(&game_state, &warp);
         assert_eq!(
             tracker.pending_warp().unwrap().transport_type,
-            "HORNED_REMAINS"
+            "HornedRemains"
         );
 
         game_state.advance_frame();
         let discovery = tracker.check_warp(&game_state, &warp);
 
         assert!(discovery.is_some());
-        assert_eq!(discovery.unwrap().transport_type, "HORNED_REMAINS");
+        assert_eq!(discovery.unwrap().transport_type, "HornedRemains");
     }
 
     #[test]
     fn test_liurnia_tower_door_animation() {
         // Animation 12202126: Divine Tower of Liurnia inverted door teleport
-        use crate::core::constants::Animation;
+        use crate::core::animations::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -638,20 +641,20 @@ mod tests {
         tracker.check_warp(&game_state, &warp);
         assert_eq!(
             tracker.pending_warp().unwrap().transport_type,
-            "LIURNIA_TOWER_DOOR"
+            "LiurniaTowerDoor"
         );
 
         game_state.advance_frame();
         let discovery = tracker.check_warp(&game_state, &warp);
 
         assert!(discovery.is_some());
-        assert_eq!(discovery.unwrap().transport_type, "LIURNIA_TOWER_DOOR");
+        assert_eq!(discovery.unwrap().transport_type, "LiurniaTowerDoor");
     }
 
     #[test]
     fn test_post_boss_warp_animation() {
         // Animation 12020210: warp after defeating certain bosses (e.g., Maliketh)
-        use crate::core::constants::Animation;
+        use crate::core::animations::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -673,20 +676,20 @@ mod tests {
         tracker.check_warp(&game_state, &warp);
         assert_eq!(
             tracker.pending_warp().unwrap().transport_type,
-            "POST_BOSS_WARP"
+            "PostBossWarp"
         );
 
         game_state.advance_frame();
         let discovery = tracker.check_warp(&game_state, &warp);
 
         assert!(discovery.is_some());
-        assert_eq!(discovery.unwrap().transport_type, "POST_BOSS_WARP");
+        assert_eq!(discovery.unwrap().transport_type, "PostBossWarp");
     }
 
     #[test]
     fn test_erdtree_burn_animation() {
         // Animation 68110: warp when burning the Erdtree with Melina
-        use crate::core::constants::Animation;
+        use crate::core::animations::Animation;
 
         let game_state = MockGameState::new(
             vec![
@@ -708,7 +711,7 @@ mod tests {
         tracker.check_warp(&game_state, &warp);
         assert_eq!(
             tracker.pending_warp().unwrap().transport_type,
-            "ERDTREE_BURN"
+            "ErdtreeBurn"
         );
 
         game_state.advance_frame();
@@ -716,7 +719,7 @@ mod tests {
 
         assert!(discovery.is_some());
         let d = discovery.unwrap();
-        assert_eq!(d.transport_type, "ERDTREE_BURN");
+        assert_eq!(d.transport_type, "ErdtreeBurn");
         assert_eq!(d.exit.map_id, 0x0C020000);
     }
 
@@ -902,7 +905,7 @@ mod tests {
         tracker.pending_warp = Some(PendingWarp {
             entry: make_pos(0x3C2C2400, 100.0, 0.0, 100.0),
             destination_entity_id: 755890001,
-            transport_type: "FOG",
+            transport_type: "FogWall".to_string(),
             created_at: Instant::now(),
             warp_was_requested: false,
         });
@@ -998,7 +1001,7 @@ mod tests {
     }
 
     // =========================================================================
-    // POST_BOSS_WARP false positive filtering tests
+    // PostBossWarp false positive filtering tests
     // =========================================================================
 
     #[test]
@@ -1007,7 +1010,7 @@ mod tests {
         let discovery = DiscoveryEvent {
             entry: make_pos(0x0A0A1000, 100.0, 0.0, 100.0),
             exit: make_pos(0x0A0A1000, 105.0, 0.0, 105.0),
-            transport_type: "FOG",
+            transport_type: "FogWall".to_string(),
             destination_entity_id: 0,
             warp_was_requested: true,
         };
@@ -1020,7 +1023,7 @@ mod tests {
         let discovery = DiscoveryEvent {
             entry: make_pos(0x0A0A1000, 100.0, 0.0, 100.0),
             exit: make_pos(0x0A0A1000, 105.0, 0.0, 105.0),
-            transport_type: "FOG",
+            transport_type: "FogWall".to_string(),
             destination_entity_id: 0,
             warp_was_requested: false,
         };
@@ -1029,11 +1032,11 @@ mod tests {
 
     #[test]
     fn test_discovery_event_post_boss_warp_with_warp_requested() {
-        // POST_BOSS_WARP with warp_requested=true is valid
+        // PostBossWarp with warp_requested=true is valid
         let discovery = DiscoveryEvent {
             entry: make_pos(0x0A0A1000, 100.0, 0.0, 100.0),
             exit: make_pos(0x0B0B1000, 100.0, 0.0, 100.0),
-            transport_type: "POST_BOSS_WARP",
+            transport_type: "PostBossWarp".to_string(),
             destination_entity_id: 0,
             warp_was_requested: true,
         };
@@ -1042,12 +1045,12 @@ mod tests {
 
     #[test]
     fn test_discovery_event_post_boss_warp_false_positive() {
-        // POST_BOSS_WARP without warp_requested is INVALID (false positive)
+        // PostBossWarp without warp_requested is INVALID (false positive)
         // This matches the false positive case from the logs where warp_requested was never true
         let discovery = DiscoveryEvent {
             entry: make_pos(0x0A0A1000, -125.4, 40.9, -350.4),
             exit: make_pos(0x0A0A1000, -119.4, 40.6, -353.5),
-            transport_type: "POST_BOSS_WARP",
+            transport_type: "PostBossWarp".to_string(),
             destination_entity_id: 0,
             warp_was_requested: false,
         };
@@ -1056,11 +1059,11 @@ mod tests {
 
     #[test]
     fn test_discovery_event_liurnia_tower_door_with_warp_requested() {
-        // LIURNIA_TOWER_DOOR with warp_requested=true is valid
+        // LiurniaTowerDoor with warp_requested=true is valid
         let discovery = DiscoveryEvent {
             entry: make_pos(0x0A0A1000, 100.0, 0.0, 100.0),
             exit: make_pos(0x0B0B1000, 100.0, 0.0, 100.0),
-            transport_type: "LIURNIA_TOWER_DOOR",
+            transport_type: "LiurniaTowerDoor".to_string(),
             destination_entity_id: 0,
             warp_was_requested: true,
         };
@@ -1069,11 +1072,11 @@ mod tests {
 
     #[test]
     fn test_discovery_event_liurnia_tower_door_false_positive() {
-        // LIURNIA_TOWER_DOOR without warp_requested is INVALID (false positive)
+        // LiurniaTowerDoor without warp_requested is INVALID (false positive)
         let discovery = DiscoveryEvent {
             entry: make_pos(0x0A0A1000, -90.1, 357.2, 22.1),
             exit: make_pos(0x0A0A1000, -71.6, 347.8, 16.9),
-            transport_type: "LIURNIA_TOWER_DOOR",
+            transport_type: "LiurniaTowerDoor".to_string(),
             destination_entity_id: 0,
             warp_was_requested: false,
         };
@@ -1082,7 +1085,7 @@ mod tests {
 
     #[test]
     fn test_post_boss_warp_filtered_in_check_warp() {
-        // Full integration test: POST_BOSS_WARP false positive should not emit discovery
+        // Full integration test: PostBossWarp false positive should not emit discovery
         let game_state = MockGameState::new(
             vec![
                 Some(make_pos(0x0A0A1000, -125.4, 40.9, -350.4)), // Entry
@@ -1107,13 +1110,13 @@ mod tests {
         let discovery = tracker.check_warp(&game_state, &warp);
         assert!(
             discovery.is_none(),
-            "POST_BOSS_WARP false positive should be filtered"
+            "PostBossWarp false positive should be filtered"
         );
     }
 
     #[test]
     fn test_post_boss_warp_valid_with_warp_requested() {
-        // POST_BOSS_WARP with warp_requested=true should emit discovery
+        // PostBossWarp with warp_requested=true should emit discovery
         let game_state = MockGameState::new(
             vec![
                 Some(make_pos(0x0A101000, 100.0, 0.0, 100.0)), // Boss arena
@@ -1138,8 +1141,8 @@ mod tests {
         let discovery = tracker.check_warp(&game_state, &warp);
         assert!(
             discovery.is_some(),
-            "POST_BOSS_WARP with warp_requested should be valid"
+            "PostBossWarp with warp_requested should be valid"
         );
-        assert_eq!(discovery.unwrap().transport_type, "POST_BOSS_WARP");
+        assert_eq!(discovery.unwrap().transport_type, "PostBossWarp");
     }
 }

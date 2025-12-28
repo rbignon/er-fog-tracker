@@ -78,61 +78,6 @@ pub struct SpEffectDebugInfo {
     pub has_teleport_effect: bool,
 }
 
-// =============================================================================
-// TELEPORT TYPE
-// =============================================================================
-
-/// Types of teleportation events
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TeleportType {
-    /// Fog wall traversal
-    FogWall,
-    /// Waygate or Sending gate
-    Waygate,
-    /// Pureblood Knight's Medal
-    Medal,
-    /// Coffin transport
-    Coffin,
-    /// Fast travel to a grace
-    FastTravel,
-}
-
-impl TeleportType {
-    /// Animation ID that triggers this event type
-    pub fn animation_id(&self) -> Option<u32> {
-        use super::constants::Animation;
-        match self {
-            Self::FogWall => Some(Animation::FogWall.as_u32()),
-            Self::Waygate => Some(Animation::Waygate.as_u32()),
-            Self::Medal => Some(Animation::Medal.as_u32()),
-            Self::Coffin => None,
-            Self::FastTravel => None,
-        }
-    }
-
-    /// SpEffect IDs used for detection
-    pub fn speffect_ids(&self) -> &'static [u32] {
-        match self {
-            Self::FogWall => &[],
-            Self::Waygate => &[],
-            Self::Medal => &[],
-            Self::Coffin => &[4190, 4010, 4510],
-            Self::FastTravel => &[],
-        }
-    }
-
-    /// Log prefix for this event type
-    pub fn name(&self) -> &'static str {
-        match self {
-            Self::FogWall => "FOG",
-            Self::Waygate => "WAYGATE",
-            Self::Medal => "MEDAL",
-            Self::Coffin => "COFFIN",
-            Self::FastTravel => "FAST_TRAVEL",
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -162,12 +107,5 @@ mod tests {
 
         // Same position = 0 distance
         assert!((pos1.distance_to(&pos1)).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_teleport_type_names() {
-        assert_eq!(TeleportType::FogWall.name(), "FOG");
-        assert_eq!(TeleportType::Waygate.name(), "WAYGATE");
-        assert_eq!(TeleportType::Coffin.name(), "COFFIN");
     }
 }

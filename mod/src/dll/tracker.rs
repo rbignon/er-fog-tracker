@@ -13,8 +13,9 @@ use std::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 use windows::Win32::Foundation::HINSTANCE;
 
+use crate::core::animations::{get_animation_label, get_teleport_type};
 use crate::core::constants::GreatRune;
-use crate::core::entity_utils::{get_animation_label, get_teleport_type, is_fog_rando_entity};
+use crate::core::entity_utils::is_fog_rando_entity;
 use crate::core::io_traits::{
     ConnectionStatus as CoreConnectionStatus, DiscoveryResult, DiscoverySender, ServerEvent,
     ServerEventReceiver, ZoneQueryResult,

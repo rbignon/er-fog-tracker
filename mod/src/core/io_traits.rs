@@ -253,7 +253,7 @@ mod tests {
         DiscoveryEvent {
             entry: make_pos(0x3C2C2400, 100.0, 0.0, 100.0),
             exit: make_pos(0x0A0A1000, 200.0, 0.0, 200.0),
-            transport_type: "FOG",
+            transport_type: "FogWall".to_string(),
             destination_entity_id: 755890042,
             warp_was_requested: false,
         }
