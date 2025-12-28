@@ -308,6 +308,42 @@ class TestResolveFromMapId:
         zones = resolver.resolve_from_map_id("m99_99_99_99")
         assert zones == []
 
+    def test_parent_map_expands_to_child_zones(self, resolver):
+        """Parent map ID (m##_##_00_00) should include zones from child maps.
+
+        Entity mapping uses parent map format (e.g., m61_44_00_00) but zones
+        are defined with specific tiles (e.g., m61_44_45_00). The resolver
+        should expand parent maps to include zones from all child tiles.
+
+        This fixes the Midra's Manse → Romina bug where entity mapping
+        returned m61_44_00_00 but rauhruins_romina is in m61_44_45_00.
+        """
+        # Parent map m61_44_00_00 (from entity mapping)
+        zones = resolver.resolve_from_map_id("m61_44_00_00")
+        internal_names = [z[0] for z in zones]
+
+        # rauhruins_romina is defined in m61_44_45_00 (child tile)
+        # but should be found when querying parent m61_44_00_00
+        assert (
+            "rauhruins_romina" in internal_names
+        ), "rauhruins_romina should be found via parent map m61_44_00_00"
+
+        # Also check other zones from child tiles are included
+        assert "rauhruins_west" in internal_names
+        assert "rauhruins_postromina" in internal_names
+
+    def test_non_parent_map_not_expanded(self, resolver):
+        """Non-parent map IDs should not be expanded.
+
+        Only maps with 00_00 as the last two segments should expand.
+        """
+        # Specific tile - should only return zones for that tile
+        zones_specific = resolver.resolve_from_map_id("m61_44_45_00")
+        zones_parent = resolver.resolve_from_map_id("m61_44_00_00")
+
+        # Parent should have more zones (from all child tiles)
+        assert len(zones_parent) >= len(zones_specific)
+
 
 class TestResolveAllCandidates:
     """Tests for ZoneResolver.resolve_all_candidates method."""

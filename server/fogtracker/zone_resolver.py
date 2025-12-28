@@ -504,18 +504,43 @@ class ZoneResolver:
         """
         Get all possible zones for a map_id (without position disambiguation).
 
+        For "parent" map IDs (m##_##_00_00), also returns zones from child maps
+        (m##_##_XX_YY). This handles entity mapping which uses parent format.
+
         Returns:
             List of (internal_name, display_name) tuples.
         """
         results = []
+        seen = set()
 
-        # From foglocations
+        # Check if this is a parent map ID (last two segments are 00_00)
+        # Format: m{area}_{grid_x}_{grid_z}_{variant}
+        match = re.match(r"(m\d+_\d+)_(\d+)_(\d+)", map_id)
+        is_parent_map = match and match.group(2) == "00" and match.group(3) == "00"
+        parent_prefix = match.group(1) + "_" if is_parent_map else None
+
+        # Direct match
         if map_id in self.map_zones:
             for internal_name in self.map_zones[map_id]:
-                display_name = self.zone_display_names.get(
-                    internal_name, internal_name.replace("_", " ").title()
-                )
-                results.append((internal_name, display_name))
+                if internal_name not in seen:
+                    seen.add(internal_name)
+                    display_name = self.zone_display_names.get(
+                        internal_name, internal_name.replace("_", " ").title()
+                    )
+                    results.append((internal_name, display_name))
+
+        # For parent maps, also check child maps
+        if parent_prefix:
+            for child_map_id, zones in self.map_zones.items():
+                # Match child maps: m##_##_XX_YY where XX or YY is not 00
+                if child_map_id.startswith(parent_prefix) and child_map_id != map_id:
+                    for internal_name in zones:
+                        if internal_name not in seen:
+                            seen.add(internal_name)
+                            display_name = self.zone_display_names.get(
+                                internal_name, internal_name.replace("_", " ").title()
+                            )
+                            results.append((internal_name, display_name))
 
         return results
 
