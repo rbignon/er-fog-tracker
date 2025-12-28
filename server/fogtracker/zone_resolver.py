@@ -611,8 +611,12 @@ class ZoneResolver:
                 display_name = self.zone_display_names.get(
                     internal_name, internal_name.replace("_", " ").title()
                 )
-                # Lower priority for foglocations (no position info)
-                priority = 3 if internal_name.endswith("_boss") else 2
+                # All foglocations zones get same priority (2)
+                # Note: boss zones (_boss suffix) used to be deprioritized (3) but this
+                # caused fog gates leading to boss arenas to be excluded from candidates
+                # when MAX_ZONE_CANDIDATES was exceeded (issue: Cave of Knowledge - Soldier
+                # of Godrick not found because 5 non-boss zones filled the candidate list)
+                priority = 2
                 dist = _compute_distance(internal_name)
                 candidates.append((internal_name, display_name, priority, dist))
 

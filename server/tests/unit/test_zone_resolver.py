@@ -743,3 +743,44 @@ class TestResolveAllCandidatesOrdering:
         assert (
             "farumazula" in top_5_names
         ), "farumazula should be in top 5 candidates for this position"
+
+
+class TestBossZonesInCandidates:
+    """Test that boss zones (_boss suffix) are included in top candidates.
+
+    Bug fix: Boss zones used to be deprioritized (priority 3 instead of 2),
+    causing them to be excluded when MAX_ZONE_CANDIDATES (5) was exceeded.
+    This caused fog gates leading to boss arenas to fail matching.
+
+    Example: "Cave of Knowledge - Soldier of Godrick" (graveyard_cave_boss)
+    was excluded from candidates for m18_00_00_00 because 5 non-boss zones
+    filled the list first.
+    """
+
+    def test_boss_zone_in_top_candidates_m18(self, resolver):
+        """graveyard_cave_boss should be in top 5 candidates for m18_00_00_00."""
+        # Position from the reported bug: target_pos = (-42.6, 11.3, 40.2)
+        candidates = resolver.resolve_all_candidates("m18_00_00_00", -42.6, 11.3, 40.2)
+        top_5_names = [c[0] for c in candidates[:5]]
+
+        assert "graveyard_cave_boss" in top_5_names, (
+            f"graveyard_cave_boss (Cave of Knowledge - Soldier of Godrick) should be "
+            f"in top 5 candidates, got: {top_5_names}"
+        )
+
+    def test_boss_zones_not_deprioritized(self, resolver):
+        """Boss zones should have same priority as non-boss zones."""
+        candidates = resolver.resolve_all_candidates("m18_00_00_00", 0, 0, 0)
+
+        # Get all zones and check their positions
+        all_keys = [c[0] for c in candidates]
+
+        # graveyard_cave_boss should not be last (was deprioritized before fix)
+        boss_idx = all_keys.index("graveyard_cave_boss")
+
+        # Boss zone should be interspersed with non-boss zones, not pushed to end
+        # At minimum, it should appear before at least one non-boss zone
+        # (accounting for distance-based sorting)
+        assert (
+            boss_idx < len(all_keys) - 1
+        ), f"Boss zone at position {boss_idx} should not be at the very end"
