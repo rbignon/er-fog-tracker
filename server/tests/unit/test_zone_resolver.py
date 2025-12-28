@@ -702,3 +702,44 @@ class TestPreexistingLinks:
                     assert resolver.has_preexisting_link(target, source)
                     return
         # If no bidirectional links found, that's also valid (all one-way)
+
+
+class TestResolveAllCandidatesOrdering:
+    """Test that resolve_all_candidates returns deterministic ordering."""
+
+    def test_ordering_is_deterministic(self, resolver):
+        """Verify that calling resolve_all_candidates multiple times returns same order."""
+        # Call multiple times and verify same result
+        results = []
+        for _ in range(5):
+            candidates = resolver.resolve_all_candidates("m13_00_00_00", 13.1, -39.0, 430.6)
+            results.append([c[0] for c in candidates])
+
+        # All results should be identical
+        for i in range(1, len(results)):
+            assert results[i] == results[0], "resolve_all_candidates should be deterministic"
+
+    def test_zones_with_known_positions_ordered_by_distance(self, resolver):
+        """Verify that zones with known positions are ordered by distance to query."""
+        # Position near Farum Azula Rooftop and Bridge
+        candidates = resolver.resolve_all_candidates("m13_00_00_00", 13.1, -39.0, 430.6)
+        candidate_names = [c[0] for c in candidates]
+
+        # farumazula has known position (50.658, -60.356, 520.79)
+        # farumazula_temple has known position (-62.355, -20.0, 391.102)
+        # farumazula_prestart has known position (175.2, 59.0, 205.9)
+        # farumazula should appear before farumazula_prestart (closer to query)
+        if "farumazula" in candidate_names and "farumazula_prestart" in candidate_names:
+            assert candidate_names.index("farumazula") < candidate_names.index(
+                "farumazula_prestart"
+            ), "Closer zone should appear first"
+
+    def test_farum_azula_rooftop_in_top_candidates(self, resolver):
+        """Verify that Farum Azula Rooftop is in top 5 candidates for relevant position."""
+        # This is the position from the reported bug
+        candidates = resolver.resolve_all_candidates("m13_00_00_00", 13.1, -39.0, 430.6)
+        top_5_names = [c[0] for c in candidates[:5]]
+
+        assert (
+            "farumazula" in top_5_names
+        ), "farumazula should be in top 5 candidates for this position"

@@ -553,10 +553,29 @@ class ZoneResolver:
         Position-based rules are used to order candidates (best match first),
         but ALL candidates are returned so the caller can try alternatives.
 
+        Ordering:
+        1. Position-matched rules (priority 0)
+        2. Default area (priority 1)
+        3. Other zones sorted by distance to query position (priority 2)
+        4. Boss zones (priority 3)
+        Within same priority, sorts by distance to query position if known,
+        otherwise alphabetically by internal name for determinism.
+
         Returns:
             List of (internal_name, display_name) tuples, best match first.
         """
-        candidates: list[tuple[str, str, int]] = []  # (internal, display, priority)
+        # (internal, display, priority, distance) where distance is used for tie-breaking
+        candidates: list[tuple[str, str, int, float]] = []
+
+        def _compute_distance(internal_name: str) -> float:
+            """Compute squared distance from query position to zone's known position."""
+            known_pos = self.zone_known_positions.get(internal_name)
+            if known_pos:
+                dx, dy, dz = known_pos[0] - x, known_pos[1] - y, known_pos[2] - z
+                return dx * dx + dy * dy + dz * dz
+            # No known position - use a large sentinel value
+            # This ensures zones with unknown positions sort after those with known positions
+            return float("inf")
 
         # Check position-based rules from submaps.txt
         if map_id in self.map_rules:
@@ -567,19 +586,21 @@ class ZoneResolver:
                 display_name = self.zone_display_names.get(
                     rule.area, rule.area.replace("_", " ").title()
                 )
+                dist = _compute_distance(rule.area)
                 if rule.matches(x, y, z):
                     # Position match - highest priority
-                    candidates.append((rule.area, display_name, 0))
+                    candidates.append((rule.area, display_name, 0, dist))
                 else:
                     # Rule exists but position doesn't match - lower priority
-                    candidates.append((rule.area, display_name, 2))
+                    candidates.append((rule.area, display_name, 2, dist))
 
             # Add default area
             if rules.default_area:
                 display_name = self.zone_display_names.get(
                     rules.default_area, rules.default_area.replace("_", " ").title()
                 )
-                candidates.append((rules.default_area, display_name, 1))
+                dist = _compute_distance(rules.default_area)
+                candidates.append((rules.default_area, display_name, 1, dist))
 
         # Add zones from foglocations2.txt
         if map_id in self.map_zones:
@@ -592,13 +613,16 @@ class ZoneResolver:
                 )
                 # Lower priority for foglocations (no position info)
                 priority = 3 if internal_name.endswith("_boss") else 2
-                candidates.append((internal_name, display_name, priority))
+                dist = _compute_distance(internal_name)
+                candidates.append((internal_name, display_name, priority, dist))
 
-        # Sort by priority and remove duplicates
-        candidates.sort(key=lambda c: c[2])
+        # Sort by (priority, distance, internal_name) for deterministic ordering
+        # Distance breaks ties among same-priority zones by proximity to query position
+        # Internal name breaks ties among zones with same priority and no known position
+        candidates.sort(key=lambda c: (c[2], c[3], c[0]))
         seen = set()
         results = []
-        for internal, display, _ in candidates:
+        for internal, display, _, _ in candidates:
             if internal not in seen:
                 seen.add(internal)
                 results.append((internal, display))
