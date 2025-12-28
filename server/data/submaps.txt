@@ -1,5 +1,94 @@
 
 MapAreas:
+# Leyndell, Royal Capital - Multiple zones at different heights and positions
+- Map: m11_00_00_00
+  Areas:
+  # Queen's Bedchamber is the highest area (before dropping into Godfrey or Morgott)
+  - Name: Queen's Bedchamber
+    Area: leyndell_bedchamber
+    YAbove: 45
+  # Godfrey arena (Erdtree Sanctuary) - high level, Z < -380 (inside arena)
+  - Name: Erdtree Sanctuary (Godfrey arena)
+    Area: leyndell_sanctuary
+    YAbove: 25
+    ZBelow: -380
+  # Behind Erdtree Sanctuary - same Y level as sanctuary but Z > -380 (east/behind arena)
+  - Name: Behind Erdtree Sanctuary
+    Area: leyndell_sanctuaryback
+    YAbove: 25
+    ZAbove: -380
+  # Divine Bridge - mid-high level
+  - Name: Divine Bridge
+    Area: leyndell_divinebridge
+    YAbove: 15
+  # Erdtree Sanctuary Stairs / Front - mid level
+  - Name: Erdtree Sanctuary Stairs
+    Area: leyndell_sanctuaryfront
+    YAbove: -20
+  # Pre-tower area
+  - Name: Before Divine Tower
+    Area: leyndell_pretower
+    YAbove: -35
+  # Main city (default) - lowest level
+  - Name: Main City
+    Area: leyndell
+
+# Leyndell, Ashen Capital - Multiple zones at different heights (same layout as Royal)
+- Map: m11_05_00_00
+  Areas:
+  # Queen's Bedchamber is the highest area (Y ≈ 47.4)
+  - Name: Queen's Bedchamber
+    Area: leyndell2_bedchamber
+    YAbove: 45
+  # Gideon arena (Erdtree Sanctuary) - high level (Y ≈ 29.4), Z < -380 (inside arena)
+  - Name: Erdtree Sanctuary (Gideon arena)
+    Area: leyndell2_sanctuary
+    YAbove: 25
+    ZBelow: -380
+  # Behind Erdtree Sanctuary - same Y level as sanctuary but Z > -380
+  - Name: Behind Erdtree Sanctuary
+    Area: leyndell2_sanctuaryback
+    YAbove: 25
+    ZAbove: -380
+  # South of Erdtree Sanctuary - approaching area
+  - Name: South of Erdtree Sanctuary
+    Area: leyndell2_sanctuaryside
+    YAbove: 10
+  # Divine Bridge - mid-high level
+  - Name: Divine Bridge
+    Area: leyndell2_divinebridge
+    YAbove: 0
+  # Erdtree Entrance
+  - Name: Erdtree Entrance
+    Area: leyndell2_erdtree
+    YAbove: -15
+  # Pre-tower area (Y ≈ -21.6)
+  - Name: Before Divine Tower
+    Area: leyndell2_pretower
+    YAbove: -25
+  # Main Ashen city (default) - lowest level
+  - Name: Main City
+    Area: leyndell2
+
+# Academy of Raya Lucaria - zones at different heights
+- Map: m14_00_00_00
+  Areas:
+  # Grand Library (Rennala) - highest area (Y ≈ 154)
+  - Name: Grand Library (Rennala)
+    Area: academy_library
+    YAbove: 140
+  # Rooftops and Courtyard - mid-high (Y ≈ 100-140)
+  - Name: Academy Courtyard
+    Area: academy_courtyard
+    YAbove: 105
+  # Red Wolf and main academy (Y ≈ 80-105)
+  - Name: Academy (Red Wolf area)
+    Area: academy
+    YAbove: 75
+  # Main Entrance - lower area (default)
+  - Name: Main Entrance
+    Area: academy_entrance
+
 - Map: m12_01_00_00
   Areas:
   - Name: Lake of Rot

@@ -37,6 +37,9 @@ from fogtracker.zone_matching import (
     names_match,
 )
 
+# Maximum number of zone candidates to use for matching (should match server)
+MAX_ZONE_CANDIDATES = 5
+
 
 # =============================================================================
 # Entity mapping helpers
@@ -195,14 +198,14 @@ def test_fog_resolution(
         if has_zone_keys:
             all_matches = find_all_matching_zone_pairs_by_keys(
                 random_zone_pairs,
-                source_candidates[:15],
-                target_candidates[:15],
+                source_candidates[:MAX_ZONE_CANDIDATES],
+                target_candidates[:MAX_ZONE_CANDIDATES],
             )
         else:
             all_matches = find_all_matching_zone_pairs(
                 random_zone_pairs,
-                source_candidates[:15],
-                target_candidates[:15],
+                source_candidates[:MAX_ZONE_CANDIDATES],
+                target_candidates[:MAX_ZONE_CANDIDATES],
             )
 
         # Step 4: Analyze results

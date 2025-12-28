@@ -33,6 +33,11 @@ from fogtracker.zone_resolver import get_resolver
 
 logger = logging.getLogger(__name__)
 
+# Maximum number of zone candidates to use for matching.
+# Lower = more precise (fewer multi-link discoveries), but might miss matches
+# if position is slightly off. Higher = more fallback options but more spoilers.
+MAX_ZONE_CANDIDATES = 5
+
 
 class ModClient(Client):
     """Client for the game mod."""
@@ -383,8 +388,8 @@ class ModClient(Client):
                     # Find ALL matches, then pick those with lowest back-propagation cost
                     all_matches = find_all_matching_zone_pairs_by_keys(
                         game.zone_links,
-                        source_candidates[:15],
-                        target_candidates[:15],
+                        source_candidates[:MAX_ZONE_CANDIDATES],
+                        target_candidates[:MAX_ZONE_CANDIDATES],
                     )
                     if all_matches:
                         logger.info("[MOD] Found %d candidate match(es) by keys", len(all_matches))
@@ -458,8 +463,8 @@ class ModClient(Client):
                     # Also apply backprop cost tie-breaking
                     all_matches = find_all_matching_zone_pairs(
                         game.zone_links,
-                        source_candidates[:15],
-                        target_candidates[:15],
+                        source_candidates[:MAX_ZONE_CANDIDATES],
+                        target_candidates[:MAX_ZONE_CANDIDATES],
                     )
 
                     if all_matches:
@@ -526,8 +531,8 @@ class ModClient(Client):
                     else:
                         logger.warning(
                             "[MOD] No spoiler log match (tried %d x %d combinations)",
-                            len(source_candidates[:15]),
-                            len(target_candidates[:15]),
+                            len(source_candidates[:MAX_ZONE_CANDIDATES]),
+                            len(target_candidates[:MAX_ZONE_CANDIDATES]),
                         )
             else:
                 logger.warning("[MOD] Game has no zone_links, cannot resolve")
