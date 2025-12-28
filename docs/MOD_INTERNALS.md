@@ -95,9 +95,16 @@ GlobalPosition
 
 ## Teleport Detection
 
-The mod uses **animation-based detection** for all known teleport types. This is more reliable than checking `warp_requested` or entity ID ranges because:
-- The `destination_entity_id` in GameMan may not be the Fog Rando entity ID (the game uses its own entity IDs for some warps)
-- Animation detection catches all fog gates regardless of how the game internally handles the warp
+The mod uses a **dual-trigger detection strategy**:
+
+1. **Animation trigger**: Detects known teleport animations (fog walls, waygates, etc.)
+2. **Entity trigger**: Detects when `warp_requested` becomes true with a Fog Rando entity ID (755890000-755899999), even if the animation is unknown
+
+This dual approach ensures we catch:
+- All standard fog gate traversals (via animation detection)
+- Fog gates with unknown/new animations (via entity ID detection)
+
+**Validation**: ALL discoveries require `warp_requested` to have been true at some point during the warp. This filters false positives like cutscene animations that play without an actual warp occurring.
 
 ### Supported Teleport Types
 
@@ -109,33 +116,157 @@ The mod uses **animation-based detection** for all known teleport types. This is
 | Sending Gate (Red) | `60472` | Portal-style gates |
 | Medal | `50340` | Pureblood Knight's Medal item use |
 | Horned Remains | `60010` | Teleport to Regal Ancestor Spirit (Nokron) |
-| Liurnia Tower Door | `12202126` | Opening the door at the bottom of the inverted tower. **Requires validation** (see below) |
-| Post Boss Warp | `12020210` | Warp after defeating a boss (e.g., Maliketh). **Requires validation** (see below) |
+| Liurnia Tower Door | `12202126` | Opening the door at the bottom of the inverted tower |
+| Post Boss Warp | `12020210` | Warp after defeating a boss (e.g., Maliketh) |
 | Erdtree Burn | `68110` | Cutscene warp when burning the Erdtree with Melina |
 | Placidusax Lie Down | `67010` | Lie down animation to access Placidusax boss arena |
+| FOG_RANDO | (any) | Entity-triggered detection for unknown animations |
+
+### Warp Timeline (Player Perspective)
+
+A typical fog gate traversal from the player's perspective:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              Timeline                                        │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  t=0        t=0.5s       t=1s          t=1.5s       t=2s         t=2.5s     │
+│   │           │           │              │           │             │         │
+│   ▼           ▼           ▼              ▼           ▼             ▼         │
+│ Player    Animation   warp_requested  Loading    Position      Discovery    │
+│ enters     starts      becomes true   screen     readable       sent        │
+│ fog gate              dest_entity     (pos=None) (exit pos)                 │
+│                       captured                                              │
+│                                                                              │
+│ ──────▶ ENTRY ──────▶ CAPTURE ──────────────────▶ EXIT ──────▶ SEND ──────▶ │
+│         (record       (poll each                  (create       (if valid)  │
+│         entry pos)    frame)                      discovery)                │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+This timing explains why:
+- We poll `dest_entity_id` each frame (it's set ~0.5-1s after animation starts)
+- We track `warp_was_requested` (it becomes true during the warp, not at the start)
+- We wait for position to be readable (loading screen can last 1-2s)
 
 ### Detection Flow
 
+The complete warp detection workflow:
+
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                        Timeline                              │
-├──────────────────────────────────────────────────────────────┤
-│  t=0      t=1s         t=1.5s        t=2s        t=2.5s     │
-│   │        │            │             │            │         │
-│   ▼        ▼            ▼             ▼            ▼         │
-│ Player  Animation   dest_entity   Loading     Position       │
-│ enters   starts     captured      screen      readable       │
-│ fog                 from GameMan  (pos=None)  (exit pos)     │
-│                                                              │
-│ ─────▶ ENTRY ─────▶ CAPTURE ─────────────────▶ EXIT ─────▶  │
-│        (store       (poll until                (send         │
-│        entry pos)   non-zero)                  discovery)    │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         WARP DETECTION WORKFLOW                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+                           ┌─────────────────────────┐
+                           │   MEMORY READING        │
+                           │      (each frame)       │
+                           └───────────┬─────────────┘
+                                       │
+        ┌──────────────────────────────┼──────────────────────────────┐
+        ▼                              ▼                              ▼
+┌───────────────┐           ┌─────────────────────┐         ┌────────────────┐
+│ PlayerIns     │           │ GameMan             │         │ GameMan        │
+│ ─────────────│           │ ─────────────────── │         │ ────────────── │
+│ position      │           │ warp_requested      │         │ dest_entity_id │
+│ (x, y, z)     │           │ (bool @ 0x10)       │         │ (u32 @ 0x3C)   │
+│ map_id        │           └──────────┬──────────┘         └───────┬────────┘
+│ anim_id       │                      │                            │
+└───────┬───────┘                      │                            │
+        │                              │                            │
+        ▼                              ▼                            ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                            WarpTracker::check_warp()                          │
+└───────────────────────────────────────────────────────────────────────────────┘
+        │
+        │  1. TIMEOUT CHECK: If pending_warp exists and > 30s → discard
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                           2. ENTRY DETECTION                                  │
+│                        (two possible triggers)                                │
+└───────────────────────────────────────────────────────────────────────────────┘
+        │
+        ├─────────────────────────────────────┬─────────────────────────────────┐
+        ▼                                     ▼                                 │
+┌─────────────────────────────┐   ┌─────────────────────────────────┐          │
+│   TRIGGER A: ANIMATION      │   │   TRIGGER B: ENTITY             │          │
+│   ─────────────────────────│   │   ───────────────────────────── │          │
+│   Known teleport animation  │   │   warp_requested: false → true  │          │
+│   just started              │   │   AND                           │          │
+│   (was_in_anim=false →true) │   │   dest_entity_id ∈              │          │
+│                             │   │     [755890000, 755899999]      │          │
+│   → Create PendingWarp      │   │   AND                           │          │
+│     transport_type = label  │   │   pending_warp = None           │          │
+│     warp_was_requested=false│   │                                 │          │
+│     dest_entity_id = 0      │   │   → Create PendingWarp          │          │
+│                             │   │     transport_type = "FOG_RANDO"│          │
+│                             │   │     warp_was_requested = true   │          │
+│                             │   │     dest_entity_id = captured   │          │
+└─────────────────────────────┘   └─────────────────────────────────┘          │
+        │                                                                       │
+        └───────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                      3. STATE CAPTURE (if pending_warp exists)                │
+│  ─────────────────────────────────────────────────────────────────────────── │
+│  • If warp_requested = true → pending.warp_was_requested = true               │
+│  • If pending.dest_entity_id == 0 && dest_entity_id != 0                      │
+│      → pending.dest_entity_id = dest_entity_id                                │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                           4. EXIT DETECTION                                   │
+│  ─────────────────────────────────────────────────────────────────────────── │
+│  Animation ended (was_in_anim=true → false) AND position readable             │
+│  OR                                                                           │
+│  Pending warp exists + no animation + position became readable (delayed)      │
+│                                                                               │
+│  → Create DiscoveryEvent from PendingWarp + exit position                     │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                           5. VALIDATION (is_valid)                            │
+│  ─────────────────────────────────────────────────────────────────────────── │
+│                                                                               │
+│                         warp_was_requested == true ?                          │
+│                                                                               │
+│                          ┌──────────┴──────────┐                              │
+│                          │                     │                              │
+│                         YES                    NO                             │
+│                          │                     │                              │
+│                          ▼                     ▼                              │
+│                  ┌───────────────┐    ┌───────────────┐                       │
+│                  │ VALID         │    │ FALSE POSITIVE│                       │
+│                  │ → return Some │    │ → return None │                       │
+│                  └───────────────┘    └───────────────┘                       │
+│                                                                               │
+│  Filters false positives like:                                                │
+│  • POST_BOSS_WARP with dest_entity=0 (cutscene without actual warp)          │
+│  • LIURNIA_TOWER_DOOR with dest_entity=0 (door without randomization)        │
+│  • Vanilla waygates (entity=34112160, etc.) without warp_requested           │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       │ Some(DiscoveryEvent)
+                                       ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                      6. SEND TO SERVER (if connected)                         │
+│  ─────────────────────────────────────────────────────────────────────────── │
+│                                                                               │
+│  TrackerSession::update() calls server.send_discovery()                       │
+│  → Sends discovery_v2 message via WebSocket                                   │
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Entry Detection**: When a teleport animation starts (`get_teleport_type(anim_id)` returns Some), record the entry position
-2. **Entity Capture**: Poll `GameMan.destination_entity_id` each frame until non-zero
-3. **Exit Detection**: When animation ends AND position is readable, send discovery
+**Key steps**:
+1. **Entry Detection**: Two triggers can start tracking - animation start OR entity-based (warp_requested + fog rando entity ID)
+2. **State Capture**: Poll `warp_requested` and `dest_entity_id` each frame while pending
+3. **Exit Detection**: When animation ends AND position is readable, create discovery
+4. **Validation**: Filter by `warp_was_requested` - ALL discoveries must have had this flag true
+5. **Send**: If connected, send `discovery_v2` message to server
 
 ### Coffin Transport
 
@@ -145,22 +276,32 @@ Coffins have no distinctive animation and are currently not explicitly detected.
 
 Fast travel (via map menu) is **not tracked** by the mod. It uses `warp_requested` without a teleport animation, but since it's not a fog gate traversal, it's intentionally ignored.
 
-### Cutscene Animation Validation
+### Warp Validation
 
-Some animations in the `12xxxxxx` range (`POST_BOSS_WARP`, `LIURNIA_TOWER_DOOR`) can be triggered without an actual warp occurring (e.g., during cutscenes or visual transitions). To filter these false positives, discoveries with these transport types are validated before being sent to the server.
+ALL discoveries are validated by checking if `warp_requested` was true at some point during the warp. This universal validation filters out false positives across all animation types:
 
-A discovery with these animation types is considered **valid** only if `warp_requested` was true at some point during the warp. The tracker monitors `GameMan.warp_requested` each frame while a warp is pending and records if it ever becomes true.
+- **Cutscene animations** (`POST_BOSS_WARP`, `LIURNIA_TOWER_DOOR`) that can play without an actual warp
+- **Vanilla waygates** that may trigger the animation detection but aren't randomized fog gates
 
-**Example false positive** (filtered):
+The tracker monitors `GameMan.warp_requested` each frame while a warp is pending and records if it ever becomes true. A discovery is only sent if `warp_was_requested == true`.
+
+**Example false positives** (filtered):
 ```
 Animation: LIURNIA_TOWER_DOOR (12202126)
 Entry: m43_01_00_00 (-90.1, 357.2, 22.1)
 Exit:  m43_01_00_00 (-71.6, 347.8, 16.9)
 warp_requested: never true
-→ Discarded (no warp was actually requested by the game)
+→ Discarded (cutscene animation without actual warp)
+
+Animation: WAYGATE (60490)
+Entry: m60_42_36_00 (123.4, 56.7, 89.0)
+Exit:  m60_41_35_00 (234.5, 67.8, 90.1)
+dest_entity: 34112160 (vanilla entity, not fog rando)
+warp_requested: never true
+→ Discarded (vanilla waygate, not a randomized fog gate)
 ```
 
-Other teleport types (FOG, WAYGATE, MEDAL, etc.) are always valid because their animations are only played during actual warps.
+Empirical testing has shown that ALL valid fog rando warps have `warp_requested=true`, making this a reliable universal filter.
 
 ## SpEffect Reading
 
@@ -186,9 +327,11 @@ A single `PendingWarp` struct tracks the current teleport:
 
 ```rust
 struct PendingWarp {
-    entry: PlayerPosition,       // Position when animation started
-    destination_entity_id: u32,  // Captured from GameMan (may be 0 initially)
-    transport_type: &'static str, // "FOG", "WAYGATE", "SENDING_GATE", "MEDAL", or "OTHER"
+    entry: PlayerPosition,        // Position when warp started
+    destination_entity_id: u32,   // Captured from GameMan (may be 0 initially)
+    transport_type: &'static str, // "FOG", "WAYGATE", "FOG_RANDO", etc.
+    created_at: Instant,          // For timeout detection (30s max)
+    warp_was_requested: bool,     // Whether warp_requested was ever true
 }
 ```
 
@@ -200,27 +343,55 @@ State transitions:
                             │ (pending_warp = None)   │
                             └───────────┬─────────────┘
                                         │
-                        Teleport animation starts
-                        (was_in_teleport_anim: false → true)
-                                        │
-                                        ▼
+               ┌────────────────────────┴────────────────────────┐
+               │                                                 │
+    Teleport animation starts                      warp_requested becomes true
+    (was_in_teleport_anim: false→true)             AND dest_entity ∈ [755890000-755899999]
+               │                                                 │
+               │                                                 │
+               ▼                                                 ▼
+    ┌─────────────────────────┐                    ┌─────────────────────────┐
+    │ PENDING (animation)     │                    │ PENDING (entity)        │
+    │ transport_type = label  │                    │ transport_type =        │
+    │ warp_was_requested=false│                    │   "FOG_RANDO"           │
+    │ dest_entity = 0         │                    │ warp_was_requested=true │
+    └───────────┬─────────────┘                    │ dest_entity = captured  │
+                │                                  └───────────┬─────────────┘
+                └────────────────────┬─────────────────────────┘
+                                     │
+                                     ▼
                             ┌─────────────────────────┐
-              Entry pos     │     PENDING             │
-              captured      │ (pending_warp = Some)   │
-                            │ dest_entity polled each │
-                            │ frame until non-zero    │
+                            │   PENDING (polling)     │
+                            │ Each frame:             │
+                            │ - Track warp_requested  │
+                            │ - Capture dest_entity   │
+                            │ - Check timeout (30s)   │
                             └───────────┬─────────────┘
                                         │
                     Animation ends + position readable
-                    (was_in_teleport_anim: true → false)
+                    OR position becomes readable (delayed)
                                         │
                                         ▼
                             ┌─────────────────────────┐
-                            │     EXIT                │
-                            │ Send discovery_v2       │
-                            │ Clear pending_warp      │
+                            │     VALIDATE            │
+                            │ warp_was_requested?     │
+                            └───────────┬─────────────┘
+                             YES        │        NO
+                              │         │         │
+                              ▼         │         ▼
+                    ┌─────────────────┐ │ ┌─────────────────┐
+                    │ Send discovery  │ │ │ Discard         │
+                    │ Clear pending   │ │ │ (false positive)│
+                    └─────────────────┘ │ └─────────────────┘
+                                        │
+                                        ▼
+                            ┌─────────────────────────┐
+                            │     IDLE                │
+                            │ (pending_warp = None)   │
                             └─────────────────────────┘
 ```
+
+**Timeout handling**: If a pending warp stays unresolved for more than 30 seconds, it's discarded to avoid stale state.
 
 **Delayed exit handling**: If the animation ends while position is still unreadable (loading screen), the pending warp is kept and the discovery is sent on the next frame when position becomes readable.
 
@@ -263,13 +434,15 @@ The spawn point on the **source side** of the fog gate. This is the entity ID us
 
 ## Destination Entity Capture
 
-The destination entity ID is polled each frame while a warp is pending:
+The destination entity ID handling depends on how the warp was triggered:
+
+**Animation-triggered warps**: The entity ID is polled each frame until non-zero:
 
 ```rust
 // Capture dest_entity_id when available (happens after animation start for fog gates)
 if let Some(ref mut pending) = self.pending_warp {
     if pending.destination_entity_id == 0 {
-        let dest_entity_id = self.game_man_reader.get_destination_entity_id();
+        let dest_entity_id = warp_detector.get_destination_entity_id();
         if dest_entity_id != 0 {
             pending.destination_entity_id = dest_entity_id;
         }
@@ -277,7 +450,9 @@ if let Some(ref mut pending) = self.pending_warp {
 }
 ```
 
-This polling approach is necessary because:
+**Entity-triggered warps**: The entity ID is captured immediately when the trigger fires (since we already checked it's in the fog rando range).
+
+The polling approach for animation-triggered warps is necessary because:
 1. The `WarpPlayer` instruction (which sets the entity ID) executes ~1 second AFTER the fog animation starts
 2. For some warp types (e.g., sending gates), the entity ID in GameMan may not be the Fog Rando entity ID at the exact moment `warp_requested` becomes true
 

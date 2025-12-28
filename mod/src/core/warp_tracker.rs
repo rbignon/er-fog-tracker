@@ -6,7 +6,7 @@
 use std::time::Instant;
 
 use super::constants::WARP_TIMEOUT;
-use super::entity_utils::get_teleport_type;
+use super::entity_utils::{get_teleport_type, is_fog_rando_entity};
 use super::traits::{GameStateReader, WarpDetector};
 use super::types::PlayerPosition;
 
@@ -55,26 +55,17 @@ pub struct DiscoveryEvent {
     pub warp_was_requested: bool,
 }
 
-/// Animation types that require warp_requested validation.
-/// These are cutscene/transition animations (12xxxxxx range) that can play
-/// without an actual warp occurring.
-const ANIMATIONS_REQUIRING_WARP_VALIDATION: &[&str] = &["POST_BOSS_WARP", "LIURNIA_TOWER_DOOR"];
-
 impl DiscoveryEvent {
     /// Check if this discovery event is valid (not a false positive).
     ///
-    /// Some animations (POST_BOSS_WARP, LIURNIA_TOWER_DOOR) can be triggered
-    /// without an actual warp (e.g., cutscenes, transitions). We filter these
-    /// by requiring that `warp_requested` was true at some point during the warp.
+    /// A discovery is valid if `warp_requested` was true at some point during
+    /// the warp. This filters out false positives like cutscene animations
+    /// (POST_BOSS_WARP, LIURNIA_TOWER_DOOR) that can play without an actual warp.
     ///
-    /// Other transport types (FOG, WAYGATE, etc.) are always valid because
-    /// their animations are only played during actual warps.
+    /// Previously, we only required this for specific animation types, but
+    /// empirical data shows that ALL valid warps have `warp_requested=true`,
+    /// so we can apply this universally and remove the animation whitelist.
     pub fn is_valid(&self) -> bool {
-        if !ANIMATIONS_REQUIRING_WARP_VALIDATION.contains(&self.transport_type) {
-            return true;
-        }
-
-        // Cutscene animations: require warp_requested to have been true
         self.warp_was_requested
     }
 }
@@ -91,9 +82,14 @@ impl DiscoveryEvent {
 ///
 /// # Detection Strategy
 ///
-/// 1. Detect teleport animation start → record entry position
-/// 2. When warp_requested becomes true → capture dest_entity_id
-/// 3. When animation ends + position readable → emit discovery event
+/// Two triggers can start tracking a warp:
+/// 1. **Animation trigger**: Detect teleport animation start → record entry position
+/// 2. **Entity trigger**: warp_requested becomes true with fog rando entity ID
+///    (755890xxx) → record entry position even without known animation
+///
+/// Then:
+/// - When warp_requested becomes true → capture dest_entity_id
+/// - When animation ends + position readable → emit discovery event
 pub struct WarpTracker {
     /// Pending fog rando warp (entry recorded, waiting for exit)
     pending_warp: Option<PendingWarp>,
@@ -101,8 +97,8 @@ pub struct WarpTracker {
     was_in_teleport_anim: bool,
     /// Whether position was readable last frame (to detect loading screens)
     was_position_readable: bool,
-    /// Last logged warp_requested state (for deduplication)
-    last_logged_warp_requested: bool,
+    /// Whether warp_requested was true last frame (to detect transition)
+    was_warp_requested: bool,
 }
 
 impl WarpTracker {
@@ -112,7 +108,7 @@ impl WarpTracker {
             pending_warp: None,
             was_in_teleport_anim: false,
             was_position_readable: false,
-            last_logged_warp_requested: false,
+            was_warp_requested: false,
         }
     }
 
@@ -147,12 +143,17 @@ impl WarpTracker {
             }
         }
 
-        // Get current animation state
+        // Get current animation and warp state
         let cur_anim = game_state.read_animation();
         let is_in_teleport_anim = cur_anim.and_then(get_teleport_type).is_some();
-        let transport_type = cur_anim.and_then(get_teleport_type).unwrap_or("OTHER");
+        let transport_type = cur_anim.and_then(get_teleport_type).unwrap_or("UNKNOWN");
 
-        // Entry detection: animation just started
+        let is_warp_requested = warp_detector.is_warp_requested();
+        let dest_entity_id = warp_detector.get_destination_entity_id();
+
+        // Entry detection - two triggers:
+        //
+        // 1. Animation trigger: known teleport animation just started
         if is_in_teleport_anim && !self.was_in_teleport_anim {
             if let Some(pos) = position.clone() {
                 self.pending_warp = Some(PendingWarp {
@@ -165,19 +166,34 @@ impl WarpTracker {
             }
         }
 
+        // 2. Entity trigger: warp_requested just became true with fog rando entity ID
+        //    This catches warps with unknown animations (e.g., animation 25032200)
+        if is_warp_requested
+            && !self.was_warp_requested
+            && is_fog_rando_entity(dest_entity_id)
+            && self.pending_warp.is_none()
+        {
+            if let Some(pos) = position.clone() {
+                self.pending_warp = Some(PendingWarp {
+                    entry: pos,
+                    destination_entity_id: dest_entity_id,
+                    transport_type: "FOG_RANDO", // Unknown animation, but fog rando entity
+                    created_at: Instant::now(),
+                    warp_was_requested: true, // Already true since that's how we triggered
+                });
+            }
+        }
+
         // Capture dest_entity_id and warp_requested state when available
         if let Some(ref mut pending) = self.pending_warp {
             // Track if warp_requested was ever true during this warp
-            if warp_detector.is_warp_requested() {
+            if is_warp_requested {
                 pending.warp_was_requested = true;
             }
 
             // Capture dest_entity_id when it becomes available
-            if pending.destination_entity_id == 0 {
-                let dest_entity_id = warp_detector.get_destination_entity_id();
-                if dest_entity_id != 0 {
-                    pending.destination_entity_id = dest_entity_id;
-                }
+            if pending.destination_entity_id == 0 && dest_entity_id != 0 {
+                pending.destination_entity_id = dest_entity_id;
             }
         }
 
@@ -221,7 +237,7 @@ impl WarpTracker {
         // Update state for next frame
         self.was_in_teleport_anim = is_in_teleport_anim;
         self.was_position_readable = position_now_readable;
-        self.last_logged_warp_requested = warp_detector.is_warp_requested();
+        self.was_warp_requested = is_warp_requested;
 
         // Filter out false positives (e.g., POST_BOSS_WARP without actual warp)
         discovery.filter(|d| d.is_valid())
@@ -295,15 +311,16 @@ mod tests {
         );
 
         let warp = MockWarpDetector::new();
-        warp.set_warp(true, 755890042, 0x0A0A1000);
+        // warp_requested becomes true AFTER animation starts (realistic sequence)
 
         let mut tracker = WarpTracker::new();
 
-        // Frame 0: Idle
+        // Frame 0: Idle, no warp yet
         assert!(tracker.check_warp(&game_state, &warp).is_none());
         game_state.advance_frame();
 
-        // Frame 1: Animation starts, pending warp created
+        // Frame 1: Animation starts, then warp_requested becomes true
+        warp.set_warp(true, 755890042, 0x0A0A1000);
         assert!(tracker.check_warp(&game_state, &warp).is_none());
         assert!(tracker.has_pending_warp());
         game_state.advance_frame();
@@ -469,11 +486,15 @@ mod tests {
         );
 
         let warp = MockWarpDetector::new();
+        // warp_requested becomes true AFTER animation starts (realistic sequence)
         let mut tracker = WarpTracker::new();
 
+        // Frame 0: Idle, no warp yet
         tracker.check_warp(&game_state, &warp);
         game_state.advance_frame();
 
+        // Frame 1: Animation starts, then warp_requested becomes true
+        warp.set_warp(true, 755890100, 0x0A0A1000);
         tracker.check_warp(&game_state, &warp);
         assert_eq!(
             tracker.pending_warp().unwrap().transport_type,
@@ -503,9 +524,12 @@ mod tests {
         let warp = MockWarpDetector::new();
         let mut tracker = WarpTracker::new();
 
+        // Frame 0: Idle
         tracker.check_warp(&game_state, &warp);
         game_state.advance_frame();
 
+        // Frame 1: Animation starts, warp_requested becomes true
+        warp.set_warp(true, 755890200, 0x0A0A1000);
         tracker.check_warp(&game_state, &warp);
         assert_eq!(tracker.pending_warp().unwrap().transport_type, "MEDAL");
 
@@ -717,15 +741,14 @@ mod tests {
         );
 
         let warp = MockWarpDetector::new();
-        warp.set_warp(true, 755890001, 0x0A0A1000);
-
         let mut tracker = WarpTracker::new();
 
         // Frame 0: Idle at A
         assert!(tracker.check_warp(&game_state, &warp).is_none());
         game_state.advance_frame();
 
-        // Frame 1: Animation starts for A→B
+        // Frame 1: Animation starts for A→B - set warp_requested now
+        warp.set_warp(true, 755890001, 0x0A0A1000);
         assert!(tracker.check_warp(&game_state, &warp).is_none());
         game_state.advance_frame();
 
@@ -979,8 +1002,21 @@ mod tests {
     // =========================================================================
 
     #[test]
-    fn test_discovery_event_is_valid_non_post_boss_warp() {
-        // Non-POST_BOSS_WARP types are always valid, even without warp_requested
+    fn test_discovery_event_is_valid_with_warp_requested() {
+        // All transport types require warp_was_requested=true to be valid
+        let discovery = DiscoveryEvent {
+            entry: make_pos(0x0A0A1000, 100.0, 0.0, 100.0),
+            exit: make_pos(0x0A0A1000, 105.0, 0.0, 105.0),
+            transport_type: "FOG",
+            destination_entity_id: 0,
+            warp_was_requested: true,
+        };
+        assert!(discovery.is_valid());
+    }
+
+    #[test]
+    fn test_discovery_event_is_invalid_without_warp_requested() {
+        // Without warp_was_requested, all types are invalid
         let discovery = DiscoveryEvent {
             entry: make_pos(0x0A0A1000, 100.0, 0.0, 100.0),
             exit: make_pos(0x0A0A1000, 105.0, 0.0, 105.0),
@@ -988,7 +1024,7 @@ mod tests {
             destination_entity_id: 0,
             warp_was_requested: false,
         };
-        assert!(discovery.is_valid());
+        assert!(!discovery.is_valid());
     }
 
     #[test]
