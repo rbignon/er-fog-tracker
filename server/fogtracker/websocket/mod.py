@@ -149,10 +149,12 @@ class ModClient(Client):
                     elif len(discovered_candidates) > 1:
                         # Multiple discovered candidates - ambiguous, return null
                         logger.info(
-                            "[MOD] Zone query ambiguous: %d discovered candidates for %s",
+                            "[MOD] Zone query ambiguous: %d discovered candidates for %s:",
                             len(discovered_candidates),
                             map_id,
                         )
+                        for candidate in discovered_candidates:
+                            logger.info("[MOD]   - %s", candidate[1])
                     else:
                         # No discovered candidates - return null
                         logger.debug("[MOD] Zone query: no discovered candidates for %s", map_id)
