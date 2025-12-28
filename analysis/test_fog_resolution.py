@@ -38,7 +38,7 @@ from fogtracker.zone_matching import (
 )
 
 # Maximum number of zone candidates to use for matching (should match server)
-MAX_ZONE_CANDIDATES = 5
+MAX_ZONE_CANDIDATES = 15
 
 
 # =============================================================================

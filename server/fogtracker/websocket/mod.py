@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # Maximum number of zone candidates to use for matching.
 # Lower = more precise (fewer multi-link discoveries), but might miss matches
 # if position is slightly off. Higher = more fallback options but more spoilers.
-MAX_ZONE_CANDIDATES = 5
+MAX_ZONE_CANDIDATES = 15
 
 
 class ModClient(Client):
