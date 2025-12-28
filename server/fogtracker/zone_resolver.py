@@ -85,6 +85,12 @@ class ZoneResolver:
         self.zone_metadata: dict[str, ZoneMetadata] = {}
         # display_name -> list of internal_names (handles duplicates)
         self.display_name_to_zones: dict[str, list[str]] = {}
+        # Known positions from fog.txt (ToArea + Location entries)
+        # internal_name -> (x, y, z)
+        self.zone_known_positions: dict[str, tuple[float, float, float]] = {}
+        # Preexisting links from fog.txt To: sections
+        # source_zone -> {target_zones}
+        self.preexisting_links: dict[str, set[str]] = {}
 
         if data_dir:
             self._load_data()
@@ -109,9 +115,10 @@ class ZoneResolver:
             for zone_key, display_name in self.zone_display_names.items():
                 self.display_name_to_zone[display_name] = zone_key
             logger.info(
-                "Loaded %d zone display names, %d detail texts from fog.txt",
+                "Loaded %d zone display names, %d detail texts, %d known positions from fog.txt",
                 len(self.zone_display_names),
                 len(self.detail_text_to_zone),
+                len(self.zone_known_positions),
             )
 
         # Load foglocations2.txt
@@ -222,6 +229,8 @@ class ZoneResolver:
         bside_area = None
         # Track fog gate's map (for ASide/BSide zone candidates)
         foggate_map = None
+        # For parsing ToArea + Location entries (known zone positions)
+        current_to_area = None
 
         for line in content.split("\n"):
             line_stripped = line.strip()
@@ -255,6 +264,12 @@ class ZoneResolver:
                 in_to_section = True
                 in_aside = False
                 in_bside = False
+            elif line_stripped.startswith("- Area:") and in_to_section and current_name:
+                # Parse To: section entries (preexisting connections)
+                target_area = line_stripped.replace("- Area:", "").strip()
+                if current_name not in self.preexisting_links:
+                    self.preexisting_links[current_name] = set()
+                self.preexisting_links[current_name].add(target_area)
             elif line_stripped.startswith("ASide:"):
                 in_aside = True
                 in_bside = False
@@ -302,6 +317,37 @@ class ZoneResolver:
                 # Store map_ids in zone_metadata
                 if current_name in self.zone_metadata:
                     self.zone_metadata[current_name].map_ids.extend(map_ids)
+            elif line_stripped.startswith("ToArea:"):
+                # Track ToArea for subsequent Location parsing
+                current_to_area = line_stripped.replace("ToArea:", "").strip()
+            elif line_stripped.startswith("Location:") and current_to_area:
+                # Parse Location: X Y Z [rotation] - extract position for zone
+                loc_str = line_stripped.replace("Location:", "").strip()
+                parts = loc_str.split()
+                if len(parts) >= 3:
+                    try:
+                        x, y, z = float(parts[0]), float(parts[1]), float(parts[2])
+                        # Store as known position for this zone
+                        # Only store if we don't have one yet (first occurrence wins)
+                        if current_to_area not in self.zone_known_positions:
+                            self.zone_known_positions[current_to_area] = (x, y, z)
+                    except ValueError:
+                        pass
+                current_to_area = None  # Reset after parsing
+            elif line_stripped.startswith("BossTriggerArea:"):
+                # Parse BossTriggerArea: X Y Z ... for boss arena positions
+                # Use the current aside_area or bside_area as the zone
+                area_for_trigger = aside_area if in_aside else (bside_area if in_bside else None)
+                if area_for_trigger:
+                    trigger_str = line_stripped.replace("BossTriggerArea:", "").strip()
+                    parts = trigger_str.split()
+                    if len(parts) >= 3:
+                        try:
+                            x, y, z = float(parts[0]), float(parts[1]), float(parts[2])
+                            if area_for_trigger not in self.zone_known_positions:
+                                self.zone_known_positions[area_for_trigger] = (x, y, z)
+                        except ValueError:
+                            pass
             # Reset ASide/BSide context when we exit their indentation level
             elif indent <= 2 and (in_aside or in_bside):
                 in_aside = False
@@ -589,6 +635,22 @@ class ZoneResolver:
         """
         return self.display_name_to_zone.get(display_name)
 
+    def has_preexisting_link(self, source_key: str, target_key: str) -> bool:
+        """
+        Check if a preexisting link exists from source to target in fog.txt.
+
+        This is used to determine one-way status: if A→B exists but B→A doesn't,
+        the link is one-way.
+
+        Args:
+            source_key: Internal zone key for source
+            target_key: Internal zone key for target
+
+        Returns:
+            True if the link exists in the To: section of source_key.
+        """
+        return target_key in self.preexisting_links.get(source_key, set())
+
     def lookup_spoiler_name(self, spoiler_name: str) -> tuple[str | None, str | None]:
         """
         Try to resolve a spoiler log zone name to our internal zone.
@@ -626,6 +688,9 @@ class ZoneResolver:
         """
         Estimate approximate x, y, z coordinates for a zone.
 
+        Uses known positions from fog.txt (ToArea + Location) when available,
+        otherwise falls back to estimation based on map grid or position bounds.
+
         Args:
             map_id: The map ID (e.g., "m60_42_32_00")
             internal_name: Optional internal zone name for bounds lookup
@@ -633,6 +698,10 @@ class ZoneResolver:
         Returns:
             Tuple of (x, y, z) or None if cannot estimate.
         """
+        # First, check if we have a known position for this zone from fog.txt
+        if internal_name and internal_name in self.zone_known_positions:
+            return self.zone_known_positions[internal_name]
+
         if not map_id:
             return None
 

@@ -481,6 +481,16 @@ def enrich_connections_with_zone_keys(
         if not target_key:
             target_key = resolver.lookup_by_display_name(conn.target)
 
+        # Determine is_one_way for preexisting connections using fog.txt To: structure
+        is_one_way = conn.is_one_way
+        if conn.conn_type == "preexisting" and source_key and target_key and not is_one_way:
+            # Check if link exists in fog.txt To: sections
+            forward_exists = resolver.has_preexisting_link(source_key, target_key)
+            reverse_exists = resolver.has_preexisting_link(target_key, source_key)
+            # If only one direction exists, mark as one-way
+            if forward_exists and not reverse_exists:
+                is_one_way = True
+
         # Create enriched connection (preserve all fields from original)
         enriched.append(
             ConnectionInfo(
@@ -496,7 +506,7 @@ def enrich_connections_with_zone_keys(
                 target_key=target_key,
                 required_item=conn.required_item,
                 required_item_from=conn.required_item_from,
-                is_one_way=conn.is_one_way,
+                is_one_way=is_one_way,
             )
         )
 

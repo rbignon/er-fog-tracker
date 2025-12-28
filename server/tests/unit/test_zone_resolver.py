@@ -656,3 +656,49 @@ class TestNokronBeforeMimicTearResolution:
             internal == "siofrabank_nokron"
         ), f"Expected siofrabank_nokron at Mimic Tear fog gate position, got {internal}"
         assert display == "Nokron before Mimic Tear"
+
+
+class TestPreexistingLinks:
+    """Tests for preexisting link detection from fog.txt To: sections.
+
+    The To: section in fog.txt defines one-way preexisting connections.
+    If zone A has To: B but zone B does NOT have To: A, the connection
+    is one-way (A→B only).
+    """
+
+    def test_preexisting_links_loaded(self, resolver):
+        """Preexisting links should be loaded from fog.txt."""
+        assert len(resolver.preexisting_links) > 0
+
+    def test_has_preexisting_link_forward(self, resolver):
+        """has_preexisting_link returns True for forward direction."""
+        # shadowkeep_church_lower has To: shadowkeep_sanctum
+        assert resolver.has_preexisting_link("shadowkeep_church_lower", "shadowkeep_sanctum")
+
+    def test_has_preexisting_link_no_reverse(self, resolver):
+        """has_preexisting_link returns False when no reverse link exists."""
+        # shadowkeep_sanctum does NOT have To: shadowkeep_church_lower
+        assert not resolver.has_preexisting_link("shadowkeep_sanctum", "shadowkeep_church_lower")
+
+    def test_one_way_detection_from_to_section(self, resolver):
+        """One-way should be detected from asymmetric To: entries."""
+        source = "shadowkeep_church_lower"
+        target = "shadowkeep_sanctum"
+
+        forward = resolver.has_preexisting_link(source, target)
+        reverse = resolver.has_preexisting_link(target, source)
+
+        # This link should be one-way (forward exists, reverse doesn't)
+        assert forward and not reverse
+
+    def test_bidirectional_link_both_directions(self, resolver):
+        """Bidirectional links should have To: entries in both zones."""
+        # Find a bidirectional link (both zones have To: entries pointing to each other)
+        for source, targets in resolver.preexisting_links.items():
+            for target in targets:
+                if resolver.has_preexisting_link(target, source):
+                    # Found a bidirectional link
+                    assert resolver.has_preexisting_link(source, target)
+                    assert resolver.has_preexisting_link(target, source)
+                    return
+        # If no bidirectional links found, that's also valid (all one-way)

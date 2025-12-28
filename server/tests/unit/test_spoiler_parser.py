@@ -3,6 +3,8 @@
 Tests the parsing of Fog Gate Randomizer spoiler logs.
 """
 
+from pathlib import Path
+
 import pytest
 
 from fogtracker.spoiler_parser import (
@@ -15,9 +17,11 @@ from fogtracker.spoiler_parser import (
     _parse_area_line,
     _parse_connection_line,
     _should_skip_line,
+    enrich_connections_with_zone_keys,
     parse_spoiler_log,
     validate_spoiler_header,
 )
+from fogtracker.zone_resolver import ZoneResolver
 
 
 class TestShouldSkipLine:
@@ -576,3 +580,69 @@ class TestWithRealSpoilerLogs:
         result = parse_spoiler_log(spoiler_log_1078869800)
         zone_names = {z.name for z in result.zones}
         assert "Chapel of Anticipation" in zone_names
+
+
+class TestEnrichConnectionsOneWay:
+    """Tests for one-way detection in enrich_connections_with_zone_keys.
+
+    Preexisting connections should be marked as one-way based on fog.txt
+    To: structure. If source has To: target but target doesn't have To: source,
+    the connection is one-way.
+    """
+
+    @pytest.fixture
+    def resolver(self):
+        """Create a ZoneResolver with real data."""
+        data_dir = Path(__file__).parent.parent.parent / "data"
+        return ZoneResolver(data_dir)
+
+    def test_one_way_preexisting_from_fog_txt(self, resolver):
+        """Preexisting link should be marked one-way from fog.txt To: structure."""
+        # shadowkeep_church_lower -> shadowkeep_sanctum is one-way
+        conn = ConnectionInfo(
+            id="test-id",
+            source="Shadow Keep - Drained Church District",
+            target="Shadow Keep - Tree-Worship Sanctum",
+            conn_type="preexisting",
+            source_details="opening the door",
+            target_details="in map",
+            is_one_way=False,  # Parser sets False (no pattern match)
+        )
+
+        enriched = enrich_connections_with_zone_keys([conn], resolver)
+        result = enriched[0]
+
+        assert result.source_key == "shadowkeep_church_lower"
+        assert result.target_key == "shadowkeep_sanctum"
+        assert result.is_one_way is True  # Should be corrected to True
+
+    def test_already_one_way_not_changed(self, resolver):
+        """Connections already marked one-way should stay one-way."""
+        conn = ConnectionInfo(
+            id="test-id",
+            source="Some Zone",
+            target="Another Zone",
+            conn_type="preexisting",
+            is_one_way=True,  # Already one-way from pattern
+        )
+
+        enriched = enrich_connections_with_zone_keys([conn], resolver)
+        result = enriched[0]
+
+        assert result.is_one_way is True
+
+    def test_random_connection_unchanged(self, resolver):
+        """Random connections should not be affected by fog.txt To: structure."""
+        conn = ConnectionInfo(
+            id="test-id",
+            source="Shadow Keep - Drained Church District",
+            target="Shadow Keep - Tree-Worship Sanctum",
+            conn_type="random",  # Random, not preexisting
+            is_one_way=False,
+        )
+
+        enriched = enrich_connections_with_zone_keys([conn], resolver)
+        result = enriched[0]
+
+        # Random connections use pattern-based detection, not fog.txt To:
+        assert result.is_one_way is False
