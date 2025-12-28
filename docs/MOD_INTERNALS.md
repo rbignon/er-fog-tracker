@@ -48,7 +48,6 @@ Primary structure for player state.
 WorldChrMan (base address)
     └─[0x1E508] PlayerIns (player instance, offset varies by version)
           ├─[0x178] SpEffectCtrl (active effects)
-          ├─[0x160] tae_queued_use_item (item being used)
           └─ ChrCtrl
                └─ cur_anim (current animation ID)
 ```
@@ -111,6 +110,7 @@ This dual approach ensures we catch:
 | Type | Animation ID | Notes |
 |------|-------------|-------|
 | Fog Wall | `60060` | Most common |
+| Back to Entrance | `60460` | Ground teleporter after defeating dungeon boss |
 | Waygate | `60490` | Sending gates to other areas |
 | Sending Gate (Blue) | `60470` | Portal-style gates |
 | Sending Gate (Red) | `60472` | Portal-style gates |
@@ -498,7 +498,7 @@ The overlay is rendered via DirectX hook (hudhook library).
 
 ## Configuration
 
-The mod reads `fogrando_tracker.toml` from the DLL directory:
+The mod reads `fog_rando_tracker.toml` from the DLL directory:
 
 ```toml
 [server]
@@ -509,11 +509,24 @@ game_id = "uuid-of-game"
 auto_reconnect = true
 
 [keybindings]
-toggle_ui = "F8"
+toggle_ui = "F9"
+toggle_debug = "F10"
+toggle_exits = "F11"
 
 [overlay]
 font_path = "segoeui.ttf"
 font_size = 16.0
+background_color = "#141414"
+background_opacity = 0.7
+text_color = "#FFFFFF"
+text_disabled_color = "#808080"
+discovered_color = "#80FF80"
+undiscovered_color = "#B3B3B3"
+show_border = false
+border_color = "#404040"
+status_template = "{zone}$>{status} {discovered}/{total}"
+zone_unknown_text = "(traverse a fog to identify)"
+# icon_size = 16.0  # Optional, defaults to font_size
 ```
 
 ## Debug Logging
