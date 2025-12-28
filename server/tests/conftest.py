@@ -1,5 +1,14 @@
 """Shared pytest fixtures for fogtracker tests."""
 
+# Set default environment variables for tests BEFORE importing any fogtracker modules.
+# This prevents pydantic Settings validation errors when importing main.py.
+import os
+
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite://:memory:")
+os.environ.setdefault("TWITCH_CLIENT_ID", "test")
+os.environ.setdefault("TWITCH_CLIENT_SECRET", "test")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-testing")
+
 import json
 from pathlib import Path
 
