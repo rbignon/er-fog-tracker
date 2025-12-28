@@ -120,6 +120,22 @@ export async function updateGame(gameId, { label }) {
 }
 
 // =============================================================================
+// Spoiler API (public, no auth required)
+// =============================================================================
+
+/**
+ * Parse a spoiler log via the server.
+ * @param {string} spoilerLog - Raw spoiler log text
+ * @returns {Promise<{ seed: number, zones: Array, zone_links: Array }>}
+ */
+export async function parseSpoilerLog(spoilerLog) {
+    return apiFetch('/api/spoiler/parse', {
+        method: 'POST',
+        body: JSON.stringify({ spoiler_log: spoilerLog }),
+    });
+}
+
+// =============================================================================
 // Users API (public)
 // =============================================================================
 
@@ -194,6 +210,7 @@ export async function undiscoverZone(gameId, zone) {
 }
 
 export default {
+    parseSpoilerLog,
     createGame,
     getGame,
     getMyGames,

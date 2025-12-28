@@ -2,7 +2,7 @@
 // UI - Upload, header controls, modals, search
 // ============================================================
 
-import { SpoilerLogParser } from './parser.js';
+import { parseSpoilerLog } from './api.js';
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
 import * as Toast from './toast.js';
@@ -34,8 +34,8 @@ function clearError() {
 }
 
 // Process spoiler log text (common logic for files and demo)
-function processSpoilerLogText(text) {
-    // Detect spoiler log type
+async function processSpoilerLogText(text) {
+    // Quick client-side validation for better UX
     const hasFogPatterns = text.includes('Preexisting:');
     const hasScaling = text.includes('scaling:');
 
@@ -55,7 +55,31 @@ function processSpoilerLogText(text) {
         );
     }
 
-    const parsedData = SpoilerLogParser.parse(text);
+    // Parse via API
+    const apiData = await parseSpoilerLog(text);
+
+    // Transform API response to frontend format
+    const parsedData = {
+        nodes: apiData.zones.map((zone, index) => ({
+            id: zone.name,
+            isBoss: zone.is_boss || false,
+            scaling: zone.scaling || null,
+            order: index,
+        })),
+        links: apiData.zone_links.map(link => ({
+            id: link.id,
+            source: link.source,
+            target: link.target,
+            type: link.type,
+            sourceDetails: link.source_details || '',
+            targetDetails: link.target_details || '',
+            requiredItemFrom: link.required_item_from || null,
+            isInherentlyOneWay: link.is_inherently_one_way || false,
+        })),
+        metadata: {
+            seed: String(apiData.seed),
+        },
+    };
 
     if (parsedData.nodes.length === 0) {
         throw new Error('No areas found in the log file.');
@@ -150,9 +174,9 @@ function handleFile(file) {
 
     const reader = new FileReader();
 
-    reader.onload = e => {
+    reader.onload = async e => {
         try {
-            processSpoilerLogText(e.target.result);
+            await processSpoilerLogText(e.target.result);
         } catch (err) {
             console.error(err);
             showError(err.message || `Error parsing the log file: ${err}`);
@@ -166,23 +190,20 @@ function handleFile(file) {
     reader.readAsText(file);
 }
 
-function loadDemoData() {
+async function loadDemoData() {
     clearError();
 
-    fetch('data/demo_log.txt')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Demo file not found');
-            }
-            return response.text();
-        })
-        .then(text => {
-            processSpoilerLogText(text);
-        })
-        .catch(err => {
-            console.error(err);
-            showError(`Error loading demo: ${err.message}`);
-        });
+    try {
+        const response = await fetch('data/demo_log.txt');
+        if (!response.ok) {
+            throw new Error('Demo file not found');
+        }
+        const text = await response.text();
+        await processSpoilerLogText(text);
+    } catch (err) {
+        console.error(err);
+        showError(`Error loading demo: ${err.message}`);
+    }
 }
 
 // ============================================================

@@ -5,7 +5,6 @@
 import * as Auth from '../auth.js';
 import * as Api from '../api.js';
 import { navigate } from '../router.js';
-import { SpoilerLogParser } from '../parser.js';
 import * as Toast from '../toast.js';
 import { getLinkEndpoints } from '../state.js';
 
@@ -62,18 +61,34 @@ async function handleFileSelect(file) {
 
     try {
         const text = await file.text();
-        const result = SpoilerLogParser.parse(text);
 
-        if (!result || !result.metadata?.seed) {
+        // Parse via API
+        const apiData = await Api.parseSpoilerLog(text);
+
+        if (!apiData.seed) {
             throw new Error('Invalid spoiler log format');
         }
 
         // Store in format expected by createGame
         parsedData = {
-            seed: result.metadata.seed,
+            seed: String(apiData.seed),
             graphData: {
-                nodes: result.nodes,
-                links: result.links,
+                nodes: apiData.zones.map((zone, index) => ({
+                    id: zone.name,
+                    isBoss: zone.is_boss || false,
+                    scaling: zone.scaling || null,
+                    order: index,
+                })),
+                links: apiData.zone_links.map(link => ({
+                    id: link.id,
+                    source: link.source,
+                    target: link.target,
+                    type: link.type,
+                    sourceDetails: link.source_details || '',
+                    targetDetails: link.target_details || '',
+                    requiredItemFrom: link.required_item_from || null,
+                    isInherentlyOneWay: link.is_inherently_one_way || false,
+                })),
             },
         };
 

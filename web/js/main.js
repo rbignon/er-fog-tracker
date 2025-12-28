@@ -265,7 +265,7 @@ async function initViewerMode(gameId) {
  * Convert server game data to client graph format.
  */
 async function convertServerDataToGraph(game) {
-    const { extractRequiredItemFromDescription } = await import('./parser.js');
+    const { extractRequiredItemFromDescription } = await import('./keyItems.js');
 
     // Build zone metadata map if available
     // Note: zones have UUID id but links use zone names, so key by name

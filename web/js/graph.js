@@ -2,7 +2,7 @@
 // GRAPH - D3.js rendering, simulation, interactions
 // ============================================================
 
-import { extractRequiredItemFromDescription, parseRequiredItemZones } from './parser.js';
+import { extractRequiredItemFromDescription, parseRequiredItemZones } from './keyItems.js';
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
 import * as PositionManager from './positionManager.js';
