@@ -212,8 +212,8 @@ function handleSearch(query) {
 
     State.emit('searchMatched', { matchingIds: new Set(matching.map(n => n.id)) });
 
-    // Show dropdown with undiscovered matches in exploration mode
-    if (State.isExplorationMode()) {
+    // Show dropdown with undiscovered matches in exploration mode (not for viewers)
+    if (State.isExplorationMode() && !State.isViewerMode()) {
         const explorationState = State.getExplorationState();
         const undiscoveredMatches = matching.filter(n => !explorationState.discovered.has(n.id));
 

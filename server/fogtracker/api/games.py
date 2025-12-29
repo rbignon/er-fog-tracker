@@ -276,12 +276,9 @@ async def create_discovery(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a discovery (REST fallback, prefer WebSocket)."""
-    # Verify game exists and belongs to user
+    # Verify game exists
     result = await db.execute(
-        select(Game)
-        .where(Game.id == game_id)
-        .where(Game.user_id == user.id)
-        .where(Game.deleted_at.is_(None))
+        select(Game).where(Game.id == game_id).where(Game.deleted_at.is_(None))
     )
     game = result.scalar_one_or_none()
 
@@ -289,6 +286,13 @@ async def create_discovery(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Game not found",
+        )
+
+    # Verify user is the owner (viewers cannot create discoveries)
+    if game.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the game owner can create discoveries",
         )
 
     # Propagate discovery
@@ -360,12 +364,9 @@ async def create_undiscovery(
     db: AsyncSession = Depends(get_db),
 ):
     """Undiscover a zone and cascade to unreachable zones."""
-    # Verify game exists and belongs to user
+    # Verify game exists
     result = await db.execute(
-        select(Game)
-        .where(Game.id == game_id)
-        .where(Game.user_id == user.id)
-        .where(Game.deleted_at.is_(None))
+        select(Game).where(Game.id == game_id).where(Game.deleted_at.is_(None))
     )
     game = result.scalar_one_or_none()
 
@@ -373,6 +374,13 @@ async def create_undiscovery(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Game not found",
+        )
+
+    # Verify user is the owner (viewers cannot undiscover zones)
+    if game.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the game owner can undiscover zones",
         )
 
     # Undiscover the zone and cascade
