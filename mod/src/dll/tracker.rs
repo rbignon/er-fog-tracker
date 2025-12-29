@@ -28,6 +28,7 @@ use crate::core::warp_tracker::DiscoveryEvent;
 use crate::eldenring::{GameMan, GameState, SpEffect};
 
 use super::config::Config;
+use super::frame_state::FrameSnapshot;
 use super::icon_atlas::IconAtlas;
 use super::websocket::{ConnectionStatus as WsConnectionStatus, IncomingMessage, WebSocketClient};
 
@@ -276,32 +277,37 @@ impl FogRandoTracker {
 
     /// Check for fog gate randomizer warps each frame
     ///
-    /// This method delegates warp detection to TrackerSession and handles
-    /// the resulting events (logging, status messages, etc.)
+    /// This method:
+    /// 1. Captures a FrameSnapshot with all game state readings upfront
+    /// 2. Performs debug logging using the snapshot
+    /// 3. Delegates warp detection to TrackerSession using the snapshot
+    /// 4. Handles the resulting events (logging, status messages, etc.)
     pub fn check_fog_traversal(&mut self) {
-        // Debug logging (DLL-specific, uses tracing)
-        self.log_speffect_debug();
-        self.log_animation_debug();
-        self.log_warp_debug();
+        // 1. Capture all game state in a single pass
+        let snapshot = FrameSnapshot::capture(&self.game_state, &self.game_man);
+
+        // 2. Debug logging (DLL-specific, uses tracing)
+        // SpEffect debug is optimized with early return check
+        self.log_speffect_debug(&snapshot);
+        self.log_animation_debug(&snapshot);
+        self.log_warp_debug(&snapshot);
 
         // Debug: dump key items once to find Kindling param_id
         if !self.debug_items_dumped {
-            if self.game_state.read_position().is_some() {
+            if snapshot.read_position().is_some() {
                 info!("[DEBUG] Dumping key items inventory...");
                 self.debug_dump_key_items();
                 self.debug_items_dumped = true;
             }
         }
 
-        // Create adapter for WebSocket communication
+        // 3. Create adapter for WebSocket communication
         let mut adapter = WebSocketAdapter::new(&mut self.ws_client);
 
-        // Delegate to TrackerSession
-        let events = self
-            .session
-            .update(&self.game_state, &self.game_man, &mut adapter);
+        // 4. Delegate to TrackerSession using snapshot for both traits
+        let events = self.session.update(&snapshot, &snapshot, &mut adapter);
 
-        // Handle session events
+        // 5. Handle session events
         for event in events {
             match event {
                 SessionEvent::DiscoverySent(discovery) => {
@@ -448,11 +454,11 @@ impl FogRandoTracker {
     }
 
     /// Log GameMan warp state changes (with deduplication)
-    fn log_warp_debug(&mut self) {
-        let warp_requested = self.game_man.is_warp_requested();
+    fn log_warp_debug(&mut self, snapshot: &FrameSnapshot) {
+        let warp_requested = snapshot.is_warp_requested();
 
         if warp_requested != self.last_logged_warp_requested {
-            let warp_info = self.game_man.get_warp_info();
+            let warp_info = snapshot.get_warp_info();
             if warp_requested {
                 let dest_entity = warp_info
                     .as_ref()
@@ -462,7 +468,7 @@ impl FogRandoTracker {
                     .as_ref()
                     .map(|w| w.destination_map_id)
                     .unwrap_or(0);
-                let cur_anim = self.game_state.read_animation();
+                let cur_anim = snapshot.read_animation();
                 let is_fog_rando = is_fog_rando_entity(dest_entity);
                 let has_known_anim = cur_anim.and_then(get_teleport_type).is_some();
 
@@ -478,7 +484,7 @@ impl FogRandoTracker {
 
                 // Special warning for potential untracked Fog Rando warps
                 if is_fog_rando && !has_known_anim {
-                    if let Some(pos) = self.game_state.read_position() {
+                    if let Some(pos) = snapshot.read_position() {
                         warn!(
                             dest_entity,
                             map_id = pos.map_id_str,
@@ -499,8 +505,8 @@ impl FogRandoTracker {
 
     /// Log animation changes (with deduplication)
     /// Only logs when animation changes or every 5 seconds as a heartbeat
-    fn log_animation_debug(&mut self) {
-        let cur_anim = self.game_state.read_animation();
+    fn log_animation_debug(&mut self, snapshot: &FrameSnapshot) {
+        let cur_anim = snapshot.read_animation();
 
         // Check if animation changed or 5 seconds elapsed
         let anim_changed = cur_anim != self.last_logged_anim;
@@ -521,13 +527,33 @@ impl FogRandoTracker {
 
     /// Log SpEffect debug info (with deduplication)
     /// Only logs when state changes or every 5 seconds as a heartbeat
-    fn log_speffect_debug(&mut self) {
+    ///
+    /// Optimized with early return: only does the expensive get_debug_info()
+    /// scan if debug mode is enabled OR there's a state change to log.
+    fn log_speffect_debug(&mut self, _snapshot: &FrameSnapshot) {
+        let heartbeat_due = self.last_speffect_log_time.elapsed() >= Duration::from_secs(5);
+
+        // Quick check: has teleport effect changed?
+        let has_teleport_now = self.sp_effect.has_teleport_effect();
+        let was_teleporting = self
+            .last_logged_speffect_state
+            .as_ref()
+            .map(|(t, _)| *t)
+            .unwrap_or(false);
+        let teleport_changed = has_teleport_now != was_teleporting;
+
+        // Early return: skip expensive scan if nothing to log
+        // Only do full scan if: debug mode enabled OR teleport changed OR heartbeat due
+        if !self.show_debug && !teleport_changed && !heartbeat_due {
+            return;
+        }
+
+        // Now do the full scan (only when needed)
         let dbg = self.sp_effect.get_debug_info();
         let current_state = (dbg.has_teleport_effect, dbg.active_effects.clone());
 
-        // Check if state changed or 5 seconds elapsed
+        // Check if state changed
         let state_changed = self.last_logged_speffect_state.as_ref() != Some(&current_state);
-        let heartbeat_due = self.last_speffect_log_time.elapsed() >= Duration::from_secs(5);
 
         if state_changed || heartbeat_due {
             // Log pointer chain status

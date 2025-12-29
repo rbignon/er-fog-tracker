@@ -66,6 +66,15 @@ impl SpEffect {
         let world_chr_man_ptr = self.read_ptr(self.world_chr_man)?;
         self.read_ptr(world_chr_man_ptr + self.player_ins_offset)
     }
+
+    /// Quick check for teleport effect (avoids full debug info scan)
+    ///
+    /// This is a lightweight alternative to get_debug_info() when you only
+    /// need to know if the teleport effect is active. Uses has_sp_effect()
+    /// which does an early return on match.
+    pub fn has_teleport_effect(&self) -> bool {
+        self.has_sp_effect(DEBUG_TELEPORT_SPEFFECT_ID)
+    }
 }
 
 impl SpEffectChecker for SpEffect {

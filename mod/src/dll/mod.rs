@@ -9,6 +9,7 @@
 //! - Logging setup
 
 pub mod config;
+mod frame_state;
 pub mod hotkey;
 pub mod icon_atlas;
 pub mod logging;
