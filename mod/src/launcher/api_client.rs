@@ -58,11 +58,6 @@ impl VersionCompatibility {
         }
     }
 
-    /// Returns true if this is a blocking incompatibility
-    pub fn is_blocking(&self) -> bool {
-        matches!(self, Self::ClientTooOld { .. } | Self::ServerTooOld { .. })
-    }
-
     /// Get the releases URL for downloading updates
     pub fn releases_url() -> &'static str {
         RELEASES_URL
