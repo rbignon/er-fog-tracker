@@ -47,9 +47,13 @@ pub trait WarpDetector {
     /// Get the last grace entity ID (last visited grace)
     ///
     /// This returns the entity ID of the last Site of Grace visited.
-    /// After fast travel completes, this will be the destination grace.
-    /// Used for precise zone resolution after fast travel.
     fn get_last_grace_entity_id(&self) -> u32;
+
+    /// Get the target grace entity ID (fast travel destination)
+    ///
+    /// This is only valid while warp_requested is true.
+    /// It gets cleared after the warp completes.
+    fn get_target_grace_entity_id(&self) -> u32;
 
     /// Get the destination map ID for the current warp
     fn get_destination_map_id(&self) -> u32;
@@ -131,6 +135,7 @@ pub mod mocks {
         pub warp_requested: std::cell::Cell<bool>,
         pub dest_entity_id: std::cell::Cell<u32>,
         pub last_grace_entity_id: std::cell::Cell<u32>,
+        pub target_grace_entity_id: std::cell::Cell<u32>,
         pub dest_map_id: std::cell::Cell<u32>,
     }
 
@@ -140,6 +145,7 @@ pub mod mocks {
                 warp_requested: std::cell::Cell::new(false),
                 dest_entity_id: std::cell::Cell::new(0),
                 last_grace_entity_id: std::cell::Cell::new(0),
+                target_grace_entity_id: std::cell::Cell::new(0),
                 dest_map_id: std::cell::Cell::new(0),
             }
         }
@@ -153,6 +159,11 @@ pub mod mocks {
         /// Set the last grace entity ID (for fast travel zone resolution tests)
         pub fn set_last_grace(&self, grace_entity_id: u32) {
             self.last_grace_entity_id.set(grace_entity_id);
+        }
+
+        /// Set the target grace entity ID (only valid during warp)
+        pub fn set_target_grace(&self, grace_entity_id: u32) {
+            self.target_grace_entity_id.set(grace_entity_id);
         }
     }
 
@@ -173,6 +184,10 @@ pub mod mocks {
 
         fn get_last_grace_entity_id(&self) -> u32 {
             self.last_grace_entity_id.get()
+        }
+
+        fn get_target_grace_entity_id(&self) -> u32 {
+            self.target_grace_entity_id.get()
         }
 
         fn get_destination_map_id(&self) -> u32 {
