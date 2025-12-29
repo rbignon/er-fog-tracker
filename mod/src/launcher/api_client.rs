@@ -4,9 +4,75 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use ureq::{Agent, AgentBuilder};
 
-// Re-export version types from core module
-// Use crate name because launcher is a separate binary that depends on the library
-pub use fog_rando_tracker::core::version::{VersionCompatibility, CLIENT_VERSION};
+// =============================================================================
+// Version Constants and Compatibility
+// =============================================================================
+
+/// Client version from Cargo.toml
+pub const CLIENT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// URL for downloading releases
+pub const RELEASES_URL: &str = "https://github.com/rbignon/er-fog-tracker/releases";
+
+/// Result of version compatibility check
+#[derive(Debug, Clone, PartialEq)]
+pub enum VersionCompatibility {
+    /// Versions are compatible (same major, client >= server)
+    Compatible,
+    /// Update available (same major, client < server)
+    UpdateAvailable { server_version: String },
+    /// Client is too old (client major < server major)
+    ClientTooOld { server_version: String },
+    /// Server is too old (client major > server major)
+    ServerTooOld { server_version: String },
+}
+
+impl VersionCompatibility {
+    /// Check compatibility between client and server versions
+    pub fn check(server_version: &str) -> Self {
+        let client_major = CLIENT_VERSION
+            .split('.')
+            .next()
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or(0);
+        let server_major = server_version
+            .split('.')
+            .next()
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or(0);
+
+        if client_major < server_major {
+            Self::ClientTooOld {
+                server_version: server_version.to_string(),
+            }
+        } else if client_major > server_major {
+            Self::ServerTooOld {
+                server_version: server_version.to_string(),
+            }
+        } else if server_version > CLIENT_VERSION {
+            Self::UpdateAvailable {
+                server_version: server_version.to_string(),
+            }
+        } else {
+            Self::Compatible
+        }
+    }
+
+    /// Returns true if this is a blocking incompatibility
+    pub fn is_blocking(&self) -> bool {
+        matches!(self, Self::ClientTooOld { .. } | Self::ServerTooOld { .. })
+    }
+
+    /// Get the releases URL for downloading updates
+    pub fn releases_url() -> &'static str {
+        RELEASES_URL
+    }
+
+    /// Get the client version
+    pub fn client_version() -> &'static str {
+        CLIENT_VERSION
+    }
+}
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
