@@ -16,7 +16,8 @@ The mod is a Rust DLL injected into the Elden Ring process using DirectX hooking
 │  │             │  │             │  │                     │ │
 │  │ - position  │  │ - effects   │  │ - warp_requested    │ │
 │  │ - map_id    │  │ - item use  │  │ - dest_entity_id    │ │
-│  │ - animation │  │             │  │ - dest_map_id       │ │
+│  │ - animation │  │             │  │ - target_grace_id   │ │
+│  │             │  │             │  │ - dest_map_id       │ │
 │  └──────┬──────┘  └──────┬──────┘  └──────────┬──────────┘ │
 │         │                │                     │            │
 │         └────────────────┼─────────────────────┘            │
@@ -63,9 +64,14 @@ Global game state including warp information.
 ```
 GameMan (base address)
     ├─[0x10]  warp_requested (bool) - true when warp is pending
-    ├─[0x3C]  initial_area_entity_id (u32) - destination entity ID
+    ├─[0x3C]  initial_area_entity_id (u32) - spawn point entity ID (fog rando: 755890xxx)
+    ├─[0xB3C] target_grace (u32) - grace entity ID for fast travel (format: AABB0295x)
     └─[0xAC8] load_target_block_id (u32) - destination map ID
 ```
+
+**Two different entity IDs**:
+- `initial_area_entity_id` (0x3C): Spawn point entity ID, used for fog gate tracking
+- `target_grace` (0xB3C): Grace entity ID from the teleport menu, used for fast travel zone resolution
 
 ### FieldArea (Play Region)
 
@@ -274,7 +280,11 @@ Coffins have no distinctive animation and are currently not explicitly detected.
 
 ### Fast Travel
 
-Fast travel (via map menu) is **not tracked as a discovery** by the mod - it's not a fog gate traversal. However, the mod does capture the destination entity ID (grace entity ID) when fast travel is initiated.
+Fast travel (via map menu) is **not tracked as a discovery** by the mod - it's not a fog gate traversal. However, the mod does capture the grace entity ID when fast travel is initiated.
+
+**Key distinction**: The mod reads from `target_grace` (offset 0xB3C) for fast travel, NOT from `initial_area_entity_id` (offset 0x3C). These contain different values:
+- `target_grace` (0xB3C): Grace entity ID like `14002951` (Debate Parlour)
+- `initial_area_entity_id` (0x3C): Spawn point ID like `14000981` (different format)
 
 After fast travel completes (loading screen exits), the mod sends a `zone_query` message that includes the `grace_entity_id`. This allows the server to precisely resolve the destination zone using the grace-to-zone mapping, bypassing position-based resolution which can be ambiguous when multiple zones share the same coordinates.
 
@@ -287,8 +297,9 @@ After fast travel completes (loading screen exits), the mod sends a `zone_query`
 │   ▼               ▼                ▼               ▼                         │
 │ Player        warp_requested    Loading        zone_query                    │
 │ selects       becomes true      screen         sent with                     │
-│ grace         dest_entity_id    (pos=None)     grace_entity_id               │
+│ grace         target_grace      (pos=None)     grace_entity_id               │
 │               = grace entity                                                 │
+│               (read from 0xB3C)                                              │
 │                                                                              │
 │ ──────▶ CAPTURE ──────────────────────────────▶ SEND zone_query ──────────▶  │
 │         (store grace                            (include grace_entity_id)    │
@@ -296,7 +307,7 @@ After fast travel completes (loading screen exits), the mod sends a `zone_query`
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-The grace entity ID is stored in `TrackerSession.last_warp_destination_entity_id` and cleared after being sent with the zone_query.
+The grace entity ID is stored in `TrackerSession.last_target_grace_entity_id` and cleared after being sent with the zone_query.
 
 ### Warp Validation
 
@@ -421,12 +432,16 @@ State transitions:
 
 FogMod uses entity IDs in range `755890000-755899999` for its spawn points. Each fog gate transition involves two entity IDs:
 
-### Destination Entity (dest_entity)
+### Destination Entity (dest_entity) - Fog Gates Only
 
 The spawn point on the **destination side** of the fog gate. This is the entity ID used by the `WarpPlayer` instruction (2003:14) to teleport the player.
 
-- **Captured from**: `GameMan.initial_area_entity_id` when `warp_requested` becomes true
+- **Memory offset**: `GameMan + 0x3C` (`initial_area_entity_id`)
+- **Captured from**: `WarpDetector::get_destination_entity_id()` when `warp_requested` becomes true
 - **Used for**: Zone resolution (map lookup via entity_mapping)
+- **Format**: `755890xxx` (FogMod spawn point range)
+
+**Note**: This is different from the grace entity ID used for fast travel (see GameMan offsets above).
 
 ### Source Entity (source_entity)
 

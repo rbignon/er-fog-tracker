@@ -24,8 +24,10 @@ pub struct FrameSnapshot {
     animation: Option<u32>,
     /// Whether a warp is currently requested
     warp_requested: bool,
-    /// Destination entity ID for the current warp
+    /// Destination entity ID for the current warp (spawn point, for fog gates)
     destination_entity_id: u32,
+    /// Target grace entity ID (for fast travel zone resolution)
+    target_grace_entity_id: u32,
     /// Destination map ID for the current warp
     destination_map_id: u32,
 }
@@ -45,6 +47,7 @@ impl FrameSnapshot {
         let animation = game_state.read_animation();
         let warp_requested = game_man.is_warp_requested();
         let destination_entity_id = game_man.get_destination_entity_id();
+        let target_grace_entity_id = game_man.get_target_grace_entity_id();
         let destination_map_id = game_man.get_destination_map_id();
 
         Self {
@@ -52,6 +55,7 @@ impl FrameSnapshot {
             animation,
             warp_requested,
             destination_entity_id,
+            target_grace_entity_id,
             destination_map_id,
         }
     }
@@ -78,6 +82,10 @@ impl WarpDetector for FrameSnapshot {
 
     fn get_destination_entity_id(&self) -> u32 {
         self.destination_entity_id
+    }
+
+    fn get_target_grace_entity_id(&self) -> u32 {
+        self.target_grace_entity_id
     }
 
     fn get_destination_map_id(&self) -> u32 {
@@ -113,6 +121,7 @@ mod tests {
             animation,
             warp_requested,
             destination_entity_id: dest_entity_id,
+            target_grace_entity_id: 0,
             destination_map_id: dest_map_id,
         }
     }

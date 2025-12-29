@@ -42,8 +42,11 @@ pub const DEBUG_TELEPORT_SPEFFECT_ID: u32 = 4280;
 /// Offset of warp_requested bool in GameMan structure
 pub const GAMEMAN_WARP_REQUESTED_OFFSET: usize = 0x10;
 
-/// Offset of initial_area_entity_id in GameMan structure
+/// Offset of initial_area_entity_id in GameMan structure (spawn point)
 pub const GAMEMAN_INITIAL_AREA_ENTITY_ID_OFFSET: usize = 0x3C;
+
+/// Offset of target grace entity ID in GameMan structure (grace teleport destination)
+pub const GAMEMAN_TARGET_GRACE_ENTITY_ID_OFFSET: usize = 0xB3C;
 
 /// Offset of load_target_block_id in GameMan structure
 pub const GAMEMAN_LOAD_TARGET_BLOCK_ID_OFFSET: usize = 0xAC8;

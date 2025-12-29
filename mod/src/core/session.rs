@@ -65,8 +65,8 @@ pub struct SessionState {
 pub struct TrackerSession {
     warp_tracker: WarpTracker,
     state: SessionState,
-    /// Last destination entity ID seen during a warp (for zone_query after fast travel)
-    last_warp_destination_entity_id: Option<u32>,
+    /// Target grace entity ID captured when fast travel is requested (for zone_query)
+    last_target_grace_entity_id: Option<u32>,
 }
 
 impl TrackerSession {
@@ -75,7 +75,7 @@ impl TrackerSession {
         Self {
             warp_tracker: WarpTracker::new(),
             state: SessionState::default(),
-            last_warp_destination_entity_id: None,
+            last_target_grace_entity_id: None,
         }
     }
 
@@ -150,10 +150,12 @@ impl TrackerSession {
     {
         let mut events = Vec::new();
 
-        // 0. Capture destination entity ID when warp is requested (for fast travel zone queries)
+        // 0. Capture target grace entity ID when warp is requested (for fast travel zone queries)
         // We capture this early so it's available when zone_query is sent after loading screen
+        // Note: We use get_target_grace_entity_id() which reads the grace entity ID (offset 0xB3C)
+        // rather than get_destination_entity_id() which reads the spawn point entity ID (offset 0x3C)
         if warp_detector.is_warp_requested() {
-            self.last_warp_destination_entity_id = Some(warp_detector.get_destination_entity_id());
+            self.last_target_grace_entity_id = Some(warp_detector.get_target_grace_entity_id());
         }
 
         // 1. Check for loading screen exit BEFORE check_warp (which updates state)
@@ -174,9 +176,9 @@ impl TrackerSession {
                 if let Some(pos) = game_state.read_position() {
                     // Pass grace_entity_id for fast travel zone queries
                     // The server will use this for precise zone resolution
-                    server.send_zone_query(&pos, self.last_warp_destination_entity_id);
+                    server.send_zone_query(&pos, self.last_target_grace_entity_id);
                     // Clear the stored entity ID after use
-                    self.last_warp_destination_entity_id = None;
+                    self.last_target_grace_entity_id = None;
                     // Clear zone while waiting for response
                     self.state.current_zone = None;
                     self.state.exits.clear();
@@ -727,7 +729,10 @@ mod tests {
         game_state.advance_frame();
 
         // Frame 1: At starting position, warp is requested
-        warp.set_warp(true, GRACE_ENTITY_ID, 0x3C2C2400);
+        // Note: set_target_grace() sets the grace entity ID (read from offset 0xB3C)
+        // while set_warp() sets the spawn point entity ID (read from offset 0x3C)
+        warp.set_warp(true, 0, 0x3C2C2400);
+        warp.set_target_grace(GRACE_ENTITY_ID);
         session.update(&game_state, &warp, &mut server);
         game_state.advance_frame();
 
@@ -737,6 +742,7 @@ mod tests {
 
         // Frame 3: Position readable - zone query should include grace entity ID
         warp.set_warp(false, 0, 0); // Warp completed
+        warp.set_target_grace(0); // Grace ID may be cleared after warp
         session.update(&game_state, &warp, &mut server);
 
         // Verify zone query was sent with the grace entity ID
@@ -769,7 +775,8 @@ mod tests {
         game_state.advance_frame();
 
         // Frame 1: Warp requested (fast travel)
-        warp.set_warp(true, GRACE_ENTITY_ID, 0x3C2C2400);
+        warp.set_warp(true, 0, 0x3C2C2400);
+        warp.set_target_grace(GRACE_ENTITY_ID);
         session.update(&game_state, &warp, &mut server);
         game_state.advance_frame();
 
@@ -779,6 +786,7 @@ mod tests {
 
         // Frame 3: Arrived - zone query with grace entity ID
         warp.set_warp(false, 0, 0);
+        warp.set_target_grace(0);
         session.update(&game_state, &warp, &mut server);
         game_state.advance_frame();
 

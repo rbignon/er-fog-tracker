@@ -38,11 +38,17 @@ pub trait WarpDetector {
     /// Check if a warp is currently requested
     fn is_warp_requested(&self) -> bool;
 
-    /// Get the destination entity ID for the current warp
+    /// Get the destination entity ID for the current warp (spawn point)
     ///
-    /// This is typically the entity ID of the grace being fast traveled to,
-    /// or the fog gate randomizer entity ID (755890xxx).
+    /// This returns the spawn point entity ID, which is the fog gate randomizer
+    /// entity ID (755890xxx) for fog gate traversals.
     fn get_destination_entity_id(&self) -> u32;
+
+    /// Get the target grace entity ID for fast travel
+    ///
+    /// This returns the grace entity ID (AABB0295x format) when fast traveling
+    /// to a Site of Grace. Used for precise zone resolution after fast travel.
+    fn get_target_grace_entity_id(&self) -> u32;
 
     /// Get the destination map ID for the current warp
     fn get_destination_map_id(&self) -> u32;
@@ -123,6 +129,7 @@ pub mod mocks {
     pub struct MockWarpDetector {
         pub warp_requested: std::cell::Cell<bool>,
         pub dest_entity_id: std::cell::Cell<u32>,
+        pub target_grace_entity_id: std::cell::Cell<u32>,
         pub dest_map_id: std::cell::Cell<u32>,
     }
 
@@ -131,6 +138,7 @@ pub mod mocks {
             Self {
                 warp_requested: std::cell::Cell::new(false),
                 dest_entity_id: std::cell::Cell::new(0),
+                target_grace_entity_id: std::cell::Cell::new(0),
                 dest_map_id: std::cell::Cell::new(0),
             }
         }
@@ -139,6 +147,11 @@ pub mod mocks {
             self.warp_requested.set(requested);
             self.dest_entity_id.set(entity_id);
             self.dest_map_id.set(map_id);
+        }
+
+        /// Set the target grace entity ID (for fast travel zone resolution tests)
+        pub fn set_target_grace(&self, grace_entity_id: u32) {
+            self.target_grace_entity_id.set(grace_entity_id);
         }
     }
 
@@ -155,6 +168,10 @@ pub mod mocks {
 
         fn get_destination_entity_id(&self) -> u32 {
             self.dest_entity_id.get()
+        }
+
+        fn get_target_grace_entity_id(&self) -> u32 {
+            self.target_grace_entity_id.get()
         }
 
         fn get_destination_map_id(&self) -> u32 {
