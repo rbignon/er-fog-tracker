@@ -256,18 +256,18 @@ pub struct LauncherApp {
     // =========================================================================
     // Version Dialog (for version mismatch notifications)
     // =========================================================================
-    #[nwg_control(size: (420, 180), position: (350, 280), title: "Version Check", flags: "WINDOW")]
+    #[nwg_control(size: (420, 200), position: (350, 280), title: "Version Check", flags: "WINDOW")]
     #[nwg_events(OnWindowClose: [LauncherApp::on_version_dialog_close])]
     version_window: nwg::Window,
 
-    #[nwg_control(parent: version_window, text: "", position: (20, 20), size: (380, 60))]
+    #[nwg_control(parent: version_window, text: "", position: (20, 20), size: (380, 80))]
     version_message: nwg::Label,
 
-    #[nwg_control(parent: version_window, text: "Continue", position: (90, 110), size: (100, 35))]
+    #[nwg_control(parent: version_window, text: "Continue", position: (90, 120), size: (100, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_version_continue_click])]
     version_continue_btn: nwg::Button,
 
-    #[nwg_control(parent: version_window, text: "Download", position: (230, 110), size: (100, 35))]
+    #[nwg_control(parent: version_window, text: "Download", position: (230, 120), size: (100, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_version_download_click])]
     version_download_btn: nwg::Button,
 
