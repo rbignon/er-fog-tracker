@@ -5,7 +5,8 @@ use std::time::Duration;
 use ureq::{Agent, AgentBuilder};
 
 // Re-export version types from core module
-pub use crate::core::version::{VersionCompatibility, CLIENT_VERSION};
+// Use crate name because launcher is a separate binary that depends on the library
+pub use fog_rando_tracker::core::version::{VersionCompatibility, CLIENT_VERSION};
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
