@@ -167,7 +167,7 @@ pub struct LauncherApp {
     #[nwg_control(parent: window, text: "Mod Token:", position: (20, 85), size: (460, 20))]
     token_label: nwg::Label,
 
-    #[nwg_control(parent: window, text: "", position: (20, 110), size: (460, 25), flags: "VISIBLE|TAB_STOP")]
+    #[nwg_control(parent: window, text: "", position: (20, 110), size: (460, 25), password: Some('●'), flags: "VISIBLE|TAB_STOP")]
     token_input: nwg::TextInput,
 
     #[nwg_control(parent: window, text: "Find your token in Settings on the fog-tracker website", position: (20, 145), size: (460, 20))]
