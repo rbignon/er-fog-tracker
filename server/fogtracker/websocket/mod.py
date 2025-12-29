@@ -197,6 +197,234 @@ class ModClient(Client):
             }
         )
 
+    async def _handle_medal_discovery(self, data: dict):
+        """Handle Medal warp discovery.
+
+        The Pureblood Knight's Medal can be used from anywhere, so we cannot use
+        the source position to find the link. Instead, we find the link with
+        required_item="Pureblood Knight's Medal" and match only by destination.
+        """
+        target_map_id = data.get("target_map_id")
+        target_pos = data.get("target_pos", {})
+        target_play_region_id = data.get("target_play_region_id")
+
+        target_col = f"h{target_play_region_id:06x}" if target_play_region_id else None
+
+        logger.info(
+            "[MOD] Medal discovery: target=%s (%.1f, %.1f, %.1f) col=%s",
+            target_map_id,
+            target_pos.get("x", 0),
+            target_pos.get("y", 0),
+            target_pos.get("z", 0),
+            target_col,
+        )
+
+        resolver = get_resolver()
+
+        # Resolve target candidates
+        target_col_internal, target_col_display = None, None
+        if target_col:
+            target_col_internal, target_col_display = resolver.resolve_by_col(
+                target_map_id, target_col
+            )
+            if target_col_display:
+                logger.info("[MOD] Target resolved by Col: %s", target_col_display)
+
+        target_candidates = resolver.resolve_all_candidates(
+            target_map_id,
+            target_pos.get("x", 0),
+            target_pos.get("y", 0),
+            target_pos.get("z", 0),
+        )
+
+        if target_col_internal:
+            target_candidates = [(target_col_internal, target_col_display)] + [
+                c for c in target_candidates if c[0] != target_col_internal
+            ]
+
+        if not target_candidates:
+            logger.warning("[MOD] No target zone candidates for Medal warp to %s", target_map_id)
+            await self.send(
+                {
+                    "type": "discovery_v2_ack",
+                    "propagated": [],
+                    "resolved": [],
+                    "error": "No target zone candidates found for Medal warp",
+                }
+            )
+            return
+
+        async with async_session() as db:
+            result = await db.execute(select(Game).where(Game.id == self.game_id).with_for_update())
+            game = result.scalar_one_or_none()
+
+            resolved_links = []
+            all_discovery_results: list[DiscoveryResult] = []
+
+            if game and game.zone_links:
+                # Find the Medal link (required_item = "Pureblood Knight's Medal")
+                medal_link = None
+                for zl in game.zone_links:
+                    if zl.get("required_item") == "Pureblood Knight's Medal":
+                        medal_link = zl
+                        break
+
+                if not medal_link:
+                    logger.warning("[MOD] No Medal link found in zone_links")
+                    await self.send(
+                        {
+                            "type": "discovery_v2_ack",
+                            "propagated": [],
+                            "resolved": [],
+                            "error": "No Medal link found in spoiler log",
+                        }
+                    )
+                    return
+
+                # Check if any target candidate matches the medal link's target
+                target_display_names = {c[1] for c in target_candidates[:MAX_ZONE_CANDIDATES]}
+                target_keys = {c[0] for c in target_candidates[:MAX_ZONE_CANDIDATES]}
+
+                medal_target = medal_link.get("target")
+                medal_target_key = medal_link.get("target_key")
+
+                match_found = False
+                if medal_target_key and medal_target_key in target_keys:
+                    match_found = True
+                    logger.info("[MOD] Medal target matched by key: %s", medal_target)
+                elif medal_target in target_display_names:
+                    match_found = True
+                    logger.info("[MOD] Medal target matched by display name: %s", medal_target)
+
+                if match_found:
+                    source_display = medal_link.get("source")
+                    target_display = medal_target
+                    resolved_links.append({"source": source_display, "target": target_display})
+
+                    discovery_result = await propagate_discovery(
+                        db,
+                        self.game_id,
+                        source_display,
+                        target_display,
+                        discovered_by="mod",
+                    )
+                    all_discovery_results.append(discovery_result)
+                else:
+                    logger.warning(
+                        "[MOD] Medal target '%s' (key=%s) not in candidates: %s",
+                        medal_target,
+                        medal_target_key,
+                        [c[1] for c in target_candidates[:5]],
+                    )
+
+            await db.commit()
+
+            # Merge discovery results
+            primary_result = None
+            for dr in all_discovery_results:
+                if dr.main_links:
+                    primary_result = dr
+                    break
+            if not primary_result and all_discovery_results:
+                primary_result = all_discovery_results[0]
+
+            merged_result = DiscoveryResult(origin=primary_result.origin if primary_result else "")
+            for dr in all_discovery_results:
+                merged_result.main_links.extend(dr.main_links)
+                merged_result.backprop_links.extend(dr.backprop_links)
+                merged_result.forward_links.extend(dr.forward_links)
+
+            all_propagated = merged_result.all_links()
+
+            db.expire_all()
+
+            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            game = result.scalar_one_or_none()
+
+            # Compute exits from destination zone
+            exits = []
+            destination_zone = None
+            if resolved_links and game:
+                link = resolved_links[0]
+                destination_zone = link["target"]
+
+                exits = compute_zone_exits(
+                    game.zone_links or [],
+                    game.discovered_zone_links or [],
+                    destination_zone,
+                )
+
+            # Compute stats
+            stats = {"discovered": 0, "total": 0, "percent": 0}
+            if game:
+                stats = compute_discovery_stats(
+                    game.zone_links or [], game.discovered_zone_links or []
+                )
+
+            # Log discovery summary
+            if merged_result.total_count() > 0:
+                summary = format_discovery_summary(
+                    merged_result,
+                    discovered_by="mod",
+                    total_discovered=stats["discovered"],
+                    total_links=stats["total"],
+                )
+                for line in summary.split("\n"):
+                    logger.info(line)
+
+            # Log in-game display preview
+            if destination_zone:
+                ingame = format_ingame_display(destination_zone, exits, stats)
+                for line in ingame.split("\n"):
+                    logger.info(line)
+
+            # Get zone scaling
+            scaling = None
+            if destination_zone and game:
+                scaling = get_zone_scaling(game.zones, destination_zone)
+
+            # Send ack to mod
+            ack_msg = {
+                "type": "discovery_v2_ack",
+                "propagated": all_propagated,
+                "resolved": resolved_links,
+                "current_zone": destination_zone,
+                "exits": exits,
+                "stats": stats,
+                "scaling": scaling,
+            }
+            if not resolved_links:
+                ack_msg["error"] = "Medal target not found in candidates"
+
+            await self.send(ack_msg)
+
+            # Broadcast to host and viewers
+            if all_propagated:
+                result = await db.execute(select(Game).where(Game.id == self.game_id))
+                game = result.scalar_one_or_none()
+
+                if game:
+                    expanded_links = expand_discovered_links(
+                        game.discovered_zone_links or [], game.zone_links or []
+                    )
+
+                    logger.info(
+                        "[MOD] Broadcasting %d Medal-propagated links, %d total discovered",
+                        len(all_propagated),
+                        len(expanded_links),
+                    )
+                    await manager.broadcast_to_all(
+                        self.game_id,
+                        {
+                            "type": "discovery",
+                            "propagated": all_propagated,
+                            "discovered_zone_links": expanded_links,
+                            "stats": stats,
+                            "focus_target": destination_zone,
+                        },
+                        exclude=self.ws,
+                    )
+
     async def _handle_discovery_v2(self, data: dict):
         """Handle discovery with map_id + position (server resolves zone names)."""
         logger.debug("[Discover] Received: %s", data)
@@ -233,6 +461,12 @@ class ModClient(Client):
         if not source_map_id or not target_map_id:
             logger.warning("[MOD] Missing map_id in discovery_v2")
             await self.send({"type": "error", "message": "Missing source_map_id or target_map_id"})
+            return
+
+        # Handle Medal warp specially: the medal can be used from anywhere,
+        # so we ignore the source position and find the link by required_item
+        if warp_type == "Medal":
+            await self._handle_medal_discovery(data)
             return
 
         resolver = get_resolver()

@@ -1399,7 +1399,390 @@ class TestDiscoveryV2Handler:
                 }
             )
 
-        # Should complete without error
+        # Should complete without error (game not found)
         call_args = mock_client.send.call_args[0][0]
         assert call_args["type"] == "discovery_v2_ack"
         assert call_args["propagated"] == []
+
+
+# =============================================================================
+# TestMedalDiscoveryHandler
+# =============================================================================
+
+
+class TestMedalDiscoveryHandler:
+    """Tests for _handle_medal_discovery method.
+
+    The Pureblood Knight's Medal can be used from anywhere, so the source
+    position is ignored. Instead, we find the link with required_item="Pureblood
+    Knight's Medal" and match only by destination.
+    """
+
+    @pytest.fixture
+    def zone_links_with_medal(self):
+        """Zone links including a Medal link."""
+        return [
+            {
+                "id": "link1",
+                "source": "Chapel of Anticipation",
+                "target": "Before Regal Ancestor Spirit",
+                "source_key": "chapel_start",
+                "target_key": "siofra_nokron_preboss",
+                "required_item": "Pureblood Knight's Medal",
+                "type": "random",
+                "is_one_way": True,
+            },
+            {
+                "id": "link2",
+                "source": "Chapel of Anticipation",
+                "target": "Limgrave",
+                "source_key": "chapel_start",
+                "target_key": "limgrave",
+                "type": "preexisting",
+            },
+            {
+                "id": "link3",
+                "source": "Limgrave",
+                "target": "Stormveil Castle",
+                "source_key": "limgrave",
+                "target_key": "stormveil",
+                "type": "random",
+            },
+        ]
+
+    def _make_mock_game(self, zone_links, discovered_links=None, zones=None):
+        """Helper to create a mock game object."""
+        game = MagicMock()
+        game.zone_links = zone_links
+        game.discovered_zone_links = discovered_links or []
+        game.zones = zones
+        return game
+
+    def _setup_db_mock(self, mock_session, game):
+        """Helper to setup database mock."""
+        mock_db = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = game
+        mock_db.execute = AsyncMock(return_value=mock_result)
+        mock_db.commit = AsyncMock()
+        mock_db.expire_all = MagicMock()
+        mock_session.return_value.__aenter__.return_value = mock_db
+        return mock_db
+
+    @pytest.mark.asyncio
+    async def test_medal_discovery_routes_to_handler(self, mock_client):
+        """Medal warp_type should route to _handle_medal_discovery."""
+        mock_client._handle_medal_discovery = AsyncMock()
+
+        await mock_client._handle_discovery_v2(
+            {
+                "source_map_id": "m60_41_36_00",
+                "target_map_id": "m12_02_00_00",
+                "source_pos": {"x": 100, "y": 50, "z": 200},
+                "target_pos": {"x": -50, "y": 100, "z": 300},
+                "warp_type": "Medal",
+            }
+        )
+
+        mock_client._handle_medal_discovery.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_medal_discovery_ignores_source_position(
+        self, mock_client, zone_links_with_medal, mock_manager
+    ):
+        """Medal discovery should not use source position to find zones."""
+        mock_game = self._make_mock_game(zone_links_with_medal)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Even if source would resolve to some random zone, it shouldn't matter
+        mock_resolver.resolve_all_candidates.return_value = [
+            ("siofra_nokron_preboss", "Before Regal Ancestor Spirit"),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Chapel of Anticipation")
+        discovery_result.main_links = [
+            DiscoveredLink("Chapel of Anticipation", "Before Regal Ancestor Spirit", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_medal_discovery(
+                {
+                    "source_map_id": "m60_41_36_00",  # Random source map
+                    "target_map_id": "m12_02_00_00",
+                    "source_pos": {"x": 100, "y": 50, "z": 200},  # Random position
+                    "target_pos": {"x": -50, "y": 100, "z": 300},
+                }
+            )
+
+        # resolve_all_candidates should only be called once (for target)
+        assert mock_resolver.resolve_all_candidates.call_count == 1
+
+        # Should discover the Medal link
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["type"] == "discovery_v2_ack"
+        assert call_args["resolved"] == [
+            {"source": "Chapel of Anticipation", "target": "Before Regal Ancestor Spirit"}
+        ]
+
+    @pytest.mark.asyncio
+    async def test_medal_discovery_matches_by_target_key(
+        self, mock_client, zone_links_with_medal, mock_manager
+    ):
+        """Medal discovery should match using target_key when available."""
+        mock_game = self._make_mock_game(zone_links_with_medal)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Target candidates include the medal target by key
+        mock_resolver.resolve_all_candidates.return_value = [
+            ("siofra_nokron_preboss", "Before Regal Ancestor Spirit"),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Chapel of Anticipation")
+        discovery_result.main_links = [
+            DiscoveredLink("Chapel of Anticipation", "Before Regal Ancestor Spirit", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_medal_discovery(
+                {
+                    "target_map_id": "m12_02_00_00",
+                    "target_pos": {"x": -50, "y": 100, "z": 300},
+                }
+            )
+
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["current_zone"] == "Before Regal Ancestor Spirit"
+
+    @pytest.mark.asyncio
+    async def test_medal_discovery_matches_by_display_name(
+        self, mock_client, zone_links_with_medal, mock_manager
+    ):
+        """Medal discovery should fallback to display name matching."""
+        mock_game = self._make_mock_game(zone_links_with_medal)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Target candidates match by display name (different key)
+        mock_resolver.resolve_all_candidates.return_value = [
+            ("different_key", "Before Regal Ancestor Spirit"),  # Same name, different key
+        ]
+
+        discovery_result = DiscoveryResult(origin="Chapel of Anticipation")
+        discovery_result.main_links = [
+            DiscoveredLink("Chapel of Anticipation", "Before Regal Ancestor Spirit", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_medal_discovery(
+                {
+                    "target_map_id": "m12_02_00_00",
+                    "target_pos": {"x": -50, "y": 100, "z": 300},
+                }
+            )
+
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["current_zone"] == "Before Regal Ancestor Spirit"
+
+    @pytest.mark.asyncio
+    async def test_medal_discovery_no_medal_link_in_zone_links(self, mock_client, mock_manager):
+        """Should return error when no Medal link exists in zone_links."""
+        zone_links_no_medal = [
+            {
+                "id": "link1",
+                "source": "Limgrave",
+                "target": "Stormveil Castle",
+                "type": "random",
+            },
+        ]
+        mock_game = self._make_mock_game(zone_links_no_medal)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.return_value = [
+            ("some_zone", "Some Zone"),
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_medal_discovery(
+                {
+                    "target_map_id": "m12_02_00_00",
+                    "target_pos": {"x": -50, "y": 100, "z": 300},
+                }
+            )
+
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["type"] == "discovery_v2_ack"
+        assert call_args["error"] == "No Medal link found in spoiler log"
+        assert call_args["propagated"] == []
+
+    @pytest.mark.asyncio
+    async def test_medal_discovery_target_not_in_candidates(
+        self, mock_client, zone_links_with_medal, mock_manager
+    ):
+        """Should return error when Medal target doesn't match any candidate."""
+        mock_game = self._make_mock_game(zone_links_with_medal)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Candidates don't include the medal target
+        mock_resolver.resolve_all_candidates.return_value = [
+            ("limgrave", "Limgrave"),
+            ("stormveil", "Stormveil Castle"),
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 0, "total": 3, "percent": 0},
+            ),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_medal_discovery(
+                {
+                    "target_map_id": "m12_02_00_00",
+                    "target_pos": {"x": -50, "y": 100, "z": 300},
+                }
+            )
+
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["type"] == "discovery_v2_ack"
+        assert call_args["error"] == "Medal target not found in candidates"
+        assert call_args["resolved"] == []
+
+    @pytest.mark.asyncio
+    async def test_medal_discovery_no_target_candidates(self, mock_client, zone_links_with_medal):
+        """Should return error when no target zone candidates found."""
+        mock_game = self._make_mock_game(zone_links_with_medal)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.return_value = []  # No candidates
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_medal_discovery(
+                {
+                    "target_map_id": "m12_02_00_00",
+                    "target_pos": {"x": -50, "y": 100, "z": 300},
+                }
+            )
+
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["type"] == "discovery_v2_ack"
+        assert call_args["error"] == "No target zone candidates found for Medal warp"
+
+    @pytest.mark.asyncio
+    async def test_medal_discovery_broadcasts_to_host_and_viewers(
+        self, mock_client, zone_links_with_medal, mock_manager
+    ):
+        """Medal discovery should broadcast to connected clients."""
+        mock_game = self._make_mock_game(zone_links_with_medal)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.return_value = [
+            ("siofra_nokron_preboss", "Before Regal Ancestor Spirit"),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Chapel of Anticipation")
+        discovery_result.main_links = [
+            DiscoveredLink("Chapel of Anticipation", "Before Regal Ancestor Spirit", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch(
+                "fogtracker.websocket.mod.expand_discovered_links",
+                return_value=[{"zone_link_id": "link1"}],
+            ),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_medal_discovery(
+                {
+                    "target_map_id": "m12_02_00_00",
+                    "target_pos": {"x": -50, "y": 100, "z": 300},
+                }
+            )
+
+        mock_manager.broadcast_to_all.assert_called_once()
+        broadcast_args = mock_manager.broadcast_to_all.call_args
+        assert broadcast_args[0][0] == mock_client.game_id
+        broadcast_data = broadcast_args[0][1]
+        assert broadcast_data["type"] == "discovery"
+        assert broadcast_data["focus_target"] == "Before Regal Ancestor Spirit"
