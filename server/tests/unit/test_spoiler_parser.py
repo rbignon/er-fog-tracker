@@ -501,6 +501,39 @@ class TestOneWayDetection:
         assert conn.conn_type == "preexisting"
         assert conn.is_one_way is False  # Elevator = bidirectional
 
+    def test_transporter_chest_is_one_way(self):
+        """Transporter chest with 'arriving' target is one-way.
+
+        The transporter chest teleports you somewhere and you can't use
+        the arrival point to return.
+        """
+        line = (
+            "  Random: Limgrave (opening the transporter chest in Dragon-Burnt Ruins) "
+            "--> Caelid - Sellia Crystal Tunnel (arriving in the middle of Sellia Crystal Tunnel)"
+        )
+        conn = _parse_connection_line(line)
+        assert conn is not None
+        assert conn.source == "Limgrave"
+        assert conn.target == "Caelid - Sellia Crystal Tunnel"
+        assert conn.is_one_way is True
+
+    def test_from_deeproot_destination_is_one_way(self):
+        """Destinations 'from Deeproot' are one-way.
+
+        The sending gate from Deeproot leads to a point in Leyndell that
+        cannot be used as an exit, regardless of what the source is.
+        """
+        line = (
+            "  Random: Divine Tower of Liurnia "
+            "(opening the door at the bottom of the flipped tower) "
+            "--> Leyndell (arriving at the start of Leyndell from Deeproot)"
+        )
+        conn = _parse_connection_line(line)
+        assert conn is not None
+        assert conn.source == "Divine Tower of Liurnia"
+        assert conn.target == "Leyndell"
+        assert conn.is_one_way is True
+
 
 class TestDataclasses:
     """Tests for dataclass structures."""

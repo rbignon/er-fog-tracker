@@ -28,6 +28,7 @@ ALWAYS_ONE_WAY_PATTERNS = [
     re.compile(r"warp to", re.IGNORECASE),
     re.compile(r"warp after", re.IGNORECASE),
     re.compile(r"dropping", re.IGNORECASE),  # Drop-down connections (can't go back up)
+    re.compile(r"from Deeproot", re.IGNORECASE),  # Sending gate destination from Deeproot
 ]
 
 # "arriving at/in/from" is only one-way if the SOURCE contains a teleport mechanism
@@ -41,6 +42,7 @@ TELEPORT_SOURCE_PATTERNS = [
     re.compile(r"warp", re.IGNORECASE),
     re.compile(r"Horned Remains", re.IGNORECASE),
     re.compile(r"lying down", re.IGNORECASE),
+    re.compile(r"transporter chest", re.IGNORECASE),
 ]
 
 # Known key items that can be mentioned in fog log descriptions
