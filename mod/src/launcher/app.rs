@@ -406,6 +406,8 @@ impl LauncherApp {
                             );
                             self.token_connect_btn.set_text("Connect");
                             self.token_connect_btn.set_enabled(true);
+                            self.token_url_input.set_enabled(true);
+                            self.token_input.set_enabled(true);
                             return;
                         }
                         VersionCompatibility::ServerTooOld { server_version } => {
@@ -420,6 +422,8 @@ impl LauncherApp {
                             );
                             self.token_connect_btn.set_text("Connect");
                             self.token_connect_btn.set_enabled(true);
+                            self.token_url_input.set_enabled(true);
+                            self.token_input.set_enabled(true);
                             return;
                         }
                         VersionCompatibility::UpdateAvailable { server_version } => {
@@ -461,12 +465,16 @@ impl LauncherApp {
                     .set_text(&format!("Connected as: {}", display));
                 self.token_connect_btn.set_text("Connect");
                 self.token_connect_btn.set_enabled(true);
+                self.token_url_input.set_enabled(true);
+                self.token_input.set_enabled(true);
                 self.show_screen(AppScreen::GameSelection);
             }
             TaskResult::TokenValidated(Err(e)) => {
                 self.token_error.set_text(&format!("Error: {}", e));
                 self.token_connect_btn.set_text("Connect");
                 self.token_connect_btn.set_enabled(true);
+                self.token_url_input.set_enabled(true);
+                self.token_input.set_enabled(true);
             }
             TaskResult::GamesLoaded(Ok(games)) => {
                 // Update data FIRST (before UI operations that trigger on_game_selected)
@@ -730,6 +738,8 @@ impl LauncherApp {
         self.token_error.set_text("");
         self.token_connect_btn.set_text("Connecting...");
         self.token_connect_btn.set_enabled(false);
+        self.token_url_input.set_enabled(false);
+        self.token_input.set_enabled(false);
         data.validate_token(url, token);
     }
 
