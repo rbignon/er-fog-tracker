@@ -60,6 +60,210 @@ class ModClient(Client):
         message = data.get("message", "")
         logger.info("[MOD DEBUG] %s", message)
 
+    # -------------------------------------------------------------------------
+    # Helper methods for zone resolution and discovery
+    # -------------------------------------------------------------------------
+
+    def _resolve_zone_candidates(
+        self, map_id: str, pos: dict, play_region_id: int | None, label: str = ""
+    ) -> list[tuple[str, str]]:
+        """Resolve zone candidates for a map position.
+
+        Uses Col resolution first (most precise), then position-based fallback.
+        Returns list of (zone_key, display_name) tuples, with Col result first if found.
+        """
+        resolver = get_resolver()
+
+        # Try Col resolution first
+        col_internal, col_display = None, None
+        if play_region_id:
+            col = f"h{play_region_id:06x}"
+            col_internal, col_display = resolver.resolve_by_col(map_id, col)
+            if col_display:
+                logger.info("[MOD] %s resolved by Col: %s", label or "Zone", col_display)
+
+        # Get position-based candidates
+        candidates = resolver.resolve_all_candidates(
+            map_id,
+            pos.get("x", 0),
+            pos.get("y", 0),
+            pos.get("z", 0),
+        )
+
+        # Prepend Col result if found
+        if col_internal:
+            candidates = [(col_internal, col_display)] + [
+                c for c in candidates if c[0] != col_internal
+            ]
+
+        return candidates
+
+    def _merge_discovery_results(
+        self, all_discovery_results: list[DiscoveryResult]
+    ) -> tuple[DiscoveryResult, DiscoveryResult | None]:
+        """Merge multiple discovery results into one.
+
+        Returns (merged_result, primary_result) where primary_result is the one
+        that actually discovered new links (has main_links).
+        """
+        primary_result = None
+        for dr in all_discovery_results:
+            if dr.main_links:
+                primary_result = dr
+                break
+        if not primary_result and all_discovery_results:
+            primary_result = all_discovery_results[0]
+
+        merged_result = DiscoveryResult(origin=primary_result.origin if primary_result else "")
+        for dr in all_discovery_results:
+            merged_result.main_links.extend(dr.main_links)
+            merged_result.backprop_links.extend(dr.backprop_links)
+            merged_result.forward_links.extend(dr.forward_links)
+
+        return merged_result, primary_result
+
+    async def _finalize_and_send_discovery(
+        self,
+        db,
+        resolved_links: list[dict],
+        all_discovery_results: list[DiscoveryResult],
+        target_candidates: list[tuple[str, str]],
+        error_msg_if_empty: str,
+    ):
+        """Finalize discovery: compute stats, log, send ack, and broadcast.
+
+        This method handles the common post-discovery flow:
+        1. Merge discovery results
+        2. Refetch game data
+        3. Compute destination zone and exits
+        4. Compute stats
+        5. Log summary
+        6. Send ack to mod
+        7. Broadcast to host/viewers
+        """
+        merged_result, primary_result = self._merge_discovery_results(all_discovery_results)
+        all_propagated = merged_result.all_links()
+
+        # Expire and refetch game
+        db.expire_all()
+        result = await db.execute(select(Game).where(Game.id == self.game_id))
+        game = result.scalar_one_or_none()
+
+        # Compute destination zone and exits
+        exits = []
+        destination_zone = None
+        if resolved_links and game:
+            # Find the link that corresponds to the primary discovery result
+            link = None
+            if primary_result and primary_result.main_links:
+                main_target = primary_result.main_links[0].target
+                for rl in resolved_links:
+                    if rl["target"] == main_target or rl["source"] == main_target:
+                        link = rl
+                        break
+            if not link:
+                link = resolved_links[0]
+
+            target_display_names = {c[1] for c in target_candidates}
+
+            if link["target"] in target_display_names:
+                destination_zone = link["target"]
+            elif link["source"] in target_display_names:
+                destination_zone = link["source"]
+            else:
+                destination_zone = link["target"]
+
+            exits = compute_zone_exits(
+                game.zone_links or [],
+                game.discovered_zone_links or [],
+                destination_zone,
+            )
+
+        # Compute stats
+        stats = {"discovered": 0, "total": 0, "percent": 0}
+        if game:
+            stats = compute_discovery_stats(game.zone_links or [], game.discovered_zone_links or [])
+
+        # Log discovery summary
+        if merged_result.total_count() > 0:
+            summary = format_discovery_summary(
+                merged_result,
+                discovered_by="mod",
+                total_discovered=stats["discovered"],
+                total_links=stats["total"],
+            )
+            for line in summary.split("\n"):
+                logger.info(line)
+
+        # Log in-game display preview
+        if destination_zone:
+            ingame = format_ingame_display(destination_zone, exits, stats)
+            for line in ingame.split("\n"):
+                logger.info(line)
+
+        # Get zone scaling
+        scaling = None
+        if destination_zone and game:
+            scaling = get_zone_scaling(game.zones, destination_zone)
+
+        # Send ack to mod
+        ack_msg = {
+            "type": "discovery_v2_ack",
+            "propagated": all_propagated,
+            "resolved": resolved_links,
+            "current_zone": destination_zone,
+            "exits": exits,
+            "stats": stats,
+            "scaling": scaling,
+        }
+        if not resolved_links:
+            ack_msg["error"] = error_msg_if_empty
+
+        await self.send(ack_msg)
+
+        # Broadcast to host and viewers
+        if all_propagated:
+            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            game = result.scalar_one_or_none()
+
+            if game:
+                raw_links = game.discovered_zone_links or []
+                expanded_links = expand_discovered_links(
+                    game.discovered_zone_links or [], game.zone_links or []
+                )
+
+                if len(expanded_links) != len(raw_links):
+                    logger.warning(
+                        "[MOD] Expansion lost links! Raw: %d, Expanded: %d",
+                        len(raw_links),
+                        len(expanded_links),
+                    )
+
+                logger.info(
+                    "[MOD] Broadcasting %d propagated links, %d total discovered",
+                    len(all_propagated),
+                    len(expanded_links),
+                )
+                await manager.broadcast_to_all(
+                    self.game_id,
+                    {
+                        "type": "discovery",
+                        "propagated": all_propagated,
+                        "discovered_zone_links": expanded_links,
+                        "stats": stats,
+                        "focus_target": destination_zone,
+                    },
+                    exclude=self.ws,
+                )
+            else:
+                logger.warning("[MOD] Game not found for broadcast after propagation")
+        else:
+            logger.debug("[MOD] No links propagated, skipping broadcast")
+
+    # -------------------------------------------------------------------------
+    # Message handlers
+    # -------------------------------------------------------------------------
+
     async def _handle_tag_update(self, data: dict):
         """Handle tag update from mod."""
         zone = data.get("zone")
@@ -208,39 +412,18 @@ class ModClient(Client):
         target_pos = data.get("target_pos", {})
         target_play_region_id = data.get("target_play_region_id")
 
-        target_col = f"h{target_play_region_id:06x}" if target_play_region_id else None
-
         logger.info(
-            "[MOD] Medal discovery: target=%s (%.1f, %.1f, %.1f) col=%s",
+            "[MOD] Medal discovery: target=%s (%.1f, %.1f, %.1f)",
             target_map_id,
             target_pos.get("x", 0),
             target_pos.get("y", 0),
             target_pos.get("z", 0),
-            target_col,
         )
-
-        resolver = get_resolver()
 
         # Resolve target candidates
-        target_col_internal, target_col_display = None, None
-        if target_col:
-            target_col_internal, target_col_display = resolver.resolve_by_col(
-                target_map_id, target_col
-            )
-            if target_col_display:
-                logger.info("[MOD] Target resolved by Col: %s", target_col_display)
-
-        target_candidates = resolver.resolve_all_candidates(
-            target_map_id,
-            target_pos.get("x", 0),
-            target_pos.get("y", 0),
-            target_pos.get("z", 0),
+        target_candidates = self._resolve_zone_candidates(
+            target_map_id, target_pos, target_play_region_id, label="Target"
         )
-
-        if target_col_internal:
-            target_candidates = [(target_col_internal, target_col_display)] + [
-                c for c in target_candidates if c[0] != target_col_internal
-            ]
 
         if not target_candidates:
             logger.warning("[MOD] No target zone candidates for Medal warp to %s", target_map_id)
@@ -263,11 +446,14 @@ class ModClient(Client):
 
             if game and game.zone_links:
                 # Find the Medal link (required_item = "Pureblood Knight's Medal")
-                medal_link = None
-                for zl in game.zone_links:
-                    if zl.get("required_item") == "Pureblood Knight's Medal":
-                        medal_link = zl
-                        break
+                medal_link = next(
+                    (
+                        zl
+                        for zl in game.zone_links
+                        if zl.get("required_item") == "Pureblood Knight's Medal"
+                    ),
+                    None,
+                )
 
                 if not medal_link:
                     logger.warning("[MOD] No Medal link found in zone_links")
@@ -298,14 +484,13 @@ class ModClient(Client):
 
                 if match_found:
                     source_display = medal_link.get("source")
-                    target_display = medal_target
-                    resolved_links.append({"source": source_display, "target": target_display})
+                    resolved_links.append({"source": source_display, "target": medal_target})
 
                     discovery_result = await propagate_discovery(
                         db,
                         self.game_id,
                         source_display,
-                        target_display,
+                        medal_target,
                         discovered_by="mod",
                     )
                     all_discovery_results.append(discovery_result)
@@ -319,111 +504,13 @@ class ModClient(Client):
 
             await db.commit()
 
-            # Merge discovery results
-            primary_result = None
-            for dr in all_discovery_results:
-                if dr.main_links:
-                    primary_result = dr
-                    break
-            if not primary_result and all_discovery_results:
-                primary_result = all_discovery_results[0]
-
-            merged_result = DiscoveryResult(origin=primary_result.origin if primary_result else "")
-            for dr in all_discovery_results:
-                merged_result.main_links.extend(dr.main_links)
-                merged_result.backprop_links.extend(dr.backprop_links)
-                merged_result.forward_links.extend(dr.forward_links)
-
-            all_propagated = merged_result.all_links()
-
-            db.expire_all()
-
-            result = await db.execute(select(Game).where(Game.id == self.game_id))
-            game = result.scalar_one_or_none()
-
-            # Compute exits from destination zone
-            exits = []
-            destination_zone = None
-            if resolved_links and game:
-                link = resolved_links[0]
-                destination_zone = link["target"]
-
-                exits = compute_zone_exits(
-                    game.zone_links or [],
-                    game.discovered_zone_links or [],
-                    destination_zone,
-                )
-
-            # Compute stats
-            stats = {"discovered": 0, "total": 0, "percent": 0}
-            if game:
-                stats = compute_discovery_stats(
-                    game.zone_links or [], game.discovered_zone_links or []
-                )
-
-            # Log discovery summary
-            if merged_result.total_count() > 0:
-                summary = format_discovery_summary(
-                    merged_result,
-                    discovered_by="mod",
-                    total_discovered=stats["discovered"],
-                    total_links=stats["total"],
-                )
-                for line in summary.split("\n"):
-                    logger.info(line)
-
-            # Log in-game display preview
-            if destination_zone:
-                ingame = format_ingame_display(destination_zone, exits, stats)
-                for line in ingame.split("\n"):
-                    logger.info(line)
-
-            # Get zone scaling
-            scaling = None
-            if destination_zone and game:
-                scaling = get_zone_scaling(game.zones, destination_zone)
-
-            # Send ack to mod
-            ack_msg = {
-                "type": "discovery_v2_ack",
-                "propagated": all_propagated,
-                "resolved": resolved_links,
-                "current_zone": destination_zone,
-                "exits": exits,
-                "stats": stats,
-                "scaling": scaling,
-            }
-            if not resolved_links:
-                ack_msg["error"] = "Medal target not found in candidates"
-
-            await self.send(ack_msg)
-
-            # Broadcast to host and viewers
-            if all_propagated:
-                result = await db.execute(select(Game).where(Game.id == self.game_id))
-                game = result.scalar_one_or_none()
-
-                if game:
-                    expanded_links = expand_discovered_links(
-                        game.discovered_zone_links or [], game.zone_links or []
-                    )
-
-                    logger.info(
-                        "[MOD] Broadcasting %d Medal-propagated links, %d total discovered",
-                        len(all_propagated),
-                        len(expanded_links),
-                    )
-                    await manager.broadcast_to_all(
-                        self.game_id,
-                        {
-                            "type": "discovery",
-                            "propagated": all_propagated,
-                            "discovered_zone_links": expanded_links,
-                            "stats": stats,
-                            "focus_target": destination_zone,
-                        },
-                        exclude=self.ws,
-                    )
+            await self._finalize_and_send_discovery(
+                db,
+                resolved_links,
+                all_discovery_results,
+                target_candidates,
+                error_msg_if_empty="Medal target not found in candidates",
+            )
 
     async def _handle_discovery_v2(self, data: dict):
         """Handle discovery with map_id + position (server resolves zone names)."""
@@ -469,49 +556,13 @@ class ModClient(Client):
             await self._handle_medal_discovery(data)
             return
 
-        resolver = get_resolver()
-
-        # Try exact Col resolution first (if available)
-        source_col_internal, source_col_display = None, None
-        target_col_internal, target_col_display = None, None
-
-        if source_col:
-            source_col_internal, source_col_display = resolver.resolve_by_col(
-                source_map_id, source_col
-            )
-            if source_col_display:
-                logger.info("[MOD] Source resolved by Col: %s", source_col_display)
-
-        if target_col:
-            target_col_internal, target_col_display = resolver.resolve_by_col(
-                target_map_id, target_col
-            )
-            if target_col_display:
-                logger.info("[MOD] Target resolved by Col: %s", target_col_display)
-
-        # Get all candidate zones for source and target (fallback)
-        source_candidates = resolver.resolve_all_candidates(
-            source_map_id,
-            source_pos.get("x", 0),
-            source_pos.get("y", 0),
-            source_pos.get("z", 0),
+        # Resolve zone candidates for source and target
+        source_candidates = self._resolve_zone_candidates(
+            source_map_id, source_pos, source_play_region_id, label="Source"
         )
-        target_candidates = resolver.resolve_all_candidates(
-            target_map_id,
-            target_pos.get("x", 0),
-            target_pos.get("y", 0),
-            target_pos.get("z", 0),
+        target_candidates = self._resolve_zone_candidates(
+            target_map_id, target_pos, target_play_region_id, label="Target"
         )
-
-        # If Col resolved, prepend to candidates with highest priority
-        if source_col_internal:
-            source_candidates = [(source_col_internal, source_col_display)] + [
-                c for c in source_candidates if c[0] != source_col_internal
-            ]
-        if target_col_internal:
-            target_candidates = [(target_col_internal, target_col_display)] + [
-                c for c in target_candidates if c[0] != target_col_internal
-            ]
 
         logger.debug(
             "[MOD] Zone candidates: source=%s, target=%s",
@@ -543,6 +594,7 @@ class ModClient(Client):
             if game and game.zone_links:
                 # If entity_mapping is available, use it to improve zone candidate ordering
                 if destination_entity_id and game.entity_mapping:
+                    resolver = get_resolver()
                     entity_info = game.entity_mapping.get(str(destination_entity_id))
                     if entity_info:
                         emevd_source_map = entity_info.get("source_map")
@@ -779,149 +831,13 @@ class ModClient(Client):
 
             await db.commit()
 
-            # Merge all discovery results into one for summary logging
-            # Find the result that actually discovered new links (has main_links)
-            # to use its origin for the merged result
-            primary_result = None
-            for dr in all_discovery_results:
-                if dr.main_links:
-                    primary_result = dr
-                    break
-            if not primary_result and all_discovery_results:
-                primary_result = all_discovery_results[0]
-
-            merged_result = DiscoveryResult(origin=primary_result.origin if primary_result else "")
-            for dr in all_discovery_results:
-                merged_result.main_links.extend(dr.main_links)
-                merged_result.backprop_links.extend(dr.backprop_links)
-                merged_result.forward_links.extend(dr.forward_links)
-
-            # Build flat list for backward compatibility
-            all_propagated = merged_result.all_links()
-
-            # Expire cached objects to ensure fresh data after propagate_discovery
-            db.expire_all()
-
-            # Refetch game to get fresh data after expire_all()
-            result = await db.execute(select(Game).where(Game.id == self.game_id))
-            game = result.scalar_one_or_none()
-
-            # Compute exits from the destination zone
-            # Use the link that actually discovered something new (from primary_result)
-            exits = []
-            destination_zone = None
-            if resolved_links and game:
-                # Find the link that corresponds to the primary discovery result
-                link = None
-                if primary_result and primary_result.main_links:
-                    # Match resolved_links to the one with the actual discovery
-                    main_target = primary_result.main_links[0].target
-                    for rl in resolved_links:
-                        if rl["target"] == main_target or rl["source"] == main_target:
-                            link = rl
-                            break
-                if not link:
-                    link = resolved_links[0]
-
-                target_display_names = {c[1] for c in target_candidates}
-
-                if link["target"] in target_display_names:
-                    destination_zone = link["target"]
-                elif link["source"] in target_display_names:
-                    destination_zone = link["source"]
-                else:
-                    destination_zone = link["target"]
-
-                exits = compute_zone_exits(
-                    game.zone_links or [],
-                    game.discovered_zone_links or [],
-                    destination_zone,
-                )
-
-            # Compute discovery stats
-            stats = {"discovered": 0, "total": 0, "percent": 0}
-            if game:
-                stats = compute_discovery_stats(
-                    game.zone_links or [], game.discovered_zone_links or []
-                )
-
-            # Log discovery summary
-            if merged_result.total_count() > 0:
-                summary = format_discovery_summary(
-                    merged_result,
-                    discovered_by="mod",
-                    total_discovered=stats["discovered"],
-                    total_links=stats["total"],
-                )
-                for line in summary.split("\n"):
-                    logger.info(line)
-
-            # Log in-game display preview
-            if destination_zone:
-                ingame = format_ingame_display(destination_zone, exits, stats)
-                for line in ingame.split("\n"):
-                    logger.info(line)
-
-            # Get zone scaling for destination
-            scaling = None
-            if destination_zone and game:
-                scaling = get_zone_scaling(game.zones, destination_zone)
-
-            # Send ack to mod
-            ack_msg = {
-                "type": "discovery_v2_ack",
-                "propagated": all_propagated,
-                "resolved": resolved_links,
-                "current_zone": destination_zone,
-                "exits": exits,
-                "stats": stats,
-                "scaling": scaling,
-            }
-            if not resolved_links:
-                ack_msg["error"] = "No matching link found in spoiler log"
-
-            await self.send(ack_msg)
-
-            # Broadcast to host and viewers
-            if all_propagated:
-                # Refetch game to ensure we have ALL discovered_zone_links after multiple propagate calls
-                result = await db.execute(select(Game).where(Game.id == self.game_id))
-                game = result.scalar_one_or_none()
-
-                if game:
-                    raw_links = game.discovered_zone_links or []
-                    expanded_links = expand_discovered_links(
-                        game.discovered_zone_links or [], game.zone_links or []
-                    )
-
-                    # Debug: check if expansion dropped any links
-                    if len(expanded_links) != len(raw_links):
-                        logger.warning(
-                            "[MOD] Expansion lost links! Raw: %d, Expanded: %d",
-                            len(raw_links),
-                            len(expanded_links),
-                        )
-
-                    logger.info(
-                        "[MOD] Broadcasting %d propagated links, %d total discovered to host/viewers",
-                        len(all_propagated),
-                        len(expanded_links),
-                    )
-                    await manager.broadcast_to_all(
-                        self.game_id,
-                        {
-                            "type": "discovery",
-                            "propagated": all_propagated,
-                            "discovered_zone_links": expanded_links,
-                            "stats": stats,
-                            "focus_target": destination_zone,
-                        },
-                        exclude=self.ws,
-                    )
-                else:
-                    logger.warning("[MOD] Game not found for broadcast after propagation")
-            else:
-                logger.debug("[MOD] No links propagated, skipping broadcast")
+            await self._finalize_and_send_discovery(
+                db,
+                resolved_links,
+                all_discovery_results,
+                target_candidates,
+                error_msg_if_empty="No matching link found in spoiler log",
+            )
 
     @classmethod
     async def handle_connection(cls, websocket: WebSocket, game_id: UUID):
