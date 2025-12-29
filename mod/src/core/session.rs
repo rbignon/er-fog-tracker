@@ -65,8 +65,6 @@ pub struct SessionState {
 pub struct TrackerSession {
     warp_tracker: WarpTracker,
     state: SessionState,
-    /// Target grace entity ID captured when fast travel is requested (for zone_query)
-    last_target_grace_entity_id: Option<u32>,
 }
 
 impl TrackerSession {
@@ -75,7 +73,6 @@ impl TrackerSession {
         Self {
             warp_tracker: WarpTracker::new(),
             state: SessionState::default(),
-            last_target_grace_entity_id: None,
         }
     }
 
@@ -150,14 +147,6 @@ impl TrackerSession {
     {
         let mut events = Vec::new();
 
-        // 0. Capture target grace entity ID when warp is requested (for fast travel zone queries)
-        // We capture this early so it's available when zone_query is sent after loading screen
-        // Note: We use get_target_grace_entity_id() which reads the grace entity ID (offset 0xB3C)
-        // rather than get_destination_entity_id() which reads the spawn point entity ID (offset 0x3C)
-        if warp_detector.is_warp_requested() {
-            self.last_target_grace_entity_id = Some(warp_detector.get_target_grace_entity_id());
-        }
-
         // 1. Check for loading screen exit BEFORE check_warp (which updates state)
         // This must be done first because check_warp updates was_position_readable
         let just_exited_loading = self.warp_tracker.just_exited_loading_screen(game_state);
@@ -174,11 +163,15 @@ impl TrackerSession {
         if just_exited_loading {
             if server.is_connected() {
                 if let Some(pos) = game_state.read_position() {
-                    // Pass grace_entity_id for fast travel zone queries
-                    // The server will use this for precise zone resolution
-                    server.send_zone_query(&pos, self.last_target_grace_entity_id);
-                    // Clear the stored entity ID after use
-                    self.last_target_grace_entity_id = None;
+                    // Read LastGrace directly - after fast travel, this will be the destination grace
+                    // We read it now (after loading) because LastGrace is updated when arriving at a grace
+                    let last_grace = warp_detector.get_last_grace_entity_id();
+                    let grace_entity_id = if last_grace != 0 {
+                        Some(last_grace)
+                    } else {
+                        None
+                    };
+                    server.send_zone_query(&pos, grace_entity_id);
                     // Clear zone while waiting for response
                     self.state.current_zone = None;
                     self.state.exits.clear();
@@ -709,43 +702,34 @@ mod tests {
     // -------------------------------------------------------------------------
 
     #[test]
-    fn test_zone_query_includes_grace_entity_id_for_fast_travel() {
-        // Simulate fast travel: warp requested with grace entity ID, then loading screen
+    fn test_zone_query_includes_last_grace_entity_id() {
+        // After fast travel, LastGrace contains the destination grace
+        // The zone_query should include this value
         const GRACE_ENTITY_ID: u32 = 1042362951; // "The First Step" grace
 
         let game_state = MockGameState::new(
             vec![
                 Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Starting position
-                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Warp requested
                 None,                                          // Loading screen
                 Some(make_pos(0x3C2C2400, 200.0, 0.0, 200.0)), // Destination (Limgrave)
             ],
-            vec![Some(0), Some(0), Some(0), Some(0)],
+            vec![Some(0), Some(0), Some(0)],
         );
         let warp = MockWarpDetector::new();
         let mut server = MockServerConnection::new();
-        // Sync session to avoid zone query on first readable frame
         let mut session = synced_session(&game_state, &warp);
         game_state.advance_frame();
 
-        // Frame 1: At starting position, warp is requested
-        // Note: set_target_grace() sets the grace entity ID (read from offset 0xB3C)
-        // while set_warp() sets the spawn point entity ID (read from offset 0x3C)
-        warp.set_warp(true, 0, 0x3C2C2400);
-        warp.set_target_grace(GRACE_ENTITY_ID);
+        // Frame 1: Loading screen
         session.update(&game_state, &warp, &mut server);
         game_state.advance_frame();
 
-        // Frame 2: Loading screen
-        session.update(&game_state, &warp, &mut server);
-        game_state.advance_frame();
-
-        // Frame 3: Position readable - zone query should include grace entity ID
-        warp.set_warp(false, 0, 0); // Warp completed
-        warp.set_target_grace(0); // Grace ID may be cleared after warp
+        // Frame 2: Position readable - LastGrace is now set to destination
+        // set_last_grace() simulates the game updating LastGrace after arrival
+        warp.set_last_grace(GRACE_ENTITY_ID);
         session.update(&game_state, &warp, &mut server);
 
-        // Verify zone query was sent with the grace entity ID
+        // Verify zone query was sent with the last grace entity ID
         assert_eq!(server.zone_query_count(), 1);
         assert_eq!(
             server.last_zone_query_grace_entity_id(),
@@ -754,60 +738,44 @@ mod tests {
     }
 
     #[test]
-    fn test_zone_query_grace_entity_id_cleared_after_use() {
-        // Verify the grace entity ID is cleared after being used in a zone query
+    fn test_zone_query_last_grace_persists_across_deaths() {
+        // LastGrace persists across deaths - it's the last visited grace
+        // So zone queries after death should still include it
         const GRACE_ENTITY_ID: u32 = 1042362951;
 
         let game_state = MockGameState::new(
             vec![
-                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Start (sync frame)
-                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Warp requested
-                None,                                          // Loading 1
-                Some(make_pos(0x3C2C2400, 200.0, 0.0, 200.0)), // Destination 1
-                None,                                          // Loading 2 (death, no warp request)
-                Some(make_pos(0x3C2C2400, 200.0, 0.0, 200.0)), // Respawn
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // At grace (sync frame)
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Still there
+                None,                                          // Death loading
+                Some(make_pos(0x3C2C2400, 50.0, 0.0, 50.0)),   // Respawn at same grace
             ],
-            vec![Some(0), Some(0), Some(0), Some(0), Some(0), Some(0)],
+            vec![Some(0), Some(0), Some(0), Some(0)],
         );
         let warp = MockWarpDetector::new();
+        // LastGrace is already set (player visited this grace before)
+        warp.set_last_grace(GRACE_ENTITY_ID);
         let mut server = MockServerConnection::new();
         let mut session = synced_session(&game_state, &warp);
         game_state.advance_frame();
 
-        // Frame 1: Warp requested (fast travel)
-        warp.set_warp(true, 0, 0x3C2C2400);
-        warp.set_target_grace(GRACE_ENTITY_ID);
+        // Frame 1: Still playing
         session.update(&game_state, &warp, &mut server);
         game_state.advance_frame();
 
-        // Frame 2: Loading
+        // Frame 2: Death loading screen
         session.update(&game_state, &warp, &mut server);
         game_state.advance_frame();
 
-        // Frame 3: Arrived - zone query with grace entity ID
-        warp.set_warp(false, 0, 0);
-        warp.set_target_grace(0);
+        // Frame 3: Respawn - zone query should include LastGrace
         session.update(&game_state, &warp, &mut server);
-        game_state.advance_frame();
 
-        // Verify first zone query has grace entity ID
+        // Verify zone query was sent with the last grace entity ID
         assert_eq!(server.zone_query_count(), 1);
         assert_eq!(
             server.last_zone_query_grace_entity_id(),
             Some(GRACE_ENTITY_ID)
         );
-
-        // Frame 4: Second loading screen (death - no warp request)
-        session.update(&game_state, &warp, &mut server);
-        game_state.advance_frame();
-
-        // Frame 5: Respawn - zone query should NOT have grace entity ID
-        session.update(&game_state, &warp, &mut server);
-
-        // Verify second zone query was sent without grace entity ID
-        assert_eq!(server.zone_query_count(), 2);
-        // The last query should have no grace entity ID (it was cleared)
-        assert_eq!(server.last_zone_query_grace_entity_id(), None);
     }
 
     #[test]
