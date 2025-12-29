@@ -60,6 +60,9 @@ libeldenring = { git = "https://github.com/veeenu/eldenring-practice-tool", tag 
 # --- hudhook for ImGui overlay (includes imgui as transitive dependency) ---
 hudhook = { version = "0.7.0", features = ["dx12", "inject"], default-features = false }
 
+# --- retour for function hooking (warp detection) ---
+retour = { version = "0.3", default-features = false }
+
 # --- Windows API ---
 [target.'cfg(windows)'.dependencies.windows]
 version = "0.54.0"

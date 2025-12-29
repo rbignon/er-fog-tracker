@@ -16,17 +16,16 @@ The mod is a Rust DLL injected into the Elden Ring process using DirectX hooking
 │  │             │  │             │  │                     │ │
 │  │ - position  │  │ - effects   │  │ - warp_requested    │ │
 │  │ - map_id    │  │ - item use  │  │ - dest_entity_id    │ │
-│  │ - animation │  │             │  │ - target_grace_id   │ │
-│  │             │  │             │  │ - dest_map_id       │ │
+│  │ - animation │  │             │  │ - dest_map_id       │ │
 │  └──────┬──────┘  └──────┬──────┘  └──────────┬──────────┘ │
 │         │                │                     │            │
 │         └────────────────┼─────────────────────┘            │
 │                          ▼                                  │
-│                   ┌─────────────┐                          │
-│                   │   Tracker   │                          │
-│                   │  (per-frame │                          │
-│                   │   polling)  │                          │
-│                   └──────┬──────┘                          │
+│                   ┌─────────────┐     ┌─────────────┐      │
+│                   │   Tracker   │◄────│  Warp Hook  │      │
+│                   │  (per-frame │     │ (lua_warp)  │      │
+│                   │   polling)  │     │ grace_id    │      │
+│                   └──────┬──────┘     └─────────────┘      │
 │                          │                                  │
 │         ┌────────────────┼────────────────┐                │
 │         ▼                ▼                ▼                │
@@ -65,13 +64,14 @@ Global game state including warp information.
 GameMan (base address)
     ├─[0x10]  warp_requested (bool) - true when warp is pending
     ├─[0x3C]  initial_area_entity_id (u32) - spawn point entity ID (fog rando: 755890xxx)
-    ├─[0xB3C] target_grace (u32) - grace entity ID for fast travel (format: AABB0295x)
     └─[0xAC8] load_target_block_id (u32) - destination map ID
 ```
 
-**Two different entity IDs**:
+**Note**: The offset `0xB3C` was previously documented as `target_grace` but returns 0 in practice. The mod now uses a function hook to capture the grace entity ID (see Warp Hook section below).
+
+**Entity ID usage**:
 - `initial_area_entity_id` (0x3C): Spawn point entity ID, used for fog gate tracking
-- `target_grace` (0xB3C): Grace entity ID from the teleport menu, used for fast travel zone resolution
+- Grace entity ID: Captured via warp hook, used for fast travel zone resolution
 
 ### FieldArea (Play Region)
 
@@ -282,9 +282,9 @@ Coffins have no distinctive animation and are currently not explicitly detected.
 
 Fast travel (via map menu) is **not tracked as a discovery** by the mod - it's not a fog gate traversal. However, the mod does capture the grace entity ID when fast travel is initiated.
 
-**Key distinction**: The mod reads from `target_grace` (offset 0xB3C) for fast travel, NOT from `initial_area_entity_id` (offset 0x3C). These contain different values:
-- `target_grace` (0xB3C): Grace entity ID like `14002951` (Debate Parlour)
-- `initial_area_entity_id` (0x3C): Spawn point ID like `14000981` (different format)
+**Key distinction**: The mod captures the grace entity ID via a function hook, NOT from memory offset `0x3C`. These contain different values:
+- Grace entity ID (from hook): Like `1042362951` (The First Step)
+- `initial_area_entity_id` (0x3C): Spawn point ID like `14000981` (different format, used for fog gates)
 
 After fast travel completes (loading screen exits), the mod sends a `zone_query` message that includes the `grace_entity_id`. This allows the server to precisely resolve the destination zone using the grace-to-zone mapping, bypassing position-based resolution which can be ambiguous when multiple zones share the same coordinates.
 
@@ -292,22 +292,21 @@ After fast travel completes (loading screen exits), the mod sends a `zone_query`
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                         Fast Travel Timeline                                 │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  t=0            t=0.5s           t=1-2s           t=2s                       │
+│  t=0            t=0.1s           t=1-2s           t=2s                       │
 │   │               │                │               │                         │
 │   ▼               ▼                ▼               ▼                         │
-│ Player        warp_requested    Loading        zone_query                    │
-│ selects       becomes true      screen         sent with                     │
-│ grace         target_grace      (pos=None)     grace_entity_id               │
-│               = grace entity                                                 │
-│               (read from 0xB3C)                                              │
+│ Player        Game calls        Loading        zone_query                    │
+│ selects       lua_warp()        screen         sent with                     │
+│ grace         Hook captures     (pos=None)     grace_entity_id               │
+│               grace_entity_id                                                │
 │                                                                              │
-│ ──────▶ CAPTURE ──────────────────────────────▶ SEND zone_query ──────────▶  │
-│         (store grace                            (include grace_entity_id)    │
-│          entity ID)                                                          │
+│ ──────▶ HOOK CAPTURE ─────────────────────────▶ SEND zone_query ──────────▶  │
+│         (warp_hook stores                       (include grace_entity_id)    │
+│          grace entity ID)                                                    │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-The grace entity ID is stored in `TrackerSession.last_target_grace_entity_id` and cleared after being sent with the zone_query.
+The grace entity ID is captured by the warp hook and stored until it's included in the zone_query, then cleared.
 
 ### Warp Validation
 
@@ -335,6 +334,62 @@ warp_requested: never true
 ```
 
 Empirical testing has shown that ALL valid fog rando warps have `warp_requested=true`, making this a reliable universal filter.
+
+## Warp Hook (Grace Entity ID Capture)
+
+The mod hooks the game's `lua_warp` function to capture the grace entity ID when the player initiates fast travel from the map menu.
+
+### Why a Hook?
+
+The GameMan offset `0xB3C` (documented as `target_grace`) returns 0 in practice. Investigation of `fromsoftware-rs` revealed that offset `0xB30` is actually an `F32Vector3` (coordinates), not an entity ID. No other tool (practice-tool, EldenRingTool) successfully reads the grace destination from memory - they all use hardcoded grace databases.
+
+The practice-tool revealed that the game calls a `lua_warp` function with the grace entity ID as the third parameter:
+
+```rust
+type WarpFn = extern "system" fn(arg1: u64, arg2: u64, grace_id_minus_1000: u32);
+```
+
+### Implementation
+
+The hook is implemented using the `retour` crate (a maintained fork of `detour-rs`):
+
+```rust
+// warp_hook.rs
+static CAPTURED_GRACE_ENTITY_ID: AtomicU32 = AtomicU32::new(0);
+
+unsafe extern "system" fn warp_hook(arg1: u64, arg2: u64, grace_id_param: u32) {
+    // The game passes grace_entity_id - 0x3e8 (1000)
+    let grace_entity_id = grace_id_param.wrapping_add(0x3e8);
+    CAPTURED_GRACE_ENTITY_ID.store(grace_entity_id, Ordering::SeqCst);
+
+    // Call original function
+    WARP_DETOUR.get().unwrap().call(arg1, arg2, grace_id_param);
+}
+```
+
+### Function Address
+
+The `lua_warp` function address is provided by `libeldenring`, which maintains AOB (Array of Bytes) patterns for all supported game versions. The actual function is at `lua_warp + 2` (skipping a RET instruction from the previous function).
+
+Pattern used by libeldenring:
+```
+C3 ?? ?? ?? ?? ?? ?? 57 48 83 EC ?? 48 8B FA 44
+```
+
+### Data Flow
+
+1. **Hook Installation**: At DLL startup, the hook is installed on `lua_warp`
+2. **Fast Travel**: When the player selects a grace, the game calls `lua_warp(arg1, arg2, grace_id - 1000)`
+3. **Capture**: The hook intercepts the call and stores `grace_id` in an atomic variable
+4. **Frame Capture**: `FrameSnapshot` reads from `warp_hook::get_captured_grace_entity_id()`
+5. **Zone Query**: After loading completes, the captured ID is included in `zone_query`
+6. **Clear**: After sending, the captured value is cleared for the next warp
+
+### Files
+
+- `mod/src/eldenring/warp_hook.rs` - Hook implementation
+- `mod/src/dll/frame_state.rs` - Integration with frame snapshot
+- `mod/src/dll/tracker.rs` - Hook installation and clear after use
 
 ## SpEffect Reading
 

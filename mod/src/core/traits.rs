@@ -44,15 +44,13 @@ pub trait WarpDetector {
     /// entity ID (755890xxx) for fog gate traversals.
     fn get_destination_entity_id(&self) -> u32;
 
-    /// Get the last grace entity ID (last visited grace)
-    ///
-    /// This returns the entity ID of the last Site of Grace visited.
-    fn get_last_grace_entity_id(&self) -> u32;
-
     /// Get the target grace entity ID (fast travel destination)
     ///
-    /// This is only valid while warp_requested is true.
-    /// It gets cleared after the warp completes.
+    /// This value is captured via a function hook on lua_warp when the player
+    /// initiates fast travel from the map menu. The hook intercepts the grace
+    /// entity ID passed as a parameter to the warp function.
+    ///
+    /// Note: Reading from GameMan offset 0xB3C does not work in practice.
     fn get_target_grace_entity_id(&self) -> u32;
 
     /// Get the destination map ID for the current warp
@@ -134,7 +132,6 @@ pub mod mocks {
     pub struct MockWarpDetector {
         pub warp_requested: std::cell::Cell<bool>,
         pub dest_entity_id: std::cell::Cell<u32>,
-        pub last_grace_entity_id: std::cell::Cell<u32>,
         pub target_grace_entity_id: std::cell::Cell<u32>,
         pub dest_map_id: std::cell::Cell<u32>,
     }
@@ -144,7 +141,6 @@ pub mod mocks {
             Self {
                 warp_requested: std::cell::Cell::new(false),
                 dest_entity_id: std::cell::Cell::new(0),
-                last_grace_entity_id: std::cell::Cell::new(0),
                 target_grace_entity_id: std::cell::Cell::new(0),
                 dest_map_id: std::cell::Cell::new(0),
             }
@@ -156,12 +152,7 @@ pub mod mocks {
             self.dest_map_id.set(map_id);
         }
 
-        /// Set the last grace entity ID (for fast travel zone resolution tests)
-        pub fn set_last_grace(&self, grace_entity_id: u32) {
-            self.last_grace_entity_id.set(grace_entity_id);
-        }
-
-        /// Set the target grace entity ID (only valid during warp)
+        /// Set the target grace entity ID (simulates hook capture during fast travel)
         pub fn set_target_grace(&self, grace_entity_id: u32) {
             self.target_grace_entity_id.set(grace_entity_id);
         }
@@ -180,10 +171,6 @@ pub mod mocks {
 
         fn get_destination_entity_id(&self) -> u32 {
             self.dest_entity_id.get()
-        }
-
-        fn get_last_grace_entity_id(&self) -> u32 {
-            self.last_grace_entity_id.get()
         }
 
         fn get_target_grace_entity_id(&self) -> u32 {

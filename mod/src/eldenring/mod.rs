@@ -9,6 +9,7 @@ mod game_man;
 mod game_state;
 mod memory;
 mod sp_effect;
+pub mod warp_hook;
 
 pub use game_man::GameMan;
 pub use game_state::GameState;

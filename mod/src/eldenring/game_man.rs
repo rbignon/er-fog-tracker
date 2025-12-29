@@ -7,8 +7,7 @@ use windows::Win32::System::Threading::GetCurrentProcess;
 
 use super::memory::MemoryReader;
 use crate::core::constants::{
-    GAMEMAN_INITIAL_AREA_ENTITY_ID_OFFSET, GAMEMAN_LAST_GRACE_ENTITY_ID_OFFSET,
-    GAMEMAN_LOAD_TARGET_BLOCK_ID_OFFSET, GAMEMAN_TARGET_GRACE_ENTITY_ID_OFFSET,
+    GAMEMAN_INITIAL_AREA_ENTITY_ID_OFFSET, GAMEMAN_LOAD_TARGET_BLOCK_ID_OFFSET,
     GAMEMAN_WARP_REQUESTED_OFFSET,
 };
 use crate::core::traits::WarpDetector;
@@ -68,16 +67,11 @@ impl WarpDetector for GameMan {
             .unwrap_or(0)
     }
 
-    fn get_last_grace_entity_id(&self) -> u32 {
-        self.get_game_man_ptr()
-            .and_then(|gm| self.read_u32(gm + GAMEMAN_LAST_GRACE_ENTITY_ID_OFFSET))
-            .unwrap_or(0)
-    }
-
     fn get_target_grace_entity_id(&self) -> u32 {
-        self.get_game_man_ptr()
-            .and_then(|gm| self.read_u32(gm + GAMEMAN_TARGET_GRACE_ENTITY_ID_OFFSET))
-            .unwrap_or(0)
+        // Note: Reading from GameMan offset 0xB3C does not work - it returns 0.
+        // The actual value is captured via the warp_hook module which intercepts
+        // the lua_warp function call. FrameSnapshot reads from the hook instead.
+        0
     }
 
     fn get_destination_map_id(&self) -> u32 {

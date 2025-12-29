@@ -26,9 +26,7 @@ pub struct FrameSnapshot {
     warp_requested: bool,
     /// Destination entity ID for the current warp (spawn point, for fog gates)
     destination_entity_id: u32,
-    /// Last grace entity ID (last visited grace)
-    last_grace_entity_id: u32,
-    /// Target grace entity ID (fast travel destination, only valid during warp)
+    /// Target grace entity ID (fast travel destination, captured via warp hook)
     target_grace_entity_id: u32,
     /// Destination map ID for the current warp
     destination_map_id: u32,
@@ -43,22 +41,25 @@ impl FrameSnapshot {
     /// - Warp requested flag (from GameMan)
     /// - Destination entity ID (from GameMan)
     /// - Destination map ID (from GameMan)
+    /// - Target grace entity ID (from warp hook)
     pub fn capture(game_state: &GameState, game_man: &GameMan) -> Self {
         // Read all values once
         let position = game_state.read_position();
         let animation = game_state.read_animation();
         let warp_requested = game_man.is_warp_requested();
         let destination_entity_id = game_man.get_destination_entity_id();
-        let last_grace_entity_id = game_man.get_last_grace_entity_id();
-        let target_grace_entity_id = game_man.get_target_grace_entity_id();
         let destination_map_id = game_man.get_destination_map_id();
+
+        // Target grace entity ID comes from the warp hook, which intercepts
+        // the lua_warp function call when the player initiates fast travel.
+        // Note: Reading from GameMan offset 0xB3C does not work.
+        let target_grace_entity_id = crate::eldenring::warp_hook::get_captured_grace_entity_id();
 
         Self {
             position,
             animation,
             warp_requested,
             destination_entity_id,
-            last_grace_entity_id,
             target_grace_entity_id,
             destination_map_id,
         }
@@ -86,10 +87,6 @@ impl WarpDetector for FrameSnapshot {
 
     fn get_destination_entity_id(&self) -> u32 {
         self.destination_entity_id
-    }
-
-    fn get_last_grace_entity_id(&self) -> u32 {
-        self.last_grace_entity_id
     }
 
     fn get_target_grace_entity_id(&self) -> u32 {
@@ -129,7 +126,6 @@ mod tests {
             animation,
             warp_requested,
             destination_entity_id: dest_entity_id,
-            last_grace_entity_id: 0,
             target_grace_entity_id: 0,
             destination_map_id: dest_map_id,
         }

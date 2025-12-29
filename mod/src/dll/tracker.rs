@@ -236,6 +236,15 @@ impl FogRandoTracker {
         // Initialize GameMan reader for warp detection
         let game_man = GameMan::new(game_state.base_addresses());
 
+        // Install warp function hook for grace entity ID capture
+        unsafe {
+            let lua_warp = game_state.base_addresses().lua_warp;
+            if let Err(e) = crate::eldenring::warp_hook::install(lua_warp) {
+                error!(error = %e, "Failed to install warp hook (grace tracking may be limited)");
+                // Continue without the hook - fall back to existing behavior
+            }
+        }
+
         info!("FogRandoTracker initialized!");
 
         // Initialize WebSocket client for server integration
@@ -339,7 +348,8 @@ impl FogRandoTracker {
                     );
                 }
                 SessionEvent::ZoneQuerySent => {
-                    // Already logged in adapter
+                    // Clear the warp hook's captured grace ID after it's been used
+                    crate::eldenring::warp_hook::clear_captured_grace_entity_id();
                 }
                 SessionEvent::ZoneUpdated(result) => {
                     info!(
@@ -483,7 +493,6 @@ impl FogRandoTracker {
 
                 // Always log warp requests at info level for diagnostics
                 let target_grace = snapshot.get_target_grace_entity_id();
-                let last_grace = snapshot.get_last_grace_entity_id();
                 info!(
                     dest_entity,
                     dest_map,
@@ -491,27 +500,8 @@ impl FogRandoTracker {
                     cur_anim = cur_anim.unwrap_or(0),
                     has_known_anim,
                     target_grace,
-                    last_grace,
                     "[GAMEMAN] >>> WARP REQUESTED <<<"
                 );
-
-                // Debug: dump raw values at grace-related offsets
-                if let Some(gm_ptr) = self.game_man.debug_get_ptr() {
-                    let off_b30 = self.game_man.debug_read_offset(0xB30).unwrap_or(0);
-                    let off_b34 = self.game_man.debug_read_offset(0xB34).unwrap_or(0);
-                    let off_b38 = self.game_man.debug_read_offset(0xB38).unwrap_or(0);
-                    let off_b3c = self.game_man.debug_read_offset(0xB3C).unwrap_or(0);
-                    let off_b40 = self.game_man.debug_read_offset(0xB40).unwrap_or(0);
-                    debug!(
-                        gm_ptr = format!("0x{:X}", gm_ptr),
-                        off_b30 = format!("0x{:08X}", off_b30),
-                        off_b34 = format!("0x{:08X}", off_b34),
-                        off_b38 = format!("0x{:08X}", off_b38),
-                        off_b3c = format!("0x{:08X}", off_b3c),
-                        off_b40 = format!("0x{:08X}", off_b40),
-                        "[GAMEMAN] Debug: raw offsets around 0xB30-0xB40"
-                    );
-                }
 
                 // Special warning for potential untracked Fog Rando warps
                 if is_fog_rando && !has_known_anim {
