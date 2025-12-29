@@ -274,7 +274,29 @@ Coffins have no distinctive animation and are currently not explicitly detected.
 
 ### Fast Travel
 
-Fast travel (via map menu) is **not tracked** by the mod. It uses `warp_requested` without a teleport animation, but since it's not a fog gate traversal, it's intentionally ignored.
+Fast travel (via map menu) is **not tracked as a discovery** by the mod - it's not a fog gate traversal. However, the mod does capture the destination entity ID (grace entity ID) when fast travel is initiated.
+
+After fast travel completes (loading screen exits), the mod sends a `zone_query` message that includes the `grace_entity_id`. This allows the server to precisely resolve the destination zone using the grace-to-zone mapping, bypassing position-based resolution which can be ambiguous when multiple zones share the same coordinates.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         Fast Travel Timeline                                 │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  t=0            t=0.5s           t=1-2s           t=2s                       │
+│   │               │                │               │                         │
+│   ▼               ▼                ▼               ▼                         │
+│ Player        warp_requested    Loading        zone_query                    │
+│ selects       becomes true      screen         sent with                     │
+│ grace         dest_entity_id    (pos=None)     grace_entity_id               │
+│               = grace entity                                                 │
+│                                                                              │
+│ ──────▶ CAPTURE ──────────────────────────────▶ SEND zone_query ──────────▶  │
+│         (store grace                            (include grace_entity_id)    │
+│          entity ID)                                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+The grace entity ID is stored in `TrackerSession.last_warp_destination_entity_id` and cleared after being sent with the zone_query.
 
 ### Warp Validation
 
@@ -475,6 +497,48 @@ When a traversal completes, the mod sends:
 ```
 
 The `destination_entity_id` is the key for entity mapping lookup on the server.
+
+## Zone Query Message
+
+When the player exits a loading screen without a pending warp (fast travel, death, initial load), the mod sends a `zone_query` to request the current zone information:
+
+```json
+{
+  "type": "zone_query",
+  "map_id": "m60_42_36_00",
+  "pos": {"x": 100.0, "y": 50.0, "z": 200.0},
+  "play_region_id": 1048576,
+  "grace_entity_id": 1042362951
+}
+```
+
+The `grace_entity_id` field is optional and only present for fast travel:
+- **Fast travel**: Contains the grace entity ID (e.g., `1042362951` for "The First Step")
+- **Death/respawn**: Not present (server uses position-based resolution)
+- **Initial load**: Not present
+
+### Grace Entity ID Format
+
+Grace entity IDs follow patterns based on location type:
+
+| Type | Format | Example |
+|------|--------|---------|
+| Overworld | `10XXYY295x` | `1042362951` → m60_42_36_00 (The First Step) |
+| Legacy dungeon | `AABB0295x` | `10002958` → m10_00 (Stormveil Main Gate) |
+| Mini-dungeon | `1XX295x` | `1002950` → m31_00 (Murkwater Cave) |
+| Roundtable Hold | `11102950` | `11102950` → Table of Lost Grace |
+
+The server maintains a mapping of 254 grace entity IDs to zone names in `server/data/graces.json`.
+
+### Zone Resolution Priority
+
+When handling `zone_query`, the server resolves the zone in this order:
+
+1. **Grace entity ID** (most precise for fast travel)
+2. **Col/play_region_id** (precise for dungeons)
+3. **Position-based** (fallback, may have duplicates)
+
+Only discovered zones are returned to avoid spoilers.
 
 ## Loading Screen Handling
 
