@@ -42,6 +42,17 @@ impl GameMan {
     fn get_game_man_ptr(&self) -> Option<usize> {
         self.read_ptr(self.game_man)
     }
+
+    /// Debug: get GameMan pointer for logging
+    pub fn debug_get_ptr(&self) -> Option<usize> {
+        self.get_game_man_ptr()
+    }
+
+    /// Debug: read raw u32 at offset for diagnostics
+    pub fn debug_read_offset(&self, offset: usize) -> Option<u32> {
+        self.get_game_man_ptr()
+            .and_then(|gm| self.read_u32(gm + offset))
+    }
 }
 
 impl WarpDetector for GameMan {

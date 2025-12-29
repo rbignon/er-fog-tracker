@@ -305,6 +305,15 @@ impl FogRandoTracker {
         let mut adapter = WebSocketAdapter::new(&mut self.ws_client);
 
         // 4. Delegate to TrackerSession using snapshot for both traits
+        // Debug: log warp detection state
+        if snapshot.is_warp_requested() {
+            debug!(
+                warp_requested = snapshot.is_warp_requested(),
+                target_grace = snapshot.get_target_grace_entity_id(),
+                has_pending_warp = self.session.has_pending_warp(),
+                "[SESSION] Pre-update warp state"
+            );
+        }
         let events = self.session.update(&snapshot, &snapshot, &mut adapter);
 
         // 5. Handle session events
@@ -473,14 +482,36 @@ impl FogRandoTracker {
                 let has_known_anim = cur_anim.and_then(get_teleport_type).is_some();
 
                 // Always log warp requests at info level for diagnostics
+                let target_grace = snapshot.get_target_grace_entity_id();
+                let last_grace = snapshot.get_last_grace_entity_id();
                 info!(
                     dest_entity,
                     dest_map,
                     is_fog_rando,
                     cur_anim = cur_anim.unwrap_or(0),
                     has_known_anim,
+                    target_grace,
+                    last_grace,
                     "[GAMEMAN] >>> WARP REQUESTED <<<"
                 );
+
+                // Debug: dump raw values at grace-related offsets
+                if let Some(gm_ptr) = self.game_man.debug_get_ptr() {
+                    let off_b30 = self.game_man.debug_read_offset(0xB30).unwrap_or(0);
+                    let off_b34 = self.game_man.debug_read_offset(0xB34).unwrap_or(0);
+                    let off_b38 = self.game_man.debug_read_offset(0xB38).unwrap_or(0);
+                    let off_b3c = self.game_man.debug_read_offset(0xB3C).unwrap_or(0);
+                    let off_b40 = self.game_man.debug_read_offset(0xB40).unwrap_or(0);
+                    debug!(
+                        gm_ptr = format!("0x{:X}", gm_ptr),
+                        off_b30 = format!("0x{:08X}", off_b30),
+                        off_b34 = format!("0x{:08X}", off_b34),
+                        off_b38 = format!("0x{:08X}", off_b38),
+                        off_b3c = format!("0x{:08X}", off_b3c),
+                        off_b40 = format!("0x{:08X}", off_b40),
+                        "[GAMEMAN] Debug: raw offsets around 0xB30-0xB40"
+                    );
+                }
 
                 // Special warning for potential untracked Fog Rando warps
                 if is_fog_rando && !has_known_anim {
