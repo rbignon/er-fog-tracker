@@ -72,3 +72,61 @@ export function warning(message) {
 export function info(message) {
     return show(message, { type: 'info' });
 }
+
+/**
+ * Show a persistent update notification with a refresh button.
+ * @param {string} newVersion - The new version available
+ */
+export function showUpdateAvailable(newVersion) {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-info toast-update';
+    toast.innerHTML = `
+        <span class="toast-message">New version ${newVersion} available</span>
+        <button class="toast-action-btn">Refresh</button>
+        <button class="toast-close">&times;</button>
+    `;
+
+    const closeBtn = toast.querySelector('.toast-close');
+    closeBtn.addEventListener('click', () => removeToast(toast));
+
+    const refreshBtn = toast.querySelector('.toast-action-btn');
+    refreshBtn.addEventListener('click', () => {
+        location.reload(true);
+    });
+
+    getContainer().appendChild(toast);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+        toast.classList.add('toast-visible');
+    });
+
+    // No auto-remove for update notifications
+    return toast;
+}
+
+/**
+ * Show a persistent version incompatibility error.
+ * @param {string} serverVersion - The server version
+ */
+export function showVersionIncompatible(serverVersion) {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-error toast-update';
+    toast.innerHTML = `
+        <span class="toast-message">Version incompatible (server: ${serverVersion}). Please refresh.</span>
+        <button class="toast-action-btn">Refresh</button>
+    `;
+
+    const refreshBtn = toast.querySelector('.toast-action-btn');
+    refreshBtn.addEventListener('click', () => {
+        location.reload(true);
+    });
+
+    getContainer().appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add('toast-visible');
+    });
+
+    return toast;
+}

@@ -2055,6 +2055,29 @@ marker path {
     color: #e0b060;
 }
 
+.toast-update {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-right: 40px;
+}
+
+.toast-action-btn {
+    background: #3a5030;
+    border: 1px solid #4a6040;
+    color: #c4b998;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.toast-action-btn:hover {
+    background: #4a6040;
+}
+
 /* ============================================================
    Overlay mode - transparent background for stream overlay
    ============================================================ */

@@ -13,7 +13,9 @@ from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
+from fogtracker import __version__
 from fogtracker.api import api_router
 from fogtracker.config import settings
 from fogtracker.database import init_db
@@ -54,9 +56,22 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Fog Gate Tracker API",
     description="Backend for er-fog-tracker with real-time sync",
-    version="1.0.0",
+    version=__version__,
     lifespan=lifespan,
 )
+
+
+# Version header middleware
+class VersionHeaderMiddleware(BaseHTTPMiddleware):
+    """Add Server-Version header to all responses."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Server-Version"] = __version__
+        return response
+
+
+app.add_middleware(VersionHeaderMiddleware)
 
 # CORS middleware
 app.add_middleware(

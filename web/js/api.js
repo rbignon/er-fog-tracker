@@ -3,8 +3,12 @@
  */
 
 import { getAuthHeaders } from './auth.js';
+import { VERSION } from './version.js';
 
 const DEFAULT_TIMEOUT_MS = 30000;
+
+// Last seen server version (set after each API call)
+let lastServerVersion = null;
 
 /**
  * Base fetch wrapper with error handling and timeout.
@@ -22,12 +26,19 @@ async function apiFetch(path, options = {}, timeout = DEFAULT_TIMEOUT_MS) {
             signal: controller.signal,
             headers: {
                 'Content-Type': 'application/json',
+                'Client-Version': VERSION,
                 ...getAuthHeaders(),
                 ...options.headers,
             },
         });
 
         clearTimeout(timeoutId);
+
+        // Store server version from response header
+        const serverVersion = response.headers.get('Server-Version');
+        if (serverVersion) {
+            lastServerVersion = serverVersion;
+        }
 
         if (!response.ok) {
             const error = new Error(`API error: ${response.status}`);
@@ -292,6 +303,47 @@ export async function undiscoverZone(gameId, zone) {
     });
 }
 
+// =============================================================================
+// Version API
+// =============================================================================
+
+/**
+ * Get the last seen server version.
+ * @returns {string|null} Server version or null if no API call made yet
+ */
+export function getLastServerVersion() {
+    return lastServerVersion;
+}
+
+/**
+ * Get the client version.
+ * @returns {string} Client version
+ */
+export function getClientVersion() {
+    return VERSION;
+}
+
+/**
+ * Check version compatibility between client and server.
+ * @returns {{ compatible: boolean, updateAvailable: boolean, serverVersion: string|null }}
+ */
+export function checkVersionCompatibility() {
+    if (!lastServerVersion) {
+        return { compatible: true, updateAvailable: false, serverVersion: null };
+    }
+
+    const [clientMajor] = VERSION.split('.').map(Number);
+    const [serverMajor] = lastServerVersion.split('.').map(Number);
+
+    if (clientMajor !== serverMajor) {
+        return { compatible: false, updateAvailable: false, serverVersion: lastServerVersion };
+    }
+
+    // Same major - check if server is newer
+    const updateAvailable = lastServerVersion > VERSION;
+    return { compatible: true, updateAvailable, serverVersion: lastServerVersion };
+}
+
 export default {
     parseSpoilerLog,
     transformZonesFromApi,
@@ -308,4 +360,7 @@ export default {
     regenerateModToken,
     createDiscovery,
     undiscoverZone,
+    getLastServerVersion,
+    getClientVersion,
+    checkVersionCompatibility,
 };

@@ -11,7 +11,9 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
-use super::api_client::{ApiClient, ApiError, GameSummary, UserInfo};
+use super::api_client::{
+    ApiClient, ApiError, ApiResponseWithVersion, GameSummary, UserInfo, VersionCompatibility,
+};
 use super::config::LauncherConfig;
 use super::process_monitor::{find_dll_path, ProcessMonitor, ProcessState};
 use super::rando_folder::{
@@ -36,7 +38,7 @@ pub enum AppScreen {
 // =============================================================================
 
 enum TaskResult {
-    TokenValidated(Result<UserInfo, ApiError>),
+    TokenValidated(Result<ApiResponseWithVersion<UserInfo>, ApiError>),
     GamesLoaded(Result<Vec<GameSummary>, ApiError>),
     GameCreated(Result<(GameSummary, bool), ApiError>),
     GameDeleted(Result<(), ApiError>),
@@ -57,6 +59,8 @@ struct AppData {
     process_monitor: Option<ProcessMonitor>,
     task_sender: Sender<TaskResult>,
     task_receiver: Receiver<TaskResult>,
+    /// Whether version check is blocking (incompatible versions)
+    version_blocking: bool,
 }
 
 impl AppData {
@@ -77,6 +81,7 @@ impl AppData {
             process_monitor,
             task_sender,
             task_receiver,
+            version_blocking: false,
         }
     }
 
@@ -249,6 +254,24 @@ pub struct LauncherApp {
     newgame_create_btn: nwg::Button,
 
     // =========================================================================
+    // Version Dialog (for version mismatch notifications)
+    // =========================================================================
+    #[nwg_control(size: (420, 180), position: (350, 280), title: "Version Check", flags: "WINDOW")]
+    #[nwg_events(OnWindowClose: [LauncherApp::on_version_dialog_close])]
+    version_window: nwg::Window,
+
+    #[nwg_control(parent: version_window, text: "", position: (20, 20), size: (380, 60))]
+    version_message: nwg::Label,
+
+    #[nwg_control(parent: version_window, text: "Continue", position: (90, 110), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_version_continue_click])]
+    version_continue_btn: nwg::Button,
+
+    #[nwg_control(parent: version_window, text: "Download", position: (230, 110), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_version_download_click])]
+    version_download_btn: nwg::Button,
+
+    // =========================================================================
     // Waiting Screen
     // =========================================================================
     #[nwg_control(parent: window, text: "Waiting for Elden Ring...", position: (20, 60), size: (460, 30))]
@@ -310,6 +333,9 @@ impl LauncherApp {
         // Hide New Game dialog initially
         self.newgame_window.set_visible(false);
 
+        // Hide Version dialog initially
+        self.version_window.set_visible(false);
+
         // Disable buttons until a game is selected
         self.games_remove_btn.set_enabled(false);
         self.games_inject_btn.set_enabled(false);
@@ -361,7 +387,58 @@ impl LauncherApp {
 
     fn process_task_result(&self, result: TaskResult) {
         match result {
-            TaskResult::TokenValidated(Ok(user)) => {
+            TaskResult::TokenValidated(Ok(response)) => {
+                let user = response.data;
+
+                // Check version compatibility
+                if let Some(ref server_version) = response.server_version {
+                    let compat = VersionCompatibility::check(server_version);
+                    match compat {
+                        VersionCompatibility::ClientTooOld { server_version } => {
+                            // Blocking: client needs update
+                            self.show_version_dialog(
+                                &format!(
+                                    "Your launcher (v{}) is outdated.\n\nServer requires v{}.\nPlease download the latest version.",
+                                    VersionCompatibility::client_version(),
+                                    server_version
+                                ),
+                                true, // blocking
+                            );
+                            self.token_connect_btn.set_text("Connect");
+                            self.token_connect_btn.set_enabled(true);
+                            return;
+                        }
+                        VersionCompatibility::ServerTooOld { server_version } => {
+                            // Blocking: server needs update
+                            self.show_version_dialog(
+                                &format!(
+                                    "Server version (v{}) is too old.\n\nYour launcher is v{}.\nPlease contact the server administrator.",
+                                    server_version,
+                                    VersionCompatibility::client_version()
+                                ),
+                                true, // blocking
+                            );
+                            self.token_connect_btn.set_text("Connect");
+                            self.token_connect_btn.set_enabled(true);
+                            return;
+                        }
+                        VersionCompatibility::UpdateAvailable { server_version } => {
+                            // Non-blocking: show info
+                            self.show_version_dialog(
+                                &format!(
+                                    "A new version is available!\n\nYour version: v{}\nLatest version: v{}",
+                                    VersionCompatibility::client_version(),
+                                    server_version
+                                ),
+                                false, // non-blocking
+                            );
+                        }
+                        VersionCompatibility::Compatible => {
+                            // All good, continue
+                        }
+                    }
+                }
+
                 // Save config and transition to game selection
                 {
                     let mut data_ref = self.data.borrow_mut();
@@ -768,6 +845,77 @@ impl LauncherApp {
 
     fn close_newgame_dialog(&self) {
         self.newgame_window.set_visible(false);
+        self.window.set_enabled(true);
+        self.window.set_focus();
+    }
+
+    fn show_version_dialog(&self, message: &str, blocking: bool) {
+        // Store blocking state
+        {
+            let mut data_ref = self.data.borrow_mut();
+            if let Some(data) = data_ref.as_mut() {
+                data.version_blocking = blocking;
+            }
+        }
+
+        // Set message
+        self.version_message.set_text(message);
+
+        // Show/hide Continue button based on blocking
+        self.version_continue_btn.set_visible(!blocking);
+
+        // Show dialog modally
+        self.window.set_enabled(false);
+        self.version_window.set_visible(true);
+        self.version_window.set_focus();
+    }
+
+    fn on_version_dialog_close(&self) {
+        let blocking = {
+            let data_ref = self.data.borrow();
+            data_ref
+                .as_ref()
+                .map(|d| d.version_blocking)
+                .unwrap_or(false)
+        };
+
+        if blocking {
+            // If blocking, close the app
+            nwg::stop_thread_dispatch();
+        } else {
+            // Otherwise just close the dialog
+            self.close_version_dialog();
+        }
+    }
+
+    fn on_version_continue_click(&self) {
+        self.close_version_dialog();
+    }
+
+    fn on_version_download_click(&self) {
+        // Open releases page in browser
+        let _ = std::process::Command::new("cmd")
+            .args(["/c", "start", "", VersionCompatibility::releases_url()])
+            .spawn();
+
+        // If blocking, close the app
+        let blocking = {
+            let data_ref = self.data.borrow();
+            data_ref
+                .as_ref()
+                .map(|d| d.version_blocking)
+                .unwrap_or(false)
+        };
+
+        if blocking {
+            nwg::stop_thread_dispatch();
+        } else {
+            self.close_version_dialog();
+        }
+    }
+
+    fn close_version_dialog(&self) {
+        self.version_window.set_visible(false);
         self.window.set_enabled(true);
         self.window.set_focus();
     }

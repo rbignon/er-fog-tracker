@@ -14,6 +14,7 @@ pub mod session;
 pub mod status_template;
 pub mod traits;
 pub mod types;
+pub mod version;
 pub mod warp_tracker;
 
 // Re-export commonly used items

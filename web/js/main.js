@@ -8,11 +8,38 @@ import * as State from './state.js';
 import * as UI from './ui.js';
 import * as Graph from './graph.js';
 import * as Sync from './sync/index.js';
+import * as Toast from './toast.js';
+import { checkVersionCompatibility } from './api.js';
 
 // Pages
 import * as LandingPage from './pages/landing.js';
 import * as DashboardPage from './pages/dashboard.js';
 import * as ViewerListPage from './pages/viewer-list.js';
+
+// Track if version notification was already shown
+let versionNotificationShown = false;
+
+// ============================================================
+// VERSION CHECK
+// ============================================================
+
+/**
+ * Check version compatibility after an API call and show notification if needed.
+ * Only shows notification once per session.
+ */
+function checkAndNotifyVersion() {
+    if (versionNotificationShown) return;
+
+    const { compatible, updateAvailable, serverVersion } = checkVersionCompatibility();
+
+    if (!compatible && serverVersion) {
+        versionNotificationShown = true;
+        Toast.showVersionIncompatible(serverVersion);
+    } else if (updateAvailable && serverVersion) {
+        versionNotificationShown = true;
+        Toast.showUpdateAvailable(serverVersion);
+    }
+}
 
 // ============================================================
 // HELPERS
@@ -197,6 +224,9 @@ async function initPlayMode(gameId) {
         const { getGame } = await import('./api.js');
         const game = await getGame(gameId);
 
+        // Check version compatibility after API call
+        checkAndNotifyVersion();
+
         // Convert server data to graph format
         const graphData = await convertServerDataToGraph(game);
 
@@ -233,6 +263,9 @@ async function initViewerMode(gameId) {
     try {
         const { getGame } = await import('./api.js');
         const game = await getGame(gameId);
+
+        // Check version compatibility after API call
+        checkAndNotifyVersion();
 
         // Convert server data to graph format
         const graphData = await convertServerDataToGraph(game);

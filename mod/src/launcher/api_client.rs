@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use ureq::{Agent, AgentBuilder};
 
+// Re-export version types from core module
+pub use crate::core::version::{VersionCompatibility, CLIENT_VERSION};
+
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Debug, Clone)]
@@ -88,11 +91,18 @@ struct ErrorResponse {
 // API Client Implementation
 // =============================================================================
 
+/// Response with optional server version
+pub struct ApiResponseWithVersion<T> {
+    pub data: T,
+    pub server_version: Option<String>,
+}
+
 impl ApiClient {
     pub fn new(base_url: &str, token: &str) -> Self {
+        let user_agent = format!("FogRandoTracker-Launcher/{}", CLIENT_VERSION);
         let agent = AgentBuilder::new()
             .timeout(REQUEST_TIMEOUT)
-            .user_agent("FogRandoTracker-Launcher/1.0")
+            .user_agent(&user_agent)
             .build();
 
         // Normalize base URL (remove trailing slash)
@@ -130,17 +140,51 @@ impl ApiClient {
         }
     }
 
-    /// Validate the mod token and get user info
-    pub fn validate_token(&self) -> Result<UserInfo, ApiError> {
+    fn handle_response_with_version<T: for<'de> Deserialize<'de>>(
+        response: Result<ureq::Response, ureq::Error>,
+    ) -> Result<ApiResponseWithVersion<T>, ApiError> {
+        match response {
+            Ok(resp) => {
+                // Extract server version before consuming response
+                let server_version = resp.header("Server-Version").map(|s| s.to_string());
+                let data = resp
+                    .into_json()
+                    .map_err(|e| ApiError::Network(format!("Failed to parse response: {}", e)))?;
+                Ok(ApiResponseWithVersion {
+                    data,
+                    server_version,
+                })
+            }
+            Err(ureq::Error::Status(status, resp)) => {
+                let detail = resp
+                    .into_json::<ErrorResponse>()
+                    .map(|e| e.detail)
+                    .unwrap_or_else(|_| "Unknown error".to_string());
+
+                match status {
+                    401 => Err(ApiError::Unauthorized),
+                    404 => Err(ApiError::NotFound),
+                    429 => Err(ApiError::RateLimited(detail)),
+                    400 => Err(ApiError::BadRequest(detail)),
+                    _ => Err(ApiError::ServerError(detail)),
+                }
+            }
+            Err(ureq::Error::Transport(e)) => Err(ApiError::Network(e.to_string())),
+        }
+    }
+
+    /// Validate the mod token and get user info, also returns server version
+    pub fn validate_token(&self) -> Result<ApiResponseWithVersion<UserInfo>, ApiError> {
         let url = format!("{}/api/mod/me", self.base_url);
 
         let response = self
             .agent
             .get(&url)
             .set("Authorization", &format!("Bearer {}", self.token))
+            .set("Client-Version", CLIENT_VERSION)
             .call();
 
-        Self::handle_response(response)
+        Self::handle_response_with_version(response)
     }
 
     /// List user's games
@@ -151,6 +195,7 @@ impl ApiClient {
             .agent
             .get(&url)
             .set("Authorization", &format!("Bearer {}", self.token))
+            .set("Client-Version", CLIENT_VERSION)
             .call();
 
         let list: GameListResponse = Self::handle_response(response)?;
@@ -177,6 +222,7 @@ impl ApiClient {
             .post(&url)
             .set("Authorization", &format!("Bearer {}", self.token))
             .set("Content-Type", "application/json")
+            .set("Client-Version", CLIENT_VERSION)
             .send_json(&request);
 
         Self::handle_response(response)
@@ -190,6 +236,7 @@ impl ApiClient {
             .agent
             .delete(&url)
             .set("Authorization", &format!("Bearer {}", self.token))
+            .set("Client-Version", CLIENT_VERSION)
             .call();
 
         match response {
