@@ -116,15 +116,23 @@ impl ServerEventReceiver for WebSocketAdapter<'_> {
                 current_zone,
                 exits,
                 stats,
+                scaling,
             } => ServerEvent::DiscoveryAck(DiscoveryResult {
                 propagated,
                 current_zone,
                 exits,
                 stats,
+                scaling,
             }),
-            IncomingMessage::ZoneQueryAck { zone, exits } => {
-                ServerEvent::ZoneQueryAck(ZoneQueryResult { zone, exits })
-            }
+            IncomingMessage::ZoneQueryAck {
+                zone,
+                exits,
+                scaling,
+            } => ServerEvent::ZoneQueryAck(ZoneQueryResult {
+                zone,
+                exits,
+                scaling,
+            }),
             IncomingMessage::Error(msg) => ServerEvent::Error(msg),
             IncomingMessage::Ping => {
                 // Ping is auto-handled by WebSocketClient, but we still need to return something
@@ -378,6 +386,11 @@ impl FogRandoTracker {
     /// Get discovery statistics (from session state)
     pub fn discovery_stats(&self) -> Option<&DiscoveryStats> {
         self.session.stats()
+    }
+
+    /// Get current zone scaling text (from session state)
+    pub fn current_zone_scaling(&self) -> Option<&str> {
+        self.session.current_zone_scaling()
     }
 
     /// Get the WebSocket connection status

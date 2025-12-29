@@ -41,6 +41,8 @@ pub struct DiscoveryResult {
     pub exits: Vec<FogExit>,
     /// Updated discovery statistics
     pub stats: DiscoveryStats,
+    /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
+    pub scaling: Option<String>,
 }
 
 /// Result of a zone query
@@ -50,6 +52,8 @@ pub struct ZoneQueryResult {
     pub zone: Option<String>,
     /// Available exits from current zone
     pub exits: Vec<FogExit>,
+    /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
+    pub scaling: Option<String>,
 }
 
 /// Events received from the server
@@ -165,12 +169,17 @@ pub mod mocks {
                 current_zone: zone,
                 exits,
                 stats,
+                scaling: None,
             }));
         }
 
         /// Queue a zone query acknowledgment
         pub fn queue_zone_ack(&self, zone: Option<String>, exits: Vec<FogExit>) {
-            self.queue_event(ServerEvent::ZoneQueryAck(ZoneQueryResult { zone, exits }));
+            self.queue_event(ServerEvent::ZoneQueryAck(ZoneQueryResult {
+                zone,
+                exits,
+                scaling: None,
+            }));
         }
 
         /// Get the number of discoveries sent

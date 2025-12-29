@@ -111,6 +111,7 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   {kindling}      - Number of Messmer's Kindling items
 #   {kindling_icon} - Messmer's Kindling icon
 #   {death_icon}    - Death icon
+#   {scaling}       - Zone scaling tier (e.g., "Scaling: tier 1, previously 2")
 #
 # Colors (optional, add after variable name with colon):
 #   {variable:color} - Apply color to the variable
@@ -136,6 +137,7 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   "{zone}$n{rune_icons} {discovered}/{total}"          - Two lines with rune icons
 #   "{rune_icons} {kindling_icon}{kindling}"             - Rune icons + kindling icon with count
 #   "{death_icon}{deaths}"                               - Death icon with count
+#   "{zone}$n{scaling}$>{status} {discovered}/{total}"   - Two lines with zone scaling
 #
 status_template = "{zone}$>{status} {discovered}/{total}"
 

@@ -28,6 +28,7 @@ from fogtracker.zone_matching import (
     expand_discovered_links,
     find_all_matching_zone_pairs_by_keys,
     get_discovered_nodes,
+    get_zone_scaling,
 )
 from fogtracker.zone_resolver import get_resolver
 
@@ -183,11 +184,16 @@ class ModClient(Client):
         ingame = format_ingame_display(zone_display, exits, stats)
         for line in ingame.split("\n"):
             logger.info(line)
+
+        # Get zone scaling
+        scaling = get_zone_scaling(game.zones, zone_display)
+
         await self.send(
             {
                 "type": "zone_query_ack",
                 "zone": zone_display,
                 "exits": exits,
+                "scaling": scaling,
             }
         )
 
@@ -622,6 +628,11 @@ class ModClient(Client):
                 for line in ingame.split("\n"):
                     logger.info(line)
 
+            # Get zone scaling for destination
+            scaling = None
+            if destination_zone and game:
+                scaling = get_zone_scaling(game.zones, destination_zone)
+
             # Send ack to mod
             ack_msg = {
                 "type": "discovery_v2_ack",
@@ -630,6 +641,7 @@ class ModClient(Client):
                 "current_zone": destination_zone,
                 "exits": exits,
                 "stats": stats,
+                "scaling": scaling,
             }
             if not resolved_links:
                 ack_msg["error"] = "No matching link found in spoiler log"

@@ -172,6 +172,7 @@ impl FogRandoTracker {
             igt_ms: self.read_igt(),
             runes: self.read_great_runes_count(),
             kindling: self.read_kindling_count(),
+            scaling: self.current_zone_scaling().map(String::from),
         }
     }
 

@@ -109,6 +109,9 @@ pub enum ServerResponse {
         exits: Vec<FogExit>,
         #[serde(default)]
         stats: DiscoveryStats,
+        /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
+        #[serde(default)]
+        scaling: Option<String>,
     },
     /// Discovery broadcast from host (web UI manual discovery)
     Discovery {
@@ -122,6 +125,9 @@ pub enum ServerResponse {
         zone: Option<String>,
         #[serde(default)]
         exits: Vec<FogExit>,
+        /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
+        #[serde(default)]
+        scaling: Option<String>,
     },
     /// Server ping (mod should respond with Pong)
     Ping,
@@ -310,7 +316,8 @@ mod tests {
             "propagated": [{"source": "Limgrave", "target": "Stormveil Castle"}],
             "current_zone": "Stormveil Castle",
             "exits": [{"target": "Limgrave", "description": "Main gate"}],
-            "stats": {"discovered": 10, "total": 50}
+            "stats": {"discovered": 10, "total": 50},
+            "scaling": "Scaling: tier 1, previously 2"
         }"#;
         let resp: ServerResponse = serde_json::from_str(json).unwrap();
         match resp {
@@ -319,6 +326,7 @@ mod tests {
                 current_zone,
                 exits,
                 stats,
+                scaling,
             } => {
                 assert_eq!(propagated.len(), 1);
                 assert_eq!(propagated[0].source, "Limgrave");
@@ -328,6 +336,7 @@ mod tests {
                 assert_eq!(exits[0].target, "Limgrave");
                 assert_eq!(stats.discovered, 10);
                 assert_eq!(stats.total, 50);
+                assert_eq!(scaling, Some("Scaling: tier 1, previously 2".to_string()));
             }
             _ => panic!("Expected DiscoveryV2Ack"),
         }
@@ -348,11 +357,13 @@ mod tests {
                 current_zone,
                 exits,
                 stats,
+                scaling,
             } => {
                 assert!(propagated.is_empty());
                 assert!(current_zone.is_none());
                 assert!(exits.is_empty()); // default
                 assert_eq!(stats, DiscoveryStats::default()); // default
+                assert!(scaling.is_none()); // default
             }
             _ => panic!("Expected DiscoveryV2Ack"),
         }
@@ -381,13 +392,19 @@ mod tests {
         let json = r#"{
             "type": "zone_query_ack",
             "zone": "Limgrave",
-            "exits": [{"target": "???", "description": "North"}, {"target": "Stormveil", "description": "East"}]
+            "exits": [{"target": "???", "description": "North"}, {"target": "Stormveil", "description": "East"}],
+            "scaling": "Scaling: tier 1"
         }"#;
         let resp: ServerResponse = serde_json::from_str(json).unwrap();
         match resp {
-            ServerResponse::ZoneQueryAck { zone, exits } => {
+            ServerResponse::ZoneQueryAck {
+                zone,
+                exits,
+                scaling,
+            } => {
                 assert_eq!(zone, Some("Limgrave".to_string()));
                 assert_eq!(exits.len(), 2);
+                assert_eq!(scaling, Some("Scaling: tier 1".to_string()));
             }
             _ => panic!("Expected ZoneQueryAck"),
         }
@@ -398,9 +415,14 @@ mod tests {
         let json = r#"{"type": "zone_query_ack", "zone": null}"#;
         let resp: ServerResponse = serde_json::from_str(json).unwrap();
         match resp {
-            ServerResponse::ZoneQueryAck { zone, exits } => {
+            ServerResponse::ZoneQueryAck {
+                zone,
+                exits,
+                scaling,
+            } => {
                 assert!(zone.is_none());
                 assert!(exits.is_empty());
+                assert!(scaling.is_none());
             }
             _ => panic!("Expected ZoneQueryAck"),
         }

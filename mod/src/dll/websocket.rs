@@ -74,11 +74,15 @@ pub enum IncomingMessage {
         current_zone: Option<String>,
         exits: Vec<FogExit>,
         stats: DiscoveryStats,
+        /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
+        scaling: Option<String>,
     },
     /// Zone query response (after fast travel)
     ZoneQueryAck {
         zone: Option<String>,
         exits: Vec<FogExit>,
+        /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
+        scaling: Option<String>,
     },
     /// Error message
     Error(String),
@@ -336,6 +340,7 @@ fn websocket_thread(
                         current_zone: None,
                         exits: vec![],
                         stats,
+                        scaling: None,
                     });
                 }
 
@@ -560,6 +565,7 @@ fn message_loop(
                             ref current_zone,
                             ref exits,
                             ref stats,
+                            ref scaling,
                         } => {
                             debug!(
                                 zone = current_zone.as_deref().unwrap_or("?"),
@@ -567,6 +573,7 @@ fn message_loop(
                                 exits = exits.len(),
                                 discovered = stats.discovered,
                                 total = stats.total,
+                                scaling = scaling.as_deref().unwrap_or(""),
                                 "[WS RX] DiscoveryV2Ack"
                             );
                             let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
@@ -574,6 +581,7 @@ fn message_loop(
                                 current_zone: current_zone.clone(),
                                 exits: exits.clone(),
                                 stats: stats.clone(),
+                                scaling: scaling.clone(),
                             });
                         }
                         ServerResponse::Discovery {
@@ -593,20 +601,24 @@ fn message_loop(
                                 current_zone: None,
                                 exits: vec![],
                                 stats: stats.clone(),
+                                scaling: None,
                             });
                         }
                         ServerResponse::ZoneQueryAck {
                             ref zone,
                             ref exits,
+                            ref scaling,
                         } => {
                             debug!(
                                 zone = zone.as_deref().unwrap_or("?"),
                                 exits = exits.len(),
+                                scaling = scaling.as_deref().unwrap_or(""),
                                 "[WS RX] ZoneQueryAck"
                             );
                             let _ = incoming_tx.send(IncomingMessage::ZoneQueryAck {
                                 zone: zone.clone(),
                                 exits: exits.clone(),
+                                scaling: scaling.clone(),
                             });
                         }
                         ServerResponse::Error { ref message } => {

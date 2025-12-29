@@ -5,7 +5,7 @@
 //! # Template syntax
 //!
 //! - Variables: `{zone}`, `{discovered}`, `{total}`, `{progress}`, `{status}`, `{map}`,
-//!   `{deaths}`, `{igt}`, `{runes}`, `{kindling}`, `{rune_icons}`, `{kindling_icon}`, `{death_icon}`
+//!   `{deaths}`, `{igt}`, `{runes}`, `{kindling}`, `{scaling}`, `{rune_icons}`, `{kindling_icon}`, `{death_icon}`
 //! - Colors: `{variable:color}` where color is a name or hex code
 //!   - Named colors: `red`, `green`, `blue`, `yellow`, `orange`, `cyan`, `magenta`, `gray`, `white`
 //!   - Hex colors: `#RRGGBB` (e.g., `#FF0000` for red)
@@ -29,6 +29,7 @@
 //!     igt_ms: Some(3600000),
 //!     runes: Some(3),
 //!     kindling: Some(2),
+//!     scaling: Some("Scaling: tier 1".to_string()),
 //! };
 //!
 //! // Simple template
@@ -192,6 +193,8 @@ pub struct TemplateContext {
     pub runes: Option<u32>,
     /// Number of Messmer's Kindling items
     pub kindling: Option<u32>,
+    /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
+    pub scaling: Option<String>,
 }
 
 impl Default for TemplateContext {
@@ -208,6 +211,7 @@ impl Default for TemplateContext {
             igt_ms: None,
             runes: None,
             kindling: None,
+            scaling: None,
         }
     }
 }
@@ -364,6 +368,7 @@ fn get_variable_value(name: &str, ctx: &TemplateContext) -> Option<String> {
         "igt" => Some(ctx.igt_ms.map(format_igt).unwrap_or_default()),
         "runes" => Some(ctx.runes.map(|r| r.to_string()).unwrap_or_default()),
         "kindling" => Some(ctx.kindling.map(|k| k.to_string()).unwrap_or_default()),
+        "scaling" => Some(ctx.scaling.as_deref().unwrap_or("").to_string()),
         "status" => None, // Special handling
         _ => None,
     }
@@ -504,6 +509,7 @@ mod tests {
             igt_ms: Some(3723000), // 1:02:03
             runes: Some(3),
             kindling: Some(2),
+            scaling: Some("Scaling: tier 1, previously 2".to_string()),
         }
     }
 
@@ -690,6 +696,30 @@ mod tests {
         };
         let result = render_template("{runes}/8 | K:{kindling}", &ctx);
         assert_eq!(result.lines[0].left_text().as_deref(), Some("5/8 | K:3"));
+    }
+
+    // -------------------------------------------------------------------------
+    // Scaling tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_scaling() {
+        let ctx = default_ctx();
+        let result = render_template("{scaling}", &ctx);
+        assert_eq!(
+            result.lines[0].left_text().as_deref(),
+            Some("Scaling: tier 1, previously 2")
+        );
+    }
+
+    #[test]
+    fn test_scaling_none() {
+        let ctx = TemplateContext {
+            scaling: None,
+            ..default_ctx()
+        };
+        let result = render_template("S:{scaling}", &ctx);
+        assert_eq!(result.lines[0].left_text().as_deref(), Some("S:"));
     }
 
     // -------------------------------------------------------------------------

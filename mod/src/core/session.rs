@@ -45,6 +45,8 @@ pub struct SessionState {
     pub exits: Vec<FogExit>,
     /// Discovery statistics
     pub stats: Option<DiscoveryStats>,
+    /// Current zone scaling text (e.g., "Scaling: tier 1, previously 2")
+    pub current_zone_scaling: Option<String>,
 }
 
 // =============================================================================
@@ -92,6 +94,11 @@ impl TrackerSession {
     /// Get discovery statistics
     pub fn stats(&self) -> Option<&DiscoveryStats> {
         self.state.stats.as_ref()
+    }
+
+    /// Get current zone scaling text
+    pub fn current_zone_scaling(&self) -> Option<&str> {
+        self.state.current_zone_scaling.as_deref()
     }
 
     /// Check if there's a pending warp
@@ -160,6 +167,7 @@ impl TrackerSession {
                     // Clear zone while waiting for response
                     self.state.current_zone = None;
                     self.state.exits.clear();
+                    self.state.current_zone_scaling = None;
                     events.push(SessionEvent::ZoneQuerySent);
                 }
             }
@@ -176,6 +184,7 @@ impl TrackerSession {
                     if result.current_zone.is_some() {
                         self.state.current_zone = result.current_zone.clone();
                         self.state.exits = result.exits.clone();
+                        self.state.current_zone_scaling = result.scaling.clone();
                     }
                     if result.stats.total > 0 {
                         self.state.stats = Some(result.stats.clone());
@@ -187,6 +196,7 @@ impl TrackerSession {
                     if result.zone.is_some() {
                         self.state.current_zone = result.zone.clone();
                         self.state.exits = result.exits.clone();
+                        self.state.current_zone_scaling = result.scaling.clone();
                     }
                     events.push(SessionEvent::ZoneUpdated(result));
                 }
@@ -668,6 +678,7 @@ mod tests {
                 discovered: 5,
                 total: 50,
             },
+            scaling: None,
         }));
 
         session.update(&game_state, &warp, &mut server);

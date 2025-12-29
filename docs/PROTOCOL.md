@@ -403,7 +403,8 @@ Acknowledgment with resolved zone info.
     "discovered": 15,
     "total": 100,
     "percent": 15.0
-  }
+  },
+  "scaling": "Scaling: tier 1, previously 2"
 }
 ```
 
@@ -414,6 +415,7 @@ Acknowledgment with resolved zone info.
 | `current_zone` | Zone player arrived in |
 | `exits` | Available fog gates from current zone |
 | `stats` | Discovery progress |
+| `scaling` | Zone scaling tier text (optional, from spoiler log) |
 
 #### Mod → Server: `zone_query`
 
@@ -449,7 +451,8 @@ Response with resolved zone and exits.
       "description": "after the boss",
       "from_zone": null
     }
-  ]
+  ],
+  "scaling": "Scaling: tier 1, previously 2"
 }
 ```
 
@@ -457,6 +460,7 @@ Response with resolved zone and exits.
 |-------|-------------|
 | `zone` | Resolved zone name (null if not found) |
 | `exits` | Available fog gates from current zone |
+| `scaling` | Zone scaling tier text (optional, from spoiler log) |
 
 #### Mod → Server: `debug_log`
 

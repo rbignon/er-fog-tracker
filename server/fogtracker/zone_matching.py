@@ -892,3 +892,24 @@ def compute_zone_exits(
         )
 
     return exits
+
+
+def get_zone_scaling(zones: list[dict] | None, zone_name: str) -> str | None:
+    """
+    Get the scaling text for a zone by its display name.
+
+    Args:
+        zones: List of zone metadata dicts with 'name' and 'scaling' fields
+        zone_name: The display name of the zone to look up
+
+    Returns:
+        The scaling text (e.g., "Scaling: tier 1, previously 2") or None if not found.
+    """
+    if not zones:
+        return None
+
+    for zone in zones:
+        if zone.get("name") == zone_name:
+            return zone.get("scaling")
+
+    return None
