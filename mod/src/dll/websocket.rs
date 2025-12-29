@@ -56,6 +56,8 @@ pub enum OutgoingMessage {
         map_id: u32,
         pos: Position,
         play_region_id: Option<u32>,
+        /// Entity ID of the grace being fast traveled to
+        grace_entity_id: Option<u32>,
     },
     /// Respond to server ping
     Pong,
@@ -223,7 +225,13 @@ impl WebSocketClient {
     }
 
     /// Send a zone query to the server (after fast travel)
-    pub fn send_zone_query(&self, map_id: u32, pos: (f32, f32, f32), play_region_id: Option<u32>) {
+    pub fn send_zone_query(
+        &self,
+        map_id: u32,
+        pos: (f32, f32, f32),
+        play_region_id: Option<u32>,
+        grace_entity_id: Option<u32>,
+    ) {
         if let Some(tx) = &self.tx {
             let _ = tx.try_send(OutgoingMessage::ZoneQuery {
                 map_id,
@@ -233,6 +241,7 @@ impl WebSocketClient {
                     z: pos.2,
                 },
                 play_region_id,
+                grace_entity_id,
             });
         }
     }
@@ -515,18 +524,21 @@ fn message_loop(
                 map_id,
                 ref pos,
                 play_region_id,
+                grace_entity_id,
             }) => {
                 let map_str = format_map_id(map_id);
                 debug!(
                     map_id = %map_str,
                     pos = format!("({:.1}, {:.1}, {:.1})", pos.x, pos.y, pos.z),
                     play_region_id = ?play_region_id,
+                    grace_entity_id = ?grace_entity_id,
                     "[WS TX] ZoneQuery"
                 );
                 let msg = ServerMessage::ZoneQuery {
                     map_id: map_str,
                     pos: pos.clone(),
                     play_region_id,
+                    grace_entity_id,
                 };
                 let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
                 socket

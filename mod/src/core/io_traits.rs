@@ -85,7 +85,10 @@ pub trait DiscoverySender {
     fn send_discovery(&self, event: &DiscoveryEvent);
 
     /// Send a zone query (after loading screen exit)
-    fn send_zone_query(&self, position: &PlayerPosition);
+    ///
+    /// The `grace_entity_id` parameter is the entity ID of the grace being fast traveled to.
+    /// Pass `None` for non-fast-travel zone queries (fog gate traversals, deaths, etc.)
+    fn send_zone_query(&self, position: &PlayerPosition, grace_entity_id: Option<u32>);
 }
 
 /// Trait for receiving events from the server
@@ -112,6 +115,13 @@ pub mod mocks {
     use super::*;
     use std::cell::RefCell;
 
+    /// A zone query with position and optional grace entity ID
+    #[derive(Debug, Clone)]
+    pub struct ZoneQueryRecord {
+        pub position: PlayerPosition,
+        pub grace_entity_id: Option<u32>,
+    }
+
     /// Mock server connection for testing
     ///
     /// This mock allows tests to:
@@ -123,8 +133,8 @@ pub mod mocks {
         pub connected: RefCell<bool>,
         /// Discoveries that were sent
         pub discoveries_sent: RefCell<Vec<DiscoveryEvent>>,
-        /// Zone queries that were sent
-        pub zone_queries_sent: RefCell<Vec<PlayerPosition>>,
+        /// Zone queries that were sent (with grace entity ID)
+        pub zone_queries_sent: RefCell<Vec<ZoneQueryRecord>>,
         /// Events to return from poll_event()
         pub pending_events: RefCell<Vec<ServerEvent>>,
     }
@@ -197,9 +207,25 @@ pub mod mocks {
             self.discoveries_sent.borrow().last().cloned()
         }
 
-        /// Get the last zone query sent, if any
+        /// Get the last zone query sent, if any (position only, for backward compatibility)
         pub fn last_zone_query(&self) -> Option<PlayerPosition> {
+            self.zone_queries_sent
+                .borrow()
+                .last()
+                .map(|r| r.position.clone())
+        }
+
+        /// Get the last zone query record (with grace entity ID)
+        pub fn last_zone_query_record(&self) -> Option<ZoneQueryRecord> {
             self.zone_queries_sent.borrow().last().cloned()
+        }
+
+        /// Get the last grace entity ID sent with a zone query
+        pub fn last_zone_query_grace_entity_id(&self) -> Option<u32> {
+            self.zone_queries_sent
+                .borrow()
+                .last()
+                .and_then(|r| r.grace_entity_id)
         }
     }
 
@@ -226,8 +252,11 @@ pub mod mocks {
             self.discoveries_sent.borrow_mut().push(event.clone());
         }
 
-        fn send_zone_query(&self, position: &PlayerPosition) {
-            self.zone_queries_sent.borrow_mut().push(position.clone());
+        fn send_zone_query(&self, position: &PlayerPosition, grace_entity_id: Option<u32>) {
+            self.zone_queries_sent.borrow_mut().push(ZoneQueryRecord {
+                position: position.clone(),
+                grace_entity_id,
+            });
         }
     }
 
@@ -302,7 +331,7 @@ mod tests {
         let pos = make_pos(0x3C2C2400, 100.0, 50.0, 100.0);
 
         assert_eq!(server.zone_query_count(), 0);
-        server.send_zone_query(&pos);
+        server.send_zone_query(&pos, None);
         assert_eq!(server.zone_query_count(), 1);
 
         let last = server.last_zone_query().unwrap();

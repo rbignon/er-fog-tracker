@@ -65,6 +65,8 @@ pub struct SessionState {
 pub struct TrackerSession {
     warp_tracker: WarpTracker,
     state: SessionState,
+    /// Last destination entity ID seen during a warp (for zone_query after fast travel)
+    last_warp_destination_entity_id: Option<u32>,
 }
 
 impl TrackerSession {
@@ -73,6 +75,7 @@ impl TrackerSession {
         Self {
             warp_tracker: WarpTracker::new(),
             state: SessionState::default(),
+            last_warp_destination_entity_id: None,
         }
     }
 
@@ -147,6 +150,12 @@ impl TrackerSession {
     {
         let mut events = Vec::new();
 
+        // 0. Capture destination entity ID when warp is requested (for fast travel zone queries)
+        // We capture this early so it's available when zone_query is sent after loading screen
+        if warp_detector.is_warp_requested() {
+            self.last_warp_destination_entity_id = Some(warp_detector.get_destination_entity_id());
+        }
+
         // 1. Check for loading screen exit BEFORE check_warp (which updates state)
         // This must be done first because check_warp updates was_position_readable
         let just_exited_loading = self.warp_tracker.just_exited_loading_screen(game_state);
@@ -163,7 +172,11 @@ impl TrackerSession {
         if just_exited_loading {
             if server.is_connected() {
                 if let Some(pos) = game_state.read_position() {
-                    server.send_zone_query(&pos);
+                    // Pass grace_entity_id for fast travel zone queries
+                    // The server will use this for precise zone resolution
+                    server.send_zone_query(&pos, self.last_warp_destination_entity_id);
+                    // Clear the stored entity ID after use
+                    self.last_warp_destination_entity_id = None;
                     // Clear zone while waiting for response
                     self.state.current_zone = None;
                     self.state.exits.clear();
@@ -687,5 +700,171 @@ mod tests {
         assert_eq!(session.current_zone(), Some("Limgrave"));
         // Stats should still update
         assert_eq!(session.stats().unwrap().discovered, 5);
+    }
+
+    // -------------------------------------------------------------------------
+    // Grace entity ID tests (fast travel zone resolution)
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_zone_query_includes_grace_entity_id_for_fast_travel() {
+        // Simulate fast travel: warp requested with grace entity ID, then loading screen
+        const GRACE_ENTITY_ID: u32 = 1042362951; // "The First Step" grace
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Starting position
+                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Warp requested
+                None,                                          // Loading screen
+                Some(make_pos(0x3C2C2400, 200.0, 0.0, 200.0)), // Destination (Limgrave)
+            ],
+            vec![Some(0), Some(0), Some(0), Some(0)],
+        );
+        let warp = MockWarpDetector::new();
+        let mut server = MockServerConnection::new();
+        // Sync session to avoid zone query on first readable frame
+        let mut session = synced_session(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: At starting position, warp is requested
+        warp.set_warp(true, GRACE_ENTITY_ID, 0x3C2C2400);
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 2: Loading screen
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 3: Position readable - zone query should include grace entity ID
+        warp.set_warp(false, 0, 0); // Warp completed
+        session.update(&game_state, &warp, &mut server);
+
+        // Verify zone query was sent with the grace entity ID
+        assert_eq!(server.zone_query_count(), 1);
+        assert_eq!(
+            server.last_zone_query_grace_entity_id(),
+            Some(GRACE_ENTITY_ID)
+        );
+    }
+
+    #[test]
+    fn test_zone_query_grace_entity_id_cleared_after_use() {
+        // Verify the grace entity ID is cleared after being used in a zone query
+        const GRACE_ENTITY_ID: u32 = 1042362951;
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Start (sync frame)
+                Some(make_pos(0x0A0A1000, 100.0, 0.0, 100.0)), // Warp requested
+                None,                                          // Loading 1
+                Some(make_pos(0x3C2C2400, 200.0, 0.0, 200.0)), // Destination 1
+                None,                                          // Loading 2 (death, no warp request)
+                Some(make_pos(0x3C2C2400, 200.0, 0.0, 200.0)), // Respawn
+            ],
+            vec![Some(0), Some(0), Some(0), Some(0), Some(0), Some(0)],
+        );
+        let warp = MockWarpDetector::new();
+        let mut server = MockServerConnection::new();
+        let mut session = synced_session(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: Warp requested (fast travel)
+        warp.set_warp(true, GRACE_ENTITY_ID, 0x3C2C2400);
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 2: Loading
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 3: Arrived - zone query with grace entity ID
+        warp.set_warp(false, 0, 0);
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Verify first zone query has grace entity ID
+        assert_eq!(server.zone_query_count(), 1);
+        assert_eq!(
+            server.last_zone_query_grace_entity_id(),
+            Some(GRACE_ENTITY_ID)
+        );
+
+        // Frame 4: Second loading screen (death - no warp request)
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 5: Respawn - zone query should NOT have grace entity ID
+        session.update(&game_state, &warp, &mut server);
+
+        // Verify second zone query was sent without grace entity ID
+        assert_eq!(server.zone_query_count(), 2);
+        // The last query should have no grace entity ID (it was cleared)
+        assert_eq!(server.last_zone_query_grace_entity_id(), None);
+    }
+
+    #[test]
+    fn test_zone_query_no_grace_entity_id_for_death() {
+        // When player dies (no warp requested), zone query should not have grace entity ID
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Playing (sync frame)
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Still playing
+                None,                                          // Death loading
+                Some(make_pos(0x3C2C2400, 50.0, 0.0, 50.0)),   // Respawn at grace
+            ],
+            vec![Some(0), Some(0), Some(0), Some(0)],
+        );
+        let warp = MockWarpDetector::new(); // No warp requested (death)
+        let mut server = MockServerConnection::new();
+        let mut session = synced_session(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: Playing normally
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 2: Death loading screen
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 3: Respawn - zone query without grace entity ID
+        session.update(&game_state, &warp, &mut server);
+
+        // Verify zone query was sent without grace entity ID
+        assert_eq!(server.zone_query_count(), 1);
+        assert_eq!(server.last_zone_query_grace_entity_id(), None);
+    }
+
+    #[test]
+    fn test_fog_gate_discovery_does_not_capture_grace_entity_id() {
+        // For fog gate traversals, the destination_entity_id is a fog rando entity (755890xxx)
+        // Zone info comes from discovery ack, not zone query
+        const FOG_RANDO_ENTITY: u32 = 755890042;
+
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Entry zone
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Animation starts
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)), // Exit zone
+            ],
+            vec![Some(0), Some(Animation::FogWall.as_u32()), Some(0)],
+        );
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, FOG_RANDO_ENTITY, 0x0A0A1000);
+
+        let mut server = MockServerConnection::new();
+        let mut session = synced_session(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: Animation starts, pending warp created
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 2: Animation ends, discovery sent
+        session.update(&game_state, &warp, &mut server);
+
+        // Discovery should be sent (not zone query)
+        assert_eq!(server.discovery_count(), 1);
+        assert_eq!(server.zone_query_count(), 0);
     }
 }

@@ -81,6 +81,9 @@ pub enum ServerMessage {
         pos: Position,
         #[serde(skip_serializing_if = "Option::is_none")]
         play_region_id: Option<u32>,
+        /// Entity ID of the grace being fast traveled to (enables precise zone lookup)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        grace_entity_id: Option<u32>,
     },
     /// Pong response to server ping
     Pong,
@@ -257,10 +260,26 @@ mod tests {
             map_id: "m60_44_36_00".to_string(),
             pos: Position::new(100.0, 0.0, 100.0),
             play_region_id: Some(6044360),
+            grace_entity_id: Some(1042362951),
         };
         let json = serde_json::to_string(&msg).unwrap();
         assert!(json.contains(r#""type":"zone_query""#));
         assert!(json.contains(r#""map_id":"m60_44_36_00""#));
+        assert!(json.contains(r#""grace_entity_id":1042362951"#));
+    }
+
+    #[test]
+    fn test_zone_query_message_serialize_no_grace() {
+        let msg = ServerMessage::ZoneQuery {
+            map_id: "m60_44_36_00".to_string(),
+            pos: Position::new(100.0, 0.0, 100.0),
+            play_region_id: None,
+            grace_entity_id: None,
+        };
+        let json = serde_json::to_string(&msg).unwrap();
+        assert!(json.contains(r#""type":"zone_query""#));
+        // grace_entity_id should be absent (skip_serializing_if)
+        assert!(!json.contains("grace_entity_id"));
     }
 
     #[test]
@@ -462,6 +481,13 @@ mod tests {
                 map_id: "m60_44_36_00".to_string(),
                 pos: Position::new(1.0, 2.0, 3.0),
                 play_region_id: None,
+                grace_entity_id: None,
+            },
+            ServerMessage::ZoneQuery {
+                map_id: "m60_42_36_00".to_string(),
+                pos: Position::new(1.0, 2.0, 3.0),
+                play_region_id: Some(1234),
+                grace_entity_id: Some(1042362951),
             },
         ];
 

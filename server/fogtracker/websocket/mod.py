@@ -18,6 +18,7 @@ from fogtracker.game_logic import (
     format_ingame_display,
     propagate_discovery,
 )
+from fogtracker.grace_resolver import resolve_zone_by_grace_entity_id
 from fogtracker.websocket.auth import authenticate_ws, verify_game_access
 from fogtracker.websocket.base import Client
 from fogtracker.websocket.manager import manager
@@ -289,21 +290,24 @@ class ModClient(Client):
     async def _handle_zone_query(self, data: dict):
         """Handle zone query (after fast travel) - returns current zone and exits.
 
-        Uses discovered zones to filter candidates: if a player can fast travel
-        to a grace site, the zone must be discovered. This helps disambiguate
-        when multiple zones match the same position.
+        Resolution priority:
+        1. Grace entity ID (most precise for fast travel)
+        2. Col/play_region_id resolution
+        3. Position-based resolution with discovered zone filtering
         """
         map_id = data.get("map_id", "")
         pos = data.get("pos", {})
         play_region_id = data.get("play_region_id")
+        grace_entity_id = data.get("grace_entity_id")
 
         logger.info(
-            "[MOD] Zone query: %s (%.1f, %.1f, %.1f) region=%s",
+            "[MOD] Zone query: %s (%.1f, %.1f, %.1f) region=%s grace=%s",
             map_id,
             pos.get("x", 0),
             pos.get("y", 0),
             pos.get("z", 0),
             play_region_id,
+            grace_entity_id,
         )
 
         if not map_id:
@@ -323,12 +327,26 @@ class ModClient(Client):
                 game.discovered_zone_links or [], game.zone_links or []
             )
 
-            resolver = get_resolver()
-
-            # Try Col resolution first if available
             zone_internal = None
             zone_display = None
-            if play_region_id:
+
+            # 1. Try grace entity ID resolution (most precise for fast travel)
+            if grace_entity_id:
+                grace_zone = resolve_zone_by_grace_entity_id(grace_entity_id)
+                if grace_zone:
+                    # Verify the grace zone is discovered (it should be if player can fast travel)
+                    if grace_zone in discovered_zones:
+                        zone_display = grace_zone
+                        logger.info("[MOD] Zone resolved by grace entity ID: %s", zone_display)
+                    else:
+                        logger.debug(
+                            "[MOD] Grace zone '%s' not discovered, falling back",
+                            grace_zone,
+                        )
+
+            # 2. Try Col resolution if grace didn't work
+            resolver = get_resolver()
+            if not zone_display and play_region_id:
                 col = f"h{play_region_id:06x}"
                 zone_internal, zone_display = resolver.resolve_by_col(map_id, col)
                 if zone_display:
@@ -342,9 +360,9 @@ class ModClient(Client):
                         )
                         zone_internal, zone_display = None, None
 
-            # Fallback to position-based resolution
+            # 3. Fallback to position-based resolution
             # Only return if exactly 1 discovered candidate (avoid ambiguity)
-            if not zone_internal:
+            if not zone_display:
                 candidates = resolver.resolve_all_candidates(
                     map_id, pos.get("x", 0), pos.get("y", 0), pos.get("z", 0)
                 )

@@ -1,0 +1,1274 @@
+{
+  "mapping": {
+    "1002950": {
+      "grace_name": "Murkwater Cave",
+      "zone": "Limgrave - Murkwater Cave",
+      "map_id": "m31_00_00_00"
+    },
+    "1012950": {
+      "grace_name": "Earthbore Cave",
+      "zone": "Weeping Peninsula - Earthbore Cave",
+      "map_id": "m31_01_00_00"
+    },
+    "1022950": {
+      "grace_name": "Tombsward Cave",
+      "zone": "Weeping Peninsula - Tombsward Cave",
+      "map_id": "m31_02_00_00"
+    },
+    "1032950": {
+      "grace_name": "Groveside Cave",
+      "zone": "Limgrave - Groveside Cave",
+      "map_id": "m31_03_00_00"
+    },
+    "1042950": {
+      "grace_name": "Stillwater Cave",
+      "zone": "Liurnia - Stillwater Cave",
+      "map_id": "m31_04_00_00"
+    },
+    "1052950": {
+      "grace_name": "Lakeside Crystal Cave",
+      "zone": "Liurnia - Lakeside Crystal Cave",
+      "map_id": "m31_05_00_00"
+    },
+    "1062950": {
+      "grace_name": "Academy Crystal Cave",
+      "zone": "Academy of Raya Lucaria - After Academy Crystal Cave",
+      "map_id": "m31_06_00_00"
+    },
+    "1072950": {
+      "grace_name": "Seethewater Cave",
+      "zone": "Mt. Gelmir - Seethewater Cave",
+      "map_id": "m31_07_00_00"
+    },
+    "1092950": {
+      "grace_name": "Volcano Cave",
+      "zone": "Mt. Gelmir - Volcano Cave",
+      "map_id": "m31_09_00_00"
+    },
+    "1102950": {
+      "grace_name": "Dragonbarrow Cave",
+      "zone": "Dragonbarrow Cave",
+      "map_id": "m31_10_00_00"
+    },
+    "1112950": {
+      "grace_name": "Sellia Hideaway",
+      "zone": "Dragonbarrow - Sellia Hideaway",
+      "map_id": "m31_11_00_00"
+    },
+    "1122950": {
+      "grace_name": "Cave of the Forlorn",
+      "zone": "Consecrated Snowfield - Cave of the Forlorn",
+      "map_id": "m31_12_00_00"
+    },
+    "1152950": {
+      "grace_name": "Coastal Cave",
+      "zone": "Limgrave - Coastal Cave",
+      "map_id": "m31_15_00_00"
+    },
+    "1172950": {
+      "grace_name": "Highroad Cave",
+      "zone": "Limgrave - Highroad Cave",
+      "map_id": "m31_17_00_00"
+    },
+    "1182950": {
+      "grace_name": "Perfumer's Grotto",
+      "zone": "Altus Plateau - Perfumer's Grotto",
+      "map_id": "m31_18_00_00"
+    },
+    "1192950": {
+      "grace_name": "Sage's Cave",
+      "zone": "Altus Plateau - Sage's Cave",
+      "map_id": "m31_19_00_00"
+    },
+    "1202950": {
+      "grace_name": "Abandoned Cave",
+      "zone": "Caelid - Abandoned Cave Start",
+      "map_id": "m31_20_00_00"
+    },
+    "1212950": {
+      "grace_name": "Gaol Cave",
+      "zone": "Caelid - Gaol Cave",
+      "map_id": "m31_21_00_00"
+    },
+    "1222950": {
+      "grace_name": "Spiritcaller's Cave",
+      "zone": "Mountaintops - Spiritcaller Cave",
+      "map_id": "m31_22_00_00"
+    },
+    "10002950": {
+      "grace_name": "Godrick the Grafted",
+      "zone": "Godrick the Grafted",
+      "map_id": "m10_00_00_00"
+    },
+    "10002951": {
+      "grace_name": "Margit, the Fell Omen",
+      "zone": "Margit, the Fell Omen",
+      "map_id": "m10_00_00_00"
+    },
+    "10002952": {
+      "grace_name": "Castleward Tunnel",
+      "zone": "Stormhill",
+      "map_id": "m10_00_00_00"
+    },
+    "10002953": {
+      "grace_name": "Gateside Chamber",
+      "zone": "Stormhill",
+      "map_id": "m10_00_00_00"
+    },
+    "10002954": {
+      "grace_name": "Stormveil Cliffside",
+      "zone": "Stormveil Castle before Gate",
+      "map_id": "m10_00_00_00"
+    },
+    "10002955": {
+      "grace_name": "Rampart Tower",
+      "zone": "Stormhill",
+      "map_id": "m10_00_00_00"
+    },
+    "10002956": {
+      "grace_name": "Liftside Chamber",
+      "zone": "Stormhill",
+      "map_id": "m10_00_00_00"
+    },
+    "10002957": {
+      "grace_name": "Secluded Cell",
+      "zone": "Stormhill",
+      "map_id": "m10_00_00_00"
+    },
+    "10002958": {
+      "grace_name": "Stormveil Main Gate",
+      "zone": "Stormveil Castle before Gate",
+      "map_id": "m10_00_00_00"
+    },
+    "11052950": {
+      "grace_name": "Elden Throne",
+      "zone": "Leyndell - Elden Throne",
+      "map_id": "m11_05_00_00"
+    },
+    "11052951": {
+      "grace_name": "Erdtree Sanctuary",
+      "zone": "Leyndell - Erdtree Sanctuary",
+      "map_id": "m11_05_00_00"
+    },
+    "11052952": {
+      "grace_name": "East Capital Rampart",
+      "zone": "Divine Tower of East Altus Start",
+      "map_id": "m11_05_00_00"
+    },
+    "11052953": {
+      "grace_name": "Leyndell, Capital of Ash",
+      "zone": "Divine Tower of East Altus Start",
+      "map_id": "m11_05_00_00"
+    },
+    "11052954": {
+      "grace_name": "Queen's Bedchamber",
+      "zone": "Leyndell - Queen's Bedchamber",
+      "map_id": "m11_05_00_00"
+    },
+    "11052955": {
+      "grace_name": "Divine Bridge",
+      "zone": "Leyndell - Divine Bridge",
+      "map_id": "m11_05_00_00"
+    },
+    "11102950": {
+      "grace_name": "Table of Lost Grace",
+      "zone": "Roundtable Hold",
+      "map_id": "m11_10_00_00"
+    },
+    "12012950": {
+      "grace_name": "Dragonkin Soldier of Nokstella",
+      "zone": "Dragonkin Soldier of Nokstella",
+      "map_id": "m12_01_00_00"
+    },
+    "12012951": {
+      "grace_name": "Ainsel River Well Depths",
+      "zone": "Ainsel River Downstream",
+      "map_id": "m12_01_00_00"
+    },
+    "12012952": {
+      "grace_name": "Ainsel River Sluice Gate",
+      "zone": "Ainsel River Downstream",
+      "map_id": "m12_01_00_00"
+    },
+    "12012953": {
+      "grace_name": "Ainsel River Downstream",
+      "zone": "Ainsel River Downstream",
+      "map_id": "m12_01_00_00"
+    },
+    "12012954": {
+      "grace_name": "Ainsel River Main",
+      "zone": "Ainsel River Main",
+      "map_id": "m12_01_00_00"
+    },
+    "12012955": {
+      "grace_name": "Nokstella, Eternal City",
+      "zone": "Ainsel River Downstream",
+      "map_id": "m12_01_00_00"
+    },
+    "12012956": {
+      "grace_name": "Lake of Rot Shoreside",
+      "zone": "Dragonkin Soldier of Nokstella",
+      "map_id": "m12_01_00_00"
+    },
+    "12012958": {
+      "grace_name": "Grand Cloister",
+      "zone": "Ainsel River Downstream",
+      "map_id": "m12_01_00_00"
+    },
+    "12012959": {
+      "grace_name": "Nokstella Waterfall Basin",
+      "zone": "Dragonkin Soldier of Nokstella",
+      "map_id": "m12_01_00_00"
+    },
+    "12022950": {
+      "grace_name": "Great Waterfall Basin",
+      "zone": "Siofra River",
+      "map_id": "m12_02_00_00"
+    },
+    "12022951": {
+      "grace_name": "Mimic Tear",
+      "zone": "Nokron before Mimic Tear",
+      "map_id": "m12_02_00_00"
+    },
+    "12022953": {
+      "grace_name": "Siofra River Bank",
+      "zone": "Siofra River",
+      "map_id": "m12_02_00_00"
+    },
+    "12022954": {
+      "grace_name": "Worshippers' Woods",
+      "zone": "Nokron - Ancestral Woods",
+      "map_id": "m12_02_00_00"
+    },
+    "12022956": {
+      "grace_name": "Ancestral Woods",
+      "zone": "Nokron - Ancestral Woods",
+      "map_id": "m12_02_00_00"
+    },
+    "12022957": {
+      "grace_name": "Aqueduct-Facing Cliffs",
+      "zone": "Nokron - Aqueduct-Facing Cliffs",
+      "map_id": "m12_02_00_00"
+    },
+    "12022958": {
+      "grace_name": "Night's Sacred Ground",
+      "zone": "Nokron - Night's Sacred Grounds",
+      "map_id": "m12_02_00_00"
+    },
+    "12022959": {
+      "grace_name": "Below the Well",
+      "zone": "Siofra River",
+      "map_id": "m12_02_00_00"
+    },
+    "12032950": {
+      "grace_name": "Prince of Death's Throne",
+      "zone": "Deeproot Depths from Proscription",
+      "map_id": "m12_03_00_00"
+    },
+    "12032951": {
+      "grace_name": "Root-Facing Cliffs",
+      "zone": "Deeproot Depths from Proscription",
+      "map_id": "m12_03_00_00"
+    },
+    "12032952": {
+      "grace_name": "Great Waterfall Crest",
+      "zone": "Deeproot Depths from Proscription",
+      "map_id": "m12_03_00_00"
+    },
+    "12032953": {
+      "grace_name": "Deeproot Depths",
+      "zone": "Deeproot Depths from Proscription",
+      "map_id": "m12_03_00_00"
+    },
+    "12032954": {
+      "grace_name": "The Nameless Eternal City",
+      "zone": "Deeproot Depths from Proscription",
+      "map_id": "m12_03_00_00"
+    },
+    "12032955": {
+      "grace_name": "Across the Roots",
+      "zone": "Deeproot Depths from Proscription",
+      "map_id": "m12_03_00_00"
+    },
+    "12042950": {
+      "grace_name": "Astel, Naturalborn of the Void",
+      "zone": "Before Astel, Naturalborn of the Void",
+      "map_id": "m12_04_00_00"
+    },
+    "12052950": {
+      "grace_name": "Cocoon of the Empyrean",
+      "zone": "Mohg, Lord of Blood",
+      "map_id": "m12_05_00_00"
+    },
+    "12052951": {
+      "grace_name": "Palace Approach Ledge-Road",
+      "zone": "Mohgwyn Palace",
+      "map_id": "m12_05_00_00"
+    },
+    "12052952": {
+      "grace_name": "Dynasty Mausoleum Entrance",
+      "zone": "Mohgwyn Palace",
+      "map_id": "m12_05_00_00"
+    },
+    "12052953": {
+      "grace_name": "Dynasty Mausoleum Midpoint",
+      "zone": "Mohgwyn Palace",
+      "map_id": "m12_05_00_00"
+    },
+    "12072950": {
+      "grace_name": "Siofra River Well Depths",
+      "zone": "Siofra River",
+      "map_id": "m12_07_00_00"
+    },
+    "12072951": {
+      "grace_name": "Nokron, Eternal City",
+      "zone": "Siofra River",
+      "map_id": "m12_07_00_00"
+    },
+    "13002950": {
+      "grace_name": "Maliketh, the Black Blade",
+      "zone": "Maliketh the Black Blade",
+      "map_id": "m13_00_00_00"
+    },
+    "13002951": {
+      "grace_name": "Dragonlord Placidusax",
+      "zone": "Dragonlord Placidusax",
+      "map_id": "m13_00_00_00"
+    },
+    "13002952": {
+      "grace_name": "Dragon Temple Altar",
+      "zone": "Farum Azula - Dragon Temple",
+      "map_id": "m13_00_00_00"
+    },
+    "13002953": {
+      "grace_name": "Crumbling Beast Grave",
+      "zone": "Farum Azula - Crumbling Beast Grave",
+      "map_id": "m13_00_00_00"
+    },
+    "13002954": {
+      "grace_name": "Crumbling Beast Grave Depths",
+      "zone": "Farum Azula - Crumbling Beast Grave Depths",
+      "map_id": "m13_00_00_00"
+    },
+    "13002955": {
+      "grace_name": "Tempest-Facing Balcony",
+      "zone": "Farum Azula - Dragon Temple Balcony",
+      "map_id": "m13_00_00_00"
+    },
+    "13002956": {
+      "grace_name": "Dragon Temple",
+      "zone": "Farum Azula - Dragon Temple",
+      "map_id": "m13_00_00_00"
+    },
+    "13002957": {
+      "grace_name": "Dragon Temple Transept",
+      "zone": "Farum Azula - Dragon Temple Transept",
+      "map_id": "m13_00_00_00"
+    },
+    "13002958": {
+      "grace_name": "Dragon Temple Lift",
+      "zone": "Farum Azula - Dragon Temple Lift",
+      "map_id": "m13_00_00_00"
+    },
+    "13002959": {
+      "grace_name": "Dragon Temple Rooftop",
+      "zone": "Farum Azula - Dragon Temple",
+      "map_id": "m13_00_00_00"
+    },
+    "13002960": {
+      "grace_name": "Beside the Great Bridge",
+      "zone": "Farum Azula Rooftop and Bridge",
+      "map_id": "m13_00_00_00"
+    },
+    "14002950": {
+      "grace_name": "Raya Lucaria Grand Library",
+      "zone": "Academy of Raya Lucaria Main Entrance",
+      "map_id": "m14_00_00_00"
+    },
+    "14002951": {
+      "grace_name": "Debate Parlour",
+      "zone": "Academy of Raya Lucaria Main Entrance",
+      "map_id": "m14_00_00_00"
+    },
+    "14002952": {
+      "grace_name": "Church of the Cuckoo",
+      "zone": "Academy of Raya Lucaria Main Entrance",
+      "map_id": "m14_00_00_00"
+    },
+    "14002953": {
+      "grace_name": "Schoolhouse Classroom",
+      "zone": "Academy of Raya Lucaria Main Entrance",
+      "map_id": "m14_00_00_00"
+    },
+    "15002950": {
+      "grace_name": "Malenia, Goddess of Rot",
+      "zone": "Loretta, Knight of the Haligtree",
+      "map_id": "m15_00_00_00"
+    },
+    "15002951": {
+      "grace_name": "Prayer Room",
+      "zone": "Haligtree Town",
+      "map_id": "m15_00_00_00"
+    },
+    "15002952": {
+      "grace_name": "Elphael Inner Wall",
+      "zone": "Elphael, Brace of the Haligtree",
+      "map_id": "m15_00_00_00"
+    },
+    "15002953": {
+      "grace_name": "Drainage Channel",
+      "zone": "Haligtree Town",
+      "map_id": "m15_00_00_00"
+    },
+    "15002954": {
+      "grace_name": "Haligtree Roots",
+      "zone": "Haligtree Town",
+      "map_id": "m15_00_00_00"
+    },
+    "15002955": {
+      "grace_name": "Haligtree Promenade",
+      "zone": "Haligtree Town",
+      "map_id": "m15_00_00_00"
+    },
+    "15002956": {
+      "grace_name": "Haligtree Canopy",
+      "zone": "Haligtree Town",
+      "map_id": "m15_00_00_00"
+    },
+    "15002957": {
+      "grace_name": "Haligtree Town",
+      "zone": "Haligtree Town",
+      "map_id": "m15_00_00_00"
+    },
+    "15002958": {
+      "grace_name": "Haligtree Town Plaza",
+      "zone": "Haligtree Town",
+      "map_id": "m15_00_00_00"
+    },
+    "16002950": {
+      "grace_name": "Rykard, Lord of Blasphemy",
+      "zone": "Rykard, Lord of Blasphemy",
+      "map_id": "m16_00_00_00"
+    },
+    "16002951": {
+      "grace_name": "Temple of Eiglay",
+      "zone": "Volcano Manor - Temple of Eiglay",
+      "map_id": "m16_00_00_00"
+    },
+    "16002952": {
+      "grace_name": "Volcano Manor",
+      "zone": "Before Volcano Manor Entrance",
+      "map_id": "m16_00_00_00"
+    },
+    "16002953": {
+      "grace_name": "Prison Town Church",
+      "zone": "Volcano Manor Prison Town Church",
+      "map_id": "m16_00_00_00"
+    },
+    "16002954": {
+      "grace_name": "Guest Hall",
+      "zone": "Volcano Manor - Hallway Opposite Sending Gate",
+      "map_id": "m16_00_00_00"
+    },
+    "16002960": {
+      "grace_name": "Audience Pathway",
+      "zone": "Volcano Manor - Audience Pathway",
+      "map_id": "m16_00_00_00"
+    },
+    "16002962": {
+      "grace_name": "Abductor Virgin",
+      "zone": "Volcano Manor - Abductor Virgins",
+      "map_id": "m16_00_00_00"
+    },
+    "16002964": {
+      "grace_name": "Subterranean Inquisition Chamber",
+      "zone": "Before Volcano Manor Entrance",
+      "map_id": "m16_00_00_00"
+    },
+    "18002950": {
+      "grace_name": "Cave of Knowledge",
+      "zone": "Cave of Knowledge",
+      "map_id": "m18_00_00_00"
+    },
+    "18002951": {
+      "grace_name": "Stranded Graveyard",
+      "zone": "Stranded Graveyard",
+      "map_id": "m18_00_00_00"
+    },
+    "19002950": {
+      "grace_name": "Fractured Marika",
+      "zone": "Stone Platform",
+      "map_id": "m19_00_00_00"
+    },
+    "1033402950": {
+      "grace_name": "Altar South",
+      "zone": "Moonlight Altar",
+      "map_id": "m60_33_40_00"
+    },
+    "1033442950": {
+      "grace_name": "Revenger's Shack",
+      "zone": "Liurnia",
+      "map_id": "m60_33_44_00"
+    },
+    "1033462950": {
+      "grace_name": "Foot of the Four Belfries",
+      "zone": "Liurnia",
+      "map_id": "m60_33_46_00"
+    },
+    "1033472950": {
+      "grace_name": "The Four Belfries",
+      "zone": "Liurnia",
+      "map_id": "m60_33_47_00"
+    },
+    "1034412950": {
+      "grace_name": "Moonlight Altar",
+      "zone": "Moonlight Altar",
+      "map_id": "m60_34_41_00"
+    },
+    "1034422950": {
+      "grace_name": "Village of the Albinaurics",
+      "zone": "Liurnia",
+      "map_id": "m60_34_42_00"
+    },
+    "1034432950": {
+      "grace_name": "Converted Tower",
+      "zone": "Liurnia",
+      "map_id": "m60_34_43_00"
+    },
+    "1034442950": {
+      "grace_name": "Temple Quarter",
+      "zone": "Liurnia",
+      "map_id": "m60_34_44_00"
+    },
+    "1034462950": {
+      "grace_name": "Crystalline Woods",
+      "zone": "Liurnia",
+      "map_id": "m60_34_46_00"
+    },
+    "1034472951": {
+      "grace_name": "Sorcerer's Isle",
+      "zone": "Liurnia",
+      "map_id": "m60_34_47_00"
+    },
+    "1034482950": {
+      "grace_name": "Northern Liurnia Lake Shore",
+      "zone": "Liurnia",
+      "map_id": "m60_34_48_00"
+    },
+    "1034492950": {
+      "grace_name": "Road to the Manor",
+      "zone": "Liurnia",
+      "map_id": "m60_34_49_00"
+    },
+    "1034502950": {
+      "grace_name": "Ranni's Rise",
+      "zone": "Liurnia",
+      "map_id": "m60_34_50_00"
+    },
+    "1034502951": {
+      "grace_name": "Ranni's Chamber",
+      "zone": "Liurnia",
+      "map_id": "m60_34_50_00"
+    },
+    "1035422950": {
+      "grace_name": "Cathedral of Manus Celes",
+      "zone": "Liurnia",
+      "map_id": "m60_35_42_00"
+    },
+    "1035432950": {
+      "grace_name": "Folly on the Lake",
+      "zone": "Liurnia",
+      "map_id": "m60_35_43_00"
+    },
+    "1035452950": {
+      "grace_name": "South Raya Lucaria Gate",
+      "zone": "Liurnia",
+      "map_id": "m60_35_45_00"
+    },
+    "1035462950": {
+      "grace_name": "Academy Gate",
+      "zone": "Liurnia",
+      "map_id": "m60_35_46_00"
+    },
+    "1035472950": {
+      "grace_name": "East Gate Bridge Trestle",
+      "zone": "Liurnia",
+      "map_id": "m60_35_47_00"
+    },
+    "1035502950": {
+      "grace_name": "Manor Upper Level",
+      "zone": "Liurnia - Caria Manor",
+      "map_id": "m60_35_50_00"
+    },
+    "1035502951": {
+      "grace_name": "Manor Lower Level",
+      "zone": "Liurnia - Caria Manor",
+      "map_id": "m60_35_50_00"
+    },
+    "1035502952": {
+      "grace_name": "Royal Moongazing Grounds",
+      "zone": "Royal Knight Loretta",
+      "map_id": "m60_35_50_00"
+    },
+    "1035502953": {
+      "grace_name": "Main Caria Manor Gate",
+      "zone": "Liurnia - Caria Manor",
+      "map_id": "m60_35_50_00"
+    },
+    "1035532950": {
+      "grace_name": "Seethewater Terminus",
+      "zone": "Mt. Gelmir",
+      "map_id": "m60_35_53_00"
+    },
+    "1036412950": {
+      "grace_name": "Slumbering Wolf Shack",
+      "zone": "Liurnia - Slumbering Wolf's Shack",
+      "map_id": "m60_36_41_00"
+    },
+    "1036432950": {
+      "grace_name": "Boilprawn Shack",
+      "zone": "Liurnia",
+      "map_id": "m60_36_43_00"
+    },
+    "1036432951": {
+      "grace_name": "Fallen Ruins of the Lake",
+      "zone": "Liurnia",
+      "map_id": "m60_36_43_00"
+    },
+    "1036452950": {
+      "grace_name": "Gate Town North",
+      "zone": "Liurnia",
+      "map_id": "m60_36_45_00"
+    },
+    "1036482950": {
+      "grace_name": "East Raya Lucaria Gate",
+      "zone": "Liurnia",
+      "map_id": "m60_36_48_00"
+    },
+    "1036492950": {
+      "grace_name": "Bellum Church",
+      "zone": "Bellum Highway",
+      "map_id": "m60_36_49_00"
+    },
+    "1036492951": {
+      "grace_name": "The Ravine",
+      "zone": "Liurnia",
+      "map_id": "m60_36_49_00"
+    },
+    "1036502950": {
+      "grace_name": "Behind Caria Manor",
+      "zone": "Liurnia Behind Caria Manor",
+      "map_id": "m60_36_50_00"
+    },
+    "1036522950": {
+      "grace_name": "Craftsman's Shack",
+      "zone": "Altus Plateau",
+      "map_id": "m60_36_52_00"
+    },
+    "1036542951": {
+      "grace_name": "Ninth Mt. Gelmir Campsite",
+      "zone": "Mt. Gelmir",
+      "map_id": "m60_36_54_00"
+    },
+    "1036542952": {
+      "grace_name": "Road of Iniquity",
+      "zone": "Mt. Gelmir",
+      "map_id": "m60_36_54_00"
+    },
+    "1037422950": {
+      "grace_name": "Scenic Isle",
+      "zone": "Liurnia",
+      "map_id": "m60_37_42_00"
+    },
+    "1037442950": {
+      "grace_name": "Academy Gate Town",
+      "zone": "Liurnia",
+      "map_id": "m60_37_44_00"
+    },
+    "1037462950": {
+      "grace_name": "Church of Vows",
+      "zone": "Liurnia",
+      "map_id": "m60_37_46_00"
+    },
+    "1037482950": {
+      "grace_name": "Mausoleum Compound",
+      "zone": "Liurnia",
+      "map_id": "m60_37_48_00"
+    },
+    "1037492950": {
+      "grace_name": "Church of Inhibition",
+      "zone": "Bellum Highway",
+      "map_id": "m60_37_49_00"
+    },
+    "1037512950": {
+      "grace_name": "Abandoned Coffin",
+      "zone": "Altus Plateau",
+      "map_id": "m60_37_51_00"
+    },
+    "1037522951": {
+      "grace_name": "Seethewater River",
+      "zone": "Altus Plateau",
+      "map_id": "m60_37_52_00"
+    },
+    "1037532950": {
+      "grace_name": "Primeval Sorcerer Azur",
+      "zone": "Mt. Gelmir",
+      "map_id": "m60_37_53_00"
+    },
+    "1038402950": {
+      "grace_name": "Liurnia Lake Shore",
+      "zone": "Liurnia",
+      "map_id": "m60_38_40_00"
+    },
+    "1038412950": {
+      "grace_name": "Laskyar Ruins",
+      "zone": "Liurnia",
+      "map_id": "m60_38_41_00"
+    },
+    "1038432950": {
+      "grace_name": "Gate Town Bridge",
+      "zone": "Liurnia",
+      "map_id": "m60_38_43_00"
+    },
+    "1038452950": {
+      "grace_name": "Artist's Shack",
+      "zone": "Liurnia",
+      "map_id": "m60_38_45_00"
+    },
+    "1038452951": {
+      "grace_name": "Eastern Liurnia Lake Shore",
+      "zone": "Liurnia",
+      "map_id": "m60_38_45_00"
+    },
+    "1038462950": {
+      "grace_name": "Eastern Tableland",
+      "zone": "Liurnia",
+      "map_id": "m60_38_46_00"
+    },
+    "1038472950": {
+      "grace_name": "Ruined Labyrinth",
+      "zone": "Liurnia",
+      "map_id": "m60_38_47_00"
+    },
+    "1038482950": {
+      "grace_name": "Frenzied Flame Village Outskirts",
+      "zone": "Liurnia",
+      "map_id": "m60_38_48_00"
+    },
+    "1038502950": {
+      "grace_name": "Grand Lift of Dectus",
+      "zone": "Liurnia",
+      "map_id": "m60_38_50_00"
+    },
+    "1038502951": {
+      "grace_name": "Ravine-Veiled Village",
+      "zone": "Liurnia",
+      "map_id": "m60_38_50_00"
+    },
+    "1038502952": {
+      "grace_name": "Altus Plateau",
+      "zone": "Altus Plateau",
+      "map_id": "m60_38_50_00"
+    },
+    "1038512950": {
+      "grace_name": "Erdtree-Gazing Hill",
+      "zone": "Altus Plateau",
+      "map_id": "m60_38_51_00"
+    },
+    "1038542950": {
+      "grace_name": "First Mt. Gelmir Campsite",
+      "zone": "Mt. Gelmir",
+      "map_id": "m60_38_54_00"
+    },
+    "1039402950": {
+      "grace_name": "Lake-Facing Cliffs",
+      "zone": "Liurnia",
+      "map_id": "m60_39_40_00"
+    },
+    "1039412950": {
+      "grace_name": "Liurnia Highway South",
+      "zone": "Liurnia",
+      "map_id": "m60_39_41_00"
+    },
+    "1039422950": {
+      "grace_name": "Liurnia Highway North",
+      "zone": "Liurnia",
+      "map_id": "m60_39_42_00"
+    },
+    "1039442950": {
+      "grace_name": "Jarburg",
+      "zone": "Liurnia",
+      "map_id": "m60_39_44_00"
+    },
+    "1039512950": {
+      "grace_name": "Altus Highway Junction",
+      "zone": "Altus Plateau",
+      "map_id": "m60_39_51_00"
+    },
+    "1039532950": {
+      "grace_name": "Bridge of Iniquity",
+      "zone": "Altus Plateau",
+      "map_id": "m60_39_53_00"
+    },
+    "1039542950": {
+      "grace_name": "Shaded Castle Ramparts",
+      "zone": "Shaded Castle",
+      "map_id": "m60_39_54_00"
+    },
+    "1039542951": {
+      "grace_name": "Shaded Castle Inner Gate",
+      "zone": "Shaded Castle",
+      "map_id": "m60_39_54_00"
+    },
+    "1039542952": {
+      "grace_name": "Castellan's Hall",
+      "zone": "Altus Plateau",
+      "map_id": "m60_39_54_00"
+    },
+    "1040522950": {
+      "grace_name": "Forest-Spanning Greatbridge",
+      "zone": "Altus Plateau",
+      "map_id": "m60_40_52_00"
+    },
+    "1040532950": {
+      "grace_name": "Bower of Bounty",
+      "zone": "Altus Plateau",
+      "map_id": "m60_40_53_00"
+    },
+    "1040542950": {
+      "grace_name": "Road of Iniquity Side Path",
+      "zone": "Altus Plateau",
+      "map_id": "m60_40_54_00"
+    },
+    "1041322950": {
+      "grace_name": "Isolated Merchant's Shack",
+      "zone": "Weeping Peninsula",
+      "map_id": "m60_41_32_00"
+    },
+    "1041332950": {
+      "grace_name": "Fourth Church of Marika",
+      "zone": "Weeping Peninsula",
+      "map_id": "m60_41_33_00"
+    },
+    "1041352950": {
+      "grace_name": "Church of Dragon Communion",
+      "zone": "Limgrave - Church of Dragon Communion",
+      "map_id": "m60_41_35_00"
+    },
+    "1041382950": {
+      "grace_name": "Stormhill Shack",
+      "zone": "Stormhill",
+      "map_id": "m60_41_38_00"
+    },
+    "1041522951": {
+      "grace_name": "Rampartside Path",
+      "zone": "Altus Plateau",
+      "map_id": "m60_41_52_00"
+    },
+    "1041542950": {
+      "grace_name": "Windmill Village",
+      "zone": "Altus Plateau",
+      "map_id": "m60_41_54_00"
+    },
+    "1042332950": {
+      "grace_name": "Tombsward",
+      "zone": "Weeping Peninsula - Tombsward Catacombs",
+      "map_id": "m60_42_33_00"
+    },
+    "1042362950": {
+      "grace_name": "Church of Elleh",
+      "zone": "Limgrave",
+      "map_id": "m60_42_36_00"
+    },
+    "1042362951": {
+      "grace_name": "The First Step",
+      "zone": "Limgrave",
+      "map_id": "m60_42_36_00"
+    },
+    "1042372950": {
+      "grace_name": "Gatefront",
+      "zone": "Limgrave",
+      "map_id": "m60_42_37_00"
+    },
+    "1042382950": {
+      "grace_name": "Warmaster's Shack",
+      "zone": "Limgrave",
+      "map_id": "m60_42_38_00"
+    },
+    "1042512950": {
+      "grace_name": "Outer Wall Phantom Tree",
+      "zone": "Capital Outskirts",
+      "map_id": "m60_42_51_00"
+    },
+    "1042552950": {
+      "grace_name": "Windmill Heights",
+      "zone": "Altus Plateau",
+      "map_id": "m60_42_55_00"
+    },
+    "1043302950": {
+      "grace_name": "Morne Moangrave",
+      "zone": "Weeping Peninsula",
+      "map_id": "m60_43_30_00"
+    },
+    "1043312950": {
+      "grace_name": "Castle Morne Lift",
+      "zone": "Weeping Peninsula - Castle Morne",
+      "map_id": "m60_43_31_00"
+    },
+    "1043312951": {
+      "grace_name": "Behind The Castle",
+      "zone": "Weeping Peninsula - Castle Morne",
+      "map_id": "m60_43_31_00"
+    },
+    "1043312952": {
+      "grace_name": "Beside the Rampart Gaol",
+      "zone": "Weeping Peninsula - Beside the Rampart Gaol",
+      "map_id": "m60_43_31_00"
+    },
+    "1043342950": {
+      "grace_name": "Church of Pilgrimage",
+      "zone": "Limgrave",
+      "map_id": "m60_43_34_00"
+    },
+    "1043352950": {
+      "grace_name": "Seaside Ruins",
+      "zone": "Cave of Knowledge - From Seaside Ruins",
+      "map_id": "m60_43_35_00"
+    },
+    "1043372950": {
+      "grace_name": "Agheel Lake North",
+      "zone": "Limgrave",
+      "map_id": "m60_43_37_00"
+    },
+    "1043382950": {
+      "grace_name": "Murkwater Coast",
+      "zone": "Limgrave",
+      "map_id": "m60_43_38_00"
+    },
+    "1043392950": {
+      "grace_name": "Saintsbridge",
+      "zone": "Limgrave",
+      "map_id": "m60_43_39_00"
+    },
+    "1043502950": {
+      "grace_name": "Minor Erdtree Church",
+      "zone": "Capital Outskirts",
+      "map_id": "m60_43_50_00"
+    },
+    "1043532950": {
+      "grace_name": "Hermit Merchant's Shack",
+      "zone": "Altus Plateau",
+      "map_id": "m60_43_53_00"
+    },
+    "1043532951": {
+      "grace_name": "Outer Wall Battleground",
+      "zone": "Altus Plateau",
+      "map_id": "m60_43_53_00"
+    },
+    "1044332950": {
+      "grace_name": "Castle Morne Rampart",
+      "zone": "Weeping Peninsula",
+      "map_id": "m60_44_33_00"
+    },
+    "1044332951": {
+      "grace_name": "South of the Lookout Tower",
+      "zone": "Weeping Peninsula",
+      "map_id": "m60_44_33_00"
+    },
+    "1044332952": {
+      "grace_name": "Ailing Village Outskirts",
+      "zone": "Weeping Peninsula",
+      "map_id": "m60_44_33_00"
+    },
+    "1044342950": {
+      "grace_name": "Bridge of Sacrifice",
+      "zone": "Limgrave",
+      "map_id": "m60_44_34_00"
+    },
+    "1044352950": {
+      "grace_name": "Agheel Lake South",
+      "zone": "Limgrave",
+      "map_id": "m60_44_35_00"
+    },
+    "1044362950": {
+      "grace_name": "Waypoint Ruins Cellar",
+      "zone": "Limgrave - Waypoint Ruins - Mad Pumpkin Head",
+      "map_id": "m60_44_36_00"
+    },
+    "1044372950": {
+      "grace_name": "Mistwood Outskirts",
+      "zone": "Limgrave",
+      "map_id": "m60_44_37_00"
+    },
+    "1044382950": {
+      "grace_name": "Artist's Shack",
+      "zone": "Limgrave",
+      "map_id": "m60_44_38_00"
+    },
+    "1044392950": {
+      "grace_name": "Summonwater Village Outskirts",
+      "zone": "Limgrave",
+      "map_id": "m60_44_39_00"
+    },
+    "1045332950": {
+      "grace_name": "Beside the Crater-Pocked Glade",
+      "zone": "Weeping Peninsula",
+      "map_id": "m60_45_33_00"
+    },
+    "1045362950": {
+      "grace_name": "Fort Haight West",
+      "zone": "Limgrave",
+      "map_id": "m60_45_36_00"
+    },
+    "1045522950": {
+      "grace_name": "Capital Rampart",
+      "zone": "Capital Outskirts - Capital Rampart",
+      "map_id": "m60_45_52_00"
+    },
+    "1046382950": {
+      "grace_name": "Third Church of Marika",
+      "zone": "Limgrave",
+      "map_id": "m60_46_38_00"
+    },
+    "1046402950": {
+      "grace_name": "Smoldering Church",
+      "zone": "Limgrave",
+      "map_id": "m60_46_40_00"
+    },
+    "1046402951": {
+      "grace_name": "Rotview Balcony",
+      "zone": "Limgrave",
+      "map_id": "m60_46_40_00"
+    },
+    "1047392950": {
+      "grace_name": "Fort Gael North",
+      "zone": "Caelid",
+      "map_id": "m60_47_39_00"
+    },
+    "1047402950": {
+      "grace_name": "Caelem Ruins",
+      "zone": "Caelid - Caelem Ruins - Mad Pumpkin Heads",
+      "map_id": "m60_47_40_00"
+    },
+    "1047512950": {
+      "grace_name": "Forbidden Lands",
+      "zone": "Forbidden Lands",
+      "map_id": "m60_47_51_00"
+    },
+    "1047582950": {
+      "grace_name": "Apostate Derelict",
+      "zone": "Consecrated Snowfield",
+      "map_id": "m60_47_58_00"
+    },
+    "1048362950": {
+      "grace_name": "Cathedral of Dragon Communion",
+      "zone": "Caelid",
+      "map_id": "m60_48_36_00"
+    },
+    "1048372950": {
+      "grace_name": "Caelid Highway South",
+      "zone": "Caelid",
+      "map_id": "m60_48_37_00"
+    },
+    "1048382950": {
+      "grace_name": "Aeonia Swamp Shore",
+      "zone": "Caelid",
+      "map_id": "m60_48_38_00"
+    },
+    "1048382951": {
+      "grace_name": "Astray from Caelid Highway North",
+      "zone": "Caelid",
+      "map_id": "m60_48_38_00"
+    },
+    "1048392950": {
+      "grace_name": "Smoldering Wall",
+      "zone": "Caelid",
+      "map_id": "m60_48_39_00"
+    },
+    "1048402950": {
+      "grace_name": "Deep Siofra Well",
+      "zone": "Caelid",
+      "map_id": "m60_48_40_00"
+    },
+    "1048402951": {
+      "grace_name": "Dragonbarrow West",
+      "zone": "Dragonbarrow",
+      "map_id": "m60_48_40_00"
+    },
+    "1048412950": {
+      "grace_name": "Isolated Merchant's Shack",
+      "zone": "Dragonbarrow",
+      "map_id": "m60_48_41_00"
+    },
+    "1048572950": {
+      "grace_name": "Ordina, Liturgical Town",
+      "zone": "Consecrated Snowfield",
+      "map_id": "m60_48_57_00"
+    },
+    "1049372950": {
+      "grace_name": "Southern Aeonia Swamp Bank",
+      "zone": "Caelid",
+      "map_id": "m60_49_37_00"
+    },
+    "1049382950": {
+      "grace_name": "Heart of Aeonia",
+      "zone": "Caelid",
+      "map_id": "m60_49_38_00"
+    },
+    "1049382951": {
+      "grace_name": "Inner Aeonia",
+      "zone": "Caelid",
+      "map_id": "m60_49_38_00"
+    },
+    "1049392950": {
+      "grace_name": "Sellia Backstreets",
+      "zone": "Caelid - Sellia Chair-Crypt - Nox Duo",
+      "map_id": "m60_49_39_00"
+    },
+    "1049392951": {
+      "grace_name": "Chair-Crypt of Sellia",
+      "zone": "Caelid - Sellia Chair-Crypt - Nox Duo",
+      "map_id": "m60_49_39_00"
+    },
+    "1049392952": {
+      "grace_name": "Sellia Under-Stair",
+      "zone": "Caelid - Sellia Chair-Crypt - Nox Duo",
+      "map_id": "m60_49_39_00"
+    },
+    "1049532950": {
+      "grace_name": "Zamor Ruins",
+      "zone": "Forbidden Lands",
+      "map_id": "m60_49_53_00"
+    },
+    "1049532951": {
+      "grace_name": "Grand Lift of Rold",
+      "zone": "Mountaintops of the Giants",
+      "map_id": "m60_49_53_00"
+    },
+    "1049542950": {
+      "grace_name": "Consecrated Snowfield",
+      "zone": "Consecrated Snowfield",
+      "map_id": "m60_49_54_00"
+    },
+    "1049552950": {
+      "grace_name": "Inner Consecrated Snowfield",
+      "zone": "Consecrated Snowfield",
+      "map_id": "m60_49_55_00"
+    },
+    "1050362950": {
+      "grace_name": "Impassable Greatbridge",
+      "zone": "Caelid",
+      "map_id": "m60_50_36_00"
+    },
+    "1050382950": {
+      "grace_name": "Church of the Plague",
+      "zone": "Caelid",
+      "map_id": "m60_50_38_00"
+    },
+    "1050402950": {
+      "grace_name": "Dragonbarrow Fork",
+      "zone": "Dragonbarrow",
+      "map_id": "m60_50_40_00"
+    },
+    "1051362950": {
+      "grace_name": "Redmane Castle Plaza",
+      "zone": "Redmane Castle",
+      "map_id": "m60_51_36_00"
+    },
+    "1051362951": {
+      "grace_name": "Chamber Outside the Plaza",
+      "zone": "Caelid",
+      "map_id": "m60_51_36_00"
+    },
+    "1051392950": {
+      "grace_name": "Fort Faroth",
+      "zone": "Dragonbarrow",
+      "map_id": "m60_51_39_00"
+    },
+    "1051432950": {
+      "grace_name": "Bestial Sanctum",
+      "zone": "Dragonbarrow",
+      "map_id": "m60_51_43_00"
+    },
+    "1051532950": {
+      "grace_name": "Church of Repose",
+      "zone": "Flame Peak",
+      "map_id": "m60_51_53_00"
+    },
+    "1051562950": {
+      "grace_name": "Ancient Snow Valley Ruins",
+      "zone": "Mountaintops of the Giants",
+      "map_id": "m60_51_56_00"
+    },
+    "1051572950": {
+      "grace_name": "Snow Valley Ruins Overlook",
+      "zone": "Mountaintops of the Giants",
+      "map_id": "m60_51_57_00"
+    },
+    "1051572951": {
+      "grace_name": "Castle Sol Main Gate",
+      "zone": "Castle Sol",
+      "map_id": "m60_51_57_00"
+    },
+    "1051572952": {
+      "grace_name": "Church of the Eclipse",
+      "zone": "Mountaintops of the Giants",
+      "map_id": "m60_51_57_00"
+    },
+    "1051572953": {
+      "grace_name": "Castle Sol Rooftop",
+      "zone": "Castle Sol",
+      "map_id": "m60_51_57_00"
+    },
+    "1052382950": {
+      "grace_name": "Starscourge Radahn",
+      "zone": "Starscourge Radahn",
+      "map_id": "m60_52_38_00"
+    },
+    "1052412950": {
+      "grace_name": "Lenne's Rise",
+      "zone": "Dragonbarrow",
+      "map_id": "m60_52_41_00"
+    },
+    "1052422950": {
+      "grace_name": "Farum Greatbridge",
+      "zone": "Dragonbarrow",
+      "map_id": "m60_52_42_00"
+    },
+    "1052532950": {
+      "grace_name": "Foot of the Forge",
+      "zone": "Flame Peak",
+      "map_id": "m60_52_53_00"
+    },
+    "1052542950": {
+      "grace_name": "Giant's Gravepost",
+      "zone": "Flame Peak",
+      "map_id": "m60_52_54_00"
+    },
+    "1052562950": {
+      "grace_name": "Whiteridge Road",
+      "zone": "Mountaintops of the Giants",
+      "map_id": "m60_52_56_00"
+    },
+    "1052572950": {
+      "grace_name": "Freezing Lake",
+      "zone": "Mountaintops of the Giants",
+      "map_id": "m60_52_57_00"
+    },
+    "1053522950": {
+      "grace_name": "Fire Giant",
+      "zone": "Fire Giant",
+      "map_id": "m60_53_52_00"
+    },
+    "1054532950": {
+      "grace_name": "Forge of the Giants",
+      "zone": "Flame Peak",
+      "map_id": "m60_54_53_00"
+    },
+    "1054552950": {
+      "grace_name": "First Church of Marika",
+      "zone": "Mountaintops of the Giants",
+      "map_id": "m60_54_55_00"
+    }
+  }
+}

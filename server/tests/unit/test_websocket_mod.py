@@ -1786,3 +1786,242 @@ class TestMedalDiscoveryHandler:
         broadcast_data = broadcast_args[0][1]
         assert broadcast_data["type"] == "discovery"
         assert broadcast_data["focus_target"] == "Before Regal Ancestor Spirit"
+
+
+# =============================================================================
+# TestZoneQueryGraceEntityId
+# =============================================================================
+
+
+class TestZoneQueryGraceEntityId:
+    """Tests for zone_query with grace_entity_id parameter.
+
+    When fast traveling to a grace, the mod sends the grace entity ID.
+    The server should use this to precisely resolve the zone, bypassing
+    position-based resolution which can be ambiguous.
+    """
+
+    @pytest.fixture
+    def mock_client(self):
+        """Create a ModClient with mocked WebSocket and game_id."""
+        ws = AsyncMock()
+        game_id = uuid4()
+        user = MagicMock()
+        user.id = 1
+        client = ModClient(ws, game_id, user)
+        client.send = AsyncMock()
+        return client
+
+    @pytest.fixture
+    def sample_zone_links(self):
+        """Sample zone_links for testing."""
+        return [
+            {
+                "id": "link1",
+                "source": "Limgrave",
+                "target": "Stormveil Castle",
+                "type": "random",
+            },
+        ]
+
+    @pytest.fixture
+    def sample_discovered_links(self):
+        """Sample discovered_zone_links with Limgrave discovered."""
+        return [{"zone_link_id": "link1"}]
+
+    def _make_mock_game(self, zone_links, discovered_links=None):
+        """Helper to create a mock game object."""
+        game = MagicMock()
+        game.zone_links = zone_links
+        game.discovered_zone_links = discovered_links or []
+        return game
+
+    def _setup_db_mock(self, mock_session, game):
+        """Helper to setup database mock."""
+        mock_db = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = game
+        mock_db.execute.return_value = mock_result
+        mock_session.return_value.__aenter__.return_value = mock_db
+        return mock_db
+
+    @pytest.mark.asyncio
+    async def test_zone_query_uses_grace_entity_id_when_provided(
+        self, mock_client, sample_zone_links, sample_discovered_links
+    ):
+        """Should use grace_entity_id to resolve zone when provided."""
+        mock_game = self._make_mock_game(sample_zone_links, sample_discovered_links)
+
+        mock_resolver = MagicMock()
+        # Position resolves to multiple candidates (ambiguous)
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.return_value = [
+            ("limgrave", "Limgrave"),
+            ("stormveil", "Stormveil Castle"),
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.resolve_zone_by_grace_entity_id",
+                return_value="Limgrave",
+            ) as mock_grace_resolve,
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            # Pass grace_entity_id for "The First Step" grace in Limgrave
+            await mock_client._handle_zone_query(
+                {
+                    "map_id": "m60_42_36_00",
+                    "pos": {"x": 100, "y": 50, "z": 200},
+                    "grace_entity_id": 1042362951,
+                }
+            )
+
+        # Should call grace resolver
+        mock_grace_resolve.assert_called_once_with(1042362951)
+
+        # Should return Limgrave (from grace resolution, not position)
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["zone"] == "Limgrave"
+
+    @pytest.mark.asyncio
+    async def test_zone_query_grace_entity_id_skipped_if_zone_not_discovered(
+        self, mock_client, sample_zone_links
+    ):
+        """Should skip grace resolution if zone is not discovered."""
+        mock_game = self._make_mock_game(sample_zone_links, discovered_links=[])
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.return_value = []
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.resolve_zone_by_grace_entity_id",
+                return_value="Limgrave",  # Grace resolves to Limgrave
+            ),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_zone_query(
+                {
+                    "map_id": "m60_42_36_00",
+                    "pos": {"x": 100, "y": 50, "z": 200},
+                    "grace_entity_id": 1042362951,
+                }
+            )
+
+        # Should return None (Limgrave not discovered)
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["zone"] is None
+
+    @pytest.mark.asyncio
+    async def test_zone_query_fallback_when_grace_returns_none(
+        self, mock_client, sample_zone_links, sample_discovered_links
+    ):
+        """Should fallback to position resolution when grace returns None."""
+        mock_game = self._make_mock_game(sample_zone_links, sample_discovered_links)
+
+        mock_resolver = MagicMock()
+        # Col resolution finds the zone
+        mock_resolver.resolve_by_col.return_value = ("limgrave", "Limgrave")
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.resolve_zone_by_grace_entity_id",
+                return_value=None,  # Grace not found in mapping
+            ),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            # Pass unknown grace_entity_id (fog gate entity, not a grace)
+            await mock_client._handle_zone_query(
+                {
+                    "map_id": "m60_42_36_00",
+                    "pos": {"x": 100, "y": 50, "z": 200},
+                    "play_region_id": 0x100000,
+                    "grace_entity_id": 755890042,  # Fog gate entity, not a grace
+                }
+            )
+
+        # Should fallback to Col resolution
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["zone"] == "Limgrave"
+
+    @pytest.mark.asyncio
+    async def test_zone_query_no_grace_entity_id_uses_position(
+        self, mock_client, sample_zone_links, sample_discovered_links
+    ):
+        """Should use position resolution when no grace_entity_id provided."""
+        mock_game = self._make_mock_game(sample_zone_links, sample_discovered_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = ("limgrave", "Limgrave")
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.resolve_zone_by_grace_entity_id") as mock_grace_resolve,
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            # No grace_entity_id in the message
+            await mock_client._handle_zone_query(
+                {
+                    "map_id": "m60_42_36_00",
+                    "pos": {"x": 100, "y": 50, "z": 200},
+                    "play_region_id": 0x100000,
+                }
+            )
+
+        # Should NOT call grace resolver
+        mock_grace_resolve.assert_not_called()
+
+        # Should use Col resolution
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["zone"] == "Limgrave"
+
+    @pytest.mark.asyncio
+    async def test_zone_query_grace_entity_id_priority_over_col(
+        self, mock_client, sample_zone_links, sample_discovered_links
+    ):
+        """Grace entity ID should have priority over Col resolution."""
+        mock_game = self._make_mock_game(sample_zone_links, sample_discovered_links)
+
+        mock_resolver = MagicMock()
+        # Col would resolve to different zone
+        mock_resolver.resolve_by_col.return_value = ("stormveil", "Stormveil Castle")
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.resolve_zone_by_grace_entity_id",
+                return_value="Limgrave",
+            ),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_zone_query(
+                {
+                    "map_id": "m60_42_36_00",
+                    "pos": {"x": 100, "y": 50, "z": 200},
+                    "play_region_id": 0x100000,
+                    "grace_entity_id": 1042362951,
+                }
+            )
+
+        # Should use grace resolution (Limgrave), not Col (Stormveil Castle)
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["zone"] == "Limgrave"

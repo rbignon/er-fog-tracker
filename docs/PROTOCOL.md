@@ -426,7 +426,8 @@ Sent after fast travel (grace site teleportation) to request current zone info.
   "type": "zone_query",
   "map_id": "m10_01_00_00",
   "pos": {"x": 100.0, "y": 50.0, "z": 200.0},
-  "play_region_id": 1048576
+  "play_region_id": 1048576,
+  "grace_entity_id": 1042362951
 }
 ```
 
@@ -435,6 +436,7 @@ Sent after fast travel (grace site teleportation) to request current zone info.
 | `map_id` | Current map ID (format: `mWW_XX_YY_DD`) |
 | `pos` | Player position |
 | `play_region_id` | Play region ID (Col) for precise resolution |
+| `grace_entity_id` | Entity ID of the grace being fast traveled to (optional, enables precise zone lookup) |
 
 #### Server → Mod: `zone_query_ack`
 

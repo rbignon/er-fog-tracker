@@ -92,16 +92,25 @@ impl DiscoverySender for WebSocketAdapter<'_> {
         );
     }
 
-    fn send_zone_query(&self, position: &crate::core::types::PlayerPosition) {
+    fn send_zone_query(
+        &self,
+        position: &crate::core::types::PlayerPosition,
+        grace_entity_id: Option<u32>,
+    ) {
         info!(
             map_id = position.map_id_str,
             x = format!("{:.1}", position.x),
             y = format!("{:.1}", position.y),
             z = format!("{:.1}", position.z),
+            grace_entity_id = ?grace_entity_id,
             "[ZONE_QUERY] Sending after loading screen"
         );
-        self.client
-            .send_zone_query(position.map_id, position.pos(), position.play_region_id);
+        self.client.send_zone_query(
+            position.map_id,
+            position.pos(),
+            position.play_region_id,
+            grace_entity_id,
+        );
     }
 }
 
