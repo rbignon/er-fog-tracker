@@ -23,6 +23,12 @@ pub enum Animation {
     RunForwardSlash = 6002,
 
     // =========================================================================
+    // Abductor Virgin grab (15xxx)
+    // =========================================================================
+    /// Abductor Virgin grab teleport (Raya Lucaria → Volcano Manor)
+    AbductorVirginGrab = 15004000,
+
+    // =========================================================================
     // Death / Status (17xxx, 18xxx)
     // =========================================================================
     DieFromPoison = 17140,
@@ -421,6 +427,7 @@ impl Animation {
                 | Self::PostBossWarp
                 | Self::ErdtreeBurn
                 | Self::PlacidusaxLieDown
+                | Self::AbductorVirginGrab
         )
     }
 }
@@ -472,6 +479,7 @@ mod tests {
         assert!(Animation::PostBossWarp.is_teleport());
         assert!(Animation::ErdtreeBurn.is_teleport());
         assert!(Animation::PlacidusaxLieDown.is_teleport());
+        assert!(Animation::AbductorVirginGrab.is_teleport());
     }
 
     #[test]
@@ -523,5 +531,6 @@ mod tests {
         assert_eq!(Animation::Spawn as u32, 63000);
         assert_eq!(Animation::LiurniaTowerDoor as u32, 12202126);
         assert_eq!(Animation::PostBossWarp as u32, 12020210);
+        assert_eq!(Animation::AbductorVirginGrab as u32, 15004000);
     }
 }
