@@ -214,6 +214,28 @@ function createPlaceholderCard() {
 }
 
 /**
+ * Format a date using browser locale.
+ */
+function formatDate(dateStr) {
+    return new Date(dateStr).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
+}
+
+/**
+ * Get display label for a game.
+ */
+function getGameLabel(game) {
+    if (game.label) {
+        return game.label;
+    }
+    const createdDate = formatDate(game.created_at);
+    return `Seed ${game.seed} (${createdDate})`;
+}
+
+/**
  * Create a game card element.
  */
 function createGameCard(game) {
@@ -223,7 +245,7 @@ function createGameCard(game) {
 
     const percent = game.total_zones > 0 ? Math.round((game.discovery_count / game.total_zones) * 100) : 0;
 
-    const updatedDate = new Date(game.updated_at).toLocaleDateString();
+    const updatedDate = formatDate(game.updated_at);
 
     // Mod connection indicator (green dot if connected)
     const modIndicator = game.mod_connected
@@ -232,7 +254,7 @@ function createGameCard(game) {
 
     card.innerHTML = `
     <div class="game-card-header">
-      <span class="game-label">${escapeHtml(game.label || `Seed ${game.seed}`)}${modIndicator}</span>
+      <span class="game-label">${escapeHtml(getGameLabel(game))}${modIndicator}</span>
       <button class="game-delete-btn" title="Delete game">&times;</button>
     </div>
     <div class="game-card-body">
