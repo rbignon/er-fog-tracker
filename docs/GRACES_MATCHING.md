@@ -129,6 +129,23 @@ Server looks up grace_entity_id in graces.json
          └─► Not found: Fall back to position-based resolution
 ```
 
+## Entity ID Collisions
+
+The 8-digit entity ID formula ignores D1D2 (the "6x" prefix), which distinguishes base game maps (61/64) from DLC maps (68). This causes 6 pairs of graces to share the same entity ID:
+
+| Entity ID | Base Game Grace | DLC Grace |
+|-----------|-----------------|-----------|
+| 1046402950 | Smoldering Church (Caelid) | Gravesite Plain (Gravesite Plain) |
+| 1048372950 | Caelid Highway South (Caelid) | Cerulean Coast Cross (Cerulean Coast) |
+| 1048392950 | Smoldering Wall (Caelid) | Cerulean Coast (Cerulean Coast) |
+| 1048432950 | Pillar Path Cross (Gravesite Plain) | Divided Falls (Abyssal Woods) |
+| 1049392950 | Sellia Backstreets (Caelid) | Grand Altar of Dragon Communion (Jagged Peak) |
+| 1050382950 | Church of the Plague (Caelid) | Finger Ruins of Rhia (Cerulean Coast) |
+
+Additionally, FogMod's "Before Praetor's Throne" uses entity ID 16002955, which collides with vanilla "Audience Pathway" in Volcano Manor.
+
+When a collision occurs, the server falls back to position-based resolution after the grace lookup returns a zone not in the player's discovered zones.
+
 ## Building graces.json
 
 The file was built by parsing `fog.txt`:
@@ -139,7 +156,11 @@ The file was built by parsing `fog.txt`:
 4. Add FogMod custom graces manually
 5. Manual corrections for edge cases
 
-Total: 414 graces (407 vanilla + 7 FogMod custom)
+**Counts:**
+- 414 vanilla graces in fog.txt
+- 6 pairs share entity IDs (base game/DLC collisions)
+- 1 FogMod ID collides with vanilla "Audience Pathway"
+- **graces.json total: 414 entries** (407 unique vanilla + 7 FogMod custom)
 
 ## Updating graces.json
 
