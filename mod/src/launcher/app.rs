@@ -171,8 +171,12 @@ pub struct LauncherApp {
     #[nwg_control(parent: window, text: "", position: (20, 110), size: (460, 25), password: Some('●'), flags: "VISIBLE|TAB_STOP")]
     token_input: nwg::TextInput,
 
-    #[nwg_control(parent: window, text: "Get your token from the Dashboard on Fog Tracker website", position: (20, 145), size: (460, 20))]
+    #[nwg_control(parent: window, text: "Get your token from", position: (20, 145), size: (130, 20))]
     token_hint: nwg::Label,
+
+    #[nwg_control(parent: window, text: "Fog Tracker Dashboard", position: (150, 143), size: (150, 25))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_open_dashboard_link_click])]
+    token_dashboard_link: nwg::Button,
 
     #[nwg_control(parent: window, text: "", position: (20, 175), size: (460, 40))]
     token_error: nwg::Label,
@@ -707,6 +711,7 @@ impl LauncherApp {
         self.token_label.set_visible(show_token);
         self.token_input.set_visible(show_token);
         self.token_hint.set_visible(show_token);
+        self.token_dashboard_link.set_visible(show_token);
         self.token_error.set_visible(show_token);
         self.token_connect_btn.set_visible(show_token);
 
@@ -1149,6 +1154,17 @@ impl LauncherApp {
         // Open URL in default browser
         let _ = std::process::Command::new("cmd")
             .args(["/c", "start", "", &dashboard_url])
+            .spawn();
+    }
+
+    fn on_open_dashboard_link_click(&self) {
+        let _ = std::process::Command::new("cmd")
+            .args([
+                "/c",
+                "start",
+                "",
+                "https://fogtracker.malenia.win/dashboard",
+            ])
             .spawn();
     }
 }
