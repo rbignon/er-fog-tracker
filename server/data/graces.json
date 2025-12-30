@@ -1707,7 +1707,7 @@
     },
     "1051362951": {
       "grace_name": "Chamber Outside the Plaza",
-      "zone": "Caelid",
+      "zone": "Redmane Castle",
       "map_id": "m60_51_36_00"
     },
     "1051392950": {
@@ -2047,7 +2047,7 @@
     },
     "1051362952": {
       "grace_name": "After Redmane Castle Plaza",
-      "zone": "Redmane Castle",
+      "zone": "After Redmane Castle Boss",
       "map_id": "m60_51_36_00"
     },
     "12022973": {
