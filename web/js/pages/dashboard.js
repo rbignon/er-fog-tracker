@@ -380,9 +380,8 @@ function updateModSetupCredentials(user) {
     const tokenInput = document.getElementById('mod-token-field');
 
     if (serverUrlInput) {
-        // Use the current host with appropriate WebSocket protocol
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        serverUrlInput.value = `${wsProtocol}//${window.location.host}`;
+        // Use the current host with HTTP protocol (launcher expects http/https, not ws/wss)
+        serverUrlInput.value = `${window.location.protocol}//${window.location.host}`;
     }
 
     if (tokenInput && user?.modToken) {
