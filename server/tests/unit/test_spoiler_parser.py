@@ -416,6 +416,7 @@ class TestOneWayDetection:
             ("using the Pureblood Knight's Medal", True),
             ("dropping down to the right", True),  # Drop-down connections
             ("dropping into the boss fight", True),
+            ("arriving by the Great Waterfall Crest grace", True),  # Grace warp arrivals
             ("before boss arena", False),
             ("at the main gate", False),
             ("near the beach", False),
@@ -444,6 +445,26 @@ class TestOneWayDetection:
         assert conn is not None
         assert conn.source == "After Mohg, Lord of Blood"
         assert conn.target == "Volcano Manor - Hallway Opposite Sending Gate"
+        assert conn.is_one_way is False
+
+    def test_source_details_mentioning_sending_gate_landmark_is_not_one_way(self):
+        """Location descriptions mentioning 'Sending Gate' as landmark should NOT be one-way.
+
+        Regression test: "opposite the Sending Gate" in source_details was incorrectly
+        matched by the "sending gate" pattern, marking the link as one-way when it's
+        actually a bidirectional fog gate near the sending gate location.
+        """
+        line = (
+            "  Random: Volcano Manor - Room Before Sending Gate "
+            "(on the doorway on the second story opposite the Sending Gate) "
+            "--> Ainsel River Downstream (before Dragonkin of Nokstella's arena)"
+        )
+        conn = _parse_connection_line(line)
+        assert conn is not None
+        assert conn.source == "Volcano Manor - Room Before Sending Gate"
+        assert conn.target == "Ainsel River Downstream"
+        # This should be bidirectional - "opposite the Sending Gate" is just describing
+        # the fog gate's location, not indicating use of a sending gate mechanism
         assert conn.is_one_way is False
 
     def test_actual_sending_gate_usage_is_one_way(self):

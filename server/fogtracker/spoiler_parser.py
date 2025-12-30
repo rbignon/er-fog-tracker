@@ -15,7 +15,9 @@ if TYPE_CHECKING:
 
 # Patterns that ALWAYS indicate a one-way connection
 ALWAYS_ONE_WAY_PATTERNS = [
-    re.compile(r"sending gate", re.IGNORECASE),
+    # "sending gate" only triggers one-way when actively being used as a teleport
+    # NOT when mentioned as a location landmark (e.g., "opposite the Sending Gate")
+    re.compile(r"using (?:the|a|an|either|a new) (?:new )?sending gate", re.IGNORECASE),
     re.compile(r"abducted", re.IGNORECASE),
     re.compile(r"dying", re.IGNORECASE),
     re.compile(r"burning the Sealing Tree", re.IGNORECASE),
@@ -27,13 +29,17 @@ ALWAYS_ONE_WAY_PATTERNS = [
     re.compile(r"lying down", re.IGNORECASE),
     re.compile(r"warp to", re.IGNORECASE),
     re.compile(r"warp after", re.IGNORECASE),
+    re.compile(
+        r"arriving by", re.IGNORECASE
+    ),  # Grace warp arrivals (e.g., "arriving by the Great Waterfall Crest grace")
     re.compile(r"dropping", re.IGNORECASE),  # Drop-down connections (can't go back up)
     re.compile(r"from Deeproot", re.IGNORECASE),  # Sending gate destination from Deeproot
 ]
 
 # "arriving at/in/from" is only one-way if the SOURCE contains a teleport mechanism
 TELEPORT_SOURCE_PATTERNS = [
-    re.compile(r"sending gate", re.IGNORECASE),
+    # "sending gate" only triggers when actively being used as a teleport
+    re.compile(r"using (?:the|a|an|either|a new) (?:new )?sending gate", re.IGNORECASE),
     re.compile(r"abducted", re.IGNORECASE),
     re.compile(r"coffin", re.IGNORECASE),
     re.compile(r"Pureblood", re.IGNORECASE),
