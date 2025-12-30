@@ -141,13 +141,8 @@ async function handleViewerRoute({ params, query }) {
 
     if (isOverlay) {
         // OBS Overlay mode: transparent background, no UI
+        // Note: #header is hidden via CSS (body.overlay-mode #header { display: none })
         document.body.classList.add('overlay-mode');
-        document.getElementById('header-back-link').classList.add('hidden');
-        document.getElementById('new-file-btn').classList.add('hidden');
-        document.getElementById('stream-btn').classList.add('hidden');
-        document.getElementById('mod-status').classList.add('hidden');
-        document.getElementById('controls').classList.add('hidden');
-        document.getElementById('seed-info').classList.add('hidden');
 
         // Setup viewer counter from query params
         const counterPosition = query.counter || 'br';

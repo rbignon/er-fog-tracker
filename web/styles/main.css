@@ -197,9 +197,10 @@ body::before {
     padding: 16px 24px;
     background: linear-gradient(to bottom, rgba(10, 10, 12, 0.95), rgba(10, 10, 12, 0.8), transparent);
     z-index: 100;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+    gap: 24px;
 }
 
 #header h1 {
@@ -219,30 +220,29 @@ body::before {
     font-style: italic;
 }
 
-#controls {
+.header-left {
+    justify-self: start;
     display: flex;
-    gap: 12px;
+    flex-direction: column;
+}
+
+.header-center {
+    width: 100%;
+    max-width: 500px;
+    justify-self: center;
+}
+
+.header-right {
+    justify-self: end;
+    display: flex;
+    gap: 8px;
     align-items: center;
-    flex: 1;
+    flex-wrap: wrap;
     justify-content: flex-end;
 }
 
-#controls-left {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
 #search-container {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-#controls-right {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+    position: relative;
 }
 
 #explorer-controls {
@@ -882,7 +882,8 @@ input[type="checkbox"]:checked::after {
     padding: 8px 12px;
     font-family: inherit;
     font-size: 0.9rem;
-    width: 220px;
+    width: 100%;
+    box-sizing: border-box;
     transition: all 0.2s;
 }
 
@@ -1884,7 +1885,7 @@ marker path {
     #legend,
     #stats,
     #help,
-    #controls .control-group,
+    .header-right .control-group,
     #new-file-btn,
     #reset-exploration-btn,
     #stream-btn,
@@ -1902,41 +1903,47 @@ marker path {
         font-size: 0.8rem;
     }
     
-    /* Make header stack vertically */
+    /* Make header stack vertically on mobile */
     #header {
-        flex-direction: column;
+        grid-template-columns: 1fr;
         padding: 12px 16px;
         gap: 10px;
     }
-    
+
+    .header-left,
+    .header-center,
+    .header-right {
+        justify-self: stretch;
+    }
+
+    .header-center {
+        padding-top: 0;
+    }
+
+    .header-right {
+        justify-content: center;
+    }
+
     /* Smaller title to fit on one line */
     #header h1 {
         font-size: 1rem;
         letter-spacing: 0.1em;
     }
-    
+
     .subtitle {
         font-size: 0.75rem;
         margin-top: 2px;
     }
-    
-    /* Controls full width below title */
-    #controls {
-        width: 100%;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-    }
-    
+
     #search-container {
         width: 100%;
     }
-    
+
     #search {
         width: 100%;
         box-sizing: border-box;
     }
-    
+
     .control-group {
         width: 100%;
         justify-content: space-between;
@@ -2096,10 +2103,8 @@ marker path {
    ============================================================ */
 
 /* Hide Reset button and mode toggle for interactive viewers */
-.viewer-interactive #controls-left,
-.viewer-interactive #reset-exploration-btn,
-.viewer-interactive #mode-explorer,
-.viewer-interactive #mode-spoiler {
+.viewer-interactive #explorer-controls,
+.viewer-interactive #mode-selector {
     display: none !important;
 }
 
@@ -2918,7 +2923,6 @@ marker path {
 .header-left {
     display: flex;
     align-items: flex-start;
-    gap: 16px;
 }
 
 .title-link {

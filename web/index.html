@@ -204,36 +204,32 @@
     <div id="main-ui" class="page hidden">
         <div id="header">
             <div class="header-left">
-                <div>
-                    <a id="header-title-link" href="/" class="title-link"><h1>Fog Gate Randomizer Tracker</h1></a>
-                    <div class="subtitle">
-                        <span id="seed-info">Loading...</span>
-                        <a id="header-back-link" href="/dashboard" class="back-link hidden">← Dashboard</a>
-                    </div>
+                <a id="header-title-link" href="/" class="title-link"><h1>Fog Gate Randomizer Tracker</h1></a>
+                <div class="subtitle">
+                    <span id="seed-info">Loading...</span>
+                    <a id="header-back-link" href="/dashboard" class="back-link hidden">← Dashboard</a>
                 </div>
             </div>
-            <div id="controls">
-                <div id="controls-left">
-                    <div id="explorer-controls" class="hidden">
-                        <button id="reset-exploration-btn" title="Reset exploration progress">Reset</button>
-                    </div>
-                    <div id="mode-selector">
-                        <button id="mode-explorer" class="mode-btn active" title="Discover areas as you play">Explorer</button>
-                        <button id="mode-spoiler" class="mode-btn" title="See the entire map">Full Spoiler</button>
-                    </div>
-                </div>
+            <div class="header-center">
                 <div id="search-container">
                     <input type="text" id="search" placeholder="Search area...">
                     <div id="search-dropdown"></div>
                 </div>
-                <div id="controls-right">
-                    <div id="mod-status" class="mod-status hidden" title="Mod connection status">
-                        <span class="mod-status-indicator"></span>
-                        <span class="mod-status-text">Mod</span>
-                    </div>
-                    <button id="stream-btn" title="Share viewer URL for OBS">Stream</button>
-                    <button id="new-file-btn">Load New File</button>
+            </div>
+            <div class="header-right">
+                <div id="explorer-controls" class="hidden">
+                    <button id="reset-exploration-btn" title="Reset exploration progress">Reset</button>
                 </div>
+                <div id="mode-selector">
+                    <button id="mode-explorer" class="mode-btn active" title="Discover areas as you play">Explorer</button>
+                    <button id="mode-spoiler" class="mode-btn" title="See the entire map">Full Spoiler</button>
+                </div>
+                <div id="mod-status" class="mod-status hidden" title="Mod connection status">
+                    <span class="mod-status-indicator"></span>
+                    <span class="mod-status-text">Mod</span>
+                </div>
+                <button id="stream-btn" title="Share viewer URL for OBS">Stream</button>
+                <button id="new-file-btn">Load New File</button>
             </div>
         </div>
 
