@@ -162,7 +162,7 @@
     },
     "12012958": {
       "grace_name": "Grand Cloister",
-      "zone": "Lake of Rot - Grand Cloister",
+      "zone": "Lake of Rot",
       "map_id": null
     },
     "12012959": {
@@ -930,12 +930,12 @@
       "zone": "Frenzied Flame Proscription",
       "map_id": null
     },
-    "39002950": {
+    "39202950": {
       "grace_name": "Magma Wyrm Makar",
       "zone": "Magma Wrym Makar",
       "map_id": "m39_20_00_00"
     },
-    "39002951": {
+    "39202951": {
       "grace_name": "Ruin-Strewn Precipice",
       "zone": "Ruin-Strewn Precipice",
       "map_id": null
@@ -2069,6 +2069,16 @@
       "grace_name": "After Dragon Temple",
       "zone": "Farum Azula Rooftop and Bridge",
       "map_id": "m13_00_00_00"
+    },
+    "34122952": {
+      "grace_name": "Divine Tower of West Altus: Gate",
+      "zone": "Divine Tower of West Altus",
+      "map_id": "m34_12_00_00"
+    },
+    "39202952": {
+      "grace_name": "Ruin-Strewn Precipice Overlook",
+      "zone": "Ruin-Strewn Precipice",
+      "map_id": "m39_20_00_00"
     }
   }
 }
