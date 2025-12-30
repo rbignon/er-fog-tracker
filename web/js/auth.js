@@ -94,7 +94,6 @@ export async function fetchUser() {
                 username: user.twitch_username,
                 displayName: user.twitch_display_name || user.twitch_username,
                 avatarUrl: user.twitch_avatar_url,
-                apiToken: user.api_token,
                 modToken: user.mod_token,
             };
 

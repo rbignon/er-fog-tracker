@@ -429,11 +429,8 @@ async function copyToClipboard(text) {
  * Route handler for dashboard page.
  */
 export async function handleRoute() {
-    // Ensure user is loaded
-    let user = Auth.getUser();
-    if (!user) {
-        user = await Auth.fetchUser();
-    }
+    // Always verify token with server (not just cached data)
+    const user = await Auth.fetchUser();
 
     if (!user) {
         const error = Auth.getLastFetchError();

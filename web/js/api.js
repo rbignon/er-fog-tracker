@@ -2,7 +2,7 @@
  * REST API client for the fog-tracker backend.
  */
 
-import { getAuthHeaders } from './auth.js';
+import { getAuthHeaders, logout } from './auth.js';
 import { VERSION } from './version.js';
 
 const DEFAULT_TIMEOUT_MS = 30000;
@@ -41,6 +41,15 @@ async function apiFetch(path, options = {}, timeout = DEFAULT_TIMEOUT_MS) {
         }
 
         if (!response.ok) {
+            // Handle 401 Unauthorized - logout and redirect to landing
+            if (response.status === 401) {
+                logout();
+                // logout() redirects, but throw anyway to stop execution
+                const error = new Error('Session expired');
+                error.status = 401;
+                throw error;
+            }
+
             const error = new Error(`API error: ${response.status}`);
             error.status = response.status;
             try {
