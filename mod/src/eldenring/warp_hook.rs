@@ -83,8 +83,3 @@ pub fn get_captured_grace_entity_id() -> u32 {
 pub fn clear_captured_grace_entity_id() {
     CAPTURED_GRACE_ENTITY_ID.store(0, Ordering::SeqCst);
 }
-
-/// Check if the hook is installed
-pub fn is_installed() -> bool {
-    WARP_DETOUR.get().is_some()
-}
