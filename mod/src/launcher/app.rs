@@ -288,43 +288,46 @@ pub struct LauncherApp {
     // =========================================================================
     // Waiting Screen
     // =========================================================================
-    #[nwg_control(parent: window, text: "Waiting for Elden Ring...", position: (20, 60), size: (460, 30))]
+    #[nwg_control(parent: window, text: "Waiting for Elden Ring...", position: (20, 40), size: (460, 30))]
     waiting_title: nwg::Label,
 
-    #[nwg_control(parent: window, text: "", position: (20, 110), size: (460, 25))]
+    #[nwg_control(parent: window, text: "", position: (20, 90), size: (460, 25))]
     waiting_game_label: nwg::Label,
 
     #[nwg_control(parent: window, text: "Please launch the game", position: (20, 150), size: (460, 25))]
     waiting_status: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Open in Browser", position: (20, 200), size: (140, 35))]
+    #[nwg_control(parent: window, position: (100, 190), size: (300, 25), flags: "VISIBLE|MARQUEE")]
+    waiting_progress: nwg::ProgressBar,
+
+    #[nwg_control(parent: window, text: "Open in Browser", position: (90, 250), size: (140, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_open_game_browser_click])]
     waiting_open_browser_btn: nwg::Button,
 
-    #[nwg_control(parent: window, text: "Cancel", position: (340, 200), size: (140, 35))]
+    #[nwg_control(parent: window, text: "Cancel", position: (270, 250), size: (140, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_waiting_cancel_click])]
     waiting_cancel_btn: nwg::Button,
 
     // =========================================================================
     // Injected Screen
     // =========================================================================
-    #[nwg_control(parent: window, text: "Mod Active", position: (20, 50), size: (460, 30))]
+    #[nwg_control(parent: window, text: "Mod Running", position: (20, 40), size: (460, 30))]
     injected_title: nwg::Label,
 
-    #[nwg_control(parent: window, text: "", position: (20, 95), size: (460, 25))]
+    #[nwg_control(parent: window, text: "", position: (20, 90), size: (460, 25))]
     injected_game_label: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Press F9 in-game to toggle the overlay", position: (20, 135), size: (460, 25))]
+    #[nwg_control(parent: window, text: "Press F9 in-game to toggle the overlay", position: (20, 150), size: (460, 25))]
     injected_hint: nwg::Label,
 
-    #[nwg_control(parent: window, text: "", position: (20, 175), size: (460, 25))]
+    #[nwg_control(parent: window, text: "", position: (20, 190), size: (460, 25))]
     injected_status: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Open in Browser", position: (20, 220), size: (140, 35))]
+    #[nwg_control(parent: window, text: "Open in Browser", position: (90, 250), size: (140, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_open_game_browser_click])]
     injected_open_browser_btn: nwg::Button,
 
-    #[nwg_control(parent: window, text: "Back to Games", position: (340, 220), size: (140, 35))]
+    #[nwg_control(parent: window, text: "Back to Games", position: (270, 250), size: (140, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_injected_back_click])]
     injected_back_btn: nwg::Button,
 
@@ -732,6 +735,12 @@ impl LauncherApp {
         self.waiting_title.set_visible(show_waiting);
         self.waiting_game_label.set_visible(show_waiting);
         self.waiting_status.set_visible(show_waiting);
+        self.waiting_progress.set_visible(show_waiting);
+        if show_waiting {
+            self.waiting_progress.set_marquee(true, 30);
+        } else {
+            self.waiting_progress.set_marquee(false, 0);
+        }
         self.waiting_open_browser_btn.set_visible(show_waiting);
         self.waiting_cancel_btn.set_visible(show_waiting);
 
