@@ -416,6 +416,9 @@
         </header>
 
         <main class="help-content">
+            <figure class="help-screenshot">
+                <img src="/help/ingame.png" alt="Ingame screenshot">
+            </figure>
             <!-- Introduction -->
             <section class="help-section" id="introduction">
                 <h2>What is the Fog Gate Randomizer?</h2>
@@ -445,9 +448,6 @@
                     <a href="https://github.com/rbignon/er-fog-tracker/releases" target="_blank" class="btn-primary btn-download">
                         Download for Windows
                     </a>
-                    <div class="help-screenshot" data-screenshot="releases">
-                        <span class="screenshot-placeholder">[Screenshot: GitHub releases page]</span>
-                    </div>
                 </div>
 
                 <div class="help-subsection">
@@ -456,9 +456,6 @@
                         <li>Extract the ZIP archive to a folder of your choice</li>
                         <li>Run <code>FogRandoTracker.exe</code></li>
                     </ol>
-                    <div class="help-screenshot" data-screenshot="launcher-first">
-                        <span class="screenshot-placeholder">[Screenshot: Launcher at first launch]</span>
-                    </div>
                 </div>
             </section>
 
@@ -474,25 +471,29 @@
                         <li><strong>Token</strong> — Your personal authentication token (keep it secret!)</li>
                     </ul>
                     <p>Click <strong>Validate</strong> to verify the connection.</p>
-                    <div class="help-screenshot" data-screenshot="launcher-config">
-                        <span class="screenshot-placeholder">[Screenshot: Launcher connection screen with fields filled]</span>
-                    </div>
+                    <figure class="help-screenshot vertical">
+                        <img src="/help/launcher-config.png" alt="Launcher connection screen">
+                    </figure>
                 </div>
 
                 <div class="help-subsection">
-                    <h3>2.2 Create or select a game</h3>
-                    <p>Once connected, you can:</p>
-                    <ul>
-                        <li><strong>Create New Game</strong> — Select your Fog Gate Randomizer folder. The launcher will parse the randomizer files for accurate initial tracking.</li>
-                        <li><strong>Select an existing game</strong> — If you already created a game on the web dashboard.</li>
-                    </ul>
+                    <h3>2.2 Create a new game</h3>
+                    <p>Click <strong>Create New Game</strong> and select your Fog Gate Randomizer folder. The launcher will parse the randomizer files to set up accurate initial tracking.</p>
                     <div class="help-tip">
                         <span class="tip-icon">💡</span>
                         <span class="tip-text">Creating the game from the launcher is recommended for more accurate automatic tracking.</span>
                     </div>
-                    <div class="help-screenshot" data-screenshot="launcher-games">
-                        <span class="screenshot-placeholder">[Screenshot: Game list in the launcher]</span>
-                    </div>
+                    <figure class="help-screenshot vertical">
+                        <img src="/help/launcher-new-game.png" alt="Creating a new game">
+                    </figure>
+                </div>
+
+                <div class="help-subsection">
+                    <h3>2.3 Select a game and connect</h3>
+                    <p>Select your game from the list, then click <strong>Inject</strong> to start tracking. The launcher will wait for Elden Ring to start and inject the mod automatically.</p>
+                    <figure class="help-screenshot vertical">
+                        <img src="/help/launcher-games.png" alt="Game list with Inject button">
+                    </figure>
                 </div>
             </section>
 
@@ -509,9 +510,9 @@
                         <li>Launch Elden Ring through your usual method (Steam, Mod Engine, etc.)</li>
                         <li>The mod injects automatically once the game is detected</li>
                     </ol>
-                    <div class="help-screenshot" data-screenshot="launcher-waiting">
-                        <span class="screenshot-placeholder">[Screenshot: Launcher showing "Waiting for Elden Ring"]</span>
-                    </div>
+                    <figure class="help-screenshot vertical">
+                        <img src="/help/launcher-waiting.png" alt="Launcher waiting for Elden Ring">
+                    </figure>
                 </div>
 
                 <div class="help-subsection">
@@ -530,9 +531,9 @@
                         <tr><td><kbd>F10</kbd></td><td>Toggle debug information</td></tr>
                         <tr><td><kbd>F11</kbd></td><td>Toggle exits list (fold/unfold)</td></tr>
                     </table>
-                    <div class="help-screenshot" data-screenshot="overlay-ingame">
-                        <span class="screenshot-placeholder">[Screenshot: In-game overlay]</span>
-                    </div>
+                    <figure class="help-screenshot">
+                        <img src="/help/overlay-ingame.png" alt="In-game overlay">
+                    </figure>
                 </div>
 
                 <div class="help-subsection">
@@ -545,9 +546,9 @@
                         <li>Use the search bar to find specific zones</li>
                         <li>Toggle "Frontier" to highlight zones with undiscovered exits</li>
                     </ul>
-                    <div class="help-screenshot" data-screenshot="web-graph">
-                        <span class="screenshot-placeholder">[Screenshot: Web graph with a zone selected]</span>
-                    </div>
+                    <figure class="help-screenshot">
+                        <img src="/help/web-graph.png" alt="Web graph with a zone selected">
+                    </figure>
                 </div>
             </section>
 
@@ -564,9 +565,6 @@
                         <li>Copy the <strong>Viewer Link</strong></li>
                     </ol>
                     <p>Viewers can navigate the graph freely, zoom, search, and click on zones — but they can't modify anything.</p>
-                    <div class="help-screenshot" data-screenshot="viewer-mode">
-                        <span class="screenshot-placeholder">[Screenshot: Viewer mode]</span>
-                    </div>
                 </div>
 
                 <div class="help-subsection">
@@ -580,9 +578,9 @@
                         <li>Paste the URL and set dimensions to <strong>1920 x 1080</strong></li>
                     </ol>
                     <p>The overlay has a transparent background and syncs with your view — when you select a zone or use frontier mode, viewers see the same thing.</p>
-                    <div class="help-screenshot" data-screenshot="obs-overlay">
-                        <span class="screenshot-placeholder">[Screenshot: OBS Browser Source configuration + stream result]</span>
-                    </div>
+                    <figure class="help-screenshot">
+                        <img src="/help/obs-overlay.png" alt="OBS overlay configuration">
+                    </figure>
                 </div>
             </section>
 
@@ -618,32 +616,61 @@ border_color = "#404040"</code></pre>
                 <div class="help-subsection">
                     <h3>5.3 Status line template</h3>
                     <p>Customize what's shown in the overlay header:</p>
-                    <pre class="help-code"><code>[overlay]
-status_template = "{zone}$>{status} {discovered}/{total}"</code></pre>
 
-                    <h4>Available variables</h4>
+                    <h4>Text variables</h4>
                     <table class="help-table">
                         <tr><td><code>{zone}</code></td><td>Current zone name</td></tr>
-                        <tr><td><code>{discovered}</code></td><td>Number of discovered zones</td></tr>
-                        <tr><td><code>{total}</code></td><td>Total number of zones</td></tr>
-                        <tr><td><code>{progress}</code></td><td>Progress percentage</td></tr>
-                        <tr><td><code>{status}</code></td><td>Connection status indicator (colored dot)</td></tr>
-                        <tr><td><code>{map}</code></td><td>Current map ID</td></tr>
-                        <tr><td><code>{deaths}</code></td><td>Death count</td></tr>
-                        <tr><td><code>{igt}</code></td><td>In-game time</td></tr>
-                        <tr><td><code>{runes}</code></td><td>Great Runes icons</td></tr>
-                        <tr><td><code>{kindling}</code></td><td>Kindling icon (DLC)</td></tr>
-                        <tr><td><code>{scaling}</code></td><td>Current zone scaling tier</td></tr>
+                        <tr><td><code>{discovered}</code></td><td>Number of discovered links</td></tr>
+                        <tr><td><code>{total}</code></td><td>Total number of random links</td></tr>
+                        <tr><td><code>{progress}</code></td><td>Progress percentage (0-100)</td></tr>
+                        <tr><td><code>{status}</code></td><td>Connection status indicator (●)</td></tr>
+                        <tr><td><code>{map}</code></td><td>Current map ID (e.g., m60_44_36_00)</td></tr>
+                        <tr><td><code>{deaths}</code></td><td>Total death count</td></tr>
+                        <tr><td><code>{igt}</code></td><td>In-game time (H:MM:SS)</td></tr>
+                        <tr><td><code>{runes}</code></td><td>Number of Great Runes (0-8)</td></tr>
+                        <tr><td><code>{kindling}</code></td><td>Number of Messmer's Kindling (DLC)</td></tr>
+                        <tr><td><code>{scaling}</code></td><td>Zone scaling info</td></tr>
                     </table>
 
-                    <h4>Special markers</h4>
+                    <h4>Icon variables</h4>
+                    <table class="help-table">
+                        <tr><td><code>{rune_icons}</code></td><td>Great Runes as icons (filled/empty)</td></tr>
+                        <tr><td><code>{kindling_icon}</code></td><td>Kindling icon (DLC)</td></tr>
+                        <tr><td><code>{death_icon}</code></td><td>Death icon (skull)</td></tr>
+                    </table>
+
+                    <h4>Colors</h4>
+                    <p>Add a color to any variable with <code>{variable:color}</code>:</p>
+                    <table class="help-table">
+                        <tr><td>Named</td><td><code>red</code>, <code>green</code>, <code>blue</code>, <code>yellow</code>, <code>orange</code>, <code>cyan</code>, <code>magenta</code>, <code>gray</code>, <code>white</code></td></tr>
+                        <tr><td>Config</td><td><code>discovered</code>, <code>undiscovered</code>, <code>disabled</code></td></tr>
+                        <tr><td>Hex</td><td><code>#RRGGBB</code> (e.g., <code>#FF0000</code>)</td></tr>
+                    </table>
+
+                    <h4>Layout markers</h4>
                     <table class="help-table">
                         <tr><td><code>$n</code></td><td>New line</td></tr>
                         <tr><td><code>$&gt;</code></td><td>Right-align the rest of the line</td></tr>
                     </table>
 
-                    <h4>Example: multi-line template</h4>
-                    <pre class="help-code"><code>status_template = "{zone}$>{status}$n{runes} {kindling}$>{discovered}/{total}"</code></pre>
+                    <h4>Examples</h4>
+                    <pre class="help-code"><code># Default: zone on the left, status and progress on the right
+status_template = "{zone}$>{status} {discovered}/{total}"
+
+# With percentage
+status_template = "{zone}$>{status} {progress}%"
+
+# Two lines: zone + status, then runes and progress
+status_template = "{zone}$>{status}$n{rune_icons}$>{discovered}/{total}"
+
+# Speedrun style with IGT and deaths
+status_template = "{zone}$>{status}$n{igt} | {death_icon}{deaths}$>{discovered}/{total}"
+
+# Colored progress
+status_template = "{zone}$>{status} {discovered:green}/{total}"
+
+# DLC with kindling
+status_template = "{zone}$>{status}$n{rune_icons} {kindling_icon}{kindling}$>{discovered}/{total}"</code></pre>
                 </div>
 
                 <div class="help-subsection">

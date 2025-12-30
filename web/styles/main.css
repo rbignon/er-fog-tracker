@@ -3244,18 +3244,30 @@ marker path {
     white-space: pre;
 }
 
-/* Screenshots placeholder */
+/* Screenshots */
 .help-screenshot {
     margin: 16px 0;
-    padding: 60px 24px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 2px dashed #3a352f;
-    border-radius: 8px;
     text-align: center;
 }
 
-.screenshot-placeholder {
-    color: #5a5045;
+.help-screenshot img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid #3a352f;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Limit height for tall/vertical images (e.g. launcher screenshots) */
+.help-screenshot.vertical img {
+    max-height: 500px;
+    width: auto;
+}
+
+.help-screenshot figcaption {
+    margin-top: 8px;
+    color: #6a5a4a;
+    font-size: 0.85rem;
     font-style: italic;
 }
 
