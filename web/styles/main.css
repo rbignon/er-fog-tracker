@@ -7,11 +7,6 @@
 }
 
 /* Dark scrollbars */
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
 ::-webkit-scrollbar-track {
     background: #1a1a1c;
 }
@@ -27,7 +22,6 @@
 
 /* Firefox */
 * {
-    scrollbar-width: thin;
     scrollbar-color: #3a3530 #1a1a1c;
 }
 
@@ -3371,9 +3365,9 @@ marker path {
 }
 
 .help-screenshot img {
-    max-width: 100%;
     height: auto;
     border-radius: 8px;
+    max-width: 100%;
     border: 1px solid #3a352f;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
@@ -3382,6 +3376,10 @@ marker path {
 .help-screenshot.vertical img {
     max-height: 500px;
     width: auto;
+}
+
+.help-screenshot.already-fit img {
+    object-fit: none;
 }
 
 .help-screenshot figcaption {
