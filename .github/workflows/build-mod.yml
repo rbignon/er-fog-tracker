@@ -46,6 +46,13 @@ jobs:
       - name: Build release (DLL + Launcher)
         run: cargo build --release --features launcher
 
+      - name: Get version from Cargo.toml
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Prepare distribution package
         run: |
           mkdir dist
@@ -56,6 +63,6 @@ jobs:
       - name: Upload distribution package
         uses: actions/upload-artifact@v4
         with:
-          name: fog-tracker-mod
+          name: fog-tracker-mod-v${{ steps.version.outputs.version }}
           path: mod/dist/
           if-no-files-found: error
