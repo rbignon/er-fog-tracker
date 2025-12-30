@@ -70,7 +70,3 @@ class TestVersionConstant:
         # Should be semver format
         parts = __version__.split(".")
         assert len(parts) == 3
-
-    def test_version_is_current(self):
-        """Test that version is 0.1.0 (current release)."""
-        assert __version__ == "0.1.0"

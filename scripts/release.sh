@@ -32,9 +32,9 @@ sed -i "s/^version = \".*\"/version = \"$VERSION\"/" "$ROOT_DIR/server/pyproject
 echo "  - server/fogtracker/__init__.py"
 sed -i "s/^__version__ = \".*\"/__version__ = \"$VERSION\"/" "$ROOT_DIR/server/fogtracker/__init__.py"
 
-# 3. Update mod/Cargo.toml
+# 3. Update mod/Cargo.toml (only first occurrence = package version)
 echo "  - mod/Cargo.toml"
-sed -i "s/^version = \".*\"/version = \"$VERSION\"/" "$ROOT_DIR/mod/Cargo.toml"
+sed -i "0,/^version = /s/^version = \".*\"/version = \"$VERSION\"/" "$ROOT_DIR/mod/Cargo.toml"
 
 # 4. Update web/js/version.js
 echo "  - web/js/version.js"
