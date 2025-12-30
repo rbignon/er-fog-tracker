@@ -15,10 +15,34 @@
     <div id="landing-page" class="page">
         <div class="landing-content">
             <h1>Fog Gate Randomizer Tracker</h1>
-            <p class="subtitle">Elden Ring</p>
+            <p class="subtitle">Visualize, track, and share your Fog Gate Randomizer exploration progress with your stream audience in real-time.</p>
 
-            <div class="landing-description">
-                <p>Visualize, track, and share your Fog Gate Randomizer exploration progress with your stream audience in real-time.</p>
+            <div class="landing-screenshots">
+                <a href="/help">
+                    <figure>
+                        <img src="/help/ingame.png" alt="In-game overlay showing current zone and exits">
+                    </figure>
+                </a>
+                <a href="/help">
+                    <figure>
+                        <img src="/help/web-graph.png" alt="Interactive web graph visualization">
+                    </figure>
+                </a>
+            </div>
+
+            <div class="landing-about">
+                <p>The <a href="https://www.nexusmods.com/eldenring/mods/3295" target="_blank">Fog Gate Randomizer</a> is a mod for Elden Ring that randomizes where each fog gate leads. Instead of predictable connections, every fog gate becomes a mystery — stepping through might take you to a late-game area, a boss arena, or somewhere completely unexpected.</p>
+                <p>This transforms Elden Ring into a roguelike exploration experience where you must carefully navigate the world, discover new paths, and adapt your route based on what you find.</p>
+
+                <h3>What does this tracker do?</h3>
+                <p>The <strong>Fog Gate Randomizer Tracker</strong> helps you keep track of your discoveries:</p>
+                <ul>
+                    <li><strong>Interactive graph</strong> — Visualize all zones and their connections as you discover them</li>
+                    <li><strong>In-game overlay</strong> — See your current zone and available exits without leaving the game</li>
+                    <li><strong>Automatic tracking</strong> — The mod detects fog gate traversals and updates the graph in real-time</li>
+                    <li><strong>Exploration mode</strong> — Undiscovered connections show as "???" to avoid spoilers</li>
+                    <li><strong>Stream integration</strong> — Share your progress with viewers via an OBS overlay or interactive link</li>
+                </ul>
             </div>
 
             <div class="landing-actions">
@@ -36,11 +60,13 @@
                 <a href="/?offline=true" class="btn-secondary">Use Offline Mode</a>
             </div>
 
+            <p class="landing-help-link">
+                Need help getting started? <a href="/help">Read the Setup Guide →</a>
+            </p>
+
             <footer class="landing-footer">
                 <p>Developed by <strong>wospins</strong></p>
                 <p class="footer-links">
-                    <a href="/help">Setup Guide</a>
-                    <span class="separator">•</span>
                     <a href="https://github.com/rbignon/er-fog-tracker" target="_blank">GitHub</a>
                     <span class="separator">•</span>
                     <a href="https://www.nexusmods.com/eldenring/mods/3295" target="_blank">Fog Gate Randomizer Mod</a>
@@ -176,7 +202,7 @@
          Offline Upload Screen (/?offline=true)
          ========================================================================= -->
     <div id="upload-screen" class="page hidden">
-        <a href="/" class="back-link offline-back">← Back to Login</a>
+        <a href="/" class="back-btn offline-back">← Back to Login</a>
         <h1>Fog Gate Randomizer Tracker</h1>
         <p class="subtitle">Offline Mode</p>
 
@@ -411,7 +437,7 @@
          ========================================================================= -->
     <div id="help-page" class="page hidden">
         <header class="help-header">
-            <a href="/" class="help-back-link">← Back</a>
+            <a href="/" class="back-btn">← Back</a>
             <h1>Setup Guide</h1>
         </header>
 
@@ -419,24 +445,6 @@
             <figure class="help-screenshot">
                 <img src="/help/ingame.png" alt="Ingame screenshot">
             </figure>
-            <!-- Introduction -->
-            <section class="help-section" id="introduction">
-                <h2>What is the Fog Gate Randomizer?</h2>
-                <div class="help-subsection">
-                    <p>The <a href="https://www.nexusmods.com/eldenring/mods/3295" target="_blank">Fog Gate Randomizer</a> is a mod for Elden Ring that randomizes where each fog gate leads. Instead of predictable connections, every fog gate becomes a mystery — stepping through might take you to a late-game area, a boss arena, or somewhere completely unexpected.</p>
-                    <p>This transforms Elden Ring into a roguelike exploration experience where you must carefully navigate the world, discover new paths, and adapt your route based on what you find.</p>
-
-                    <h3>What does this tracker do?</h3>
-                    <p>The <strong>Fog Gate Randomizer Tracker</strong> helps you keep track of your discoveries:</p>
-                    <ul>
-                        <li><strong>Interactive graph</strong> — Visualize all zones and their connections as you discover them</li>
-                        <li><strong>In-game overlay</strong> — See your current zone and available exits without leaving the game</li>
-                        <li><strong>Automatic tracking</strong> — The mod detects fog gate traversals and updates the graph in real-time</li>
-                        <li><strong>Exploration mode</strong> — Undiscovered connections show as "???" to avoid spoilers</li>
-                        <li><strong>Stream integration</strong> — Share your progress with viewers via an OBS overlay or interactive link</li>
-                    </ul>
-                </div>
-            </section>
 
             <!-- Section 1: Installation -->
             <section class="help-section" id="installation">
