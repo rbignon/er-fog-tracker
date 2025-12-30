@@ -29,6 +29,8 @@ async function loadUserGames(username) {
     const loadingEl = document.getElementById('user-games-loading');
     const errorEl = document.getElementById('user-games-error');
     const displayNameEl = document.getElementById('user-games-displayname');
+    const avatarEl = document.getElementById('user-games-avatar');
+    const twitchLinkEl = document.getElementById('user-games-twitch-link');
 
     listEl.innerHTML = '';
     emptyEl.classList.add('hidden');
@@ -39,6 +41,18 @@ async function loadUserGames(username) {
         // Fetch user info
         const user = await Api.getUser(username);
         displayNameEl.textContent = user.displayName;
+
+        // Set avatar with fallback
+        const defaultAvatar = `data:image/svg+xml,${encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%237a6d55"><circle cx="12" cy="8" r="4"/><path d="M12 14c-6 0-8 3-8 6v1h16v-1c0-3-2-6-8-6z"/></svg>'
+        )}`;
+        avatarEl.src = user.avatarUrl || defaultAvatar;
+        avatarEl.onerror = () => {
+            avatarEl.src = defaultAvatar;
+        };
+
+        // Set Twitch link
+        twitchLinkEl.href = `https://twitch.tv/${user.username}`;
 
         // Fetch games
         const { games } = await Api.getUserGames(username);

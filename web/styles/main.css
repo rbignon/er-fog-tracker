@@ -519,6 +519,7 @@ body::before {
 }
 
 .btn-primary {
+    font-family: 'Cinzel', serif;
     background: linear-gradient(135deg, #c9a227 0%, #8b7355 100%);
     border: none;
     border-radius: 4px;
@@ -2831,16 +2832,49 @@ marker path {
 }
 
 .user-games-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     padding: 20px 40px;
     border-bottom: 1px solid #2a2520;
     margin-bottom: 30px;
 }
 
+.user-games-header .user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #7a6d55;
+}
+
 .user-games-header h1 {
+    flex: 1;
     font-family: 'Cinzel', serif;
     font-size: 1.8rem;
     color: #d4c4a8;
-    margin-top: 10px;
+    margin: 0;
+}
+
+.user-games-header .twitch-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    color: #9146ff;
+    border-radius: 8px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.user-games-header .twitch-link:hover {
+    background: rgba(145, 70, 255, 0.15);
+    color: #a970ff;
+}
+
+.user-games-header .twitch-icon {
+    width: 24px;
+    height: 24px;
 }
 
 .user-games-main {

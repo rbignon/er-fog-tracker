@@ -53,6 +53,7 @@ class UserPublic(BaseModel):
 
     username: str
     display_name: str | None
+    avatar_url: str | None
 
 
 class UserMe(BaseModel):

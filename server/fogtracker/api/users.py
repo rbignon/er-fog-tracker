@@ -30,6 +30,7 @@ async def get_user_public(
     return UserPublic(
         username=user.twitch_username,
         display_name=user.twitch_display_name,
+        avatar_url=user.twitch_avatar_url,
     )
 
 

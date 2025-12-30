@@ -245,13 +245,14 @@ export function transformLinksToApi(links, getLinkEndpoints) {
 /**
  * Get public user info.
  * @param {string} username - Twitch username
- * @returns {Promise<{ username: string, displayName: string }>}
+ * @returns {Promise<{ username: string, displayName: string, avatarUrl: string | null }>}
  */
 export async function getUser(username) {
     const data = await apiFetch(`/api/users/${username}`);
     return {
         username: data.username,
         displayName: data.display_name || data.username,
+        avatarUrl: data.avatar_url || null,
     };
 }
 
