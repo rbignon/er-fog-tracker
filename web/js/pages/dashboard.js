@@ -232,7 +232,7 @@ function createGameCard(game) {
 
     card.innerHTML = `
     <div class="game-card-header">
-      <span class="game-label">${escapeHtml(game.label || 'Untitled')}${modIndicator}</span>
+      <span class="game-label">${escapeHtml(game.label || `Seed ${game.seed}`)}${modIndicator}</span>
       <button class="game-delete-btn" title="Delete game">&times;</button>
     </div>
     <div class="game-card-body">

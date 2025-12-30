@@ -78,7 +78,7 @@ function createGameCard(game, username) {
 
     card.innerHTML = `
     <div class="game-card-header">
-      <span class="game-label">${escapeHtml(game.label || 'Untitled')}</span>
+      <span class="game-label">${escapeHtml(game.label || `Seed ${game.seed}`)}</span>
     </div>
     <div class="game-card-body">
       <div class="game-seed">Seed: ${game.seed}</div>
