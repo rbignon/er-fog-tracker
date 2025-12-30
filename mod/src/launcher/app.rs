@@ -171,17 +171,17 @@ pub struct LauncherApp {
     #[nwg_control(parent: window, text: "", position: (20, 110), size: (460, 25), password: Some('●'), flags: "VISIBLE|TAB_STOP")]
     token_input: nwg::TextInput,
 
-    #[nwg_control(parent: window, text: "Get your token from", position: (20, 145), size: (130, 20))]
+    #[nwg_control(parent: window, text: "Get your token from the Fog Tracker Dashboard", position: (20, 145), size: (460, 20))]
     token_hint: nwg::Label,
-
-    #[nwg_control(parent: window, text: "Fog Tracker Dashboard", position: (150, 143), size: (150, 25))]
-    #[nwg_events(OnButtonClick: [LauncherApp::on_open_dashboard_link_click])]
-    token_dashboard_link: nwg::Button,
 
     #[nwg_control(parent: window, text: "", position: (20, 175), size: (460, 40))]
     token_error: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Connect", position: (200, 230), size: (100, 35))]
+    #[nwg_control(parent: window, text: "Dashboard", position: (145, 230), size: (100, 35))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_open_dashboard_link_click])]
+    token_dashboard_btn: nwg::Button,
+
+    #[nwg_control(parent: window, text: "Connect", position: (255, 230), size: (100, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_connect_click])]
     token_connect_btn: nwg::Button,
 
@@ -711,8 +711,8 @@ impl LauncherApp {
         self.token_label.set_visible(show_token);
         self.token_input.set_visible(show_token);
         self.token_hint.set_visible(show_token);
-        self.token_dashboard_link.set_visible(show_token);
         self.token_error.set_visible(show_token);
+        self.token_dashboard_btn.set_visible(show_token);
         self.token_connect_btn.set_visible(show_token);
 
         // Games screen controls
