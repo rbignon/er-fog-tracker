@@ -20,6 +20,14 @@ const errorMessage = document.getElementById('error-message');
 const newFileBtn = document.getElementById('new-file-btn');
 const searchInput = document.getElementById('search');
 const searchDropdown = document.getElementById('search-dropdown');
+const searchClearBtn = document.getElementById('search-clear');
+
+// Show/hide clear button based on search input content
+function updateSearchClearButton() {
+    if (searchClearBtn) {
+        searchClearBtn.classList.toggle('hidden', !searchInput.value.trim());
+    }
+}
 
 // ============================================================
 // FILE UPLOAD
@@ -437,7 +445,22 @@ export function initUI() {
     }
 
     // Search
-    searchInput.addEventListener('input', e => handleSearch(e.target.value));
+    searchInput.addEventListener('input', e => {
+        handleSearch(e.target.value);
+        updateSearchClearButton();
+    });
+
+    // Search clear button
+    if (searchClearBtn) {
+        searchClearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchInput.focus();
+            searchDropdown.classList.remove('visible');
+            searchDropdown.innerHTML = '';
+            updateSearchClearButton();
+            State.emit('searchCleared');
+        });
+    }
 
     document.addEventListener('click', e => {
         if (!e.target.closest('#search-container')) {
@@ -476,18 +499,38 @@ export function initUI() {
         });
     }
 
+    // Helper to clear search
+    function clearSearch() {
+        searchInput.value = '';
+        searchInput.blur();
+        searchDropdown.classList.remove('visible');
+        searchDropdown.innerHTML = '';
+        updateSearchClearButton();
+        State.emit('searchCleared');
+    }
+
     // Keyboard shortcuts
     document.addEventListener('keydown', e => {
-        // Ignore if typing in an input field
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-        // Ignore if no graph loaded
-        if (!State.getGraphData()) return;
-
-        const key = e.key.toLowerCase();
-
-        // Escape: close tooltip
+        // Escape: clear search if active, otherwise close tooltip
         if (e.key === 'Escape') {
+            // If in search input, clear and blur
+            if (e.target === searchInput) {
+                clearSearch();
+                e.preventDefault();
+                return;
+            }
+
+            // Ignore if typing in other input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            // If search has text, clear it first
+            if (searchInput.value.trim()) {
+                clearSearch();
+                e.preventDefault();
+                return;
+            }
+
+            // Otherwise close tooltip
             const closeBtn = document.querySelector('#tooltip.visible .close-btn');
             if (closeBtn) {
                 closeBtn.click();
@@ -495,6 +538,14 @@ export function initUI() {
             }
             return;
         }
+
+        // Ignore other keys if typing in an input field
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        // Ignore if no graph loaded
+        if (!State.getGraphData()) return;
+
+        const key = e.key.toLowerCase();
 
         // D: Discover selected placeholder
         if (key === 'd') {

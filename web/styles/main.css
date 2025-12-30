@@ -879,7 +879,7 @@ input[type="checkbox"]:checked::after {
     background: #1a1a1c;
     border: 1px solid #3a3020;
     color: #c4b998;
-    padding: 8px 12px;
+    padding: 8px 28px 8px 12px;
     font-family: inherit;
     font-size: 0.9rem;
     width: 100%;
@@ -895,6 +895,29 @@ input[type="checkbox"]:checked::after {
 
 #search::placeholder {
     color: #5a5040;
+}
+
+.search-clear {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #5a5040;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.search-clear:hover {
+    color: #c4b998;
+}
+
+.search-clear.hidden {
+    display: none;
 }
 
 #search-dropdown {

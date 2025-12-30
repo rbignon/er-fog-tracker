@@ -1161,29 +1161,41 @@ function setupNodeClick(node, svg, nodeConnections, explorationMode, exploration
     // Restore selected node from state if exists
     let selectedNode = State.getSelectedNodeId();
 
+    // Restore default view (respecting active search or frontier)
+    function restoreDefaultView() {
+        // Check if there's an active search query
+        const searchInput = document.getElementById('search');
+        const searchQuery = searchInput?.value?.trim();
+
+        if (searchQuery) {
+            // Re-apply search filter
+            const graphData = State.getGraphData();
+            const matchingIds = new Set(
+                graphData.nodes.filter(n => n.id.toLowerCase().includes(searchQuery.toLowerCase())).map(n => n.id)
+            );
+            node.classed('highlighted', n => matchingIds.has(n.id)).classed('dimmed', n => !matchingIds.has(n.id));
+            svg.selectAll('.link').classed('dimmed', true).classed('highlighted', false);
+        } else if (State.isFrontierHighlightActive()) {
+            // Re-apply frontier view
+            State.emit('restoreFrontierHighlight');
+        } else {
+            // Reset to normal view
+            resetHighlight(node, svg);
+        }
+    }
+
     // Clear selection helper
     function clearSelection() {
         node.hideTooltip();
         selectedNode = null;
-
-        // If frontier mode is active, re-apply frontier view
-        // Otherwise just reset highlights
-        if (State.isFrontierHighlightActive()) {
-            State.emit('restoreFrontierHighlight');
-        } else {
-            resetHighlight(node, svg);
-        }
+        restoreDefaultView();
     }
 
     // Listen for tooltip close button
     cleanups.push(
         State.subscribe('tooltipClosed', () => {
             selectedNode = null;
-            if (State.isFrontierHighlightActive()) {
-                State.emit('restoreFrontierHighlight');
-            } else {
-                resetHighlight(node, svg);
-            }
+            restoreDefaultView();
         })
     );
 
