@@ -11,6 +11,7 @@ import * as Api from '../api.js';
 export function show() {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
     document.getElementById('user-games-page').classList.remove('hidden');
+    document.body.classList.remove('graph-mode');
 }
 
 /**

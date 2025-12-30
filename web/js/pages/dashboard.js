@@ -20,6 +20,7 @@ let parsedData = null;
 export function show() {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
     document.getElementById('dashboard-page').classList.remove('hidden');
+    document.body.classList.remove('graph-mode');
 }
 
 /**

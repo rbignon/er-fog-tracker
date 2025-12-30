@@ -14,6 +14,7 @@ export function show() {
     // Hide all pages, show landing
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
     document.getElementById('landing-page').classList.remove('hidden');
+    document.body.classList.remove('graph-mode');
 }
 
 /**

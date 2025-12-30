@@ -39,6 +39,8 @@
             <footer class="landing-footer">
                 <p>Developed by <strong>wospins</strong></p>
                 <p class="footer-links">
+                    <a href="/help">Setup Guide</a>
+                    <span class="separator">•</span>
                     <a href="https://github.com/rbignon/er-fog-tracker" target="_blank">GitHub</a>
                     <span class="separator">•</span>
                     <a href="https://www.nexusmods.com/eldenring/mods/3295" target="_blank">Fog Gate Randomizer Mod</a>
@@ -105,6 +107,9 @@
                             <span class="step-text">Select or create a game in the launcher — it will sync automatically!</span>
                             <span class="step-tip">💡 Tip: Creating the game from the launcher parses the fog randomizer directory for more accurate automatic tracking.</span>
                         </div>
+                    </div>
+                    <div class="mod-setup-help">
+                        <a href="/help">Need more help? Read the full setup guide →</a>
                     </div>
                 </div>
             </div>
@@ -399,6 +404,366 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- =========================================================================
+         Help Page (/help)
+         ========================================================================= -->
+    <div id="help-page" class="page hidden">
+        <header class="help-header">
+            <a href="/" class="help-back-link">← Back</a>
+            <h1>Setup Guide</h1>
+        </header>
+
+        <main class="help-content">
+            <!-- Introduction -->
+            <section class="help-section" id="introduction">
+                <h2>What is the Fog Gate Randomizer?</h2>
+                <div class="help-subsection">
+                    <p>The <a href="https://www.nexusmods.com/eldenring/mods/3295" target="_blank">Fog Gate Randomizer</a> is a mod for Elden Ring that randomizes where each fog gate leads. Instead of predictable connections, every fog gate becomes a mystery — stepping through might take you to a late-game area, a boss arena, or somewhere completely unexpected.</p>
+                    <p>This transforms Elden Ring into a roguelike exploration experience where you must carefully navigate the world, discover new paths, and adapt your route based on what you find.</p>
+
+                    <h3>What does this tracker do?</h3>
+                    <p>The <strong>Fog Gate Randomizer Tracker</strong> helps you keep track of your discoveries:</p>
+                    <ul>
+                        <li><strong>Interactive graph</strong> — Visualize all zones and their connections as you discover them</li>
+                        <li><strong>In-game overlay</strong> — See your current zone and available exits without leaving the game</li>
+                        <li><strong>Automatic tracking</strong> — The mod detects fog gate traversals and updates the graph in real-time</li>
+                        <li><strong>Exploration mode</strong> — Undiscovered connections show as "???" to avoid spoilers</li>
+                        <li><strong>Stream integration</strong> — Share your progress with viewers via an OBS overlay or interactive link</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 1: Installation -->
+            <section class="help-section" id="installation">
+                <h2>1. Installation</h2>
+
+                <div class="help-subsection">
+                    <h3>1.1 Download the launcher</h3>
+                    <p>Download the latest release from GitHub:</p>
+                    <a href="https://github.com/rbignon/er-fog-tracker/releases" target="_blank" class="btn-primary btn-download">
+                        Download for Windows
+                    </a>
+                    <div class="help-screenshot" data-screenshot="releases">
+                        <span class="screenshot-placeholder">[Screenshot: GitHub releases page]</span>
+                    </div>
+                </div>
+
+                <div class="help-subsection">
+                    <h3>1.2 Extract and launch</h3>
+                    <ol>
+                        <li>Extract the ZIP archive to a folder of your choice</li>
+                        <li>Run <code>FogRandoTracker.exe</code></li>
+                    </ol>
+                    <div class="help-screenshot" data-screenshot="launcher-first">
+                        <span class="screenshot-placeholder">[Screenshot: Launcher at first launch]</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Configuration -->
+            <section class="help-section" id="configuration">
+                <h2>2. Launcher Configuration</h2>
+
+                <div class="help-subsection">
+                    <h3>2.1 Connect to the server</h3>
+                    <p>In the launcher, enter your credentials from the <a href="/dashboard">dashboard</a>:</p>
+                    <ul>
+                        <li><strong>Server URL</strong> — Copy from the dashboard's "Automatic Tracking" section</li>
+                        <li><strong>Token</strong> — Your personal authentication token (keep it secret!)</li>
+                    </ul>
+                    <p>Click <strong>Validate</strong> to verify the connection.</p>
+                    <div class="help-screenshot" data-screenshot="launcher-config">
+                        <span class="screenshot-placeholder">[Screenshot: Launcher connection screen with fields filled]</span>
+                    </div>
+                </div>
+
+                <div class="help-subsection">
+                    <h3>2.2 Create or select a game</h3>
+                    <p>Once connected, you can:</p>
+                    <ul>
+                        <li><strong>Create New Game</strong> — Select your Fog Gate Randomizer folder. The launcher will parse the randomizer files for accurate initial tracking.</li>
+                        <li><strong>Select an existing game</strong> — If you already created a game on the web dashboard.</li>
+                    </ul>
+                    <div class="help-tip">
+                        <span class="tip-icon">💡</span>
+                        <span class="tip-text">Creating the game from the launcher is recommended for more accurate automatic tracking.</span>
+                    </div>
+                    <div class="help-screenshot" data-screenshot="launcher-games">
+                        <span class="screenshot-placeholder">[Screenshot: Game list in the launcher]</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Playing -->
+            <section class="help-section" id="playing">
+                <h2>3. Playing with the Mod</h2>
+
+                <div class="help-subsection">
+                    <h3>3.1 Launch the game</h3>
+                    <ol>
+                        <li>Select your game in the launcher</li>
+                        <li>Click <strong>Connect</strong></li>
+                        <li>The launcher will wait for Elden Ring to start</li>
+                        <li>Launch Elden Ring through your usual method (Steam, Mod Engine, etc.)</li>
+                        <li>The mod injects automatically once the game is detected</li>
+                    </ol>
+                    <div class="help-screenshot" data-screenshot="launcher-waiting">
+                        <span class="screenshot-placeholder">[Screenshot: Launcher showing "Waiting for Elden Ring"]</span>
+                    </div>
+                </div>
+
+                <div class="help-subsection">
+                    <h3>3.2 The in-game overlay</h3>
+                    <p>Once injected, an overlay appears in the top-right corner showing:</p>
+                    <ul>
+                        <li><strong>Current zone</strong> — Where you are right now</li>
+                        <li><strong>Progress counter</strong> — Discovered zones / Total zones</li>
+                        <li><strong>Connection status</strong> — Green dot when connected to server</li>
+                        <li><strong>Zone exits</strong> — List of fog gates with their destinations (discovered or ???)</li>
+                    </ul>
+
+                    <h4>Keyboard shortcuts</h4>
+                    <table class="help-table">
+                        <tr><td><kbd>F9</kbd></td><td>Toggle overlay visibility</td></tr>
+                        <tr><td><kbd>F10</kbd></td><td>Toggle debug information</td></tr>
+                        <tr><td><kbd>F11</kbd></td><td>Toggle exits list (fold/unfold)</td></tr>
+                    </table>
+                    <div class="help-screenshot" data-screenshot="overlay-ingame">
+                        <span class="screenshot-placeholder">[Screenshot: In-game overlay]</span>
+                    </div>
+                </div>
+
+                <div class="help-subsection">
+                    <h3>3.3 The web graph</h3>
+                    <p>Open your game on the <a href="/dashboard">dashboard</a> to see the interactive graph:</p>
+                    <ul>
+                        <li>The graph updates automatically when you traverse a fog gate</li>
+                        <li>Your current zone is highlighted</li>
+                        <li>Click on zones to see their connections and add tags</li>
+                        <li>Use the search bar to find specific zones</li>
+                        <li>Toggle "Frontier" to highlight zones with undiscovered exits</li>
+                    </ul>
+                    <div class="help-screenshot" data-screenshot="web-graph">
+                        <span class="screenshot-placeholder">[Screenshot: Web graph with a zone selected]</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Sharing -->
+            <section class="help-section" id="sharing">
+                <h2>4. Sharing with Viewers</h2>
+
+                <div class="help-subsection">
+                    <h3>4.1 Viewer link (interactive)</h3>
+                    <p>Share a link with your chat or Discord for read-only viewing:</p>
+                    <ol>
+                        <li>Open your game on the dashboard</li>
+                        <li>Click the <strong>Stream</strong> button</li>
+                        <li>Copy the <strong>Viewer Link</strong></li>
+                    </ol>
+                    <p>Viewers can navigate the graph freely, zoom, search, and click on zones — but they can't modify anything.</p>
+                    <div class="help-screenshot" data-screenshot="viewer-mode">
+                        <span class="screenshot-placeholder">[Screenshot: Viewer mode]</span>
+                    </div>
+                </div>
+
+                <div class="help-subsection">
+                    <h3>4.2 OBS overlay (stream)</h3>
+                    <p>Add the graph as an overlay on your stream:</p>
+                    <ol>
+                        <li>Click the <strong>Stream</strong> button</li>
+                        <li>Configure the counter position and size</li>
+                        <li>Copy the <strong>OBS Overlay</strong> URL</li>
+                        <li>In OBS, add a new <strong>Browser</strong> source</li>
+                        <li>Paste the URL and set dimensions to <strong>1920 x 1080</strong></li>
+                    </ol>
+                    <p>The overlay has a transparent background and syncs with your view — when you select a zone or use frontier mode, viewers see the same thing.</p>
+                    <div class="help-screenshot" data-screenshot="obs-overlay">
+                        <span class="screenshot-placeholder">[Screenshot: OBS Browser Source configuration + stream result]</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Customization -->
+            <section class="help-section" id="customization">
+                <h2>5. Customizing the Overlay</h2>
+
+                <div class="help-subsection">
+                    <h3>5.1 Configuration file location</h3>
+                    <p>Create a file named <code>fog_rando_tracker.toml</code> in the same folder as the DLL (your Fog Gate Randomizer folder).</p>
+                </div>
+
+                <div class="help-subsection">
+                    <h3>5.2 Font and colors</h3>
+                    <pre class="help-code"><code>[overlay]
+# Font settings
+font_path = ""                    # Path to TTF font (empty = system default)
+font_size = 16.0                  # 16 for 1080p, 24 for 4K
+
+# Colors (hex format)
+background_color = "#141414"
+background_opacity = 0.7          # 0.0 = transparent, 1.0 = opaque
+text_color = "#FFFFFF"
+text_disabled_color = "#808080"
+discovered_color = "#80FF80"      # Green for discovered exits
+undiscovered_color = "#B3B3B3"    # Gray for ??? exits
+
+# Border
+show_border = false
+border_color = "#404040"</code></pre>
+                </div>
+
+                <div class="help-subsection">
+                    <h3>5.3 Status line template</h3>
+                    <p>Customize what's shown in the overlay header:</p>
+                    <pre class="help-code"><code>[overlay]
+status_template = "{zone}$>{status} {discovered}/{total}"</code></pre>
+
+                    <h4>Available variables</h4>
+                    <table class="help-table">
+                        <tr><td><code>{zone}</code></td><td>Current zone name</td></tr>
+                        <tr><td><code>{discovered}</code></td><td>Number of discovered zones</td></tr>
+                        <tr><td><code>{total}</code></td><td>Total number of zones</td></tr>
+                        <tr><td><code>{progress}</code></td><td>Progress percentage</td></tr>
+                        <tr><td><code>{status}</code></td><td>Connection status indicator (colored dot)</td></tr>
+                        <tr><td><code>{map}</code></td><td>Current map ID</td></tr>
+                        <tr><td><code>{deaths}</code></td><td>Death count</td></tr>
+                        <tr><td><code>{igt}</code></td><td>In-game time</td></tr>
+                        <tr><td><code>{runes}</code></td><td>Great Runes icons</td></tr>
+                        <tr><td><code>{kindling}</code></td><td>Kindling icon (DLC)</td></tr>
+                        <tr><td><code>{scaling}</code></td><td>Current zone scaling tier</td></tr>
+                    </table>
+
+                    <h4>Special markers</h4>
+                    <table class="help-table">
+                        <tr><td><code>$n</code></td><td>New line</td></tr>
+                        <tr><td><code>$&gt;</code></td><td>Right-align the rest of the line</td></tr>
+                    </table>
+
+                    <h4>Example: multi-line template</h4>
+                    <pre class="help-code"><code>status_template = "{zone}$>{status}$n{runes} {kindling}$>{discovered}/{total}"</code></pre>
+                </div>
+
+                <div class="help-subsection">
+                    <h3>5.4 Keyboard shortcuts</h3>
+                    <pre class="help-code"><code>[keybindings]
+toggle_ui = "f9"
+toggle_debug = "f10"
+toggle_exits = "f11"</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 6: FAQ -->
+            <section class="help-section" id="faq">
+                <h2>6. FAQ</h2>
+
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span class="faq-icon">▶</span>
+                            <span>The mod doesn't inject / overlay doesn't appear</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Make sure you:</p>
+                            <ul>
+                                <li>Run the launcher <strong>before</strong> starting Elden Ring</li>
+                                <li>Use the same game version as the mod (check the releases page)</li>
+                                <li>Don't have other overlay software conflicting (Discord overlay, etc.)</li>
+                                <li>Have the DLL in your Fog Gate Randomizer folder</li>
+                            </ul>
+                            <p>Try running the launcher as administrator if the issue persists.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span class="faq-icon">▶</span>
+                            <span>The overlay shows "???" for zones I've already visited</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The mod only tracks fog gate traversals it observes directly. If you visited a zone before installing the mod, it won't know about it.</p>
+                            <p>You can manually discover zones on the web graph by clicking on them and selecting "Mark as discovered".</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span class="faq-icon">▶</span>
+                            <span>Zone detection is wrong or missing</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Zone detection depends on the randomizer's spoiler log. If you created the game from the web instead of the launcher, some connections might be missing.</p>
+                            <p>For best results, always create games from the launcher by selecting your Fog Gate Randomizer folder.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span class="faq-icon">▶</span>
+                            <span>Can I use this with other mods?</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Yes! The tracker is designed to work alongside other mods. It uses the same injection method as other popular tools like Practice Tool.</p>
+                            <p>If you're using Mod Engine 2, make sure the Fog Gate Randomizer is properly configured.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span class="faq-icon">▶</span>
+                            <span>The connection status shows red / disconnected</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Check that:</p>
+                            <ul>
+                                <li>Your token is correct (regenerate it from the dashboard if needed)</li>
+                                <li>The server URL is correct</li>
+                                <li>Your firewall isn't blocking the connection</li>
+                            </ul>
+                            <p>The mod will automatically try to reconnect if the connection is lost.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span class="faq-icon">▶</span>
+                            <span>Can viewers modify my game or graph?</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>No. Viewers have read-only access. They can navigate, zoom, and search, but they cannot discover zones, add tags, or change anything.</p>
+                            <p>Only you (the host) can modify the game state.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span class="faq-icon">▶</span>
+                            <span>How do I reset my progress / start a new run?</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Create a new game from the launcher with your new randomizer seed. Each game is independent — your old games remain accessible from the dashboard.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span class="faq-icon">▶</span>
+                            <span>Does this work offline?</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The web tracker has an offline mode where you can load a spoiler log locally. However, the in-game mod requires a server connection to sync discoveries.</p>
+                            <p>If you just want to visualize a spoiler log without tracking, use the offline mode from the landing page.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="help-footer">
+            <p>Still have questions? <a href="https://github.com/rbignon/er-fog-tracker/issues" target="_blank">Open an issue on GitHub</a></p>
+        </footer>
     </div>
 
     <!-- Toast notifications container -->

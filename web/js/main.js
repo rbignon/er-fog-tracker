@@ -15,6 +15,7 @@ import { checkVersionCompatibility } from './api.js';
 import * as LandingPage from './pages/landing.js';
 import * as DashboardPage from './pages/dashboard.js';
 import * as ViewerListPage from './pages/viewer-list.js';
+import * as HelpPage from './pages/help.js';
 
 // Track if version notification was already shown
 let versionNotificationShown = false;
@@ -93,6 +94,7 @@ async function handlePlayRoute({ params, query }) {
     });
     document.getElementById('main-ui').classList.remove('hidden');
     document.getElementById('main-ui').classList.add('visible');
+    document.body.classList.add('graph-mode');
 
     // Set navigation links to dashboard
     setNavigationLinks('/dashboard', 'Dashboard');
@@ -115,6 +117,7 @@ async function handlePlayRoute({ params, query }) {
     return () => {
         Sync.disconnect();
         State.setGameId(null);
+        document.body.classList.remove('graph-mode');
     };
 }
 
@@ -132,6 +135,7 @@ async function handleViewerRoute({ params, query }) {
     });
     document.getElementById('main-ui').classList.remove('hidden');
     document.getElementById('main-ui').classList.add('visible');
+    document.body.classList.add('graph-mode');
 
     // Configure for viewer mode
     State.setBackendMode('online');
@@ -172,6 +176,7 @@ async function handleViewerRoute({ params, query }) {
         State.setGameId(null);
         State.setIsViewer(false);
         State.setIsOverlayMode(false);
+        document.body.classList.remove('graph-mode');
         document.body.classList.remove('overlay-mode');
         document.body.classList.remove('viewer-interactive');
     };
@@ -188,6 +193,7 @@ function handleOfflineGraphLoaded() {
     });
     document.getElementById('main-ui').classList.remove('hidden');
     document.getElementById('main-ui').classList.add('visible');
+    document.body.classList.add('graph-mode');
 
     // Set navigation to offline home (upload screen)
     setNavigationLinks('/?offline=true', null);
@@ -434,6 +440,7 @@ async function init() {
     LandingPage.init();
     DashboardPage.init();
     ViewerListPage.init();
+    HelpPage.init();
 
     // Initialize UI event listeners (for graph UI)
     UI.initUI();
@@ -474,6 +481,7 @@ async function init() {
     Router.addRoute('/play/:gameId', handlePlayRoute, { auth: true });
     Router.addRoute('/watch/:username', ViewerListPage.handleRoute);
     Router.addRoute('/watch/:username/:gameId', handleViewerRoute);
+    Router.addRoute('/help', HelpPage.handleRoute);
 
     // Initialize router (handles current URL)
     Router.init();
