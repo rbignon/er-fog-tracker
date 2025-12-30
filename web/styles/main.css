@@ -2481,24 +2481,30 @@ marker path {
 #dashboard-page {
     min-height: 100vh;
     background: #0a0a0c;
-    padding: 20px;
 }
 
-.dashboard-header {
+/* Common page header */
+.page-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 20px 40px;
+    gap: 24px;
+    padding: 24px 48px;
     border-bottom: 1px solid #2a2520;
-    margin-bottom: 30px;
+    background: rgba(0, 0, 0, 0.3);
 }
 
-.dashboard-header h1 {
+.page-header h1 {
     font-family: 'Cinzel', serif;
     font-size: 1.8rem;
     font-weight: 600;
     color: #d4c4a8;
     letter-spacing: 0.1em;
+    margin: 0;
+}
+
+/* Dashboard header specifics */
+.dashboard-header {
+    justify-content: space-between;
 }
 
 .dashboard-user {
@@ -3037,18 +3043,9 @@ marker path {
 #user-games-page {
     min-height: 100vh;
     background: #0a0a0c;
-    padding: 20px;
 }
 
-.user-games-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 20px 40px;
-    border-bottom: 1px solid #2a2520;
-    margin-bottom: 30px;
-}
-
+/* User games header specifics */
 .user-games-header .user-avatar {
     width: 48px;
     height: 48px;
@@ -3059,10 +3056,6 @@ marker path {
 
 .user-games-header h1 {
     flex: 1;
-    font-family: 'Cinzel', serif;
-    font-size: 1.8rem;
-    color: #d4c4a8;
-    margin: 0;
 }
 
 .user-games-header .twitch-link {
@@ -3225,22 +3218,6 @@ marker path {
 #help-page {
     min-height: 100vh;
     background: linear-gradient(180deg, #1a1815 0%, #0d0c0a 100%);
-}
-
-.help-header {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    padding: 24px 48px;
-    border-bottom: 1px solid #2a2520;
-    background: rgba(0, 0, 0, 0.3);
-}
-
-.help-header h1 {
-    font-family: 'Cinzel', serif;
-    color: #c9a227;
-    font-size: 1.8rem;
-    margin: 0;
 }
 
 .help-content {
@@ -3501,7 +3478,7 @@ marker path {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .help-header {
+    .page-header {
         padding: 16px 24px;
     }
 
