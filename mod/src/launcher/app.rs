@@ -196,9 +196,9 @@ pub struct LauncherApp {
     #[nwg_control(parent: window, text: "Connected as: ", position: (20, 20), size: (350, 20))]
     games_user_label: nwg::Label,
 
-    #[nwg_control(parent: window, text: "Change Token", position: (380, 15), size: (100, 30))]
-    #[nwg_events(OnButtonClick: [LauncherApp::on_change_token_click])]
-    games_change_token_btn: nwg::Button,
+    #[nwg_control(parent: window, text: "Disconnect", position: (380, 15), size: (100, 30))]
+    #[nwg_events(OnButtonClick: [LauncherApp::on_disconnect_click])]
+    games_disconnect_btn: nwg::Button,
 
     #[nwg_control(parent: window, text: "Select a game:", position: (20, 55), size: (460, 20))]
     games_list_label: nwg::Label,
@@ -713,7 +713,7 @@ impl LauncherApp {
         // Games screen controls
         let show_games = screen == AppScreen::GameSelection;
         self.games_user_label.set_visible(show_games);
-        self.games_change_token_btn.set_visible(show_games);
+        self.games_disconnect_btn.set_visible(show_games);
         self.games_list_label.set_visible(show_games);
         self.games_list.set_visible(show_games);
         self.games_new_btn.set_visible(show_games);
@@ -767,7 +767,7 @@ impl LauncherApp {
         data.validate_token(url, token);
     }
 
-    fn on_change_token_click(&self) {
+    fn on_disconnect_click(&self) {
         let mut data_ref = self.data.borrow_mut();
         let data = match data_ref.as_mut() {
             Some(d) => d,
@@ -779,7 +779,6 @@ impl LauncherApp {
         data.user = None;
         data.current_screen = AppScreen::TokenInput;
 
-        self.token_input.set_text("");
         self.token_error.set_text("");
         self.token_connect_btn.set_text("Connect");
         self.token_connect_btn.set_enabled(true);
