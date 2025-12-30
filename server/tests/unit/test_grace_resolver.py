@@ -122,7 +122,7 @@ class TestGraceEntityIdFormats:
         dlc_graces = [
             eid
             for eid, info in mapping.items()
-            if info.get("map_id", "").startswith(("m20_", "m21_"))
+            if (info.get("map_id") or "").startswith(("m20_", "m21_"))
         ]
         # Just verify DLC graces are included if they exist
         # (This test documents that DLC support exists)
