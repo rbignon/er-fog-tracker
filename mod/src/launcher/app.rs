@@ -27,6 +27,7 @@ use super::rando_folder::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppScreen {
+    Connecting,
     TokenInput,
     GameSelection,
     WaitingForGame,
@@ -179,6 +180,15 @@ pub struct LauncherApp {
     #[nwg_control(parent: window, text: "Connect", position: (200, 230), size: (100, 35))]
     #[nwg_events(OnButtonClick: [LauncherApp::on_connect_click])]
     token_connect_btn: nwg::Button,
+
+    // =========================================================================
+    // Connecting Screen (auto-connect on startup)
+    // =========================================================================
+    #[nwg_control(parent: window, text: "Connecting...", position: (20, 180), size: (460, 30))]
+    connecting_label: nwg::Label,
+
+    #[nwg_control(parent: window, position: (100, 220), size: (300, 25), flags: "VISIBLE|MARQUEE")]
+    connecting_progress: nwg::ProgressBar,
 
     // =========================================================================
     // Game Selection Screen
@@ -347,17 +357,18 @@ impl LauncherApp {
         }
 
         // Auto-validate if we have a token
-        if data.config.has_token() {
+        let initial_screen = if data.config.has_token() {
             let url = data.config.server_url.clone();
             let token = data.config.mod_token.clone().unwrap();
-            self.token_connect_btn.set_text("Connecting...");
-            self.token_connect_btn.set_enabled(false);
             data.validate_token(url, token);
-        }
+            AppScreen::Connecting
+        } else {
+            AppScreen::TokenInput
+        };
 
         self.timer.start();
         *self.data.borrow_mut() = Some(data);
-        self.show_screen(AppScreen::TokenInput);
+        self.show_screen(initial_screen);
     }
 
     fn on_exit(&self) {
@@ -408,6 +419,7 @@ impl LauncherApp {
                             self.token_connect_btn.set_enabled(true);
                             self.token_url_input.set_enabled(true);
                             self.token_input.set_enabled(true);
+                            self.show_screen(AppScreen::TokenInput);
                             return;
                         }
                         VersionCompatibility::ServerTooOld { server_version } => {
@@ -424,6 +436,7 @@ impl LauncherApp {
                             self.token_connect_btn.set_enabled(true);
                             self.token_url_input.set_enabled(true);
                             self.token_input.set_enabled(true);
+                            self.show_screen(AppScreen::TokenInput);
                             return;
                         }
                         VersionCompatibility::UpdateAvailable { server_version } => {
@@ -475,6 +488,7 @@ impl LauncherApp {
                 self.token_connect_btn.set_enabled(true);
                 self.token_url_input.set_enabled(true);
                 self.token_input.set_enabled(true);
+                self.show_screen(AppScreen::TokenInput);
             }
             TaskResult::GamesLoaded(Ok(games)) => {
                 // Update data FIRST (before UI operations that trigger on_game_selected)
@@ -676,6 +690,16 @@ impl LauncherApp {
     }
 
     fn show_screen(&self, screen: AppScreen) {
+        // Connecting screen controls
+        let show_connecting = screen == AppScreen::Connecting;
+        self.connecting_label.set_visible(show_connecting);
+        self.connecting_progress.set_visible(show_connecting);
+        if show_connecting {
+            self.connecting_progress.set_marquee(true, 30);
+        } else {
+            self.connecting_progress.set_marquee(false, 0);
+        }
+
         // Token screen controls
         let show_token = screen == AppScreen::TokenInput;
         self.token_url_label.set_visible(show_token);
