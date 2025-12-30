@@ -451,7 +451,7 @@
                 <h2>1. Installation</h2>
 
                 <div class="help-subsection">
-                    <h3>1.1 Download the launcher</h3>
+                    <h3>Download the launcher</h3>
                     <p>Download the latest release from GitHub:</p>
                     <a href="https://github.com/rbignon/er-fog-tracker/releases" target="_blank" class="btn-primary btn-download">
                         Download for Windows
@@ -459,7 +459,7 @@
                 </div>
 
                 <div class="help-subsection">
-                    <h3>1.2 Extract and launch</h3>
+                    <h3>Extract and launch</h3>
                     <ol>
                         <li>Extract the ZIP archive to a folder of your choice</li>
                         <li>Run <code>FogRandoTracker.exe</code></li>
@@ -472,7 +472,7 @@
                 <h2>2. Launcher Configuration</h2>
 
                 <div class="help-subsection">
-                    <h3>2.1 Connect to the server</h3>
+                    <h3>Connect to the server</h3>
                     <p>In the launcher, enter your credentials from the <a href="/dashboard">dashboard</a>:</p>
                     <ul>
                         <li><strong>Server URL</strong> — Copy from the dashboard's "Automatic Tracking" section</li>
@@ -485,7 +485,7 @@
                 </div>
 
                 <div class="help-subsection">
-                    <h3>2.2 Create a new game</h3>
+                    <h3>Create a new game</h3>
                     <p>Click <strong>Create New Game</strong> and select your Fog Gate Randomizer folder. The launcher will parse the randomizer files to set up accurate initial tracking.</p>
                     <div class="help-tip">
                         <span class="tip-icon">💡</span>
@@ -497,7 +497,7 @@
                 </div>
 
                 <div class="help-subsection">
-                    <h3>2.3 Select a game and connect</h3>
+                    <h3>Select a game and connect</h3>
                     <p>Select your game from the list, then click <strong>Inject</strong> to start tracking. The launcher will wait for Elden Ring to start and inject the mod automatically.</p>
                     <figure class="help-screenshot vertical">
                         <img src="/help/launcher-games.png" alt="Game list with Inject button">
@@ -510,7 +510,7 @@
                 <h2>3. Playing with the Mod</h2>
 
                 <div class="help-subsection">
-                    <h3>3.1 Launch the game</h3>
+                    <h3>Launch the game</h3>
                     <ol>
                         <li>Select your game in the launcher</li>
                         <li>Click <strong>Connect</strong></li>
@@ -524,7 +524,7 @@
                 </div>
 
                 <div class="help-subsection">
-                    <h3>3.2 The in-game overlay</h3>
+                    <h3>The in-game overlay</h3>
                     <p>Once injected, an overlay appears in the top-right corner showing:</p>
                     <ul>
                         <li><strong>Current zone</strong> — Where you are right now</li>
@@ -545,7 +545,7 @@
                 </div>
 
                 <div class="help-subsection">
-                    <h3>3.3 The web graph</h3>
+                    <h3>The web graph</h3>
                     <p>Open your game on the <a href="/dashboard">dashboard</a> to see the interactive graph:</p>
                     <ul>
                         <li>The graph updates automatically when you traverse a fog gate</li>
@@ -565,7 +565,7 @@
                 <h2>4. Sharing with Viewers</h2>
 
                 <div class="help-subsection">
-                    <h3>4.1 Viewer link (interactive)</h3>
+                    <h3>Viewer link (interactive)</h3>
                     <p>Share a link with your chat or Discord for read-only viewing:</p>
                     <ol>
                         <li>Open your game on the dashboard</li>
@@ -576,7 +576,7 @@
                 </div>
 
                 <div class="help-subsection">
-                    <h3>4.2 OBS overlay (stream)</h3>
+                    <h3>OBS overlay (stream)</h3>
                     <p>Add the graph as an overlay on your stream:</p>
                     <ol>
                         <li>Click the <strong>Stream</strong> button</li>
@@ -597,12 +597,12 @@
                 <h2>5. Customizing the Overlay</h2>
 
                 <div class="help-subsection">
-                    <h3>5.1 Configuration file location</h3>
+                    <h3>Configuration file location</h3>
                     <p>Create a file named <code>fog_rando_tracker.toml</code> in the same folder as the DLL (your Fog Gate Randomizer folder).</p>
                 </div>
 
                 <div class="help-subsection">
-                    <h3>5.2 Font and colors</h3>
+                    <h3>Font and colors</h3>
                     <pre class="help-code"><code>[overlay]
 # Font settings
 font_path = ""                    # Path to TTF font (empty = system default)
@@ -622,7 +622,7 @@ border_color = "#404040"</code></pre>
                 </div>
 
                 <div class="help-subsection">
-                    <h3>5.3 Status line template</h3>
+                    <h3>Status line template</h3>
                     <p>Customize what's shown in the overlay header:</p>
 
                     <h4>Text variables</h4>
@@ -682,7 +682,7 @@ status_template = "{zone}$>{status}$n{rune_icons} {kindling_icon}{kindling}$>{di
                 </div>
 
                 <div class="help-subsection">
-                    <h3>5.4 Keyboard shortcuts</h3>
+                    <h3>Keyboard shortcuts</h3>
                     <pre class="help-code"><code>[keybindings]
 toggle_ui = "f9"
 toggle_debug = "f10"

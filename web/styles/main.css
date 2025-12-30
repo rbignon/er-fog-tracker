@@ -3457,6 +3457,15 @@ marker path {
     margin-bottom: 0;
 }
 
+.faq-answer a {
+    color: #c9a227;
+    text-decoration: none;
+}
+
+.faq-answer a:hover {
+    text-decoration: underline;
+}
+
 /* Help footer */
 .help-footer {
     text-align: center;
