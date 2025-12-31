@@ -820,3 +820,42 @@ class TestBossZonesInCandidates:
         assert (
             boss_idx < len(all_keys) - 1
         ), f"Boss zone at position {boss_idx} should not be at the very end"
+
+
+class TestShadowKeepChurchDistrictElevator:
+    """Test resolution for Shadow Keep - Church District elevator area.
+
+    The elevator connecting Shadow Keep to Specimen Storehouse spans two maps.
+    When the player warps to the top of this elevator from Leyndell - Erdtree
+    Sanctuary, they spawn at position (245.28, 278.0, 264.84) in map m21_01_00_00.
+    This position should resolve to Shadow Keep - Church District, not Specimen
+    Storehouse.
+
+    See: analysis/reports/20251231_153628_782495b2/REPORT.md
+    """
+
+    def test_elevator_position_resolves_to_church_district(self, resolver):
+        """Position at top of elevator should resolve to Shadow Keep - Church District."""
+        # Actual position from mod log: (245.28, 278.0, 264.84) in m21_01_00_00
+        internal, display = resolver.resolve("m21_01_00_00", 245.28, 278.0, 264.84)
+
+        assert (
+            internal == "shadowkeep_church"
+        ), f"Expected shadowkeep_church at elevator position, got {internal}"
+        assert display == "Shadow Keep - Church District"
+
+    def test_church_district_is_first_candidate(self, resolver):
+        """Shadow Keep - Church District should be first candidate at elevator position."""
+        candidates = resolver.resolve_all_candidates("m21_01_00_00", 245.28, 278.0, 264.84)
+        candidate_keys = [c[0] for c in candidates]
+
+        assert (
+            candidate_keys[0] == "shadowkeep_church"
+        ), f"Expected shadowkeep_church as first candidate, got {candidate_keys[:5]}"
+
+    def test_church_district_map_includes_m21_01(self, resolver):
+        """shadowkeep_church zone should include m21_01_00_00 in its map_ids."""
+        zones_in_m21_01 = resolver.map_zones.get("m21_01_00_00", set())
+        assert (
+            "shadowkeep_church" in zones_in_m21_01
+        ), "shadowkeep_church should be a candidate for m21_01_00_00"

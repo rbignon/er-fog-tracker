@@ -2760,7 +2760,7 @@ Areas:
   Tags: dlc
 - Name: shadowkeep_church
   Text: Shadow Keep - Church District
-  Maps: m21_00_00_00
+  Maps: m21_00_00_00 m21_01_00_00
   To:
   - Area: shadowkeep_church_lower
     Tags: using the lever

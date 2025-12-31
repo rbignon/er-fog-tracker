@@ -199,6 +199,11 @@ MapAreas:
     Area: shadowkeep
 - Map: m21_01_00_00
   Areas:
+  - Name: Shadow Keep - Church District Elevator
+    Comment: Top of elevator connecting to Shadow Keep Church District
+    Area: shadowkeep_church
+    YBelow: 285
+    ZBelow: 275
   - Name: Specimen Storehouse - Shadow Tower
     XBelow: 150
     YAbove: 335

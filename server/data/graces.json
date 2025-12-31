@@ -507,12 +507,12 @@
     },
     "21002956": {
       "grace_name": "Church District Entrance",
-      "zone": "Shadow Keep",
+      "zone": "Shadow Keep - Church District",
       "map_id": null
     },
     "21002957": {
       "grace_name": "Sunken Chapel",
-      "zone": "Shadow Keep",
+      "zone": "Shadow Keep - Church District",
       "map_id": null
     },
     "21002958": {
