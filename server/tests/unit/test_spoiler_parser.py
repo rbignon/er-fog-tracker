@@ -414,14 +414,15 @@ class TestOneWayDetection:
             ("resting in the coffin", True),
             ("lying down in bed", True),
             ("using the Pureblood Knight's Medal", True),
-            ("dropping down to the right", True),  # Drop-down connections
-            ("dropping into the boss fight", True),
             ("arriving by the Great Waterfall Crest grace", True),  # Grace warp arrivals
             ("before boss arena", False),
             ("at the main gate", False),
             ("near the beach", False),
             ("return to entrance after boss", False),
             ("at the elevator", False),  # Elevators are bidirectional
+            # "dropping" is NOT one-way for random links (see test_random_link_with_navigation_dropping)
+            ("dropping down to the right", False),
+            ("dropping into the boss fight", False),
         ],
     )
     def test_one_way_patterns(self, description, expected_one_way):
@@ -521,6 +522,32 @@ class TestOneWayDetection:
         assert conn is not None
         assert conn.conn_type == "preexisting"
         assert conn.is_one_way is False  # Elevator = bidirectional
+
+    def test_random_link_with_navigation_dropping_is_bidirectional(self):
+        """Random fog gates with 'dropping' in navigation instructions should be bidirectional.
+
+        Regression test: Volcano Manor Prison Town fog gate was incorrectly marked
+        as one-way because the description mentioned "dropping down" as navigation
+        instructions to reach the fog gate location, not as the fog gate action.
+
+        The phrase "it can be reached from main town dropping down outside Temple of Eiglay"
+        describes how to navigate to the fog gate, not that the fog gate itself involves
+        a drop-down action.
+        """
+        line = (
+            "  Random: Volcano Manor Prison Town "
+            "(before Abductor Virgins' arena. it can be reached from main town dropping down "
+            "outside Temple of Eiglay) "
+            "--> Castle Ensis - Rellana, Twin Moon Knight (at the back of Rellana's arena)"
+        )
+        conn = _parse_connection_line(line)
+        assert conn is not None
+        assert conn.conn_type == "random"
+        assert conn.source == "Volcano Manor Prison Town"
+        assert conn.target == "Castle Ensis - Rellana, Twin Moon Knight"
+        # "dropping down" in the source_details describes how to reach the fog gate location,
+        # NOT a drop-down fog gate action - this should be bidirectional
+        assert conn.is_one_way is False
 
     def test_transporter_chest_is_one_way(self):
         """Transporter chest with 'arriving' target is one-way.

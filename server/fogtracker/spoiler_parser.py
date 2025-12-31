@@ -32,8 +32,15 @@ ALWAYS_ONE_WAY_PATTERNS = [
     re.compile(
         r"arriving by", re.IGNORECASE
     ),  # Grace warp arrivals (e.g., "arriving by the Great Waterfall Crest grace")
-    re.compile(r"dropping", re.IGNORECASE),  # Drop-down connections (can't go back up)
     re.compile(r"from Deeproot", re.IGNORECASE),  # Sending gate destination from Deeproot
+]
+
+# Patterns that indicate one-way ONLY for preexisting connections
+# "dropping" describes the connection action for preexisting links (e.g., "dropping down")
+# but for random links, it often describes navigation to the fog gate location
+# (e.g., "can be reached from main town dropping down outside Temple of Eiglay")
+PREEXISTING_ONE_WAY_PATTERNS = [
+    re.compile(r"dropping", re.IGNORECASE),  # Drop-down connections (can't go back up)
 ]
 
 # "arriving at/in/from" is only one-way if the SOURCE contains a teleport mechanism
@@ -316,8 +323,12 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
     is_one_way = False
 
     # Check patterns that always indicate one-way (applies to both random and preexisting)
-    # This catches drop-downs, sending gates, coffins, etc.
-    if any(pattern.search(details_text) for pattern in ALWAYS_ONE_WAY_PATTERNS):
+    # This catches sending gates, coffins, etc.
+    if (
+        any(pattern.search(details_text) for pattern in ALWAYS_ONE_WAY_PATTERNS)
+        or conn_type == "preexisting"
+        and any(pattern.search(details_text) for pattern in PREEXISTING_ONE_WAY_PATTERNS)
+    ):
         is_one_way = True
     # Check "arriving" - only one-way if source details contain teleport mechanism
     # This is specific to random links (fog gates with teleport mechanisms)
