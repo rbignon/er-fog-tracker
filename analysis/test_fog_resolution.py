@@ -208,6 +208,29 @@ def test_fog_resolution(
                 target_candidates[:MAX_ZONE_CANDIDATES],
             )
 
+        # Step 3b: Apply candidate priority filtering (same as server)
+        # Build priority maps: lower index = higher priority (closer to actual position)
+        source_priority = {c[1]: i for i, c in enumerate(source_candidates)}
+        target_priority = {c[1]: i for i, c in enumerate(target_candidates)}
+
+        if all_matches:
+            # Compute candidate priority for each match
+            matches_with_priority = []
+            for src, tgt, pair in all_matches:
+                src_pri = source_priority.get(src, MAX_ZONE_CANDIDATES)
+                tgt_pri = target_priority.get(tgt, MAX_ZONE_CANDIDATES)
+                priority = src_pri + tgt_pri
+                matches_with_priority.append((src, tgt, pair, priority))
+
+            # Sort by priority and filter to best priority
+            matches_with_priority.sort(key=lambda x: x[3])
+            min_priority = matches_with_priority[0][3]
+            all_matches = [
+                (src, tgt, pair)
+                for src, tgt, pair, pri in matches_with_priority
+                if pri == min_priority
+            ]
+
         # Step 4: Analyze results
         num_links = len(all_matches)
 
