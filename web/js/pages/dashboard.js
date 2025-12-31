@@ -343,7 +343,7 @@ function initModSetupBanner() {
             const targetId = btn.dataset.target;
             const input = document.getElementById(targetId);
             if (input) {
-                await copyToClipboard(input.value);
+                await navigator.clipboard.writeText(input.value);
                 Toast.show('Copied to clipboard');
             }
         });
@@ -425,25 +425,6 @@ async function regenerateModToken() {
     } finally {
         btn.disabled = false;
         btn.textContent = originalText;
-    }
-}
-
-/**
- * Copy text to clipboard with fallback.
- */
-async function copyToClipboard(text) {
-    try {
-        await navigator.clipboard.writeText(text);
-    } catch (e) {
-        // Fallback for older browsers
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
     }
 }
 
