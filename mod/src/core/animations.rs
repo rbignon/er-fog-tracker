@@ -404,6 +404,10 @@ pub enum Animation {
     LiurniaTowerDoor = 12202126,
     /// Post-boss warp animation
     PostBossWarp = 12020210,
+    /// Lake of Rot coffin warp
+    CoffinLakeOfRot = 2020210,
+    /// Deeproot Depths coffin warp
+    CoffinDeeproot = 2029050,
 }
 
 impl Animation {
@@ -428,6 +432,8 @@ impl Animation {
                 | Self::ErdtreeBurn
                 | Self::PlacidusaxLieDown
                 | Self::AbductorVirginGrab
+                | Self::CoffinLakeOfRot
+                | Self::CoffinDeeproot
         )
     }
 }
@@ -480,6 +486,8 @@ mod tests {
         assert!(Animation::ErdtreeBurn.is_teleport());
         assert!(Animation::PlacidusaxLieDown.is_teleport());
         assert!(Animation::AbductorVirginGrab.is_teleport());
+        assert!(Animation::CoffinLakeOfRot.is_teleport());
+        assert!(Animation::CoffinDeeproot.is_teleport());
     }
 
     #[test]
@@ -532,5 +540,7 @@ mod tests {
         assert_eq!(Animation::LiurniaTowerDoor as u32, 12202126);
         assert_eq!(Animation::PostBossWarp as u32, 12020210);
         assert_eq!(Animation::AbductorVirginGrab as u32, 15004000);
+        assert_eq!(Animation::CoffinLakeOfRot as u32, 2020210);
+        assert_eq!(Animation::CoffinDeeproot as u32, 2029050);
     }
 }
