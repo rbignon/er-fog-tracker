@@ -349,7 +349,8 @@ function applyVisualState(data) {
         PositionManager.updatePositionsInDOM(d3Nodes);
     }
 
-    if (data.selectedNodeId !== undefined) {
+    // Only sync selection in overlay mode - interactive viewers control their own selection
+    if (data.selectedNodeId !== undefined && State.isOverlayMode()) {
         State.setSelectedNodeId(data.selectedNodeId || null);
     }
 
@@ -357,7 +358,8 @@ function applyVisualState(data) {
 }
 
 function applyVisualClasses(data) {
-    const selectedId = data.selectedNodeId || null;
+    // In overlay mode, use host's selection; in interactive mode, use local selection
+    const selectedId = State.isOverlayMode() ? data.selectedNodeId || null : State.getSelectedNodeId();
 
     d3.selectAll('.node').each(function (d) {
         const nodeState = data.nodes?.[d.id];

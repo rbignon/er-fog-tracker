@@ -354,7 +354,7 @@ export function handleDiscoveryFromServer(
 
         // On host, select the newly discovered node and show its tooltip
         // But don't auto-select if frontier mode is active (to preserve frontier view)
-        const shouldShowTooltip = State.isStreamerHost() && newlyDiscoveredTarget && !State.isFrontierHighlightActive();
+        const shouldShowTooltip = State.isStreamerHost() && newlyDiscoveredTarget;
         if (shouldShowTooltip) {
             State.setSelectedNodeId(newlyDiscoveredTarget);
         }

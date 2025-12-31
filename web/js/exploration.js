@@ -78,6 +78,8 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
                 State.discoverLink(fromNodeId, areaId);
             }
         }
+        // Select the newly discovered node
+        State.setSelectedNodeId(areaId);
         State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: areaId });
 
         // Send to server - response will contain full state with back-propagation
@@ -115,6 +117,8 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
     }
 
     discoverWithPreexisting(areaId, fromNodeId, viaLink);
+    // Select the newly discovered node
+    State.setSelectedNodeId(areaId);
     State.saveExplorationToStorage();
     State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: areaId });
 }
