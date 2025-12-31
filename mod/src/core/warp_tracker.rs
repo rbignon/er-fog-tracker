@@ -159,6 +159,12 @@ impl WarpTracker {
         // 1. Animation trigger: known teleport animation just started
         if is_in_teleport_anim && !self.was_in_teleport_anim {
             if let Some(pos) = position.clone() {
+                tracing::debug!(
+                    transport_type = transport_type,
+                    map = pos.map_id_str,
+                    pos = format!("({:.1}, {:.1}, {:.1})", pos.x, pos.y, pos.z),
+                    "[WARP] Pending created by animation trigger (warp_was_requested=false)"
+                );
                 self.pending_warp = Some(PendingWarp {
                     entry: pos,
                     destination_entity_id: 0, // Will be captured when warp_requested becomes true
@@ -166,6 +172,11 @@ impl WarpTracker {
                     created_at: Instant::now(),
                     warp_was_requested: false,
                 });
+            } else {
+                tracing::warn!(
+                    transport_type = transport_type,
+                    "[WARP] Animation trigger but position=None - pending NOT created!"
+                );
             }
         }
 
@@ -190,7 +201,11 @@ impl WarpTracker {
         // Capture dest_entity_id and warp_requested state when available
         if let Some(ref mut pending) = self.pending_warp {
             // Track if warp_requested was ever true during this warp
-            if is_warp_requested {
+            if is_warp_requested && !pending.warp_was_requested {
+                tracing::debug!(
+                    dest_entity = dest_entity_id,
+                    "[WARP] Setting warp_was_requested=true on pending"
+                );
                 pending.warp_was_requested = true;
             }
 
@@ -204,6 +219,12 @@ impl WarpTracker {
         if !is_in_teleport_anim && self.was_in_teleport_anim {
             if let Some(pending) = self.pending_warp.take() {
                 if let Some(exit_pos) = position.clone() {
+                    tracing::debug!(
+                        transport_type = pending.transport_type,
+                        warp_was_requested = pending.warp_was_requested,
+                        exit_map = exit_pos.map_id_str,
+                        "[WARP] Exit detection: creating discovery"
+                    );
                     discovery = Some(DiscoveryEvent {
                         entry: pending.entry,
                         exit: exit_pos,
@@ -213,6 +234,11 @@ impl WarpTracker {
                     });
                 } else {
                     // Position not readable yet (still loading) - keep pending
+                    tracing::debug!(
+                        transport_type = pending.transport_type,
+                        warp_was_requested = pending.warp_was_requested,
+                        "[WARP] Exit detection: position=None, keeping pending"
+                    );
                     self.pending_warp = Some(pending);
                 }
             }
@@ -243,6 +269,19 @@ impl WarpTracker {
         self.was_warp_requested = is_warp_requested;
 
         // Filter out false positives (e.g., PostBossWarp without actual warp)
+        // Log when a discovery is filtered to help debug
+        if let Some(ref d) = discovery {
+            if !d.is_valid() {
+                tracing::warn!(
+                    transport_type = d.transport_type,
+                    warp_was_requested = d.warp_was_requested,
+                    dest_entity = d.destination_entity_id,
+                    entry_map = d.entry.map_id_str,
+                    exit_map = d.exit.map_id_str,
+                    "[WARP] Discovery FILTERED by is_valid() - pending warp lost!"
+                );
+            }
+        }
         discovery.filter(|d| d.is_valid())
     }
 
