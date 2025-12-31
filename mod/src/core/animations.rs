@@ -408,6 +408,8 @@ pub enum Animation {
     CoffinLakeOfRot = 2020210,
     /// Deeproot Depths coffin warp
     CoffinDeeproot = 2029050,
+    /// Divine Tower of Liurnia
+    LiurniaDivineTower = 12020110,
 }
 
 impl Animation {
