@@ -1917,12 +1917,12 @@
     },
     "1045462950": {
       "grace_name": "Temple Town Ruins",
-      "zone": "Rauh Ruins",
+      "zone": "Rauh Base",
       "map_id": "m60_45_46_00"
     },
     "1045472950": {
       "grace_name": "Ravine North",
-      "zone": "Rauh Ruins",
+      "zone": "Rauh Base",
       "map_id": "m60_45_47_00"
     },
     "1046472950": {
@@ -1932,7 +1932,7 @@
     },
     "1047452950": {
       "grace_name": "Scadu Altus, West",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_47_45_00"
     },
     "1047472950": {
@@ -1942,42 +1942,42 @@
     },
     "1048452950": {
       "grace_name": "Highroad Cross",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_48_45_00"
     },
     "1048472950": {
       "grace_name": "Ancient Ruins Base",
-      "zone": "Rauh Ruins",
+      "zone": "Rauh Base",
       "map_id": "m60_48_47_00"
     },
     "1049432950": {
       "grace_name": "Moorth Highway, South",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_49_43_00"
     },
     "1049432951": {
       "grace_name": "Fort of Reprimand",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_49_43_00"
     },
     "1049432952": {
       "grace_name": "Behind the Fort of Reprimand",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_49_43_00"
     },
     "1049442950": {
       "grace_name": "Moorth Ruins",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_49_44_00"
     },
     "1049442951": {
       "grace_name": "Bonny Village",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_49_44_00"
     },
     "1049472950": {
       "grace_name": "Castle Watering Hole",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_49_47_00"
     },
     "1049482950": {
@@ -1997,12 +1997,12 @@
     },
     "1050442950": {
       "grace_name": "Recluses' River Downstream",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_50_44_00"
     },
     "1050452950": {
       "grace_name": "Recluses' River Upstream",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_50_45_00"
     },
     "1050482950": {
@@ -2017,27 +2017,27 @@
     },
     "1051442950": {
       "grace_name": "Bridge Leading to the Village",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_51_44_00"
     },
     "1051452950": {
       "grace_name": "Cathedral of Manus Metyr",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_51_45_00"
     },
     "1051472950": {
       "grace_name": "Church District Highroad",
-      "zone": "Scadu Altus",
+      "zone": "West Scadu Altus",
       "map_id": "m60_51_47_00"
     },
     "1051482950": {
       "grace_name": "Fingerstone Hill",
-      "zone": "Scaduview",
+      "zone": "Hinterland",
       "map_id": "m60_51_48_00"
     },
     "1051482951": {
       "grace_name": "Hinterland Bridge",
-      "zone": "Scaduview",
+      "zone": "Hinterland",
       "map_id": "m60_51_48_00"
     },
     "14002955": {
