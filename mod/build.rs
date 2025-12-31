@@ -12,6 +12,7 @@ fn main() {
     {
         println!("cargo:rerun-if-changed=launcher.rc");
         println!("cargo:rerun-if-changed=launcher.manifest");
+        println!("cargo:rerun-if-changed=assets/launcher.ico");
         embed_resource::compile("launcher.rc", embed_resource::NONE);
     }
 
