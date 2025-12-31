@@ -148,7 +148,13 @@ impl AppData {
 
 #[derive(Default, NwgUi)]
 pub struct LauncherApp {
-    #[nwg_control(size: (500, 450), position: (300, 200), title: concat!("FogRandoTracker Launcher v", env!("CARGO_PKG_VERSION")))]
+    #[nwg_resource]
+    embed: nwg::EmbedResource,
+
+    #[nwg_resource(source_embed: Some(&data.embed), source_embed_id: 1)]
+    app_icon: nwg::Icon,
+
+    #[nwg_control(size: (500, 450), position: (300, 200), title: concat!("FogRandoTracker Launcher v", env!("CARGO_PKG_VERSION")), icon: Some(&data.app_icon))]
     #[nwg_events(OnWindowClose: [LauncherApp::on_exit])]
     window: nwg::Window,
 
