@@ -82,7 +82,7 @@ class TestZoneQueryHandler:
         await mock_client._handle_zone_query({"pos": {"x": 0, "y": 0, "z": 0}})
 
         mock_client.send.assert_called_once_with(
-            {"type": "zone_query_ack", "zone": None, "exits": []}
+            {"type": "zone_query_ack", "zone": None, "zone_key": None, "exits": []}
         )
 
     @pytest.mark.asyncio
@@ -105,7 +105,7 @@ class TestZoneQueryHandler:
             )
 
         mock_client.send.assert_called_once_with(
-            {"type": "zone_query_ack", "zone": None, "exits": []}
+            {"type": "zone_query_ack", "zone": None, "zone_key": None, "exits": []}
         )
 
     @pytest.mark.asyncio
@@ -374,7 +374,7 @@ class TestZoneQueryHandler:
                 )
 
         mock_client.send.assert_called_once_with(
-            {"type": "zone_query_ack", "zone": None, "exits": []}
+            {"type": "zone_query_ack", "zone": None, "zone_key": None, "exits": []}
         )
 
 
@@ -2651,8 +2651,8 @@ class TestZoneKeyInResponses:
         assert call_args["zone_key"] == "limgrave"
 
     @pytest.mark.asyncio
-    async def test_zone_query_ack_zone_key_not_present_when_zone_null(self, mock_client):
-        """zone_key should not be present when zone is null (early return path)."""
+    async def test_zone_query_ack_zone_key_null_when_zone_null(self, mock_client):
+        """zone_key should be None when zone is null (early return path)."""
         zone_links = []
         mock_game = self._make_mock_game(zone_links)
 
@@ -2678,8 +2678,7 @@ class TestZoneKeyInResponses:
         call_args = mock_client.send.call_args[0][0]
         assert call_args["type"] == "zone_query_ack"
         assert call_args["zone"] is None
-        # zone_key is not included in early return path (when zone is None)
-        assert "zone_key" not in call_args
+        assert call_args["zone_key"] is None
 
     @pytest.mark.asyncio
     async def test_discovery_v2_ack_includes_current_zone_key(self, mock_client, mock_manager):

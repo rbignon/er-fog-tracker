@@ -315,7 +315,7 @@ class ModClient(Client):
         )
 
         if not map_id:
-            await self.send({"type": "zone_query_ack", "zone": None, "exits": []})
+            await self.send({"type": "zone_query_ack", "zone": None, "zone_key": None, "exits": []})
             return
 
         # Get game data first to know which zones are discovered
@@ -324,7 +324,9 @@ class ModClient(Client):
             game = result.scalar_one_or_none()
 
             if not game:
-                await self.send({"type": "zone_query_ack", "zone": None, "exits": []})
+                await self.send(
+                    {"type": "zone_query_ack", "zone": None, "zone_key": None, "exits": []}
+                )
                 return
 
             discovered_zones = get_discovered_nodes(
@@ -393,7 +395,9 @@ class ModClient(Client):
 
             if not zone_display:
                 logger.warning("[MOD] Zone query: no zone found for %s", map_id)
-                await self.send({"type": "zone_query_ack", "zone": None, "exits": []})
+                await self.send(
+                    {"type": "zone_query_ack", "zone": None, "zone_key": None, "exits": []}
+                )
                 return
 
             # Get exits for the resolved zone

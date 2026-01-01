@@ -85,6 +85,7 @@ impl DiscoverySender for WebSocketAdapter<'_> {
             exit_region = ?event.exit.play_region_id,
             dest_entity = event.destination_entity_id,
             source_zone = ?source_zone,
+            source_zone_key = ?source_zone_key,
             "[WARP] Sending discovery to server"
         );
         self.client.send_discovery_v2(
@@ -326,15 +327,6 @@ impl FogRandoTracker {
         let mut adapter = WebSocketAdapter::new(&mut self.ws_client);
 
         // 4. Delegate to TrackerSession using snapshot for both traits
-        // Debug: log warp detection state
-        if snapshot.is_warp_requested() {
-            debug!(
-                warp_requested = snapshot.is_warp_requested(),
-                target_grace = snapshot.get_target_grace_entity_id(),
-                has_pending_warp = self.session.has_pending_warp(),
-                "[SESSION] Pre-update warp state"
-            );
-        }
         let events = self.session.update(&snapshot, &snapshot, &mut adapter);
 
         // 5. Handle session events
