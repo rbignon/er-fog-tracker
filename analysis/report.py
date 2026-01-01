@@ -129,6 +129,7 @@ def generate_report_md(
         "- `fog.txt` - Zone definitions and fog gate data",
         "- `submaps.txt` - Position-based zone rules",
         "- `foglocations2.txt` - Zone location data by map",
+        "- `graces.json` - Graces mapping for zone_query",
         "",
         "## Resolution Instructions",
         "",
