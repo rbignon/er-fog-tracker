@@ -917,27 +917,20 @@ class TestDiscoveryV2Handler:
         assert call_args[0][3] == "Stormveil Castle"  # target (4th positional arg)
 
     @pytest.mark.asyncio
-    async def test_discovery_v2_uses_priority_tiebreaker(
+    async def test_discovery_v2_discovers_all_tied_matches(
         self, mock_client, sample_zone_links, mock_manager
     ):
-        """When multiple matches have same cost, should use candidate priority as tiebreaker.
-
-        Priority is based on candidate ordering (position proximity). The match
-        with lowest priority sum (source_priority + target_priority) wins.
-        """
+        """Should discover all matches when multiple have same cost."""
         mock_game = self._make_mock_game(sample_zone_links)
 
         mock_resolver = MagicMock()
         mock_resolver.resolve_by_col.return_value = (None, None)
-        # Candidates ordered by position proximity
         mock_resolver.resolve_all_candidates.side_effect = [
             [("limgrave", "Limgrave"), ("weeping", "Weeping Peninsula")],
             [("stormveil", "Stormveil Castle"), ("liurnia", "Liurnia")],
         ]
 
-        # Multiple matches with same cost but different priorities
-        # Limgrave->Stormveil: priority = 0+0 = 0 (best)
-        # Weeping->Liurnia: priority = 1+1 = 2 (worse)
+        # Multiple matches with same cost
         all_matches = [
             ("Limgrave", "Stormveil Castle", {"id": "link1"}),
             ("Weeping Peninsula", "Liurnia", {"id": "linkX"}),
@@ -980,32 +973,20 @@ class TestDiscoveryV2Handler:
                 }
             )
 
-        # Should propagate ONLY the best priority match (Limgrave -> Stormveil)
-        assert mock_propagate.call_count == 1
-        call_args = mock_propagate.call_args
-        # propagate_discovery(db, game_id, source, target, discovered_by=...)
-        # Positional args are at index 0, kwargs at index 1
-        assert call_args[0][2] == "Limgrave"  # source (3rd positional arg)
-        assert call_args[0][3] == "Stormveil Castle"  # target (4th positional arg)
+        # Should propagate BOTH matches (same cost)
+        assert mock_propagate.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_discovery_v2_destination_zone_from_best_priority_match(
+    async def test_discovery_v2_destination_zone_from_actual_discovery(
         self, mock_client, sample_zone_links, mock_manager
     ):
-        """When multiple matches exist, destination_zone should be from the best priority match.
+        """When multiple matches tie with cost 0 but only one discovers new links,
+        destination_zone should be from the one that actually discovered something.
 
-        With priority filtering, only the match with best candidate priority is tried.
-        The destination zone is from that match, regardless of whether it finds new links.
-
-        Given candidates:
-        - Source: [Erdtree Sanctuary (0), Behind Erdtree (1)]
-        - Target: [Main Entrance (0), Grand Library (1)]
-
-        Matches:
-        - Erdtree Sanctuary -> Main Entrance: priority = 0+0 = 0 (best)
-        - Behind Erdtree -> Grand Library: priority = 1+1 = 2 (worse)
-
-        Only the best priority match is tried, so destination is Main Entrance.
+        This tests the fix for the bug where:
+        - Match 1: Erdtree Sanctuary -> Academy Main Entrance (already known)
+        - Match 2: Behind Erdtree Sanctuary -> Grand Library (new discovery)
+        The destination should be Grand Library, not Academy Main Entrance.
         """
         mock_game = self._make_mock_game(sample_zone_links)
 
@@ -1016,16 +997,20 @@ class TestDiscoveryV2Handler:
             [("main_entrance", "Main Entrance"), ("grand_library", "Grand Library")],
         ]
 
-        # Multiple matches with same cost but different priorities
+        # Multiple matches with same cost
         all_matches = [
-            ("Erdtree Sanctuary", "Main Entrance", {"id": "link1"}),  # priority = 0
-            ("Behind Erdtree", "Grand Library", {"id": "link2"}),  # priority = 2
+            ("Erdtree Sanctuary", "Main Entrance", {"id": "link1"}),  # Already known
+            ("Behind Erdtree", "Grand Library", {"id": "link2"}),  # New discovery
         ]
 
-        # Discovery result for the best priority match
-        discovery_result = DiscoveryResult(origin="Erdtree Sanctuary")
-        discovery_result.main_links = [
-            DiscoveredLink("Erdtree Sanctuary", "Main Entrance", "random")
+        # First discovery result: already known (no main_links)
+        discovery_result_1 = DiscoveryResult(origin="Erdtree Sanctuary")
+        # main_links is empty because link was already discovered
+
+        # Second discovery result: new discovery (has main_links)
+        discovery_result_2 = DiscoveryResult(origin="Behind Erdtree")
+        discovery_result_2.main_links = [
+            DiscoveredLink("Behind Erdtree", "Grand Library", "random")
         ]
 
         with (
@@ -1041,8 +1026,8 @@ class TestDiscoveryV2Handler:
             ),
             patch(
                 "fogtracker.websocket.mod.propagate_discovery",
-                return_value=discovery_result,
-            ) as mock_propagate,
+                side_effect=[discovery_result_1, discovery_result_2],
+            ),
             patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
             patch(
                 "fogtracker.websocket.mod.compute_discovery_stats",
@@ -1062,248 +1047,10 @@ class TestDiscoveryV2Handler:
                 }
             )
 
-        # Only the best priority match should be propagated
-        assert mock_propagate.call_count == 1
-
         call_args = mock_client.send.call_args[0][0]
-        # Destination should be from the best priority match (Main Entrance)
-        assert call_args["current_zone"] == "Main Entrance"
-
-    @pytest.mark.asyncio
-    async def test_discovery_v2_maliketh_spurious_link_filtered(
-        self, mock_client, sample_zone_links, mock_manager
-    ):
-        """Regression test: Maliketh link should be filtered out when warping to Ashen Leyndell.
-
-        This tests the fix for the bug where warping from Yelough Anix Tunnel to
-        Ashen Leyndell would incorrectly discover both:
-        - Yelough Anix Tunnel -> Ashen Leyndell (correct)
-        - Yelough Anix Tunnel -> Maliketh the Black Blade (spurious)
-
-        The spurious Maliketh link appeared because:
-        1. Maliketh's zone (farumazula_maliketh) has a Col in m11_05_00_00
-        2. So it was included in target_candidates for Ashen Leyndell map
-        3. There exists a zone_link: Yelough Anix Tunnel -> Maliketh
-        4. Both matches had backprop cost 0
-
-        With priority filtering, Maliketh should be excluded because:
-        - Ashen Leyndell is first in target_candidates (priority 0)
-        - Maliketh is later in the list (higher priority number)
-        """
-        mock_game = self._make_mock_game(sample_zone_links)
-
-        mock_resolver = MagicMock()
-        mock_resolver.resolve_by_col.return_value = (None, None)
-        # Simulate candidates ordered by position proximity
-        # Ashen Leyndell is close to spawn point, Maliketh is far away
-        mock_resolver.resolve_all_candidates.side_effect = [
-            [("snowfield_tunnel", "Consecrated Snowfield - Yelough Anix Tunnel")],
-            [
-                ("leyndell2", "Ashen Leyndell"),  # index 0 - close to target pos
-                ("farumazula_maliketh", "Maliketh the Black Blade"),  # index 1 - far away
-            ],
-        ]
-
-        # Both links exist in the spoiler log, both match the candidates
-        all_matches = [
-            ("Consecrated Snowfield - Yelough Anix Tunnel", "Ashen Leyndell", {"id": "link1"}),
-            (
-                "Consecrated Snowfield - Yelough Anix Tunnel",
-                "Maliketh the Black Blade",
-                {"id": "link2"},
-            ),
-        ]
-
-        discovery_result = DiscoveryResult(origin="Consecrated Snowfield - Yelough Anix Tunnel")
-        discovery_result.main_links = [
-            DiscoveredLink(
-                "Consecrated Snowfield - Yelough Anix Tunnel", "Ashen Leyndell", "random"
-            )
-        ]
-
-        with (
-            patch("fogtracker.websocket.mod.async_session") as mock_session,
-            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch(
-                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
-                return_value=all_matches,
-            ),
-            patch(
-                "fogtracker.websocket.mod.compute_backprop_cost",
-                return_value=0,  # Both have same cost
-            ),
-            patch(
-                "fogtracker.websocket.mod.propagate_discovery",
-                return_value=discovery_result,
-            ) as mock_propagate,
-            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
-            patch(
-                "fogtracker.websocket.mod.compute_discovery_stats",
-                return_value={"discovered": 1, "total": 10, "percent": 10},
-            ),
-            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogtracker.websocket.mod.manager", mock_manager),
-        ):
-            self._setup_db_mock(mock_session, mock_game)
-
-            await mock_client._handle_discovery_v2(
-                {
-                    "source_map_id": "m32_11_00_00",  # Yelough Anix Tunnel
-                    "target_map_id": "m11_05_00_00",  # Ashen Leyndell
-                    "source_pos": {"x": 49.6, "y": 1208.0, "z": 68.8},
-                    "target_pos": {"x": -5.1, "y": 1.1, "z": 1.4},
-                }
-            )
-
-        # Should propagate ONLY the Ashen Leyndell link (priority 0+0=0)
-        # NOT the Maliketh link (priority 0+1=1)
-        assert mock_propagate.call_count == 1
-        call_args = mock_propagate.call_args
-        assert call_args[0][2] == "Consecrated Snowfield - Yelough Anix Tunnel"
-        assert call_args[0][3] == "Ashen Leyndell"  # NOT "Maliketh the Black Blade"
-
-    @pytest.mark.asyncio
-    async def test_discovery_v2_same_priority_discovers_all(
-        self, mock_client, sample_zone_links, mock_manager
-    ):
-        """When multiple matches have same cost AND same priority, all should be discovered.
-
-        This ensures we don't over-filter: if two matches genuinely tie on all
-        criteria, both should be discovered.
-        """
-        mock_game = self._make_mock_game(sample_zone_links)
-
-        mock_resolver = MagicMock()
-        mock_resolver.resolve_by_col.return_value = (None, None)
-        # Both source and target candidates at same position in list
-        mock_resolver.resolve_all_candidates.side_effect = [
-            [("zone_a", "Zone A"), ("zone_b", "Zone B")],
-            [("zone_x", "Zone X"), ("zone_y", "Zone Y")],
-        ]
-
-        # Two matches with same priority:
-        # Zone A -> Zone X: priority = 0+0 = 0
-        # Zone B -> Zone Y: priority = 1+1 = 2
-        # But what if both have priority 0?
-        # Zone A -> Zone X: priority = 0+0 = 0
-        # Zone A -> Zone Y: priority = 0+1 = 1  (different)
-        # To test same priority, we need:
-        # Zone A -> Zone Y: priority = 0+1 = 1
-        # Zone B -> Zone X: priority = 1+0 = 1  (same!)
-        all_matches = [
-            ("Zone A", "Zone Y", {"id": "link1"}),  # priority = 0+1 = 1
-            ("Zone B", "Zone X", {"id": "link2"}),  # priority = 1+0 = 1 (tie!)
-        ]
-
-        discovery_result = DiscoveryResult(origin="Zone A")
-        discovery_result.main_links = [DiscoveredLink("Zone A", "Zone Y", "random")]
-
-        with (
-            patch("fogtracker.websocket.mod.async_session") as mock_session,
-            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch(
-                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
-                return_value=all_matches,
-            ),
-            patch(
-                "fogtracker.websocket.mod.compute_backprop_cost",
-                return_value=0,  # Same cost for all
-            ),
-            patch(
-                "fogtracker.websocket.mod.propagate_discovery",
-                return_value=discovery_result,
-            ) as mock_propagate,
-            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
-            patch(
-                "fogtracker.websocket.mod.compute_discovery_stats",
-                return_value={"discovered": 2, "total": 5, "percent": 40},
-            ),
-            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogtracker.websocket.mod.manager", mock_manager),
-        ):
-            self._setup_db_mock(mock_session, mock_game)
-
-            await mock_client._handle_discovery_v2(
-                {
-                    "source_map_id": "m60_41_36_00",
-                    "target_map_id": "m10_00_00_00",
-                    "source_pos": {"x": 0, "y": 0, "z": 0},
-                    "target_pos": {"x": 100, "y": 50, "z": 200},
-                }
-            )
-
-        # Should propagate BOTH matches since they tie on both cost AND priority
-        assert mock_propagate.call_count == 2
-
-    @pytest.mark.asyncio
-    async def test_discovery_v2_correct_link_always_discovered_when_best_priority(
-        self, mock_client, sample_zone_links, mock_manager
-    ):
-        """Regression test: the correct link should always be discovered when it has best priority.
-
-        This ensures we haven't broken the normal case where:
-        1. Multiple matches exist
-        2. The correct match has the best priority
-        3. Only the correct match is discovered
-        """
-        mock_game = self._make_mock_game(sample_zone_links)
-
-        mock_resolver = MagicMock()
-        mock_resolver.resolve_by_col.return_value = (None, None)
-        mock_resolver.resolve_all_candidates.side_effect = [
-            [("limgrave", "Limgrave"), ("weeping", "Weeping Peninsula"), ("caelid", "Caelid")],
-            [("stormveil", "Stormveil Castle"), ("liurnia", "Liurnia"), ("altus", "Altus Plateau")],
-        ]
-
-        # Multiple matches exist, but correct one (Limgrave->Stormveil) has best priority
-        all_matches = [
-            ("Limgrave", "Stormveil Castle", {"id": "correct"}),  # priority = 0+0 = 0 (best)
-            ("Weeping Peninsula", "Liurnia", {"id": "wrong1"}),  # priority = 1+1 = 2
-            ("Caelid", "Altus Plateau", {"id": "wrong2"}),  # priority = 2+2 = 4
-        ]
-
-        discovery_result = DiscoveryResult(origin="Limgrave")
-        discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
-
-        with (
-            patch("fogtracker.websocket.mod.async_session") as mock_session,
-            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
-            patch(
-                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
-                return_value=all_matches,
-            ),
-            patch(
-                "fogtracker.websocket.mod.compute_backprop_cost",
-                return_value=0,
-            ),
-            patch(
-                "fogtracker.websocket.mod.propagate_discovery",
-                return_value=discovery_result,
-            ) as mock_propagate,
-            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
-            patch(
-                "fogtracker.websocket.mod.compute_discovery_stats",
-                return_value={"discovered": 1, "total": 3, "percent": 33},
-            ),
-            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
-            patch("fogtracker.websocket.mod.manager", mock_manager),
-        ):
-            self._setup_db_mock(mock_session, mock_game)
-
-            await mock_client._handle_discovery_v2(
-                {
-                    "source_map_id": "m60_41_36_00",
-                    "target_map_id": "m10_00_00_00",
-                    "source_pos": {"x": 0, "y": 0, "z": 0},
-                    "target_pos": {"x": 100, "y": 50, "z": 200},
-                }
-            )
-
-        # Should propagate exactly the correct link
-        assert mock_propagate.call_count == 1
-        call_args = mock_propagate.call_args
-        assert call_args[0][2] == "Limgrave"
-        assert call_args[0][3] == "Stormveil Castle"
+        # Should use the zone from the discovery that actually found new links
+        # (Grand Library from discovery_result_2, not Main Entrance from discovery_result_1)
+        assert call_args["current_zone"] == "Grand Library"
 
     @pytest.mark.asyncio
     async def test_discovery_v2_ignores_unreachable_matches(

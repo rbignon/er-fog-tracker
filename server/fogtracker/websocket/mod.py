@@ -70,31 +70,32 @@ class ModClient(Client):
     ) -> list[tuple[str, str]]:
         """Resolve zone candidates for a map position.
 
-        Uses Col resolution first (most precise). If Col resolution succeeds,
-        returns ONLY that zone to avoid false matches from other zones that
-        happen to share the same map_id. Otherwise falls back to position-based
-        candidates.
-
-        Returns list of (zone_key, display_name) tuples.
+        Uses Col resolution first (most precise), then position-based fallback.
+        Returns list of (zone_key, display_name) tuples, with Col result first if found.
         """
         resolver = get_resolver()
 
-        # Try Col resolution first (most precise)
+        # Try Col resolution first
+        col_internal, col_display = None, None
         if play_region_id:
             col = f"h{play_region_id:06x}"
             col_internal, col_display = resolver.resolve_by_col(map_id, col)
-            if col_internal and col_display:
+            if col_display:
                 logger.info("[MOD] %s resolved by Col: %s", label or "Zone", col_display)
-                # Col resolution succeeded - use ONLY this zone to avoid false matches
-                return [(col_internal, col_display)]
 
-        # Col resolution failed - fall back to position-based candidates
+        # Get position-based candidates
         candidates = resolver.resolve_all_candidates(
             map_id,
             pos.get("x", 0),
             pos.get("y", 0),
             pos.get("z", 0),
         )
+
+        # Prepend Col result if found
+        if col_internal:
+            candidates = [(col_internal, col_display)] + [
+                c for c in candidates if c[0] != col_internal
+            ]
 
         return candidates
 
@@ -692,11 +693,6 @@ class ModClient(Client):
                     for zl in game.zone_links[:5]  # Check first few
                 )
 
-                # Build candidate priority maps for tie-breaking
-                # Lower index = higher priority (closer to actual position)
-                source_priority = {c[1]: i for i, c in enumerate(source_candidates)}
-                target_priority = {c[1]: i for i, c in enumerate(target_candidates)}
-
                 if has_zone_keys:
                     # Use key-based matching (more precise)
                     # Find ALL matches, then pick those with lowest back-propagation cost
@@ -717,44 +713,32 @@ class ModClient(Client):
                                 game.discovered_zone_links or [],
                                 source_display,
                             )
-                            # Compute candidate priority for tie-breaking
-                            # Use sum of source and target priority (lower = better)
-                            src_pri = source_priority.get(source_display, MAX_ZONE_CANDIDATES)
-                            tgt_pri = target_priority.get(target_display, MAX_ZONE_CANDIDATES)
-                            candidate_priority = src_pri + tgt_pri
-                            matches_with_cost.append(
-                                (source_display, target_display, pair, cost, candidate_priority)
-                            )
+                            matches_with_cost.append((source_display, target_display, pair, cost))
                             logger.debug(
-                                "[MOD] Match '%s' -> '%s': backprop cost = %d, candidate priority = %d",
+                                "[MOD] Match '%s' -> '%s': backprop cost = %d",
                                 source_display,
                                 target_display,
                                 cost,
-                                candidate_priority,
                             )
 
-                        # Sort by: unreachable last, then cost, then candidate priority
-                        matches_with_cost.sort(key=lambda x: (x[3] == -1, x[3], x[4]))
+                        # Sort by cost (ascending), -1 (unreachable) goes last
+                        matches_with_cost.sort(key=lambda x: (x[3] == -1, x[3]))
 
                         # Get minimum cost (excluding unreachable)
                         reachable = [m for m in matches_with_cost if m[3] >= 0]
                         if reachable:
                             min_cost = reachable[0][3]
-                            min_priority = reachable[0][4]
-                            # Select only matches with minimum cost AND minimum priority
-                            best_matches = [
-                                m for m in reachable if m[3] == min_cost and m[4] == min_priority
-                            ]
+                            # Select all matches with minimum cost
+                            best_matches = [m for m in reachable if m[3] == min_cost]
 
                             if len(best_matches) > 1:
                                 logger.info(
-                                    "[MOD] %d matches tied with cost %d and priority %d, discovering all",
+                                    "[MOD] %d matches tied with cost %d, discovering all",
                                     len(best_matches),
                                     min_cost,
-                                    min_priority,
                                 )
 
-                            for source_display, target_display, _, cost, _ in best_matches:
+                            for source_display, target_display, _, cost in best_matches:
                                 logger.debug(
                                     "[MOD] Discovered (by keys, cost=%d): '%s' -> '%s'",
                                     cost,
@@ -786,7 +770,7 @@ class ModClient(Client):
 
                 if not has_zone_keys:
                     # Fallback: use display name matching (legacy behavior)
-                    # Also apply backprop cost and candidate priority tie-breaking
+                    # Also apply backprop cost tie-breaking
                     all_matches = find_all_matching_zone_pairs(
                         game.zone_links,
                         source_candidates[:MAX_ZONE_CANDIDATES],
@@ -806,43 +790,31 @@ class ModClient(Client):
                                 game.discovered_zone_links or [],
                                 source_display,
                             )
-                            # Compute candidate priority for tie-breaking
-                            src_pri = source_priority.get(source_display, MAX_ZONE_CANDIDATES)
-                            tgt_pri = target_priority.get(target_display, MAX_ZONE_CANDIDATES)
-                            candidate_priority = src_pri + tgt_pri
-                            matches_with_cost.append(
-                                (source_display, target_display, pair, cost, candidate_priority)
-                            )
+                            matches_with_cost.append((source_display, target_display, pair, cost))
                             logger.debug(
-                                "[MOD] Match '%s' -> '%s': backprop cost = %d, candidate priority = %d",
+                                "[MOD] Match '%s' -> '%s': backprop cost = %d",
                                 source_display,
                                 target_display,
                                 cost,
-                                candidate_priority,
                             )
 
-                        # Sort by: unreachable last, then cost, then candidate priority
-                        matches_with_cost.sort(key=lambda x: (x[3] == -1, x[3], x[4]))
+                        # Sort by cost (ascending), -1 (unreachable) goes last
+                        matches_with_cost.sort(key=lambda x: (x[3] == -1, x[3]))
 
                         # Get minimum cost (excluding unreachable)
                         reachable = [m for m in matches_with_cost if m[3] >= 0]
                         if reachable:
                             min_cost = reachable[0][3]
-                            min_priority = reachable[0][4]
-                            # Select only matches with minimum cost AND minimum priority
-                            best_matches = [
-                                m for m in reachable if m[3] == min_cost and m[4] == min_priority
-                            ]
+                            best_matches = [m for m in reachable if m[3] == min_cost]
 
                             if len(best_matches) > 1:
                                 logger.info(
-                                    "[MOD] %d matches tied with cost %d and priority %d, discovering all",
+                                    "[MOD] %d matches tied with cost %d, discovering all",
                                     len(best_matches),
                                     min_cost,
-                                    min_priority,
                                 )
 
-                            for source_display, target_display, _, cost, _ in best_matches:
+                            for source_display, target_display, _, cost in best_matches:
                                 logger.debug(
                                     "[MOD] Discovered (by display name, cost=%d): '%s' -> '%s'",
                                     cost,
