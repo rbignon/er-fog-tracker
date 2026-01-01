@@ -1404,6 +1404,264 @@ class TestDiscoveryV2Handler:
         assert call_args["type"] == "discovery_v2_ack"
         assert call_args["propagated"] == []
 
+    # -------------------------------------------------------------------------
+    # Regression tests for priority filtering bug (commit 38483fd, reverted)
+    #
+    # These tests ensure that when multiple zone matches have the same backprop
+    # cost, ALL matches are discovered (not just the one with "best priority"
+    # based on position in candidate list).
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_regression_fias_champions_to_siofra_river(
+        self, mock_client, sample_zone_links, mock_manager
+    ):
+        """Regression test: Fia's Champions → Siofra River must be discovered.
+
+        Bug scenario (Bug 1):
+        - Player is at "Deeproot Depths - Fia's Champions"
+        - Player warps to Siofra River via waygate
+        - Two matches found with same cost 0:
+          - Deeproot Depths → Siofra River
+          - Deeproot Depths - Fia's Champions → Siofra River
+        - BOTH must be discovered, not just the first one.
+
+        The bug was introduced by filtering matches based on "candidate priority"
+        (position in candidate list), which incorrectly excluded the more specific
+        zone match.
+        """
+        mock_game = self._make_mock_game(sample_zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Candidates ordered by position - Deeproot Depths appears before Fia's Champions
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [
+                ("deeproot", "Deeproot Depths"),
+                ("fias_champions", "Deeproot Depths - Fia's Champions"),
+            ],
+            [("siofra", "Siofra River")],
+        ]
+
+        # Both links exist in the spoiler log
+        all_matches = [
+            ("Deeproot Depths", "Siofra River", {"id": "link1"}),
+            ("Deeproot Depths - Fia's Champions", "Siofra River", {"id": "link2"}),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Deeproot Depths")
+        discovery_result.main_links = [DiscoveredLink("Deeproot Depths", "Siofra River", "random")]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
+                return_value=all_matches,
+            ),
+            patch(
+                "fogtracker.websocket.mod.compute_backprop_cost",
+                return_value=0,  # Same cost for both
+            ),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ) as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 2, "total": 10, "percent": 20},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m12_03_00_00",  # Deeproot Depths
+                    "target_map_id": "m12_02_00_00",  # Siofra River area
+                    "source_pos": {"x": -355.4, "y": 150.1, "z": -199.4},
+                    "target_pos": {"x": 1450.1, "y": -805.1, "z": 1640.3},
+                }
+            )
+
+        # BOTH matches must be propagated (same cost)
+        assert mock_propagate.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_regression_divine_tower_to_margit(
+        self, mock_client, sample_zone_links, mock_manager
+    ):
+        """Regression test: Divine Tower of East Altus Start → Margit must be discovered.
+
+        Bug scenario (Bug 2):
+        - Player is at "Divine Tower of East Altus Start"
+        - Player defeats a boss and warps to Stormveil area
+        - Two matches found with same cost 0:
+          - Ashen Leyndell - before Divine Tower → Stormveil Castle after Gate
+          - Divine Tower of East Altus Start → Margit, the Fell Omen
+        - BOTH must be discovered, not just the first one.
+
+        The bug was excluding the correct Divine Tower → Margit link because
+        it had lower "priority" (appeared later in the candidate list).
+        """
+        mock_game = self._make_mock_game(sample_zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Ashen Leyndell appears before Divine Tower in source candidates
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [
+                ("ashen_leyndell", "Ashen Leyndell - before Divine Tower"),
+                ("ashen_leyndell2", "Ashen Leyndell"),
+                ("divine_tower", "Divine Tower of East Altus Start"),
+            ],
+            [
+                ("stormveil_after", "Stormveil Castle after Gate"),
+                ("stormhill", "Stormhill"),
+                ("margit", "Margit, the Fell Omen"),
+            ],
+        ]
+
+        # Both links exist in the spoiler log
+        all_matches = [
+            (
+                "Ashen Leyndell - before Divine Tower",
+                "Stormveil Castle after Gate",
+                {"id": "link1"},
+            ),
+            ("Divine Tower of East Altus Start", "Margit, the Fell Omen", {"id": "link2"}),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Ashen Leyndell - before Divine Tower")
+        discovery_result.main_links = [
+            DiscoveredLink(
+                "Ashen Leyndell - before Divine Tower",
+                "Stormveil Castle after Gate",
+                "random",
+            )
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
+                return_value=all_matches,
+            ),
+            patch(
+                "fogtracker.websocket.mod.compute_backprop_cost",
+                return_value=0,  # Same cost for both
+            ),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ) as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 2, "total": 10, "percent": 20},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m11_05_00_00",  # Ashen Leyndell area
+                    "target_map_id": "m10_00_00_00",  # Stormveil area
+                    "source_pos": {"x": 125.3, "y": -21.5, "z": -200.0},
+                    "target_pos": {"x": -34.5, "y": -0.6, "z": -18.0},
+                }
+            )
+
+        # BOTH matches must be propagated (same cost)
+        assert mock_propagate.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_regression_valiant_gargoyles_to_astel(
+        self, mock_client, sample_zone_links, mock_manager
+    ):
+        """Regression test: Valiant Gargoyles → Astel must be discovered.
+
+        Bug scenario (Bug 5):
+        - Player is at "Valiant Gargoyles" (confirmed by grace entity)
+        - Player defeats boss and warps to Astel area
+        - Two matches found with same cost 0:
+          - Siofra River → Before Astel, Naturalborn of the Void
+          - Valiant Gargoyles → Astel, Naturalborn of the Void
+        - BOTH must be discovered, not just the first one.
+
+        The bug was excluding the Valiant Gargoyles link because the warp
+        position placed it later in the candidate list than Siofra River.
+        """
+        mock_game = self._make_mock_game(sample_zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Siofra River appears before Valiant Gargoyles based on warp position
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [
+                ("nokron", "Nokron before Mimic Tear"),
+                ("siofra", "Siofra River"),
+                ("valiant", "Valiant Gargoyles"),
+            ],
+            [
+                ("astel", "Astel, Naturalborn of the Void"),
+                ("before_astel", "Before Astel, Naturalborn of the Void"),
+            ],
+        ]
+
+        # Both links exist in the spoiler log
+        all_matches = [
+            ("Siofra River", "Before Astel, Naturalborn of the Void", {"id": "link1"}),
+            ("Valiant Gargoyles", "Astel, Naturalborn of the Void", {"id": "link2"}),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Siofra River")
+        discovery_result.main_links = [
+            DiscoveredLink("Siofra River", "Before Astel, Naturalborn of the Void", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
+                return_value=all_matches,
+            ),
+            patch(
+                "fogtracker.websocket.mod.compute_backprop_cost",
+                return_value=0,  # Same cost for both
+            ),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ) as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 2, "total": 10, "percent": 20},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m12_02_00_00",  # Siofra/Nokron area
+                    "target_map_id": "m12_04_00_00",  # Astel area
+                    "source_pos": {"x": 1189.8, "y": -618.7, "z": 1906.4},
+                    "target_pos": {"x": -104.3, "y": -106.1, "z": -241.5},
+                }
+            )
+
+        # BOTH matches must be propagated (same cost)
+        assert mock_propagate.call_count == 2
+
 
 # =============================================================================
 # TestMedalDiscoveryHandler
