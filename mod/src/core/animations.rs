@@ -410,6 +410,10 @@ pub enum Animation {
     CoffinDeeproot = 2029050,
     /// Divine Tower of Liurnia
     LiurniaDivineTower = 12020110,
+    /// Way to Metyr
+    WayToMetyr = 12000000,
+    /// Burning Scaling Tree
+    BurningScalingTree = 12022200,
 }
 
 impl Animation {
@@ -436,6 +440,9 @@ impl Animation {
                 | Self::AbductorVirginGrab
                 | Self::CoffinLakeOfRot
                 | Self::CoffinDeeproot
+                | Self::LiurniaDivineTower
+                | Self::WayToMetyr
+                | Self::BurningScalingTree
         )
     }
 }
