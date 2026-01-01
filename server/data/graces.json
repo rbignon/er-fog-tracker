@@ -17,27 +17,27 @@
     },
     "10002953": {
       "grace_name": "Gateside Chamber",
-      "zone": "Stormveil Castle",
+      "zone": "Stormveil Castle after Gate",
       "map_id": null
     },
     "10002954": {
       "grace_name": "Stormveil Cliffside",
-      "zone": "Stormveil Castle",
+      "zone": "Stormveil Castle before Gate",
       "map_id": null
     },
     "10002955": {
       "grace_name": "Rampart Tower",
-      "zone": "Stormveil Castle",
+      "zone": "Stormveil Castle after Gate",
       "map_id": null
     },
     "10002956": {
       "grace_name": "Liftside Chamber",
-      "zone": "Stormveil Castle",
+      "zone": "Stormveil Castle after Gate",
       "map_id": null
     },
     "10002957": {
       "grace_name": "Secluded Cell",
-      "zone": "Stormveil Castle",
+      "zone": "Stormveil Castle after Gate",
       "map_id": null
     },
     "10002958": {
@@ -430,9 +430,9 @@
       "zone": "Volcano Manor - Abductor Virgins",
       "map_id": "m16_00_00_00"
     },
-    "16002957": {
+    "16002964": {
       "grace_name": "Subterranean Inquisition Chamber",
-      "zone": "Volcano Manor Prison Town Church",
+      "zone": "Volcano Manor Prison Town",
       "map_id": null
     },
     "18002950": {
@@ -562,7 +562,7 @@
     },
     "21022951": {
       "grace_name": "West Rampart",
-      "zone": "Specimen Storehouse",
+      "zone": "Shadow Keep - West Rampart",
       "map_id": null
     },
     "22002950": {
@@ -872,7 +872,7 @@
     },
     "34112950": {
       "grace_name": "Study Hall Entrance",
-      "zone": "Liurnia",
+      "zone": "Carian Study Hall",
       "map_id": null
     },
     "34112951": {
@@ -882,7 +882,7 @@
     },
     "34112952": {
       "grace_name": "Divine Tower of Liurnia",
-      "zone": "Divine Tower of Liurnia",
+      "zone": "Divine Tower of Liurnia Interior",
       "map_id": null
     },
     "34122950": {
@@ -1787,12 +1787,12 @@
     },
     "1051572951": {
       "grace_name": "Castle Sol Main Gate",
-      "zone": "Mountaintops of the Giants",
+      "zone": "Castle Sol",
       "map_id": "m60_51_57_00"
     },
     "1051572952": {
       "grace_name": "Church of the Eclipse",
-      "zone": "Mountaintops of the Giants",
+      "zone": "Castle Sol",
       "map_id": "m60_51_57_00"
     },
     "1051572953": {
@@ -1924,6 +1924,11 @@
       "grace_name": "Ravine North",
       "zone": "Rauh Base",
       "map_id": "m60_45_47_00"
+    },
+    "2046472950": {
+      "grace_name": "Rauh Ancient Ruins, East",
+      "zone": "Ancient Ruins of Rauh - East",
+      "map_id": "m60_46_47_00"
     },
     "1046472950": {
       "grace_name": "Rauh Ancient Ruins, East",
@@ -2060,7 +2065,7 @@
       "zone": "Divine Tower of East Altus Start",
       "map_id": "m34_14_00_00"
     },
-    "21002955": {
+    "21002953": {
       "grace_name": "Shadow Keep Moat",
       "zone": "Shadow Keep",
       "map_id": "m21_00_00_00"
@@ -2079,6 +2084,11 @@
       "grace_name": "Ruin-Strewn Precipice Overlook",
       "zone": "Ruin-Strewn Precipice",
       "map_id": "m39_20_00_00"
+    },
+    "2048442950": {
+     "grace_name": "Ensis Moongazing Grounds",
+     "zone": "Castle Ensis - Rellana, Twin Moon Knight",
+     "map_id": "m61_48_44_00"
     }
   }
 }
