@@ -2283,3 +2283,463 @@ class TestZoneQueryGraceEntityId:
         # Should use grace resolution (Limgrave), not Col (Stormveil Castle)
         call_args = mock_client.send.call_args[0][0]
         assert call_args["zone"] == "Limgrave"
+
+
+# =============================================================================
+# TestSourceZonePrioritization
+# =============================================================================
+
+
+class TestSourceZonePrioritization:
+    """Tests for source_zone disambiguation in discovery_v2.
+
+    When the mod sends source_zone or source_zone_key, the server should
+    prioritize matching candidates to improve zone resolution accuracy.
+    """
+
+    @pytest.fixture
+    def zone_links_ambiguous(self):
+        """Zone links where multiple zones share the same map.
+
+        This creates an ambiguous situation where the source position
+        could match either limgrave or limgrave_east.
+        """
+        return [
+            {
+                "id": "link1",
+                "source": "Limgrave",
+                "target": "Stormveil Castle",
+                "source_key": "limgrave",
+                "target_key": "stormveil",
+                "type": "random",
+            },
+            {
+                "id": "link2",
+                "source": "Limgrave - East",
+                "target": "Caelid",
+                "source_key": "limgrave_east",
+                "target_key": "caelid",
+                "type": "random",
+            },
+            {
+                "id": "link3",
+                "source": "Limgrave - East",
+                "target": "Stormveil Castle",
+                "source_key": "limgrave_east",
+                "target_key": "stormveil",
+                "type": "random",
+            },
+        ]
+
+    def _make_mock_game(self, zone_links, discovered_links=None, entity_mapping=None):
+        """Helper to create a mock game object."""
+        game = MagicMock()
+        game.zone_links = zone_links
+        game.discovered_zone_links = discovered_links or []
+        game.entity_mapping = entity_mapping
+        game.zones = []
+        return game
+
+    def _setup_db_mock(self, mock_session, game):
+        """Helper to setup database mock."""
+        mock_db = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = game
+        mock_db.execute = AsyncMock(return_value=mock_result)
+        mock_db.commit = AsyncMock()
+        mock_db.expire_all = MagicMock()
+        mock_session.return_value.__aenter__.return_value = mock_db
+        return mock_db
+
+    @pytest.mark.asyncio
+    async def test_source_zone_prioritizes_matching_display_name(
+        self, mock_client, mock_manager, zone_links_ambiguous
+    ):
+        """When source_zone matches a candidate display name, it should be prioritized.
+
+        This test verifies that find_all_matching_zone_pairs receives candidates
+        with the matching source_zone at the front of the list.
+        """
+        mock_game = self._make_mock_game(zone_links_ambiguous)
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Source candidates: limgrave first, then limgrave_east
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("limgrave", "Limgrave"), ("limgrave_east", "Limgrave - East")],  # Source
+            [("stormveil", "Stormveil Castle")],  # Target
+        ]
+        mock_resolver.lookup_by_display_name.return_value = "stormveil"
+
+        discovery_result = DiscoveryResult(origin="Limgrave - East")
+        discovery_result.main_links = [
+            DiscoveredLink("Limgrave - East", "Stormveil Castle", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_keys",
+                return_value=[("Limgrave - East", "Stormveil Castle", {"id": "link3"})],
+            ) as mock_find,
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m60_42_36_00",
+                    "target_map_id": "m10_00_00_00",
+                    "source_pos": {"x": 100, "y": 50, "z": 200},
+                    "target_pos": {"x": 200, "y": 60, "z": 300},
+                    "source_zone": "Limgrave - East",  # Should prioritize limgrave_east
+                }
+            )
+
+            # Verify source_zone caused prioritization: limgrave_east should be first
+            call_args = mock_find.call_args[0]
+            source_candidates = call_args[1]
+            assert source_candidates[0] == ("limgrave_east", "Limgrave - East")
+            assert source_candidates[1] == ("limgrave", "Limgrave")
+
+    @pytest.mark.asyncio
+    async def test_source_zone_key_prioritizes_matching_key(
+        self, mock_client, mock_manager, zone_links_ambiguous
+    ):
+        """When source_zone_key matches a candidate key, it should be prioritized."""
+        mock_game = self._make_mock_game(zone_links_ambiguous)
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("limgrave", "Limgrave"), ("limgrave_east", "Limgrave - East")],  # Source
+            [("stormveil", "Stormveil Castle")],  # Target
+        ]
+        mock_resolver.lookup_by_display_name.return_value = "stormveil"
+
+        discovery_result = DiscoveryResult(origin="Limgrave - East")
+        discovery_result.main_links = [
+            DiscoveredLink("Limgrave - East", "Stormveil Castle", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_keys",
+                return_value=[("Limgrave - East", "Stormveil Castle", {"id": "link3"})],
+            ) as mock_find,
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m60_42_36_00",
+                    "target_map_id": "m10_00_00_00",
+                    "source_pos": {"x": 100, "y": 50, "z": 200},
+                    "target_pos": {"x": 200, "y": 60, "z": 300},
+                    "source_zone_key": "limgrave_east",  # Should prioritize by key
+                }
+            )
+
+            # Verify source_zone_key caused prioritization
+            call_args = mock_find.call_args[0]
+            source_candidates = call_args[1]
+            assert source_candidates[0] == ("limgrave_east", "Limgrave - East")
+
+    @pytest.mark.asyncio
+    async def test_source_zone_no_match_keeps_original_order(
+        self, mock_client, mock_manager, zone_links_ambiguous
+    ):
+        """When source_zone doesn't match any candidate, original order is kept."""
+        mock_game = self._make_mock_game(zone_links_ambiguous)
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("limgrave", "Limgrave"), ("limgrave_east", "Limgrave - East")],  # Source
+            [("stormveil", "Stormveil Castle")],  # Target
+        ]
+        mock_resolver.lookup_by_display_name.return_value = "stormveil"
+
+        discovery_result = DiscoveryResult(origin="Limgrave")
+        discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_keys",
+                return_value=[("Limgrave", "Stormveil Castle", {"id": "link1"})],
+            ) as mock_find,
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m60_42_36_00",
+                    "target_map_id": "m10_00_00_00",
+                    "source_pos": {"x": 100, "y": 50, "z": 200},
+                    "target_pos": {"x": 200, "y": 60, "z": 300},
+                    "source_zone": "Caelid",  # Doesn't match any source candidate
+                }
+            )
+
+            # Original order should be preserved (limgrave first)
+            call_args = mock_find.call_args[0]
+            source_candidates = call_args[1]
+            assert source_candidates[0] == ("limgrave", "Limgrave")
+            assert source_candidates[1] == ("limgrave_east", "Limgrave - East")
+
+    @pytest.mark.asyncio
+    async def test_source_zone_not_provided_uses_original_order(
+        self, mock_client, mock_manager, zone_links_ambiguous
+    ):
+        """When source_zone is not provided, candidates stay in original order."""
+        mock_game = self._make_mock_game(zone_links_ambiguous)
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("limgrave", "Limgrave"), ("limgrave_east", "Limgrave - East")],  # Source
+            [("stormveil", "Stormveil Castle")],  # Target
+        ]
+        mock_resolver.lookup_by_display_name.return_value = "stormveil"
+
+        discovery_result = DiscoveryResult(origin="Limgrave")
+        discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_keys",
+                return_value=[("Limgrave", "Stormveil Castle", {"id": "link1"})],
+            ) as mock_find,
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m60_42_36_00",
+                    "target_map_id": "m10_00_00_00",
+                    "source_pos": {"x": 100, "y": 50, "z": 200},
+                    "target_pos": {"x": 200, "y": 60, "z": 300},
+                    # No source_zone or source_zone_key
+                }
+            )
+
+            # Original order should be preserved
+            call_args = mock_find.call_args[0]
+            source_candidates = call_args[1]
+            assert source_candidates[0] == ("limgrave", "Limgrave")
+            assert source_candidates[1] == ("limgrave_east", "Limgrave - East")
+
+
+# =============================================================================
+# TestZoneKeyInResponses
+# =============================================================================
+
+
+class TestZoneKeyInResponses:
+    """Tests for zone_key fields in server responses.
+
+    The server should include zone_key (internal name) alongside zone (display name)
+    in discovery_v2_ack and zone_query_ack responses.
+    """
+
+    def _make_mock_game(self, zone_links, discovered_links=None):
+        """Helper to create a mock game object."""
+        game = MagicMock()
+        game.zone_links = zone_links
+        game.discovered_zone_links = discovered_links or []
+        game.entity_mapping = None
+        game.zones = []
+        return game
+
+    def _setup_db_mock(self, mock_session, game):
+        """Helper to setup database mock."""
+        mock_db = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = game
+        mock_db.execute = AsyncMock(return_value=mock_result)
+        mock_db.commit = AsyncMock()
+        mock_db.expire_all = MagicMock()
+        mock_session.return_value.__aenter__.return_value = mock_db
+        return mock_db
+
+    @pytest.mark.asyncio
+    async def test_zone_query_ack_includes_zone_key(self, mock_client):
+        """zone_query_ack should include zone_key alongside zone."""
+        zone_links = [
+            {
+                "id": "link1",
+                "source": "Limgrave",
+                "target": "Stormveil Castle",
+                "type": "random",
+            }
+        ]
+        mock_game = self._make_mock_game(zone_links, [{"zone_link_id": "link1"}])
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = ("limgrave", "Limgrave")
+        mock_resolver.lookup_by_display_name.return_value = "limgrave"
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.get_zone_scaling", return_value=None),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_zone_query(
+                {
+                    "map_id": "m60_42_36_00",
+                    "pos": {"x": 100, "y": 50, "z": 200},
+                    "play_region_id": 0x100000,
+                }
+            )
+
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["type"] == "zone_query_ack"
+        assert call_args["zone"] == "Limgrave"
+        assert call_args["zone_key"] == "limgrave"
+
+    @pytest.mark.asyncio
+    async def test_zone_query_ack_zone_key_not_present_when_zone_null(self, mock_client):
+        """zone_key should not be present when zone is null (early return path)."""
+        zone_links = []
+        mock_game = self._make_mock_game(zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.return_value = []
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch("fogtracker.websocket.mod.get_zone_scaling", return_value=None),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_zone_query(
+                {
+                    "map_id": "m99_99_99_99",  # Unknown map
+                    "pos": {"x": 100, "y": 50, "z": 200},
+                }
+            )
+
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["type"] == "zone_query_ack"
+        assert call_args["zone"] is None
+        # zone_key is not included in early return path (when zone is None)
+        assert "zone_key" not in call_args
+
+    @pytest.mark.asyncio
+    async def test_discovery_v2_ack_includes_current_zone_key(self, mock_client, mock_manager):
+        """discovery_v2_ack should include current_zone_key alongside current_zone."""
+        zone_links = [
+            {
+                "id": "link1",
+                "source": "Limgrave",
+                "target": "Stormveil Castle",
+                "source_key": "limgrave",
+                "target_key": "stormveil",
+                "type": "random",
+            }
+        ]
+        mock_game = self._make_mock_game(zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("limgrave", "Limgrave")],  # Source
+            [("stormveil", "Stormveil Castle")],  # Target
+        ]
+        mock_resolver.lookup_by_display_name.return_value = "stormveil"
+
+        discovery_result = DiscoveryResult(origin="Limgrave")
+        discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs",
+                return_value=[("Limgrave", "Stormveil Castle", {"id": "link1"})],
+            ),
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.get_zone_scaling", return_value=None),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m60_42_36_00",
+                    "target_map_id": "m10_00_00_00",
+                    "source_pos": {"x": 100, "y": 50, "z": 200},
+                    "target_pos": {"x": 200, "y": 60, "z": 300},
+                }
+            )
+
+        call_args = mock_client.send.call_args[0][0]
+        assert call_args["type"] == "discovery_v2_ack"
+        assert call_args["current_zone"] == "Stormveil Castle"
+        assert call_args["current_zone_key"] == "stormveil"

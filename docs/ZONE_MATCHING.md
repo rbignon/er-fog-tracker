@@ -9,6 +9,8 @@ The mod sends:
 {
   "source_map_id": "m10_01_00_00",
   "source_pos": {"x": 100.0, "y": 50.0, "z": 200.0},
+  "source_zone": "Limgrave - Stormhill",
+  "source_zone_key": "limgrave_stormhill",
   "target_map_id": "m11_05_00_00",
   "target_pos": {"x": 150.0, "y": 60.0, "z": 180.0},
   "destination_entity_id": 755890123
@@ -21,6 +23,8 @@ Limgrave - Stormhill (near the broken bridge) -> Liurnia - Lake (by the telescop
 ```
 
 We need to match the mod's map/position data to the spoiler log's zone names.
+
+**Note**: The `source_zone` and `source_zone_key` fields are the mod's cached zone info from previous server responses. These help disambiguate the source zone (see Source Zone Prioritization below).
 
 ## Data Files
 
@@ -133,7 +137,31 @@ If `destination_entity_id` is provided and game has `entity_mapping`:
 }
 ```
 
-### 4. Zone Candidates (Fallback)
+### 4. Source Zone Prioritization (Mod Context)
+
+If the mod provides `source_zone` or `source_zone_key`:
+1. Get source zone candidates from map/position resolution
+2. Check if any candidate matches the mod's cached zone
+3. If match found, move matching candidate(s) to front of list
+4. Continue with reordered candidate list
+
+**Priority boost, not filter**: Matching candidates are prioritized, but non-matching candidates are kept as fallbacks. This handles edge cases where the mod's cached zone is stale.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Before prioritization:                                       │
+│ candidates = [zone_a, zone_b, zone_c]                       │
+│                                                              │
+│ Mod sends: source_zone = "Zone B"                           │
+│                                                              │
+│ After prioritization:                                        │
+│ candidates = [zone_b, zone_a, zone_c]  (zone_b moved front) │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Why this helps**: After traversing a fog gate, the mod knows what zone it was in (from the server's `discovery_v2_ack` or `zone_query_ack`). When the player traverses another fog gate from the same zone, this cached info helps the server pick the correct source candidate, reducing multi-link discoveries.
+
+### 5. Zone Candidates (Fallback)
 
 If no exact match:
 1. Get all zones associated with `map_id`
@@ -144,7 +172,7 @@ If no exact match:
    - Boss zones last
 3. Try matching each candidate against spoiler log
 
-### 5. Sibling Map Fallback
+### 6. Sibling Map Fallback
 
 When a map has **no zones at all** (step 4 returns empty), the resolver extends the search to sibling maps. This handles cases where the mod reports a map variant not explicitly listed in fog.txt.
 
@@ -344,6 +372,7 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
 | Strategy | Precision | When Available |
 |----------|-----------|----------------|
 | Col-based (play_region_id) | ~95% | When mod sends play_region_id |
+| Source zone prioritization | ~93% | When mod has cached zone info |
 | Entity mapping + key matching | ~92% | Launcher with EMEVD parsing |
 | Key matching only | ~82% | Spoiler log with fog.txt enrichment |
 | Position rules (submaps.txt) | ~70% | Always (fallback) |
@@ -355,7 +384,8 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Mod Discovery Event                                         │
-│ map_id, position, play_region_id, destination_entity_id    │
+│ map_id, position, play_region_id, destination_entity_id,   │
+│ source_zone, source_zone_key                                │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -371,6 +401,18 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
                      │                  │
                      └────────┬─────────┘
                               ▼
+            ┌─────────────────────────────────────┐
+            │   Source zone from mod available?   │
+            └─────────────────┬───────────────────┘
+                    Yes ┌─────┴─────┐ No
+                        ▼           │
+              ┌─────────────────┐   │
+              │ Prioritize      │   │
+              │ matching        │   │
+              │ candidates      │   │
+              └────────┬────────┘   │
+                       └─────┬──────┘
+                             ▼
             ┌─────────────────────────────────────┐
             │   Entity mapping available?         │
             └─────────────────┬───────────────────┘

@@ -68,6 +68,12 @@ pub enum ServerMessage {
         source_pos: Position,
         #[serde(skip_serializing_if = "Option::is_none")]
         source_play_region_id: Option<u32>,
+        /// Source zone display name (from cached session state)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        source_zone: Option<String>,
+        /// Source zone internal key (from cached session state)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        source_zone_key: Option<String>,
         target_map_id: String,
         target_pos: Position,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -108,6 +114,9 @@ pub enum ServerResponse {
     DiscoveryV2Ack {
         propagated: Vec<PropagatedLink>,
         current_zone: Option<String>,
+        /// Internal zone key (e.g., "limgrave_stormhill")
+        #[serde(default)]
+        current_zone_key: Option<String>,
         #[serde(default)]
         exits: Vec<FogExit>,
         #[serde(default)]
@@ -126,6 +135,9 @@ pub enum ServerResponse {
     /// Zone query response
     ZoneQueryAck {
         zone: Option<String>,
+        /// Internal zone key (e.g., "limgrave_stormhill")
+        #[serde(default)]
+        zone_key: Option<String>,
         #[serde(default)]
         exits: Vec<FogExit>,
         /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
@@ -237,6 +249,8 @@ mod tests {
             source_map_id: "m60_44_36_00".to_string(),
             source_pos: Position::new(100.0, 0.0, 100.0),
             source_play_region_id: Some(6044360),
+            source_zone: Some("Limgrave".to_string()),
+            source_zone_key: Some("limgrave".to_string()),
             target_map_id: "m10_00_00_00".to_string(),
             target_pos: Position::new(200.0, 0.0, 200.0),
             target_play_region_id: None,
@@ -250,8 +264,32 @@ mod tests {
         assert!(json.contains(r#""destination_entity_id":755890042"#));
         // source_play_region_id should be present
         assert!(json.contains(r#""source_play_region_id":6044360"#));
+        // source_zone and source_zone_key should be present
+        assert!(json.contains(r#""source_zone":"Limgrave""#));
+        assert!(json.contains(r#""source_zone_key":"limgrave""#));
         // target_play_region_id should be absent (skip_serializing_if)
         assert!(!json.contains("target_play_region_id"));
+    }
+
+    #[test]
+    fn test_discovery_v2_message_serialize_no_source_zone() {
+        let msg = ServerMessage::DiscoveryV2 {
+            source_map_id: "m60_44_36_00".to_string(),
+            source_pos: Position::new(100.0, 0.0, 100.0),
+            source_play_region_id: None,
+            source_zone: None,
+            source_zone_key: None,
+            target_map_id: "m10_00_00_00".to_string(),
+            target_pos: Position::new(200.0, 0.0, 200.0),
+            target_play_region_id: None,
+            warp_type: "FOG".to_string(),
+            destination_entity_id: 755890042,
+        };
+        let json = serde_json::to_string(&msg).unwrap();
+        assert!(json.contains(r#""type":"discovery_v2""#));
+        // source_zone and source_zone_key should be absent (skip_serializing_if)
+        assert!(!json.contains("source_zone"));
+        assert!(!json.contains("source_zone_key"));
     }
 
     #[test]
@@ -334,6 +372,7 @@ mod tests {
             "type": "discovery_v2_ack",
             "propagated": [{"source": "Limgrave", "target": "Stormveil Castle"}],
             "current_zone": "Stormveil Castle",
+            "current_zone_key": "stormveil_castle",
             "exits": [{"target": "Limgrave", "description": "Main gate"}],
             "stats": {"discovered": 10, "total": 50},
             "scaling": "Scaling: tier 1, previously 2"
@@ -343,6 +382,7 @@ mod tests {
             ServerResponse::DiscoveryV2Ack {
                 propagated,
                 current_zone,
+                current_zone_key,
                 exits,
                 stats,
                 scaling,
@@ -351,6 +391,7 @@ mod tests {
                 assert_eq!(propagated[0].source, "Limgrave");
                 assert_eq!(propagated[0].target, "Stormveil Castle");
                 assert_eq!(current_zone, Some("Stormveil Castle".to_string()));
+                assert_eq!(current_zone_key, Some("stormveil_castle".to_string()));
                 assert_eq!(exits.len(), 1);
                 assert_eq!(exits[0].target, "Limgrave");
                 assert_eq!(stats.discovered, 10);
@@ -374,12 +415,14 @@ mod tests {
             ServerResponse::DiscoveryV2Ack {
                 propagated,
                 current_zone,
+                current_zone_key,
                 exits,
                 stats,
                 scaling,
             } => {
                 assert!(propagated.is_empty());
                 assert!(current_zone.is_none());
+                assert!(current_zone_key.is_none()); // default
                 assert!(exits.is_empty()); // default
                 assert_eq!(stats, DiscoveryStats::default()); // default
                 assert!(scaling.is_none()); // default
@@ -411,6 +454,7 @@ mod tests {
         let json = r#"{
             "type": "zone_query_ack",
             "zone": "Limgrave",
+            "zone_key": "limgrave",
             "exits": [{"target": "???", "description": "North"}, {"target": "Stormveil", "description": "East"}],
             "scaling": "Scaling: tier 1"
         }"#;
@@ -418,10 +462,12 @@ mod tests {
         match resp {
             ServerResponse::ZoneQueryAck {
                 zone,
+                zone_key,
                 exits,
                 scaling,
             } => {
                 assert_eq!(zone, Some("Limgrave".to_string()));
+                assert_eq!(zone_key, Some("limgrave".to_string()));
                 assert_eq!(exits.len(), 2);
                 assert_eq!(scaling, Some("Scaling: tier 1".to_string()));
             }
@@ -436,10 +482,12 @@ mod tests {
         match resp {
             ServerResponse::ZoneQueryAck {
                 zone,
+                zone_key,
                 exits,
                 scaling,
             } => {
                 assert!(zone.is_none());
+                assert!(zone_key.is_none());
                 assert!(exits.is_empty());
                 assert!(scaling.is_none());
             }

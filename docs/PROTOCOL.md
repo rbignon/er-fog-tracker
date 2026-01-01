@@ -352,6 +352,8 @@ Sent when player traverses a fog gate.
   "source_map_id": "m10_01_00_00",
   "source_pos": {"x": 100.0, "y": 50.0, "z": 200.0},
   "source_play_region_id": 1048576,
+  "source_zone": "Limgrave",
+  "source_zone_key": "limgrave",
   "target_map_id": "m11_05_00_00",
   "target_pos": {"x": 150.0, "y": 60.0, "z": 180.0},
   "target_play_region_id": 2097152,
@@ -365,6 +367,8 @@ Sent when player traverses a fog gate.
 | `source_map_id` | Map ID before warp (format: `mWW_XX_YY_DD`) |
 | `source_pos` | Player position before warp |
 | `source_play_region_id` | Play region ID (Col) before warp |
+| `source_zone` | Source zone display name from cached session state (optional, for disambiguation) |
+| `source_zone_key` | Source zone internal key from cached session state (optional, for disambiguation) |
 | `target_map_id` | Map ID after warp |
 | `target_pos` | Player position after warp |
 | `target_play_region_id` | Play region ID after warp |
@@ -385,6 +389,7 @@ Acknowledgment with resolved zone info.
     {"source": "Zone A", "target": "Zone B"}
   ],
   "current_zone": "Zone B",
+  "current_zone_key": "zone_b",
   "exits": [
     {
       "id": "link-uuid",
@@ -412,7 +417,8 @@ Acknowledgment with resolved zone info.
 |-------|-------------|
 | `propagated` | Links discovered (including preexisting propagation) |
 | `resolved` | The specific link that was matched |
-| `current_zone` | Zone player arrived in |
+| `current_zone` | Zone display name player arrived in |
+| `current_zone_key` | Zone internal key (e.g., "limgrave_stormhill") for disambiguation (optional) |
 | `exits` | Available fog gates from current zone |
 | `stats` | Discovery progress |
 | `scaling` | Zone scaling tier text (optional, from spoiler log) |
@@ -446,6 +452,7 @@ Response with resolved zone and exits.
 {
   "type": "zone_query_ack",
   "zone": "Limgrave - Church of Elleh",
+  "zone_key": "limgrave_church_of_elleh",
   "exits": [
     {
       "id": "link-uuid",
@@ -460,7 +467,8 @@ Response with resolved zone and exits.
 
 | Field | Description |
 |-------|-------------|
-| `zone` | Resolved zone name (null if not found) |
+| `zone` | Resolved zone display name (null if not found) |
+| `zone_key` | Zone internal key (e.g., "limgrave_stormhill") for disambiguation (optional) |
 | `exits` | Available fog gates from current zone |
 | `scaling` | Zone scaling tier text (optional, from spoiler log) |
 

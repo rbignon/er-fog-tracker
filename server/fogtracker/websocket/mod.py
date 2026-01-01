@@ -202,10 +202,13 @@ class ModClient(Client):
             for line in ingame.split("\n"):
                 logger.info(line)
 
-        # Get zone scaling
+        # Get zone scaling and zone_key
         scaling = None
+        destination_zone_key = None
         if destination_zone and game:
             scaling = get_zone_scaling(game.zones, destination_zone)
+            resolver = get_resolver()
+            destination_zone_key = resolver.lookup_by_display_name(destination_zone)
 
         # Send ack to mod
         ack_msg = {
@@ -213,6 +216,7 @@ class ModClient(Client):
             "propagated": all_propagated,
             "resolved": resolved_links,
             "current_zone": destination_zone,
+            "current_zone_key": destination_zone_key,
             "exits": exits,
             "stats": stats,
             "scaling": scaling,
@@ -407,13 +411,15 @@ class ModClient(Client):
         for line in ingame.split("\n"):
             logger.info(line)
 
-        # Get zone scaling
+        # Get zone scaling and zone_key
         scaling = get_zone_scaling(game.zones, zone_display)
+        zone_key = resolver.lookup_by_display_name(zone_display) if zone_display else None
 
         await self.send(
             {
                 "type": "zone_query_ack",
                 "zone": zone_display,
+                "zone_key": zone_key,
                 "exits": exits,
                 "scaling": scaling,
             }
@@ -542,19 +548,23 @@ class ModClient(Client):
         warp_type = data.get("warp_type", "unknown")
         # FogMod spawn point entity ID (755890xxx) - enables precise matching
         destination_entity_id = data.get("destination_entity_id", 0)
+        # Source zone from mod's cached state (optional, for disambiguation)
+        source_zone = data.get("source_zone")
+        source_zone_key = data.get("source_zone_key")
 
         # Convert play_region_id to Col format (hXXYYZZ)
         source_col = f"h{source_play_region_id:06x}" if source_play_region_id else None
         target_col = f"h{target_play_region_id:06x}" if target_play_region_id else None
 
         logger.info(
-            "[MOD] Discovery v2 [%s]: %s (%.1f, %.1f, %.1f) col=%s -> %s (%.1f, %.1f, %.1f) col=%s dest_entity=%d",
+            "[MOD] Discovery v2 [%s]: %s (%.1f, %.1f, %.1f) col=%s zone=%s -> %s (%.1f, %.1f, %.1f) col=%s dest_entity=%d",
             warp_type,
             source_map_id,
             source_pos.get("x", 0),
             source_pos.get("y", 0),
             source_pos.get("z", 0),
             source_col,
+            source_zone,
             target_map_id,
             target_pos.get("x", 0),
             target_pos.get("y", 0),
@@ -581,6 +591,26 @@ class ModClient(Client):
         target_candidates = self._resolve_zone_candidates(
             target_map_id, target_pos, target_play_region_id, label="Target"
         )
+
+        # If source_zone provided by mod, prioritize matching candidate
+        if source_zone or source_zone_key:
+            prioritized = []
+            others = []
+            for candidate in source_candidates:
+                zone_key, zone_display = candidate
+                if (source_zone_key and zone_key == source_zone_key) or (
+                    source_zone and zone_display == source_zone
+                ):
+                    prioritized.append(candidate)
+                else:
+                    others.append(candidate)
+            if prioritized:
+                source_candidates = prioritized + others
+                logger.info(
+                    "[MOD] Prioritized source zone from mod: %s (key=%s)",
+                    prioritized[0][1],
+                    prioritized[0][0],
+                )
 
         logger.debug(
             "[MOD] Zone candidates: source=%s, target=%s",

@@ -70,7 +70,12 @@ impl DiscoverySender for WebSocketAdapter<'_> {
         Self::convert_status(self.client.status())
     }
 
-    fn send_discovery(&self, event: &DiscoveryEvent) {
+    fn send_discovery(
+        &self,
+        event: &DiscoveryEvent,
+        source_zone: Option<&str>,
+        source_zone_key: Option<&str>,
+    ) {
         debug!(
             entry_map = event.entry.map_id_str,
             entry_pos = format!("({:.1}, {:.1}, {:.1})", event.entry.x, event.entry.y, event.entry.z),
@@ -79,12 +84,15 @@ impl DiscoverySender for WebSocketAdapter<'_> {
             exit_pos = format!("({:.1}, {:.1}, {:.1})", event.exit.x, event.exit.y, event.exit.z),
             exit_region = ?event.exit.play_region_id,
             dest_entity = event.destination_entity_id,
+            source_zone = ?source_zone,
             "[WARP] Sending discovery to server"
         );
         self.client.send_discovery_v2(
             event.entry.map_id,
             event.entry.pos(),
             event.entry.play_region_id,
+            source_zone.map(|s| s.to_string()),
+            source_zone_key.map(|s| s.to_string()),
             event.exit.map_id,
             event.exit.pos(),
             event.exit.play_region_id,
@@ -124,22 +132,26 @@ impl ServerEventReceiver for WebSocketAdapter<'_> {
             IncomingMessage::DiscoveryAck {
                 propagated,
                 current_zone,
+                current_zone_key,
                 exits,
                 stats,
                 scaling,
             } => ServerEvent::DiscoveryAck(DiscoveryResult {
                 propagated,
                 current_zone,
+                current_zone_key,
                 exits,
                 stats,
                 scaling,
             }),
             IncomingMessage::ZoneQueryAck {
                 zone,
+                zone_key,
                 exits,
                 scaling,
             } => ServerEvent::ZoneQueryAck(ZoneQueryResult {
                 zone,
+                zone_key,
                 exits,
                 scaling,
             }),

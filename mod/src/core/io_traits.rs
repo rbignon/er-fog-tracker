@@ -37,6 +37,8 @@ pub struct DiscoveryResult {
     pub propagated: Vec<PropagatedLink>,
     /// Current zone name (after the warp)
     pub current_zone: Option<String>,
+    /// Current zone internal key (e.g., "limgrave_stormhill")
+    pub current_zone_key: Option<String>,
     /// Available exits from current zone
     pub exits: Vec<FogExit>,
     /// Updated discovery statistics
@@ -50,6 +52,8 @@ pub struct DiscoveryResult {
 pub struct ZoneQueryResult {
     /// Current zone name
     pub zone: Option<String>,
+    /// Zone internal key (e.g., "limgrave_stormhill")
+    pub zone_key: Option<String>,
     /// Available exits from current zone
     pub exits: Vec<FogExit>,
     /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
@@ -82,7 +86,15 @@ pub trait DiscoverySender {
     fn status(&self) -> ConnectionStatus;
 
     /// Send a fog gate discovery to the server
-    fn send_discovery(&self, event: &DiscoveryEvent);
+    ///
+    /// The `source_zone` and `source_zone_key` parameters are the mod's cached zone info,
+    /// used by the server for disambiguation. Pass `None` if not available.
+    fn send_discovery(
+        &self,
+        event: &DiscoveryEvent,
+        source_zone: Option<&str>,
+        source_zone_key: Option<&str>,
+    );
 
     /// Send a zone query (after loading screen exit)
     ///
@@ -177,6 +189,7 @@ pub mod mocks {
             self.queue_event(ServerEvent::DiscoveryAck(DiscoveryResult {
                 propagated: Vec::new(),
                 current_zone: zone,
+                current_zone_key: None,
                 exits,
                 stats,
                 scaling: None,
@@ -187,6 +200,7 @@ pub mod mocks {
         pub fn queue_zone_ack(&self, zone: Option<String>, exits: Vec<FogExit>) {
             self.queue_event(ServerEvent::ZoneQueryAck(ZoneQueryResult {
                 zone,
+                zone_key: None,
                 exits,
                 scaling: None,
             }));
@@ -248,7 +262,12 @@ pub mod mocks {
             }
         }
 
-        fn send_discovery(&self, event: &DiscoveryEvent) {
+        fn send_discovery(
+            &self,
+            event: &DiscoveryEvent,
+            _source_zone: Option<&str>,
+            _source_zone_key: Option<&str>,
+        ) {
             self.discoveries_sent.borrow_mut().push(event.clone());
         }
 
@@ -317,7 +336,7 @@ mod tests {
         let discovery = make_discovery();
 
         assert_eq!(server.discovery_count(), 0);
-        server.send_discovery(&discovery);
+        server.send_discovery(&discovery, Some("Limgrave"), Some("limgrave"));
         assert_eq!(server.discovery_count(), 1);
 
         let last = server.last_discovery().unwrap();

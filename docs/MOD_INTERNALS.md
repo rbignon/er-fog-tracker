@@ -558,6 +558,8 @@ When a traversal completes, the mod sends:
   "source_map_id": "m10_01_00_00",
   "source_pos": {"x": 100.0, "y": 50.0, "z": 200.0},
   "source_play_region_id": 1048576,
+  "source_zone": "Limgrave - Stormhill",
+  "source_zone_key": "limgrave_stormhill",
   "target_map_id": "m11_05_00_00",
   "target_pos": {"x": 150.0, "y": 60.0, "z": 180.0},
   "target_play_region_id": 2097152,
@@ -566,7 +568,22 @@ When a traversal completes, the mod sends:
 }
 ```
 
-The `destination_entity_id` is the key for entity mapping lookup on the server.
+| Field | Description |
+|-------|-------------|
+| `destination_entity_id` | Key for entity mapping lookup on the server |
+| `source_zone` | Cached zone display name from previous server response (optional) |
+| `source_zone_key` | Cached zone internal key (optional, for future migration) |
+
+### Source Zone Disambiguation
+
+The mod caches zone information from server responses (`discovery_v2_ack` and `zone_query_ack`). When sending a new discovery, it includes the cached zone info as `source_zone` and `source_zone_key`.
+
+The server uses this information to **prioritize** matching candidates - if the mod's cached zone matches a candidate, that candidate is moved to the front of the list. This helps resolve ambiguous cases where multiple zones could match the source position.
+
+**Key behavior**:
+- Fields are optional for backward compatibility
+- Server prioritizes (not filters) matching candidates
+- Both display name and internal key are sent to prepare for future key-based matching
 
 ## Zone Query Message
 

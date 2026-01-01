@@ -41,6 +41,8 @@ pub enum SessionEvent {
 pub struct SessionState {
     /// Current zone name
     pub current_zone: Option<String>,
+    /// Current zone internal key (e.g., "limgrave_stormhill")
+    pub current_zone_key: Option<String>,
     /// Available exits from current zone
     pub exits: Vec<FogExit>,
     /// Discovery statistics
@@ -99,6 +101,11 @@ impl TrackerSession {
     /// Get current zone name
     pub fn current_zone(&self) -> Option<&str> {
         self.state.current_zone.as_deref()
+    }
+
+    /// Get current zone internal key
+    pub fn current_zone_key(&self) -> Option<&str> {
+        self.state.current_zone_key.as_deref()
     }
 
     /// Get available exits from current zone
@@ -180,7 +187,12 @@ impl TrackerSession {
         // 2. Check for warp completion
         if let Some(discovery) = self.warp_tracker.check_warp(game_state, warp_detector) {
             if server.is_connected() {
-                server.send_discovery(&discovery);
+                // Pass cached source zone info for disambiguation
+                server.send_discovery(
+                    &discovery,
+                    self.state.current_zone.as_deref(),
+                    self.state.current_zone_key.as_deref(),
+                );
                 events.push(SessionEvent::DiscoverySent(discovery));
             }
         }
@@ -213,11 +225,12 @@ impl TrackerSession {
                 }
                 ServerEvent::DiscoveryAck(result) => {
                     // Update state from discovery ack
-                    if result.current_zone.is_some() {
-                        self.state.current_zone = result.current_zone.clone();
-                        self.state.exits = result.exits.clone();
-                        self.state.current_zone_scaling = result.scaling.clone();
-                    }
+                    // Always update zone for discoveries - if server couldn't resolve,
+                    // we're in a new (unknown) zone, not the previous one
+                    self.state.current_zone = result.current_zone.clone();
+                    self.state.current_zone_key = result.current_zone_key.clone();
+                    self.state.exits = result.exits.clone();
+                    self.state.current_zone_scaling = result.scaling.clone();
                     if result.stats.total > 0 {
                         self.state.stats = Some(result.stats.clone());
                     }
@@ -228,6 +241,7 @@ impl TrackerSession {
                     if result.zone.is_some() {
                         // Server resolved the zone - update state
                         self.state.current_zone = result.zone.clone();
+                        self.state.current_zone_key = result.zone_key.clone();
                         self.state.exits = result.exits.clone();
                         self.state.current_zone_scaling = result.scaling.clone();
                     } else {
@@ -238,6 +252,7 @@ impl TrackerSession {
                         if !same_map {
                             // Different map but resolution failed - clear zone
                             self.state.current_zone = None;
+                            self.state.current_zone_key = None;
                             self.state.exits.clear();
                             self.state.current_zone_scaling = None;
                         }
@@ -715,11 +730,13 @@ mod tests {
 
         // Set initial state
         session.state.current_zone = Some("Limgrave".to_string());
+        session.state.current_zone_key = Some("limgrave".to_string());
 
         // Queue ack with null zone (resolution failed)
         server.queue_event(ServerEvent::DiscoveryAck(DiscoveryResult {
             propagated: Vec::new(),
             current_zone: None,
+            current_zone_key: None,
             exits: Vec::new(),
             stats: DiscoveryStats {
                 discovered: 5,
@@ -730,8 +747,10 @@ mod tests {
 
         session.update(&game_state, &warp, &mut server);
 
-        // Zone should NOT be cleared (only update if Some)
-        assert_eq!(session.current_zone(), Some("Limgrave"));
+        // Zone SHOULD be cleared for discoveries - if we traversed a fog gate
+        // and server couldn't resolve, we're in a new unknown zone, not the old one
+        assert_eq!(session.current_zone(), None);
+        assert_eq!(session.current_zone_key(), None);
         // Stats should still update
         assert_eq!(session.stats().unwrap().discovered, 5);
     }
