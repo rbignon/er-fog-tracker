@@ -2742,7 +2742,7 @@ Areas:
   Tags: dlc
 - Name: shadowkeep
   Text: Shadow Keep
-  Maps: m21_00_00_00
+  Maps: m21_00_00_00 m21_01_00_00
   Tags: dlc
 - Name: shadowkeep_preboss
   Text: Shadow Keep - Before Golden Hippopotamus
@@ -2879,7 +2879,7 @@ Areas:
   Tags: dlc
 - Name: westrampart
   Text: Shadow Keep - West Rampart
-  Maps: m21_02_00_00
+  Maps: m21_01_00_00 m21_02_00_00
   Tags: dlc
 - Name: rauhruins_east
   Text: Ancient Ruins of Rauh - East

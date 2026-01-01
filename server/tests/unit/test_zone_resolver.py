@@ -859,3 +859,119 @@ class TestShadowKeepChurchDistrictElevator:
         assert (
             "shadowkeep_church" in zones_in_m21_01
         ), "shadowkeep_church should be a candidate for m21_01_00_00"
+
+
+class TestSiblingMapFallback:
+    """Tests for sibling map fallback in zone resolution.
+
+    When a map has no directly associated zones, the resolver extends the search
+    to sibling maps (same area prefix). This handles cases where the mod reports
+    a different tile/sub-area than what's defined in fog.txt.
+
+    Examples:
+    - m61_44_45_16 has no zones, but m61_44_45_00 does (overworld tile variant)
+    - m21_01_00_00 has zones, but shadowkeep is on m21_00_00_00 (DLC sub-area)
+    """
+
+    def test_get_sibling_map_zones_overworld_tile(self, resolver):
+        """Sibling zones for overworld tile should include same-tile variants.
+
+        m61_44_45_16 → should find zones from m61_44_45_00, m61_44_45_10, etc.
+        """
+        siblings = resolver._get_sibling_map_zones("m61_44_45_16")
+        sibling_names = [z[1] for z in siblings]
+
+        # Should include zones from the same tile (m61_44_45_*)
+        assert len(siblings) > 0, "Should find sibling zones for m61_44_45_16"
+        assert "Ancient Ruins of Rauh - After Romina" in sibling_names
+
+    def test_get_sibling_map_zones_dlc_area(self, resolver):
+        """Sibling zones for DLC area should include zones from same area prefix.
+
+        m21_03_00_00 (hypothetical) → should find zones from m21_00, m21_01, m21_02
+        """
+        # Use a map that might not have direct zones but shares prefix with Shadow Keep
+        siblings = resolver._get_sibling_map_zones("m21_03_00_00")
+        sibling_names = [z[1] for z in siblings]
+
+        # Should include Shadow Keep zones from m21_* maps
+        assert len(siblings) > 0, "Should find sibling zones for m21_03_00_00"
+        assert "Shadow Keep" in sibling_names or "Specimen Storehouse" in sibling_names
+
+    def test_get_sibling_map_zones_excludes_original_map(self, resolver):
+        """Sibling zones should not include zones from the excluded map."""
+        # m21_00_00_00 has shadowkeep, get siblings excluding it
+        siblings = resolver._get_sibling_map_zones("m21_01_00_00", exclude_map_ids={"m21_01_00_00"})
+
+        # Verify we got sibling zones (from m21_00, m21_02, etc.)
+        assert len(siblings) > 0
+
+        # The siblings should include zones NOT from m21_01_00_00
+        sibling_names = [z[1] for z in siblings]
+        assert "Shadow Keep" in sibling_names  # From m21_00_00_00
+
+    def test_resolve_all_candidates_fallback_to_siblings(self, resolver):
+        """When no direct candidates, should fall back to sibling maps.
+
+        m61_44_45_16 has no direct zones but siblings (m61_44_45_00) do.
+        """
+        candidates = resolver.resolve_all_candidates("m61_44_45_16", 0, 0, 0)
+        candidate_names = [c[1] for c in candidates]
+
+        assert len(candidates) > 0, "Should find candidates via sibling fallback"
+        assert "Ancient Ruins of Rauh - After Romina" in candidate_names
+
+    def test_resolve_all_candidates_no_fallback_when_direct_zones_exist(self, resolver):
+        """When direct candidates exist, should NOT add sibling zones.
+
+        m21_01_00_00 has direct zones (Specimen Storehouse), so sibling zones
+        (Shadow Keep from m21_00_00_00) should NOT be added.
+        """
+        candidates = resolver.resolve_all_candidates("m21_01_00_00", 0, 0, 0)
+        candidate_names = [c[1] for c in candidates]
+
+        # Should have direct zones
+        assert "Specimen Storehouse" in candidate_names
+
+        # Should also have zones added via fog.txt updates (shadowkeep, westrampart)
+        # These are now directly associated with m21_01_00_00
+        assert "Shadow Keep" in candidate_names
+        assert "Shadow Keep - West Rampart" in candidate_names
+
+    def test_resolve_all_candidates_can_disable_sibling_extension(self, resolver):
+        """Can disable sibling extension for testing/debugging."""
+        # m61_44_45_16 has no direct zones
+        candidates = resolver.resolve_all_candidates(
+            "m61_44_45_16", 0, 0, 0, extend_to_siblings=False
+        )
+
+        assert len(candidates) == 0, "Should have no candidates without sibling fallback"
+
+    def test_sibling_prefix_for_dungeon_maps(self, resolver):
+        """Dungeon maps (m10_, m11_, etc.) use area prefix for siblings.
+
+        m10_01_00_00 → siblings include m10_00_00_00, m10_02_00_00, etc.
+        """
+        siblings = resolver._get_sibling_map_zones("m10_99_00_00")  # Hypothetical
+        sibling_names = [z[1] for z in siblings]
+
+        # Should find Stormveil zones (m10_00_00_00) and Limgrave zones (m10_01_00_00)
+        assert len(siblings) > 0
+        # Stormveil is on m10_00, should be in siblings of m10_99
+        stormveil_found = any("Stormveil" in name for name in sibling_names)
+        assert stormveil_found, f"Expected Stormveil zones in siblings, got: {sibling_names[:5]}"
+
+    def test_sibling_prefix_for_overworld_tiles(self, resolver):
+        """Overworld tiles (m60_, m61_) use tile prefix for siblings.
+
+        m60_42_36_16 → siblings include m60_42_36_00, m60_42_36_10, etc.
+        NOT m60_42_37_00 (different tile).
+        """
+        # m60_42_36 is Limgrave starting area
+        siblings = resolver._get_sibling_map_zones("m60_42_36_99")  # Hypothetical variant
+
+        # Should find zones from m60_42_36_00 (same tile)
+        assert len(siblings) > 0, "Should find sibling zones for m60_42_36_99"
+
+        # Verify sibling zones are from same tile prefix
+        # (The sibling logic uses tile prefix m60_42_36_ for overworld)

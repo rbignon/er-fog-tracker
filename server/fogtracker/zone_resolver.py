@@ -569,8 +569,58 @@ class ZoneResolver:
             return internal_name, display_name
         return None, None
 
+    def _get_sibling_map_zones(
+        self, map_id: str, exclude_map_ids: set[str] | None = None
+    ) -> list[tuple[str, str]]:
+        """
+        Get zones from sibling maps (same area prefix, different sub-area).
+
+        For a map like m21_01_00_00, returns zones from m21_00_00_00, m21_02_00_00, etc.
+        For overworld tiles like m61_44_45_16, returns zones from m61_44_45_00, m61_44_45_10, etc.
+
+        Args:
+            map_id: The map ID to find siblings for
+            exclude_map_ids: Set of map IDs to exclude (typically the original map)
+
+        Returns:
+            List of (internal_name, display_name) tuples from sibling maps.
+        """
+        if exclude_map_ids is None:
+            exclude_map_ids = {map_id}
+
+        results = []
+        seen = set()
+
+        # Parse map_id to extract prefix
+        # Format: m{area}_{grid_x}_{grid_z}_{variant}
+        match = re.match(r"(m\d+)_(\d+)_(\d+)_(\d+)", map_id)
+        if not match:
+            return results
+
+        area = match.group(1)  # e.g., "m21" or "m61"
+        grid_x = match.group(2)
+        grid_z = match.group(3)
+
+        # Determine sibling prefix based on map type
+        # Overworld tiles (m60_, m61_): siblings share the same tile (m61_44_45_*)
+        # Dungeon/legacy maps: siblings share the area (m21_*)
+        sibling_prefix = f"{area}_{grid_x}_{grid_z}_" if area in ("m60", "m61") else f"{area}_"
+
+        # Find zones from sibling maps
+        for sibling_map_id, zones in self.map_zones.items():
+            if sibling_map_id.startswith(sibling_prefix) and sibling_map_id not in exclude_map_ids:
+                for internal_name in zones:
+                    if internal_name not in seen:
+                        seen.add(internal_name)
+                        display_name = self.zone_display_names.get(
+                            internal_name, internal_name.replace("_", " ").title()
+                        )
+                        results.append((internal_name, display_name))
+
+        return results
+
     def resolve_all_candidates(
-        self, map_id: str, x: float, y: float, z: float
+        self, map_id: str, x: float, y: float, z: float, extend_to_siblings: bool = True
     ) -> list[tuple[str, str]]:
         """
         Get all possible zones for a map_id, ordered by likelihood.
@@ -585,6 +635,11 @@ class ZoneResolver:
         4. Boss zones (priority 3)
         Within same priority, sorts by distance to query position if known,
         otherwise alphabetically by internal name for determinism.
+
+        Args:
+            map_id: The map ID to resolve
+            x, y, z: Player position
+            extend_to_siblings: If True and no candidates found, extend search to sibling maps
 
         Returns:
             List of (internal_name, display_name) tuples, best match first.
@@ -655,6 +710,22 @@ class ZoneResolver:
             if internal not in seen:
                 seen.add(internal)
                 results.append((internal, display))
+
+        # Fallback: if no candidates found, try sibling maps
+        # This handles cases where the mod reports a different tile/sub-area than
+        # what's defined in fog.txt (e.g., m61_44_45_16 vs m61_44_45_00)
+        # Note: We only extend when there are NO candidates to avoid excessive
+        # multi-link discoveries (spoilers). For cases where the map has candidates
+        # but the target zone is on a sibling map, the fix should be in fog.txt data.
+        if not results and extend_to_siblings:
+            sibling_zones = self._get_sibling_map_zones(map_id)
+            if sibling_zones:
+                logger.info(
+                    "No candidates for %s, extended to sibling maps: %d zones found",
+                    map_id,
+                    len(sibling_zones),
+                )
+                results = sibling_zones
 
         return results
 

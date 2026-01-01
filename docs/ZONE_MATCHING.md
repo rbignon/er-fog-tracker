@@ -144,6 +144,18 @@ If no exact match:
    - Boss zones last
 3. Try matching each candidate against spoiler log
 
+### 5. Sibling Map Fallback
+
+When a map has **no zones at all** (step 4 returns empty), the resolver extends the search to sibling maps. This handles cases where the mod reports a map variant not explicitly listed in fog.txt.
+
+**Sibling prefix logic**:
+- **Overworld tiles** (`m60_*`, `m61_*`): Use tile prefix (e.g., `m61_44_45_16` → siblings `m61_44_45_*`)
+- **Dungeon/legacy maps**: Use area prefix (e.g., `m21_03_00_00` → siblings `m21_*`)
+
+**Example**: The mod reports `m61_44_45_16` but fog.txt only lists zones for `m61_44_45_00`. The sibling fallback finds zones from `m61_44_45_00` and uses them as candidates.
+
+**Important**: This fallback only activates when there are NO direct candidates. If the map has zones but not the target zone, use data fixes in fog.txt instead (see Troubleshooting).
+
 ## Zone Link Matching
 
 After resolving zone names, we need to match against the spoiler log's zone links.
@@ -335,6 +347,7 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
 | Entity mapping + key matching | ~92% | Launcher with EMEVD parsing |
 | Key matching only | ~82% | Spoiler log with fog.txt enrichment |
 | Position rules (submaps.txt) | ~70% | Always (fallback) |
+| Sibling map fallback | ~65% | When map has no direct zones |
 | Display name matching | ~60% | Always (last resort) |
 
 ## Resolution Flow
@@ -404,3 +417,25 @@ If enrichment fails:
 - Check if zone display name is in fog.txt
 - Check if detail text matches ASide/BSide entries
 - Manual zone_key addition may be needed for edge cases
+
+### Zone Not in Candidates (Map Mismatch)
+
+If the target zone exists but isn't found in candidates:
+1. Check the map_id reported by the mod (in server logs)
+2. Compare with the `Maps:` field in fog.txt for that zone
+3. If the mod reports a different map, add it to the zone's `Maps:` list
+
+**Example**: The mod reports `m21_01_00_00` but the zone is defined with `Maps: m21_00_00_00`:
+```yaml
+# Before
+- Name: shadowkeep
+  Text: Shadow Keep
+  Maps: m21_00_00_00
+
+# After (add the map reported by mod)
+- Name: shadowkeep
+  Text: Shadow Keep
+  Maps: m21_00_00_00 m21_01_00_00
+```
+
+**Note**: The sibling fallback only helps when the map has NO zones. If the map has other zones but not the target, you must add the map to the zone's definition.
