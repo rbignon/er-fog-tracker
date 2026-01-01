@@ -191,6 +191,10 @@ The complete warp detection workflow:
 ┌───────────────────────────────────────────────────────────────────────────────┐
 │                           2. ENTRY DETECTION                                  │
 │                        (two possible triggers)                                │
+│                                                                               │
+│  IMPORTANT: A new pending is NOT created if an existing pending has          │
+│  warp_was_requested=true (warp in progress, don't overwrite with animations  │
+│  playing on the destination map)                                             │
 └───────────────────────────────────────────────────────────────────────────────┘
         │
         ├─────────────────────────────────────┬─────────────────────────────────┐
@@ -201,13 +205,13 @@ The complete warp detection workflow:
 │   Known teleport animation  │   │   warp_requested: false → true  │          │
 │   just started              │   │   AND                           │          │
 │   (was_in_anim=false →true) │   │   dest_entity_id ∈              │          │
-│                             │   │     [755890000, 755899999]      │          │
-│   → Create PendingWarp      │   │   AND                           │          │
-│     transport_type = label  │   │   pending_warp = None           │          │
-│     warp_was_requested=false│   │                                 │          │
-│     dest_entity_id = 0      │   │   → Create PendingWarp          │          │
-│                             │   │     transport_type = "FOG_RANDO"│          │
-│                             │   │     warp_was_requested = true   │          │
+│   AND                       │   │     [755890000, 755899999]      │          │
+│   no active warp in progress│   │   AND                           │          │
+│                             │   │   pending_warp = None           │          │
+│   → Create PendingWarp      │   │                                 │          │
+│     transport_type = label  │   │   → Create PendingWarp          │          │
+│     warp_was_requested=false│   │     transport_type = "FOG_RANDO"│          │
+│     dest_entity_id = 0      │   │     warp_was_requested = true   │          │
 │                             │   │     dest_entity_id = captured   │          │
 └─────────────────────────────┘   └─────────────────────────────────┘          │
         │                                                                       │
@@ -217,9 +221,21 @@ The complete warp detection workflow:
 ┌───────────────────────────────────────────────────────────────────────────────┐
 │                      3. STATE CAPTURE (if pending_warp exists)                │
 │  ─────────────────────────────────────────────────────────────────────────── │
-│  • If warp_requested = true → pending.warp_was_requested = true               │
+│  When warp_requested becomes true:                                            │
+│                                                                               │
+│  • FAST TRAVEL CHECK: If target_grace != 0 AND cur_anim is NOT a fog/waygate  │
+│      → This is a Fast Travel, not a fog traversal                             │
+│      → CLEAR the pending (it was a false positive from an earlier animation)  │
+│      → The zone_query flow will handle zone resolution instead                │
+│                                                                               │
+│  • Otherwise: pending.warp_was_requested = true                               │
+│                                                                               │
+│  Also:                                                                        │
 │  • If pending.dest_entity_id == 0 && dest_entity_id != 0                      │
 │      → pending.dest_entity_id = dest_entity_id                                │
+│                                                                               │
+│  Fog/waygate animations: FogWall (60060), Waygate (60490),                    │
+│                          SendingGateBlue (60470), SendingGateRed (60472)      │
 └───────────────────────────────────────────────────────────────────────────────┘
                                        │
                                        ▼
@@ -306,7 +322,7 @@ After fast travel completes (loading screen exits), the mod sends a `zone_query`
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-The grace entity ID is captured by the warp hook and stored until it's included in the zone_query, then cleared.
+The grace entity ID is captured by the warp hook and stored until the `zone_query_ack` is received from the server, then cleared. This ensures the ID remains available if the query needs to be retried.
 
 ### Warp Validation
 
@@ -435,7 +451,7 @@ State transitions:
                │                                                 │
     Teleport animation starts                      warp_requested becomes true
     (was_in_teleport_anim: false→true)             AND dest_entity ∈ [755890000-755899999]
-               │                                                 │
+    AND no active warp in progress                               │
                │                                                 │
                ▼                                                 ▼
     ┌─────────────────────────┐                    ┌─────────────────────────┐
@@ -454,30 +470,40 @@ State transitions:
                             │ - Track warp_requested  │
                             │ - Capture dest_entity   │
                             │ - Check timeout (30s)   │
+                            │ - Detect Fast Travel    │
                             └───────────┬─────────────┘
                                         │
-                    Animation ends + position readable
-                    OR position becomes readable (delayed)
-                                        │
-                                        ▼
-                            ┌─────────────────────────┐
-                            │     VALIDATE            │
-                            │ warp_was_requested?     │
-                            └───────────┬─────────────┘
-                             YES        │        NO
-                              │         │         │
-                              ▼         │         ▼
-                    ┌─────────────────┐ │ ┌─────────────────┐
-                    │ Send discovery  │ │ │ Discard         │
-                    │ Clear pending   │ │ │ (false positive)│
-                    └─────────────────┘ │ └─────────────────┘
-                                        │
-                                        ▼
-                            ┌─────────────────────────┐
-                            │     IDLE                │
-                            │ (pending_warp = None)   │
-                            └─────────────────────────┘
+           ┌────────────────────────────┼────────────────────────────┐
+           │                            │                            │
+    Fast Travel detected         Animation ends +           Timeout (30s)
+    (target_grace != 0           position readable
+     AND cur_anim not            OR position becomes
+     fog/waygate)                readable (delayed)
+           │                            │                            │
+           ▼                            ▼                            ▼
+    ┌─────────────────┐       ┌─────────────────────────┐   ┌─────────────────┐
+    │ Clear pending   │       │     VALIDATE            │   │ Discard         │
+    │ (zone_query     │       │ warp_was_requested?     │   │ (stale pending) │
+    │ handles zone)   │       └───────────┬─────────────┘   └─────────────────┘
+    └─────────────────┘                   │
+           │                   YES        │        NO
+           │                    │         │         │
+           │                    ▼         │         ▼
+           │          ┌─────────────────┐ │ ┌─────────────────┐
+           │          │ Send discovery  │ │ │ Discard         │
+           │          │ Clear pending   │ │ │ (false positive)│
+           │          └─────────────────┘ │ └─────────────────┘
+           │                              │
+           └──────────────────────────────┴──────────────────────────┐
+                                                                     │
+                                                                     ▼
+                                                    ┌─────────────────────────┐
+                                                    │     IDLE                │
+                                                    │ (pending_warp = None)   │
+                                                    └─────────────────────────┘
 ```
+
+**Note**: When a pending has `warp_was_requested=true`, new teleport animations (e.g., PostBossWarp, LiurniaDivineTower playing on the destination map) do NOT create new pendings. This prevents losing the original pending during the loading/arrival phase.
 
 **Timeout handling**: If a pending warp stays unresolved for more than 30 seconds, it's discarded to avoid stale state.
 

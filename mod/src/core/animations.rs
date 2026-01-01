@@ -441,8 +441,22 @@ impl Animation {
                 | Self::CoffinLakeOfRot
                 | Self::CoffinDeeproot
                 | Self::LiurniaDivineTower
-                | Self::WayToMetyr
-                | Self::BurningScalingTree
+                | Self::BurningScalingTree // Note: WayToMetyr (12000000) removed - it's a false positive that triggers
+                                           // during normal gameplay and incorrectly creates pending warps
+        )
+    }
+
+    /// Check if this animation is a "real" fog gate or waygate transition.
+    ///
+    /// These are transitions that should be tracked even when target_grace is set,
+    /// because waygate transitions can happen while a grace is targeted (the player
+    /// uses a waygate instead of completing the fast travel).
+    ///
+    /// This is a subset of is_teleport() - only the actual fog/waygate animations.
+    pub fn is_fog_or_waygate(self) -> bool {
+        matches!(
+            self,
+            Self::FogWall | Self::Waygate | Self::SendingGateBlue | Self::SendingGateRed
         )
     }
 }
@@ -474,6 +488,16 @@ pub fn get_teleport_type(anim_id: u32) -> Option<String> {
 pub fn is_teleport_animation(anim_id: u32) -> bool {
     Animation::try_from(anim_id)
         .map(|a| a.is_teleport())
+        .unwrap_or(false)
+}
+
+/// Check if an animation ID is a fog gate or waygate transition
+///
+/// These are animations that indicate a real fog/waygate traversal,
+/// not just a Fast Travel or cutscene animation.
+pub fn is_fog_or_waygate_animation(anim_id: u32) -> bool {
+    Animation::try_from(anim_id)
+        .map(|a| a.is_fog_or_waygate())
         .unwrap_or(false)
 }
 

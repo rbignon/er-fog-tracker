@@ -5,7 +5,7 @@
 
 use std::time::Instant;
 
-use super::animations::get_teleport_type;
+use super::animations::{get_teleport_type, is_fog_or_waygate_animation};
 use super::constants::WARP_TIMEOUT;
 use super::entity_utils::is_fog_rando_entity;
 use super::traits::{GameStateReader, WarpDetector};
@@ -157,7 +157,14 @@ impl WarpTracker {
         // Entry detection - two triggers:
         //
         // 1. Animation trigger: known teleport animation just started
-        if is_in_teleport_anim && !self.was_in_teleport_anim {
+        //    BUT: don't overwrite a pending that has warp_was_requested=true
+        //    (the warp is in progress, don't let animations on the destination map overwrite it)
+        let has_active_warp = self
+            .pending_warp
+            .as_ref()
+            .is_some_and(|p| p.warp_was_requested);
+
+        if is_in_teleport_anim && !self.was_in_teleport_anim && !has_active_warp {
             if let Some(pos) = position.clone() {
                 tracing::debug!(
                     transport_type = transport_type,
@@ -201,14 +208,34 @@ impl WarpTracker {
         // Capture dest_entity_id and warp_requested state when available
         if let Some(ref mut pending) = self.pending_warp {
             // Track if warp_requested was ever true during this warp
+            // BUT: check if this is a Fast Travel (target_grace != 0 and not a fog/waygate animation)
             if is_warp_requested && !pending.warp_was_requested {
-                tracing::debug!(
-                    dest_entity = dest_entity_id,
-                    "[WARP] Setting warp_was_requested=true on pending"
-                );
-                pending.warp_was_requested = true;
-            }
+                let target_grace = warp_detector.get_target_grace_entity_id();
+                let is_fog_or_waygate = cur_anim.is_some_and(is_fog_or_waygate_animation);
 
+                if target_grace != 0 && !is_fog_or_waygate {
+                    // This is a Fast Travel, not a fog gate traversal.
+                    // Clear the pending (it was a false positive from an earlier animation).
+                    tracing::info!(
+                        target_grace,
+                        cur_anim = cur_anim.unwrap_or(0),
+                        pending_transport = pending.transport_type,
+                        "[WARP] >>> FAST TRAVEL <<< clearing false positive pending"
+                    );
+                    self.pending_warp = None;
+                } else {
+                    tracing::debug!(
+                        dest_entity = dest_entity_id,
+                        transport_type = pending.transport_type,
+                        "[WARP] warp_was_requested=true"
+                    );
+                    pending.warp_was_requested = true;
+                }
+            }
+        }
+
+        // Re-check pending after potential Fast Travel clear
+        if let Some(ref mut pending) = self.pending_warp {
             // Capture dest_entity_id when it becomes available
             if pending.destination_entity_id == 0 && dest_entity_id != 0 {
                 pending.destination_entity_id = dest_entity_id;
@@ -219,11 +246,13 @@ impl WarpTracker {
         if !is_in_teleport_anim && self.was_in_teleport_anim {
             if let Some(pending) = self.pending_warp.take() {
                 if let Some(exit_pos) = position.clone() {
-                    tracing::debug!(
+                    tracing::info!(
                         transport_type = pending.transport_type,
-                        warp_was_requested = pending.warp_was_requested,
+                        entry_map = pending.entry.map_id_str,
                         exit_map = exit_pos.map_id_str,
-                        "[WARP] Exit detection: creating discovery"
+                        dest_entity = pending.destination_entity_id,
+                        warp_was_requested = pending.warp_was_requested,
+                        "[WARP] >>> EXIT DETECTED <<<"
                     );
                     discovery = Some(DiscoveryEvent {
                         entry: pending.entry,
@@ -252,6 +281,14 @@ impl WarpTracker {
         {
             if let Some(pending) = self.pending_warp.take() {
                 if let Some(exit_pos) = position {
+                    tracing::info!(
+                        transport_type = pending.transport_type,
+                        entry_map = pending.entry.map_id_str,
+                        exit_map = exit_pos.map_id_str,
+                        dest_entity = pending.destination_entity_id,
+                        warp_was_requested = pending.warp_was_requested,
+                        "[WARP] >>> EXIT DETECTED (delayed) <<<"
+                    );
                     discovery = Some(DiscoveryEvent {
                         entry: pending.entry,
                         exit: exit_pos,
@@ -278,7 +315,7 @@ impl WarpTracker {
                     dest_entity = d.destination_entity_id,
                     entry_map = d.entry.map_id_str,
                     exit_map = d.exit.map_id_str,
-                    "[WARP] Discovery FILTERED by is_valid() - pending warp lost!"
+                    "[WARP] !!! FILTERED (warp_was_requested=false) !!!"
                 );
             }
         }
@@ -1183,5 +1220,268 @@ mod tests {
             "PostBossWarp with warp_requested should be valid"
         );
         assert_eq!(discovery.unwrap().transport_type, "PostBossWarp");
+    }
+
+    // =========================================================================
+    // Bug fix tests: Fast Travel detection and pending protection
+    // =========================================================================
+
+    #[test]
+    fn test_fast_travel_clears_false_positive_pending() {
+        // Scenario: Player is in a zone, an animation like LiurniaDivineTower creates
+        // a pending, then they Fast Travel. The pending should be cleared, not used.
+        //
+        // Timeline from bug:
+        // - LiurniaDivineTower animation creates pending at m16_00_00_00
+        // - Fast Travel initiated with target_grace=14002955, cur_anim=WayToMetyr (not fog/waygate)
+        // - Expected: pending cleared, no discovery sent
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x10000000, 100.0, 0.0, 100.0)), // Initial position
+                Some(make_pos(0x10000000, 100.0, 0.0, 100.0)), // LiurniaDivineTower starts
+                Some(make_pos(0x10000000, 100.0, 0.0, 100.0)), // Still in animation
+                Some(make_pos(0x10000000, 100.0, 0.0, 100.0)), // Fast Travel initiated (no teleport anim)
+                None,                                          // Loading
+                Some(make_pos(0x0E000000, 200.0, 0.0, 200.0)), // Arrived at grace
+            ],
+            vec![
+                Some(0),
+                Some(Animation::LiurniaDivineTower.as_u32()), // Creates pending
+                Some(Animation::LiurniaDivineTower.as_u32()),
+                Some(0), // Animation ended, Fast Travel starts (no teleport anim playing)
+                Some(0),
+                Some(0),
+            ],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: LiurniaDivineTower animation starts - creates pending
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp(), "Pending should be created");
+        game_state.advance_frame();
+
+        // Frame 2: Still in animation
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 3: Animation ended. Fast Travel initiated with target_grace.
+        // cur_anim=0 (no teleport animation), so this should be detected as Fast Travel.
+        warp.set_warp(true, 14000985, 0x0E000000);
+        warp.set_target_grace(14002955); // Non-zero = Fast Travel
+        let discovery = tracker.check_warp(&game_state, &warp);
+
+        // The pending should have been cleared because:
+        // - target_grace != 0
+        // - cur_anim (0) is not a fog/waygate animation
+        assert!(
+            discovery.is_none(),
+            "Fast Travel should not trigger discovery from stale pending"
+        );
+        assert!(
+            !tracker.has_pending_warp(),
+            "Pending should be cleared on Fast Travel"
+        );
+    }
+
+    #[test]
+    fn test_waygate_with_target_grace_still_works() {
+        // Scenario: Player has a target_grace set (from previous menu interaction),
+        // but they use a Waygate instead of completing the fast travel.
+        // The Waygate should still be tracked because cur_anim IS a fog/waygate.
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0E000000, 100.0, 0.0, 100.0)), // Start
+                Some(make_pos(0x0E000000, 100.0, 0.0, 100.0)), // Waygate animation
+                Some(make_pos(0x0C040000, 200.0, 0.0, 200.0)), // Arrived via waygate
+            ],
+            vec![Some(0), Some(Animation::Waygate.as_u32()), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: Waygate animation starts
+        // Even with target_grace set, Waygate should be tracked
+        warp.set_warp(true, 755890123, 0x0C040000);
+        warp.set_target_grace(14002955); // Has target_grace but cur_anim is Waygate
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        assert!(
+            tracker.pending_warp().unwrap().warp_was_requested,
+            "warp_was_requested should be set for Waygate even with target_grace"
+        );
+        game_state.advance_frame();
+
+        // Frame 2: Waygate completes
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(
+            discovery.is_some(),
+            "Waygate should emit discovery even with target_grace set"
+        );
+        assert_eq!(discovery.unwrap().transport_type, "Waygate");
+    }
+
+    #[test]
+    fn test_pending_not_overwritten_when_warp_in_progress() {
+        // Scenario: Player uses a Waygate, warp_was_requested becomes true,
+        // then during loading a new animation plays on the destination map.
+        // The new animation should NOT overwrite the pending.
+        //
+        // Timeline from bug:
+        // - PostBossWarp pending created, warp_was_requested=true set
+        // - After loading, WayToMetyr animation on new map
+        // - Previously: new pending created, warp_was_requested=false, discovery filtered
+        // - Now: pending preserved, discovery sent
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0E000000, 100.0, 0.0, 100.0)), // Start
+                Some(make_pos(0x0E000000, 100.0, 0.0, 100.0)), // Waygate animation
+                None,                                          // Loading
+                Some(make_pos(0x0C040000, 200.0, 0.0, 200.0)), // Arrived, PostBossWarp plays
+                Some(make_pos(0x0C040000, 200.0, 0.0, 200.0)), // PostBossWarp ends
+            ],
+            vec![
+                Some(0),
+                Some(Animation::Waygate.as_u32()),
+                Some(Animation::Waygate.as_u32()), // Still in animation during load
+                Some(Animation::PostBossWarp.as_u32()), // New animation on dest map
+                Some(0),                           // Animation ends
+            ],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: Waygate animation starts, warp requested
+        warp.set_warp(true, 755890100, 0x0C040000);
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        assert!(tracker.pending_warp().unwrap().warp_was_requested);
+        assert_eq!(tracker.pending_warp().unwrap().transport_type, "Waygate");
+        game_state.advance_frame();
+
+        // Frame 2: Loading (position=None)
+        tracker.check_warp(&game_state, &warp);
+        assert!(
+            tracker.has_pending_warp(),
+            "Pending should be kept during loading"
+        );
+        game_state.advance_frame();
+
+        // Frame 3: Arrived, PostBossWarp animation plays
+        // This should NOT create a new pending because existing has warp_was_requested=true
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "Waygate",
+            "Pending should still be the original Waygate, not overwritten by PostBossWarp"
+        );
+        game_state.advance_frame();
+
+        // Frame 4: PostBossWarp ends - discovery should trigger with Waygate transport type
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(discovery.is_some(), "Discovery should be emitted");
+        let d = discovery.unwrap();
+        assert_eq!(
+            d.transport_type, "Waygate",
+            "Transport type should be Waygate from original pending"
+        );
+        assert!(d.warp_was_requested);
+    }
+
+    #[test]
+    fn test_sending_gate_with_loading_and_animation_on_arrival() {
+        // Full scenario test: Sending gate traversal with loading screen,
+        // then an animation plays on the destination map.
+        //
+        // This tests the fix for the bug where:
+        // 1. Waygate pending created
+        // 2. Warp requested, warp_was_requested=true
+        // 3. Loading (position=None), pending kept
+        // 4. New animation on dest map tried to create new pending
+        // 5. Previously: new pending had warp_was_requested=false, filtered
+        // 6. Now: pending protected, discovery sent correctly
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0E000000, 150.0, 128.0, -60.0)), // Academy area
+                Some(make_pos(0x0E000000, 150.0, 128.0, -60.0)), // Waygate starts
+                None,                                            // Loading
+                None,                                            // Still loading
+                Some(make_pos(0x0C040000, -90.0, -104.0, -330.0)), // Before Astel
+                Some(make_pos(0x0C040000, -90.0, -104.0, -330.0)), // LiurniaDivineTower plays
+                Some(make_pos(0x0C040000, -90.0, -104.0, -330.0)), // Animation ends
+            ],
+            vec![
+                Some(0),
+                Some(Animation::Waygate.as_u32()),
+                Some(Animation::Waygate.as_u32()),
+                Some(0), // Animation might be unreadable during load
+                Some(Animation::LiurniaDivineTower.as_u32()), // Animation on arrival
+                Some(Animation::LiurniaDivineTower.as_u32()),
+                Some(0),
+            ],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle at Academy
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: Waygate animation starts
+        warp.set_warp(true, 12042506, 0x0C040000);
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        assert_eq!(tracker.pending_warp().unwrap().transport_type, "Waygate");
+        assert!(tracker.pending_warp().unwrap().warp_was_requested);
+        game_state.advance_frame();
+
+        // Frame 2: Loading
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 3: Still loading
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp(), "Pending kept during loading");
+        game_state.advance_frame();
+
+        // Frame 4: Arrived, LiurniaDivineTower animation starts
+        // Pending should NOT be overwritten
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "Waygate",
+            "Original Waygate pending should be preserved"
+        );
+        game_state.advance_frame();
+
+        // Frame 5: Still in LiurniaDivineTower
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 6: Animation ends - discovery
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(discovery.is_some(), "Discovery should be emitted");
+        let d = discovery.unwrap();
+        assert_eq!(d.entry.map_id, 0x0E000000, "Entry should be Academy");
+        assert_eq!(d.exit.map_id, 0x0C040000, "Exit should be Astel area");
+        assert_eq!(d.transport_type, "Waygate");
+        assert!(d.is_valid(), "Discovery should be valid");
     }
 }

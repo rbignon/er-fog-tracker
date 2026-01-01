@@ -77,16 +77,12 @@ impl DiscoverySender for WebSocketAdapter<'_> {
         source_zone_key: Option<&str>,
     ) {
         debug!(
+            transport_type = event.transport_type,
             entry_map = event.entry.map_id_str,
-            entry_pos = format!("({:.1}, {:.1}, {:.1})", event.entry.x, event.entry.y, event.entry.z),
-            entry_region = ?event.entry.play_region_id,
             exit_map = event.exit.map_id_str,
-            exit_pos = format!("({:.1}, {:.1}, {:.1})", event.exit.x, event.exit.y, event.exit.z),
-            exit_region = ?event.exit.play_region_id,
             dest_entity = event.destination_entity_id,
             source_zone = ?source_zone,
-            source_zone_key = ?source_zone_key,
-            "[WARP] Sending discovery to server"
+            "[WS TX] discovery_v2"
         );
         self.client.send_discovery_v2(
             event.entry.map_id,
@@ -109,11 +105,9 @@ impl DiscoverySender for WebSocketAdapter<'_> {
     ) {
         info!(
             map_id = position.map_id_str,
-            x = format!("{:.1}", position.x),
-            y = format!("{:.1}", position.y),
-            z = format!("{:.1}", position.z),
+            pos = format!("({:.1}, {:.1}, {:.1})", position.x, position.y, position.z),
             grace_entity_id = ?grace_entity_id,
-            "[ZONE_QUERY] Sending after loading screen"
+            "[ZONE] >>> QUERY SENT <<<"
         );
         self.client.send_zone_query(
             position.map_id,
@@ -334,11 +328,11 @@ impl FogRandoTracker {
             match event {
                 SessionEvent::DiscoverySent(discovery) => {
                     info!(
+                        transport_type = discovery.transport_type,
                         entry = discovery.entry.map_id_str,
                         exit = discovery.exit.map_id_str,
-                        transport_type = discovery.transport_type,
                         dest_entity = discovery.destination_entity_id,
-                        "[WARP] Complete"
+                        "[WARP] >>> DISCOVERY SENT <<<"
                     );
                 }
                 SessionEvent::DiscoveryAcked(result) => {
@@ -352,14 +346,15 @@ impl FogRandoTracker {
                     );
                 }
                 SessionEvent::ZoneQuerySent => {
-                    // Clear the warp hook's captured grace ID after it's been used
-                    crate::eldenring::warp_hook::clear_captured_grace_entity_id();
+                    debug!("[ZONE] Query sent, waiting for ack");
                 }
                 SessionEvent::ZoneUpdated(result) => {
+                    // Clear the warp hook's captured grace ID now that the zone query is complete
+                    crate::eldenring::warp_hook::clear_captured_grace_entity_id();
                     info!(
                         zone = ?result.zone,
                         exit_count = result.exits.len(),
-                        "Zone query response"
+                        "[ZONE] >>> ZONE RESOLVED <<<"
                     );
                 }
                 SessionEvent::ConnectionChanged(status) => {

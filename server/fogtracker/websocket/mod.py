@@ -16,6 +16,8 @@ from fogtracker.game_logic import (
     find_all_matching_zone_pairs,
     format_discovery_summary,
     format_ingame_display,
+    format_resolution_failure,
+    format_zone_resolution,
     propagate_discovery,
 )
 from fogtracker.grace_resolver import resolve_zone_by_grace_entity_id
@@ -305,12 +307,11 @@ class ModClient(Client):
         grace_entity_id = data.get("grace_entity_id")
 
         logger.info(
-            "[MOD] Zone query: %s (%.1f, %.1f, %.1f) region=%s grace=%s",
+            "[MOD] >>> ZONE QUERY <<< %s (%.1f, %.1f, %.1f) grace=%s",
             map_id,
             pos.get("x", 0),
             pos.get("y", 0),
             pos.get("z", 0),
-            play_region_id,
             grace_entity_id,
         )
 
@@ -336,6 +337,8 @@ class ModClient(Client):
             zone_internal = None
             zone_display = None
 
+            resolution_method = None
+
             # 1. Try grace entity ID resolution (most precise for fast travel)
             if grace_entity_id:
                 grace_zone = resolve_zone_by_grace_entity_id(grace_entity_id)
@@ -343,7 +346,7 @@ class ModClient(Client):
                     # Verify the grace zone is discovered (it should be if player can fast travel)
                     if grace_zone in discovered_zones:
                         zone_display = grace_zone
-                        logger.info("[MOD] Zone resolved by grace entity ID: %s", zone_display)
+                        resolution_method = "Grace entity ID"
                     else:
                         logger.debug(
                             "[MOD] Grace zone '%s' not discovered, falling back",
@@ -358,7 +361,7 @@ class ModClient(Client):
                 if zone_display:
                     # Check if Col-resolved zone is discovered
                     if zone_display in discovered_zones:
-                        logger.debug("[MOD] Zone resolved by Col (discovered): %s", zone_display)
+                        resolution_method = "Col/play_region_id"
                     else:
                         logger.debug(
                             "[MOD] Zone resolved by Col but not discovered: %s, trying position",
@@ -368,33 +371,39 @@ class ModClient(Client):
 
             # 3. Fallback to position-based resolution
             # Only return if exactly 1 discovered candidate (avoid ambiguity)
+            all_candidates = []
             if not zone_display:
                 candidates = resolver.resolve_all_candidates(
                     map_id, pos.get("x", 0), pos.get("y", 0), pos.get("z", 0)
                 )
+                all_candidates = [c[1] for c in candidates] if candidates else []
                 if candidates:
                     discovered_candidates = [c for c in candidates if c[1] in discovered_zones]
                     if len(discovered_candidates) == 1:
                         # Exactly one discovered candidate - safe to return
                         zone_internal, zone_display = discovered_candidates[0]
-                        logger.debug(
-                            "[MOD] Zone resolved by position (1 discovered): %s", zone_display
-                        )
+                        resolution_method = "Position (unique match)"
                     elif len(discovered_candidates) > 1:
                         # Multiple discovered candidates - ambiguous, return null
-                        logger.info(
-                            "[MOD] Zone query ambiguous: %d discovered candidates for %s:",
+                        logger.debug(
+                            "[MOD] Zone query ambiguous: %d discovered candidates",
                             len(discovered_candidates),
-                            map_id,
                         )
-                        for candidate in discovered_candidates:
-                            logger.info("[MOD]   - %s", candidate[1])
-                    else:
-                        # No discovered candidates - return null
-                        logger.debug("[MOD] Zone query: no discovered candidates for %s", map_id)
 
             if not zone_display:
-                logger.warning("[MOD] Zone query: no zone found for %s", map_id)
+                # Log failure with visual format
+                if all_candidates:
+                    reason = f"Ambiguous ({len(all_candidates)} candidates, none unique)"
+                else:
+                    reason = "No zone candidates found"
+                failure = format_resolution_failure(
+                    context="zone_query",
+                    map_id=map_id,
+                    reason=reason,
+                    candidates=all_candidates[:5] if all_candidates else None,
+                )
+                for line in failure.split("\n"):
+                    logger.warning(line)
                 await self.send(
                     {"type": "zone_query_ack", "zone": None, "zone_key": None, "exits": []}
                 )
@@ -410,9 +419,15 @@ class ModClient(Client):
             # Compute discovery stats
             stats = compute_discovery_stats(game.zone_links or [], game.discovered_zone_links or [])
 
-        # Log in-game display preview
-        ingame = format_ingame_display(zone_display, exits, stats)
-        for line in ingame.split("\n"):
+        # Log zone resolution summary
+        resolution = format_zone_resolution(
+            zone=zone_display,
+            method=resolution_method or "Unknown",
+            exits_count=len(exits),
+            stats=stats,
+            grace_entity_id=grace_entity_id if resolution_method == "Grace entity ID" else None,
+        )
+        for line in resolution.split("\n"):
             logger.info(line)
 
         # Get zone scaling and zone_key
@@ -561,20 +576,23 @@ class ModClient(Client):
         target_col = f"h{target_play_region_id:06x}" if target_play_region_id else None
 
         logger.info(
-            "[MOD] Discovery v2 [%s]: %s (%.1f, %.1f, %.1f) col=%s zone=%s -> %s (%.1f, %.1f, %.1f) col=%s dest_entity=%d",
+            "[MOD] >>> DISCOVERY <<< [%s] %s -> %s (entity=%d)",
             warp_type,
             source_map_id,
+            target_map_id,
+            destination_entity_id,
+        )
+        logger.debug(
+            "[MOD] Discovery details: source=(%.1f, %.1f, %.1f) col=%s zone=%s | target=(%.1f, %.1f, %.1f) col=%s",
             source_pos.get("x", 0),
             source_pos.get("y", 0),
             source_pos.get("z", 0),
             source_col,
             source_zone,
-            target_map_id,
             target_pos.get("x", 0),
             target_pos.get("y", 0),
             target_pos.get("z", 0),
             target_col,
-            destination_entity_id,
         )
 
         if not source_map_id or not target_map_id:
@@ -873,11 +891,17 @@ class ModClient(Client):
                                 len(all_matches),
                             )
                     else:
-                        logger.warning(
-                            "[MOD] No spoiler log match (tried %d x %d combinations)",
-                            len(source_candidates[:MAX_ZONE_CANDIDATES]),
-                            len(target_candidates[:MAX_ZONE_CANDIDATES]),
+                        # Log failure with visual format
+                        failure = format_resolution_failure(
+                            context="discovery_v2",
+                            map_id=f"{source_map_id} -> {target_map_id}",
+                            reason=f"No spoiler log match ({len(source_candidates[:MAX_ZONE_CANDIDATES])} x {len(target_candidates[:MAX_ZONE_CANDIDATES])} combinations)",
+                            candidates=[c[1] for c in source_candidates[:3]]
+                            + ["->"]
+                            + [c[1] for c in target_candidates[:3]],
                         )
+                        for line in failure.split("\n"):
+                            logger.warning(line)
             else:
                 logger.warning("[MOD] Game has no zone_links, cannot resolve")
 

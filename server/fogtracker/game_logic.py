@@ -157,6 +157,57 @@ def format_ingame_display(
     return "\n".join(lines)
 
 
+def format_zone_resolution(
+    zone: str,
+    method: str,
+    exits_count: int,
+    stats: dict,
+    grace_entity_id: int | None = None,
+) -> str:
+    """Format a zone resolution result as a visual summary for logging."""
+    lines = []
+
+    # Header
+    lines.append("╭─ Zone Resolution ───────────────────────────────────────────")
+    lines.append(f"│ Zone:       {zone}")
+    lines.append(f"│ Method:     {method}")
+    if grace_entity_id:
+        lines.append(f"│ Grace ID:   {grace_entity_id}")
+
+    # Footer with stats
+    stats_str = f"{stats.get('discovered', 0)}/{stats.get('total', 0)}"
+    lines.append(f"╰─ Exits: {exits_count} │ Progress: {stats_str}")
+
+    return "\n".join(lines)
+
+
+def format_resolution_failure(
+    context: str,
+    map_id: str,
+    reason: str,
+    candidates: list[str] | None = None,
+) -> str:
+    """Format a resolution failure as a visual warning for logging."""
+    lines = []
+
+    # Header
+    lines.append("╭─ Resolution Failed ─────────────────────────────────────────")
+    lines.append(f"│ Context:    {context}")
+    lines.append(f"│ Map:        {map_id}")
+    lines.append(f"│ Reason:     {reason}")
+
+    if candidates:
+        lines.append("├─ Candidates tried:")
+        for c in candidates[:5]:
+            lines.append(f"│   • {c}")
+        if len(candidates) > 5:
+            lines.append(f"│   ... and {len(candidates) - 5} more")
+
+    lines.append("╰──────────────────────────────────────────────────────────────")
+
+    return "\n".join(lines)
+
+
 def format_undiscovery_summary(
     target_zone: str,
     removed_zones: list[str],
