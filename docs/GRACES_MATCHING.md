@@ -171,3 +171,29 @@ When adding new graces or fixing zone mappings:
 3. Determine the correct zone (check fog.txt for `Area:` field or use naming patterns)
 4. Add/update the entry in graces.json
 5. Test by fast traveling to that grace in-game
+
+## Death/Respawn Handling
+
+When a player dies or uses Memory of Grace (réminiscence), there is no `lua_warp` hook to capture a grace entity ID. The respawn can occur at:
+
+1. **Stake of Marika**: Player respawns near where they died
+2. **Last rested grace**: Player respawns at the last grace they rested at
+
+### Same-Map Fallback
+
+Since we don't have a grace entity ID for respawns, the server may fail to resolve the zone. To handle this gracefully, the mod implements a **same-map fallback**:
+
+```
+After loading screen ends:
+  - Send zone_query to server
+  - If server returns zone: use it
+  - If server returns null AND map_id unchanged: keep current zone (fallback)
+  - If server returns null AND map_id changed: clear zone display
+```
+
+**Rationale:**
+- Stake of Marika respawns are always on the same map → same-map fallback applies
+- Same-zone grace respawns (common case) → same-map fallback applies
+- Different-zone grace respawns without resolution → zone is cleared (honest "unknown")
+
+This is a display-only fallback for the in-game overlay. It doesn't affect link discovery, which only happens via fog gate traversals with proper entity IDs.

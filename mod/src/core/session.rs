@@ -70,6 +70,12 @@ pub struct TrackerSession {
     captured_target_grace: Option<u32>,
     /// Whether a warp was in progress last frame (to detect warp start)
     was_warp_requested: bool,
+    /// Last known map_id when position was readable (for respawn fallback)
+    /// Updated every frame when position is readable
+    last_known_map_id: Option<u32>,
+    /// Map ID before the loading screen (captured when zone_query is sent)
+    /// Used for same-map fallback comparison
+    pre_loading_map_id: Option<u32>,
 }
 
 impl TrackerSession {
@@ -80,6 +86,8 @@ impl TrackerSession {
             state: SessionState::default(),
             captured_target_grace: None,
             was_warp_requested: false,
+            last_known_map_id: None,
+            pre_loading_map_id: None,
         }
     }
 
@@ -184,13 +192,17 @@ impl TrackerSession {
                     // Use captured target_grace from when the warp started
                     let grace_entity_id = self.captured_target_grace.take();
                     server.send_zone_query(&pos, grace_entity_id);
-                    // Clear zone while waiting for response
-                    self.state.current_zone = None;
-                    self.state.exits.clear();
-                    self.state.current_zone_scaling = None;
+                    // Capture pre-loading map_id for same-map fallback comparison
+                    // (last_known_map_id still contains the map_id from before loading)
+                    self.pre_loading_map_id = self.last_known_map_id;
                     events.push(SessionEvent::ZoneQuerySent);
                 }
             }
+        }
+
+        // Update last_known_map_id when position is readable (after zone_query logic)
+        if let Some(pos) = game_state.read_position() {
+            self.last_known_map_id = Some(pos.map_id);
         }
 
         // 4. Poll and process server events
@@ -214,10 +226,25 @@ impl TrackerSession {
                 ServerEvent::ZoneQueryAck(result) => {
                     // Update state from zone query ack
                     if result.zone.is_some() {
+                        // Server resolved the zone - update state
                         self.state.current_zone = result.zone.clone();
                         self.state.exits = result.exits.clone();
                         self.state.current_zone_scaling = result.scaling.clone();
+                    } else {
+                        // Server couldn't resolve zone - apply same-map fallback
+                        // If we're on the same map as before loading (e.g., respawn at
+                        // Stake of Marika or grace in same zone), keep the current zone
+                        let same_map = self.pre_loading_map_id == self.last_known_map_id;
+                        if !same_map {
+                            // Different map but resolution failed - clear zone
+                            self.state.current_zone = None;
+                            self.state.exits.clear();
+                            self.state.current_zone_scaling = None;
+                        }
+                        // If same_map, keep the current zone (fallback)
                     }
+                    // Clear pending state
+                    self.pre_loading_map_id = None;
                     events.push(SessionEvent::ZoneUpdated(result));
                 }
                 ServerEvent::Error(msg) => {
@@ -869,5 +896,151 @@ mod tests {
         // Discovery should be sent (not zone query)
         assert_eq!(server.discovery_count(), 1);
         assert_eq!(server.zone_query_count(), 0);
+    }
+
+    // -------------------------------------------------------------------------
+    // Same-map fallback tests (respawn at Stake of Marika or same-zone grace)
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_zone_query_same_map_fallback_keeps_zone() {
+        // When server returns zone: None but we're on the same map
+        // (e.g., respawn at Stake of Marika), keep the current zone
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Playing (sync)
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Still playing
+                None,                                          // Death loading
+                Some(make_pos(0x3C2C2400, 50.0, 0.0, 50.0)),   // Respawn (same map!)
+            ],
+            vec![Some(0), Some(0), Some(0), Some(0)],
+        );
+        let warp = MockWarpDetector::new();
+        let mut server = MockServerConnection::new();
+        let mut session = synced_session(&game_state, &warp);
+
+        // Set initial zone state (simulating we were in Limgrave)
+        session.state.current_zone = Some("Limgrave".to_string());
+        session.state.exits = vec![FogExit {
+            target: "???".to_string(),
+            description: "North".to_string(),
+            from_zone: None,
+        }];
+        game_state.advance_frame();
+
+        // Frame 1: Playing normally
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 2: Death loading screen
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 3: Respawn - zone query sent
+        session.update(&game_state, &warp, &mut server);
+        assert_eq!(server.zone_query_count(), 1);
+
+        // Server responds with zone: None (couldn't resolve)
+        server.queue_zone_ack(None, Vec::new());
+
+        // Process the ack
+        session.update(&game_state, &warp, &mut server);
+
+        // Zone should be kept (same-map fallback)
+        assert_eq!(session.current_zone(), Some("Limgrave"));
+        // Exits should also be kept
+        assert_eq!(session.exits().len(), 1);
+    }
+
+    #[test]
+    fn test_zone_query_different_map_clears_zone() {
+        // When server returns zone: None and we're on a different map,
+        // the zone should be cleared (we don't know where we are)
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Playing in map A (sync)
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Still playing
+                None,                                          // Loading
+                Some(make_pos(0x0A0A1000, 50.0, 0.0, 50.0)),   // Arrived in map B (different!)
+            ],
+            vec![Some(0), Some(0), Some(0), Some(0)],
+        );
+        let warp = MockWarpDetector::new();
+        let mut server = MockServerConnection::new();
+        let mut session = synced_session(&game_state, &warp);
+
+        // Set initial zone state
+        session.state.current_zone = Some("Limgrave".to_string());
+        session.state.exits = vec![FogExit {
+            target: "???".to_string(),
+            description: "North".to_string(),
+            from_zone: None,
+        }];
+        game_state.advance_frame();
+
+        // Frame 1: Playing normally
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 2: Loading screen
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 3: Arrived at different map - zone query sent
+        session.update(&game_state, &warp, &mut server);
+        assert_eq!(server.zone_query_count(), 1);
+
+        // Server responds with zone: None (couldn't resolve)
+        server.queue_zone_ack(None, Vec::new());
+
+        // Process the ack
+        session.update(&game_state, &warp, &mut server);
+
+        // Zone should be cleared (different map, no fallback)
+        assert!(session.current_zone().is_none());
+        assert!(session.exits().is_empty());
+    }
+
+    #[test]
+    fn test_zone_query_success_clears_pre_loading_state() {
+        // When server successfully resolves zone, pre_loading_map_id should be cleared
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)), // Playing (sync)
+                None,                                          // Loading
+                Some(make_pos(0x3C2C2400, 50.0, 0.0, 50.0)),   // Respawn
+            ],
+            vec![Some(0), Some(0), Some(0)],
+        );
+        let warp = MockWarpDetector::new();
+        let mut server = MockServerConnection::new();
+        let mut session = synced_session(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: Loading screen
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 2: Zone query sent
+        session.update(&game_state, &warp, &mut server);
+        assert_eq!(server.zone_query_count(), 1);
+
+        // Server responds with a zone
+        server.queue_zone_ack(
+            Some("Limgrave".to_string()),
+            vec![FogExit {
+                target: "Stormveil".to_string(),
+                description: "Castle".to_string(),
+                from_zone: None,
+            }],
+        );
+
+        // Process the ack
+        session.update(&game_state, &warp, &mut server);
+
+        // Zone should be updated to server response
+        assert_eq!(session.current_zone(), Some("Limgrave"));
+        assert_eq!(session.exits().len(), 1);
+        assert_eq!(session.exits()[0].target, "Stormveil");
     }
 }
