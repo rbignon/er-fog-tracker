@@ -62,7 +62,13 @@ MapAreas:
   - Name: Erdtree Entrance
     Area: leyndell2_erdtree
     YAbove: -15
-  # Pre-tower area (Y ≈ -21.6)
+  # Divine Tower elevator area (X ≈ 125, Y ≈ -21.5)
+  # This zone is at the ASide of the fog gate connecting to the tower
+  - Name: Divine Tower Elevator
+    Area: leyndell_tower_start
+    YAbove: -25
+    XAbove: 110
+  # Pre-tower area (Y ≈ -21.6, X ≈ 92) - excludes elevator area
   - Name: Before Divine Tower
     Area: leyndell2_pretower
     YAbove: -25
