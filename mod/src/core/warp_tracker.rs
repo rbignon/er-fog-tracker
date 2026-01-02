@@ -2,6 +2,17 @@
 //!
 //! This module contains the core logic for detecting fog gate traversals.
 //! It is platform-independent and can be tested without Windows APIs.
+//!
+//! # Detection Strategy
+//!
+//! The tracker uses multiple triggers to detect warps:
+//!
+//! 1. **Animation trigger**: Detects known teleport animations (fog walls, waygates, etc.)
+//! 2. **Fog Rando trigger**: Detects Fog Gate Randomizer entities (755890xxx range)
+//!    even with unknown animations
+//!
+//! Each trigger can create a pending warp, which is then completed when the
+//! player arrives at the destination (animation ends + position readable).
 
 use std::time::Instant;
 
@@ -10,6 +21,96 @@ use super::constants::WARP_TIMEOUT;
 use super::entity_utils::is_fog_rando_entity;
 use super::traits::{GameStateReader, WarpDetector};
 use super::types::PlayerPosition;
+
+// =============================================================================
+// FRAME STATE
+// =============================================================================
+
+/// Snapshot of game state for the current frame.
+///
+/// This struct encapsulates all the data needed to evaluate triggers and
+/// update the warp tracker state. It's created once per frame and passed
+/// to the various evaluation methods.
+#[derive(Debug)]
+struct FrameState {
+    /// Current player position (None if loading)
+    position: Option<PlayerPosition>,
+    /// Current animation ID
+    cur_anim: Option<u32>,
+    /// Whether the current animation is a known teleport animation
+    is_teleport_anim: bool,
+    /// Transport type inferred from animation (e.g., "FogWall", "Waygate")
+    transport_type: String,
+    /// Whether warp_requested flag is true
+    warp_requested: bool,
+    /// Destination entity ID from warp detector
+    dest_entity_id: u32,
+    /// Target grace entity ID (non-zero for Fast Travel)
+    target_grace: u32,
+}
+
+impl FrameState {
+    /// Create a FrameState by reading from game state and warp detector.
+    fn from_game<G: GameStateReader, W: WarpDetector>(game_state: &G, warp_detector: &W) -> Self {
+        let position = game_state.read_position();
+        let cur_anim = game_state.read_animation();
+        let teleport_type = cur_anim.and_then(get_teleport_type);
+
+        Self {
+            position,
+            cur_anim,
+            is_teleport_anim: teleport_type.is_some(),
+            transport_type: teleport_type.unwrap_or_else(|| "UNKNOWN".to_string()),
+            warp_requested: warp_detector.is_warp_requested(),
+            dest_entity_id: warp_detector.get_destination_entity_id(),
+            target_grace: warp_detector.get_target_grace_entity_id(),
+        }
+    }
+
+    /// Whether the position is readable (not in loading screen).
+    fn position_readable(&self) -> bool {
+        self.position.is_some()
+    }
+
+    /// Check if this frame represents a Fast Travel.
+    ///
+    /// Fast Travel is detected when:
+    /// - target_grace is non-zero (grace selected in map)
+    /// - Current animation is NOT a fog/waygate (those override fast travel)
+    fn is_fast_travel(&self) -> bool {
+        let is_fog_or_waygate = self.cur_anim.is_some_and(is_fog_or_waygate_animation);
+        self.target_grace != 0 && !is_fog_or_waygate
+    }
+}
+
+// =============================================================================
+// TRIGGER SOURCE
+// =============================================================================
+
+/// Source that triggered the creation of a pending warp.
+///
+/// This enum makes explicit which detection mechanism created the pending warp,
+/// which determines the transport_type and logging behavior.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum TriggerSource {
+    /// Triggered by a known teleport animation (fog wall, waygate, etc.)
+    Animation,
+    /// Triggered by a Fog Gate Randomizer entity ID (755890xxx range)
+    FogRando,
+}
+
+impl TriggerSource {
+    /// Get the transport type for this trigger.
+    ///
+    /// For Animation triggers, the transport type comes from the frame's detected animation.
+    /// For FogRando triggers, it's always "FOG_RANDO" since the animation is unknown.
+    fn transport_type(self, frame: &FrameState) -> String {
+        match self {
+            TriggerSource::Animation => frame.transport_type.clone(),
+            TriggerSource::FogRando => "FOG_RANDO".to_string(),
+        }
+    }
+}
 
 // =============================================================================
 // PENDING WARP
@@ -75,24 +176,12 @@ impl DiscoveryEvent {
 // WARP TRACKER
 // =============================================================================
 
-/// Core warp tracking state machine
+/// Core warp tracking state machine.
 ///
-/// This struct contains the platform-independent logic for detecting
-/// fog gate traversals. It uses the GameStateReader and WarpDetector
-/// traits to read game state.
-///
-/// # Detection Strategy
-///
-/// Two triggers can start tracking a warp:
-/// 1. **Animation trigger**: Detect teleport animation start → record entry position
-/// 2. **Entity trigger**: warp_requested becomes true with fog rando entity ID
-///    (755890xxx) → record entry position even without known animation
-///
-/// Then:
-/// - When warp_requested becomes true → capture dest_entity_id
-/// - When animation ends + position readable → emit discovery event
+/// Call `check_warp` every frame to detect fog gate traversals.
+/// See module documentation for the detection strategy.
 pub struct WarpTracker {
-    /// Pending fog rando warp (entry recorded, waiting for exit)
+    /// Pending warp (entry recorded, waiting for exit)
     pending_warp: Option<PendingWarp>,
     /// Whether we were in a teleport animation last frame
     was_in_teleport_anim: bool,
@@ -103,7 +192,7 @@ pub struct WarpTracker {
 }
 
 impl WarpTracker {
-    /// Create a new WarpTracker
+    /// Create a new WarpTracker.
     pub fn new() -> Self {
         Self {
             pending_warp: None,
@@ -113,216 +202,43 @@ impl WarpTracker {
         }
     }
 
-    /// Check for fog gate traversals
+    // =========================================================================
+    // Public API
+    // =========================================================================
+
+    /// Check for fog gate traversals.
     ///
-    /// Call this every frame. Returns a DiscoveryEvent if a warp was completed.
-    ///
-    /// # Arguments
-    ///
-    /// * `game_state` - Reader for player position and animation
-    /// * `warp_detector` - Reader for warp request state
-    ///
-    /// # Returns
-    ///
-    /// * `Some(DiscoveryEvent)` - A warp was completed
-    /// * `None` - No warp completed this frame
+    /// Call this every frame. Returns a `DiscoveryEvent` if a warp was completed.
     pub fn check_warp<G: GameStateReader, W: WarpDetector>(
         &mut self,
         game_state: &G,
         warp_detector: &W,
     ) -> Option<DiscoveryEvent> {
-        let mut discovery = None;
+        // 1. Gather frame state
+        let frame = FrameState::from_game(game_state, warp_detector);
 
-        // Track loading screens
-        let position = game_state.read_position();
-        let position_now_readable = position.is_some();
+        // 2. Expire timed-out pending warps
+        self.expire_timed_out_pending();
 
-        // Check for pending warp timeout
-        if let Some(ref pending) = self.pending_warp {
-            if pending.is_timed_out() {
-                self.pending_warp = None;
-            }
+        // 3. Evaluate triggers and create pending if needed
+        if let Some(source) = self.evaluate_triggers(&frame) {
+            self.create_pending_from_trigger(source, &frame);
         }
 
-        // Get current animation and warp state
-        let cur_anim = game_state.read_animation();
-        let is_in_teleport_anim = cur_anim.and_then(get_teleport_type).is_some();
-        let transport_type = cur_anim
-            .and_then(get_teleport_type)
-            .unwrap_or_else(|| "UNKNOWN".to_string());
+        // 4. Update pending state (warp_requested, dest_entity_id, fast travel detection)
+        self.update_pending_state(&frame);
 
-        let is_warp_requested = warp_detector.is_warp_requested();
-        let dest_entity_id = warp_detector.get_destination_entity_id();
+        // 5. Try to complete the warp
+        let discovery = self.try_complete_warp(&frame);
 
-        // Entry detection - two triggers:
-        //
-        // 1. Animation trigger: known teleport animation just started
-        //    BUT: don't overwrite a pending that has warp_was_requested=true
-        //    (the warp is in progress, don't let animations on the destination map overwrite it)
-        let has_active_warp = self
-            .pending_warp
-            .as_ref()
-            .is_some_and(|p| p.warp_was_requested);
+        // 6. Save frame state for next iteration
+        self.save_frame_state(&frame);
 
-        if is_in_teleport_anim && !self.was_in_teleport_anim && !has_active_warp {
-            if let Some(pos) = position.clone() {
-                tracing::debug!(
-                    transport_type = transport_type,
-                    map = pos.map_id_str,
-                    pos = format!("({:.1}, {:.1}, {:.1})", pos.x, pos.y, pos.z),
-                    "[WARP] Pending created by animation trigger (warp_was_requested=false)"
-                );
-                self.pending_warp = Some(PendingWarp {
-                    entry: pos,
-                    destination_entity_id: 0, // Will be captured when warp_requested becomes true
-                    transport_type,
-                    created_at: Instant::now(),
-                    warp_was_requested: false,
-                });
-            } else {
-                tracing::warn!(
-                    transport_type = transport_type,
-                    "[WARP] Animation trigger but position=None - pending NOT created!"
-                );
-            }
-        }
-
-        // 2. Entity trigger: warp_requested just became true with fog rando entity ID
-        //    This catches warps with unknown animations (e.g., animation 25032200)
-        if is_warp_requested
-            && !self.was_warp_requested
-            && is_fog_rando_entity(dest_entity_id)
-            && self.pending_warp.is_none()
-        {
-            if let Some(pos) = position.clone() {
-                self.pending_warp = Some(PendingWarp {
-                    entry: pos,
-                    destination_entity_id: dest_entity_id,
-                    transport_type: "FOG_RANDO".to_string(), // Unknown animation, but fog rando entity
-                    created_at: Instant::now(),
-                    warp_was_requested: true, // Already true since that's how we triggered
-                });
-            }
-        }
-
-        // Capture dest_entity_id and warp_requested state when available
-        if let Some(ref mut pending) = self.pending_warp {
-            // Track if warp_requested was ever true during this warp
-            // BUT: check if this is a Fast Travel (target_grace != 0 and not a fog/waygate animation)
-            if is_warp_requested && !pending.warp_was_requested {
-                let target_grace = warp_detector.get_target_grace_entity_id();
-                let is_fog_or_waygate = cur_anim.is_some_and(is_fog_or_waygate_animation);
-
-                if target_grace != 0 && !is_fog_or_waygate {
-                    // This is a Fast Travel, not a fog gate traversal.
-                    // Clear the pending (it was a false positive from an earlier animation).
-                    tracing::info!(
-                        target_grace,
-                        cur_anim = cur_anim.unwrap_or(0),
-                        pending_transport = pending.transport_type,
-                        "[WARP] >>> FAST TRAVEL <<< clearing false positive pending"
-                    );
-                    self.pending_warp = None;
-                } else {
-                    tracing::debug!(
-                        dest_entity = dest_entity_id,
-                        transport_type = pending.transport_type,
-                        "[WARP] warp_was_requested=true"
-                    );
-                    pending.warp_was_requested = true;
-                }
-            }
-        }
-
-        // Re-check pending after potential Fast Travel clear
-        if let Some(ref mut pending) = self.pending_warp {
-            // Capture dest_entity_id when it becomes available
-            if pending.destination_entity_id == 0 && dest_entity_id != 0 {
-                pending.destination_entity_id = dest_entity_id;
-            }
-        }
-
-        // Exit detection: animation ended + position readable
-        if !is_in_teleport_anim && self.was_in_teleport_anim {
-            if let Some(pending) = self.pending_warp.take() {
-                if let Some(exit_pos) = position.clone() {
-                    tracing::info!(
-                        transport_type = pending.transport_type,
-                        entry_map = pending.entry.map_id_str,
-                        exit_map = exit_pos.map_id_str,
-                        dest_entity = pending.destination_entity_id,
-                        warp_was_requested = pending.warp_was_requested,
-                        "[WARP] >>> EXIT DETECTED <<<"
-                    );
-                    discovery = Some(DiscoveryEvent {
-                        entry: pending.entry,
-                        exit: exit_pos,
-                        transport_type: pending.transport_type,
-                        destination_entity_id: pending.destination_entity_id,
-                        warp_was_requested: pending.warp_was_requested,
-                    });
-                } else {
-                    // Position not readable yet (still loading) - keep pending
-                    tracing::debug!(
-                        transport_type = pending.transport_type,
-                        warp_was_requested = pending.warp_was_requested,
-                        "[WARP] Exit detection: position=None, keeping pending"
-                    );
-                    self.pending_warp = Some(pending);
-                }
-            }
-        }
-
-        // Handle delayed completion: pending warp with no animation and position readable
-        if discovery.is_none()
-            && self.pending_warp.is_some()
-            && !is_in_teleport_anim
-            && position_now_readable
-        {
-            if let Some(pending) = self.pending_warp.take() {
-                if let Some(exit_pos) = position {
-                    tracing::info!(
-                        transport_type = pending.transport_type,
-                        entry_map = pending.entry.map_id_str,
-                        exit_map = exit_pos.map_id_str,
-                        dest_entity = pending.destination_entity_id,
-                        warp_was_requested = pending.warp_was_requested,
-                        "[WARP] >>> EXIT DETECTED (delayed) <<<"
-                    );
-                    discovery = Some(DiscoveryEvent {
-                        entry: pending.entry,
-                        exit: exit_pos,
-                        transport_type: pending.transport_type,
-                        destination_entity_id: pending.destination_entity_id,
-                        warp_was_requested: pending.warp_was_requested,
-                    });
-                }
-            }
-        }
-
-        // Update state for next frame
-        self.was_in_teleport_anim = is_in_teleport_anim;
-        self.was_position_readable = position_now_readable;
-        self.was_warp_requested = is_warp_requested;
-
-        // Filter out false positives (e.g., PostBossWarp without actual warp)
-        // Log when a discovery is filtered to help debug
-        if let Some(ref d) = discovery {
-            if !d.is_valid() {
-                tracing::warn!(
-                    transport_type = d.transport_type,
-                    warp_was_requested = d.warp_was_requested,
-                    dest_entity = d.destination_entity_id,
-                    entry_map = d.entry.map_id_str,
-                    exit_map = d.exit.map_id_str,
-                    "[WARP] !!! FILTERED (warp_was_requested=false) !!!"
-                );
-            }
-        }
-        discovery.filter(|d| d.is_valid())
+        // 7. Filter invalid discoveries and return
+        self.filter_and_log_discovery(discovery)
     }
 
-    /// Check if we just exited a loading screen (for zone query)
+    /// Check if we just exited a loading screen (for zone query).
     ///
     /// Returns true if position went from unreadable to readable and
     /// there's no pending warp (to avoid querying when we'll get info from discovery).
@@ -331,19 +247,294 @@ impl WarpTracker {
         position_now_readable && !self.was_position_readable && self.pending_warp.is_none()
     }
 
-    /// Get the current pending warp, if any
+    /// Get the current pending warp, if any.
     pub fn pending_warp(&self) -> Option<&PendingWarp> {
         self.pending_warp.as_ref()
     }
 
-    /// Check if there's a pending warp
+    /// Check if there's a pending warp.
     pub fn has_pending_warp(&self) -> bool {
         self.pending_warp.is_some()
     }
 
-    /// Clear the pending warp (for testing or error recovery)
+    /// Clear the pending warp (for testing or error recovery).
     pub fn clear_pending_warp(&mut self) {
         self.pending_warp = None;
+    }
+
+    // =========================================================================
+    // Timeout handling
+    // =========================================================================
+
+    /// Clear pending warp if it has timed out.
+    fn expire_timed_out_pending(&mut self) {
+        if self.pending_warp.as_ref().is_some_and(|p| p.is_timed_out()) {
+            self.pending_warp = None;
+        }
+    }
+
+    // =========================================================================
+    // Trigger evaluation
+    // =========================================================================
+
+    /// Evaluate all triggers and return which one fired, if any.
+    ///
+    /// Triggers are evaluated in priority order. Only one can fire per frame.
+    fn evaluate_triggers(&self, frame: &FrameState) -> Option<TriggerSource> {
+        // Animation trigger has priority (more specific transport type)
+        if let Some(source) = self.check_animation_trigger(frame) {
+            return Some(source);
+        }
+
+        // Fog Rando entity trigger (catches unknown animations)
+        if let Some(source) = self.check_fog_rando_trigger(frame) {
+            return Some(source);
+        }
+
+        None
+    }
+
+    /// Check if animation trigger should fire.
+    ///
+    /// Fires when:
+    /// - A known teleport animation just started
+    /// - There's no active warp in progress (warp_was_requested=true)
+    fn check_animation_trigger(&self, frame: &FrameState) -> Option<TriggerSource> {
+        let animation_just_started = frame.is_teleport_anim && !self.was_in_teleport_anim;
+        let has_active_warp = self
+            .pending_warp
+            .as_ref()
+            .is_some_and(|p| p.warp_was_requested);
+
+        if animation_just_started && !has_active_warp {
+            Some(TriggerSource::Animation)
+        } else {
+            None
+        }
+    }
+
+    /// Check if Fog Rando entity trigger should fire.
+    ///
+    /// Fires when:
+    /// - warp_requested just became true
+    /// - dest_entity_id is in Fog Rando range (755890xxx)
+    /// - No pending warp exists
+    fn check_fog_rando_trigger(&self, frame: &FrameState) -> Option<TriggerSource> {
+        let warp_just_requested = frame.warp_requested && !self.was_warp_requested;
+
+        if warp_just_requested
+            && is_fog_rando_entity(frame.dest_entity_id)
+            && self.pending_warp.is_none()
+        {
+            Some(TriggerSource::FogRando)
+        } else {
+            None
+        }
+    }
+
+    /// Create a pending warp from the trigger that fired.
+    fn create_pending_from_trigger(&mut self, source: TriggerSource, frame: &FrameState) {
+        let Some(pos) = frame.position.clone() else {
+            // Can't create pending without entry position
+            if matches!(source, TriggerSource::Animation) {
+                tracing::warn!(
+                    transport_type = frame.transport_type,
+                    "[WARP] Animation trigger but position=None - pending NOT created!"
+                );
+            }
+            return;
+        };
+
+        let transport_type = source.transport_type(frame);
+        let (dest_entity_id, warp_was_requested) = match source {
+            TriggerSource::Animation => {
+                tracing::debug!(
+                    transport_type = transport_type,
+                    map = pos.map_id_str,
+                    pos = format!("({:.1}, {:.1}, {:.1})", pos.x, pos.y, pos.z),
+                    "[WARP] Pending created by animation trigger"
+                );
+                (0, false)
+            }
+            TriggerSource::FogRando => {
+                tracing::debug!(
+                    dest_entity = frame.dest_entity_id,
+                    map = pos.map_id_str,
+                    "[WARP] Pending created by Fog Rando trigger"
+                );
+                (frame.dest_entity_id, true) // warp_was_requested already true since that's how we triggered
+            }
+        };
+
+        self.pending_warp = Some(PendingWarp {
+            entry: pos,
+            destination_entity_id: dest_entity_id,
+            transport_type,
+            created_at: Instant::now(),
+            warp_was_requested,
+        });
+    }
+
+    // =========================================================================
+    // Pending state updates
+    // =========================================================================
+
+    /// Update the pending warp state based on current frame.
+    ///
+    /// This handles:
+    /// - Detecting Fast Travel and clearing false positive pendings
+    /// - Setting warp_was_requested when warp starts
+    /// - Capturing dest_entity_id when it becomes available
+    fn update_pending_state(&mut self, frame: &FrameState) {
+        let Some(pending) = self.pending_warp.as_mut() else {
+            return;
+        };
+
+        // Check if warp_requested just became true for this pending
+        if frame.warp_requested && !pending.warp_was_requested {
+            if frame.is_fast_travel() {
+                // Fast Travel detected - clear the false positive pending
+                tracing::info!(
+                    target_grace = frame.target_grace,
+                    cur_anim = frame.cur_anim.unwrap_or(0),
+                    pending_transport = pending.transport_type,
+                    "[WARP] >>> FAST TRAVEL <<< clearing false positive pending"
+                );
+                self.pending_warp = None;
+                return;
+            }
+
+            // Legitimate warp - mark as requested
+            tracing::debug!(
+                dest_entity = frame.dest_entity_id,
+                transport_type = pending.transport_type,
+                "[WARP] warp_was_requested=true"
+            );
+            pending.warp_was_requested = true;
+        }
+
+        // Re-borrow after potential mutation
+        let Some(pending) = self.pending_warp.as_mut() else {
+            return;
+        };
+
+        // Capture dest_entity_id when it becomes available
+        if pending.destination_entity_id == 0 && frame.dest_entity_id != 0 {
+            pending.destination_entity_id = frame.dest_entity_id;
+        }
+    }
+
+    // =========================================================================
+    // Warp completion
+    // =========================================================================
+
+    /// Try to complete the pending warp and return a discovery event.
+    ///
+    /// Completion happens when:
+    /// - Animation just ended and position is readable, OR
+    /// - No animation playing and position just became readable (delayed completion)
+    fn try_complete_warp(&mut self, frame: &FrameState) -> Option<DiscoveryEvent> {
+        // Check for animation-end completion
+        if let Some(discovery) = self.try_animation_end_completion(frame) {
+            return Some(discovery);
+        }
+
+        // Check for delayed completion (position became readable after animation ended)
+        self.try_delayed_completion(frame)
+    }
+
+    /// Try to complete warp when animation just ended.
+    fn try_animation_end_completion(&mut self, frame: &FrameState) -> Option<DiscoveryEvent> {
+        let animation_just_ended = !frame.is_teleport_anim && self.was_in_teleport_anim;
+
+        if !animation_just_ended {
+            return None;
+        }
+
+        let pending = self.pending_warp.take()?;
+
+        let Some(exit_pos) = frame.position.clone() else {
+            // Position not readable yet (still loading) - keep pending
+            tracing::debug!(
+                transport_type = pending.transport_type,
+                warp_was_requested = pending.warp_was_requested,
+                "[WARP] Exit detection: position=None, keeping pending"
+            );
+            self.pending_warp = Some(pending);
+            return None;
+        };
+
+        Some(Self::complete_pending(pending, exit_pos, false))
+    }
+
+    /// Try delayed completion when position becomes readable after animation ended.
+    fn try_delayed_completion(&mut self, frame: &FrameState) -> Option<DiscoveryEvent> {
+        if frame.is_teleport_anim || !frame.position_readable() {
+            return None;
+        }
+
+        let pending = self.pending_warp.take()?;
+        let exit_pos = frame.position.clone()?;
+
+        Some(Self::complete_pending(pending, exit_pos, true))
+    }
+
+    /// Create a DiscoveryEvent from a completed pending warp.
+    fn complete_pending(
+        pending: PendingWarp,
+        exit_pos: PlayerPosition,
+        delayed: bool,
+    ) -> DiscoveryEvent {
+        let suffix = if delayed { " (delayed)" } else { "" };
+        tracing::info!(
+            transport_type = pending.transport_type,
+            entry_map = pending.entry.map_id_str,
+            exit_map = exit_pos.map_id_str,
+            dest_entity = pending.destination_entity_id,
+            warp_was_requested = pending.warp_was_requested,
+            "[WARP] >>> EXIT DETECTED{suffix} <<<"
+        );
+
+        DiscoveryEvent {
+            entry: pending.entry,
+            exit: exit_pos,
+            transport_type: pending.transport_type,
+            destination_entity_id: pending.destination_entity_id,
+            warp_was_requested: pending.warp_was_requested,
+        }
+    }
+
+    // =========================================================================
+    // Frame state management
+    // =========================================================================
+
+    /// Save current frame state for comparison in next frame.
+    fn save_frame_state(&mut self, frame: &FrameState) {
+        self.was_in_teleport_anim = frame.is_teleport_anim;
+        self.was_position_readable = frame.position_readable();
+        self.was_warp_requested = frame.warp_requested;
+    }
+
+    /// Filter invalid discoveries and log filtered ones for debugging.
+    fn filter_and_log_discovery(
+        &self,
+        discovery: Option<DiscoveryEvent>,
+    ) -> Option<DiscoveryEvent> {
+        let discovery = discovery?;
+
+        if !discovery.is_valid() {
+            tracing::warn!(
+                transport_type = discovery.transport_type,
+                warp_was_requested = discovery.warp_was_requested,
+                dest_entity = discovery.destination_entity_id,
+                entry_map = discovery.entry.map_id_str,
+                exit_map = discovery.exit.map_id_str,
+                "[WARP] !!! FILTERED (warp_was_requested=false) !!!"
+            );
+            return None;
+        }
+
+        Some(discovery)
     }
 }
 
