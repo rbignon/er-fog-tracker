@@ -1,7 +1,64 @@
 // Hotkey handling - keyboard shortcuts with modifier support
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::cell::RefCell;
+use std::collections::HashMap;
 use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
+
+// =============================================================================
+// KEY STATE CACHE
+// =============================================================================
+
+/// Thread-local cache for key states to avoid multiple GetAsyncKeyState calls
+/// for the same key in a single frame. This fixes the bug where multiple hotkeys
+/// with the same base key (e.g., "f9" and "ctrl+f9") would interfere with each other.
+thread_local! {
+    static KEY_STATE_CACHE: RefCell<KeyStateCache> = RefCell::new(KeyStateCache::new());
+}
+
+struct KeyStateCache {
+    /// Maps key code to (is_just_pressed, is_held)
+    states: HashMap<i32, (bool, bool)>,
+    /// Frame counter to detect when cache should be invalidated
+    frame: u64,
+}
+
+impl KeyStateCache {
+    fn new() -> Self {
+        Self {
+            states: HashMap::new(),
+            frame: 0,
+        }
+    }
+
+    /// Start a new frame - this should be called once at the beginning of hotkey processing
+    fn new_frame(&mut self) {
+        self.frame += 1;
+        self.states.clear();
+    }
+
+    /// Get the key state, caching the result for this frame
+    fn get_key_state(&mut self, key_code: i32) -> (bool, bool) {
+        *self.states.entry(key_code).or_insert_with(|| {
+            let state = unsafe { GetAsyncKeyState(key_code) } as u16;
+            let just_pressed = (state & 1) != 0;
+            let is_held = (state & 0x8000) != 0;
+            (just_pressed, is_held)
+        })
+    }
+}
+
+/// Call this once per frame before checking any hotkeys
+pub fn begin_hotkey_frame() {
+    KEY_STATE_CACHE.with(|cache| {
+        cache.borrow_mut().new_frame();
+    });
+}
+
+/// Get cached key state (just_pressed, is_held)
+fn get_cached_key_state(key_code: i32) -> (bool, bool) {
+    KEY_STATE_CACHE.with(|cache| cache.borrow_mut().get_key_state(key_code))
+}
 
 // =============================================================================
 // KEY CODE MAPPING
@@ -279,16 +336,16 @@ impl Modifiers {
     const VK_SHIFT: i32 = 0x10;
     const VK_MENU: i32 = 0x12; // Alt key
 
-    /// Check if the required modifiers are currently held down
+    /// Check if the required modifiers are currently held down (using cached state)
     pub fn are_held(&self) -> bool {
-        let ctrl_ok = !self.ctrl || Self::is_key_down(Self::VK_CONTROL);
-        let shift_ok = !self.shift || Self::is_key_down(Self::VK_SHIFT);
-        let alt_ok = !self.alt || Self::is_key_down(Self::VK_MENU);
+        let ctrl_ok = !self.ctrl || Self::is_key_held(Self::VK_CONTROL);
+        let shift_ok = !self.shift || Self::is_key_held(Self::VK_SHIFT);
+        let alt_ok = !self.alt || Self::is_key_held(Self::VK_MENU);
         ctrl_ok && shift_ok && alt_ok
     }
 
-    fn is_key_down(key_code: i32) -> bool {
-        (unsafe { GetAsyncKeyState(key_code) } as u16 & 0x8000) != 0
+    fn is_key_held(key_code: i32) -> bool {
+        get_cached_key_state(key_code).1
     }
 
     fn display_prefix(&self) -> String {
@@ -341,9 +398,10 @@ impl Hotkey {
     }
 
     /// Check if this hotkey was just pressed (key edge + modifiers held)
+    /// Uses cached key state to avoid consuming the "just pressed" bit multiple times
     pub fn is_just_pressed(&self) -> bool {
-        let key_pressed = (unsafe { GetAsyncKeyState(self.key) } as u16 & 1) != 0;
-        key_pressed && self.modifiers.are_held()
+        let (just_pressed, _) = get_cached_key_state(self.key);
+        just_pressed && self.modifiers.are_held()
     }
 }
 

@@ -10,6 +10,7 @@ use crate::core::color::parse_hex_color;
 use crate::core::map_utils::format_map_id;
 use crate::core::status_template::{render_template, ContentSpan, TemplateColor, TemplateContext};
 
+use super::hotkey::begin_hotkey_frame;
 use super::icon_atlas::IconAtlas;
 use super::tracker::FogRandoTracker;
 use super::websocket::ConnectionStatus;
@@ -153,6 +154,10 @@ impl ImguiRenderLoop for FogRandoTracker {
 impl FogRandoTracker {
     /// Handle keyboard shortcuts
     fn handle_hotkeys(&mut self) {
+        // Cache all key states at the start of the frame to avoid
+        // multiple hotkeys with the same base key interfering with each other
+        begin_hotkey_frame();
+
         if self.config.keybindings.toggle_ui.is_just_pressed() {
             self.show_ui = !self.show_ui;
             debug!(show_ui = self.show_ui, "UI toggled");
