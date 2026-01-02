@@ -83,27 +83,63 @@ pub fn read_recent_logs(log_path: &Path, duration: Duration) -> Result<String, L
 
 /// Parse a timestamp from the beginning of a log line.
 ///
-/// Expected format: `YYYY-MM-DDTHH:MM:SS.mmm` or `YYYY-MM-DD HH:MM:SS.mmm`
+/// Supports multiple formats:
+/// - ISO 8601 with Z: `2026-01-02T16:36:20.988342Z` (tracing with UTC)
+/// - ISO 8601 with T: `2024-01-15T14:30:45.123456`
+/// - Space separator: `2024-01-15 14:30:45.123456`
 fn parse_log_timestamp(line: &str) -> Option<DateTime<Local>> {
-    // tracing format uses space between date and time by default
-    // e.g., "2024-01-15 14:30:45.123456 INFO ..."
-    let timestamp_str = line.get(..26)?; // "YYYY-MM-DD HH:MM:SS.ffffff"
-
-    // Try parsing with microseconds first
-    if let Ok(naive) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S%.f") {
-        return Some(DateTime::from_naive_utc_and_offset(
-            naive,
-            *Local::now().offset(),
-        ));
+    // Try ISO 8601 format with Z suffix (UTC timezone)
+    // e.g., "2026-01-02T16:36:20.988342Z DEBUG ..."
+    if line.len() >= 27 && line.as_bytes().get(26) == Some(&b'Z') {
+        let timestamp_str = line.get(..26)?; // "YYYY-MM-DDTHH:MM:SS.ffffff"
+        if let Ok(naive) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%dT%H:%M:%S%.f") {
+            return Some(DateTime::from_naive_utc_and_offset(
+                naive,
+                *Local::now().offset(),
+            ));
+        }
     }
 
-    // Try shorter timestamp without fractional seconds
-    let timestamp_str = line.get(..19)?; // "YYYY-MM-DD HH:MM:SS"
-    if let Ok(naive) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S") {
-        return Some(DateTime::from_naive_utc_and_offset(
-            naive,
-            *Local::now().offset(),
-        ));
+    // Try ISO 8601 format with T separator (no timezone)
+    // e.g., "2024-01-15T14:30:45.123456 INFO ..."
+    if let Some(timestamp_str) = line.get(..26) {
+        if let Ok(naive) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%dT%H:%M:%S%.f") {
+            return Some(DateTime::from_naive_utc_and_offset(
+                naive,
+                *Local::now().offset(),
+            ));
+        }
+    }
+
+    // Try space separator format with microseconds
+    // e.g., "2024-01-15 14:30:45.123456 INFO ..."
+    if let Some(timestamp_str) = line.get(..26) {
+        if let Ok(naive) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S%.f") {
+            return Some(DateTime::from_naive_utc_and_offset(
+                naive,
+                *Local::now().offset(),
+            ));
+        }
+    }
+
+    // Try shorter timestamp without fractional seconds (T separator)
+    if let Some(timestamp_str) = line.get(..19) {
+        if let Ok(naive) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%dT%H:%M:%S") {
+            return Some(DateTime::from_naive_utc_and_offset(
+                naive,
+                *Local::now().offset(),
+            ));
+        }
+    }
+
+    // Try shorter timestamp without fractional seconds (space separator)
+    if let Some(timestamp_str) = line.get(..19) {
+        if let Ok(naive) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S") {
+            return Some(DateTime::from_naive_utc_and_offset(
+                naive,
+                *Local::now().offset(),
+            ));
+        }
     }
 
     None
@@ -115,16 +151,32 @@ mod tests {
 
     #[test]
     fn test_parse_log_timestamp() {
+        // ISO 8601 with Z suffix (UTC)
+        let line = "2026-01-02T16:36:20.988342Z DEBUG [ANIM] test message";
+        let ts = parse_log_timestamp(line);
+        assert!(ts.is_some(), "Should parse ISO 8601 with Z suffix");
+
+        // ISO 8601 with T separator
+        let line = "2024-01-15T14:30:45.123456 INFO fog_rando_tracker: test message";
+        let ts = parse_log_timestamp(line);
+        assert!(ts.is_some(), "Should parse ISO 8601 with T separator");
+
+        // Space separator with microseconds
         let line = "2024-01-15 14:30:45.123456  INFO fog_rando_tracker: test message";
         let ts = parse_log_timestamp(line);
-        assert!(ts.is_some());
+        assert!(ts.is_some(), "Should parse space separator format");
 
+        // Space separator without fractional seconds
         let line = "2024-01-15 14:30:45  INFO fog_rando_tracker: test message";
         let ts = parse_log_timestamp(line);
-        assert!(ts.is_some());
+        assert!(ts.is_some(), "Should parse without fractional seconds");
 
+        // No timestamp
         let line = "INFO this line has no timestamp";
         let ts = parse_log_timestamp(line);
-        assert!(ts.is_none());
+        assert!(
+            ts.is_none(),
+            "Should return None for lines without timestamp"
+        );
     }
 }
