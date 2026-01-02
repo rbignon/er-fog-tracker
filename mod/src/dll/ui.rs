@@ -202,8 +202,20 @@ impl FogRandoTracker {
             let left_spans = line.left_spans().unwrap_or(&[]);
             let right_spans = line.right_spans();
 
+            // Calculate available width for left text (leave gap before right text)
+            let left_available = if let Some(spans) = right_spans {
+                let right_width = self.calculate_spans_width(ui, spans);
+                let gap = ui.calc_text_size(" ")[0]; // Minimum gap between left and right
+                max_width - right_width - gap
+            } else {
+                max_width
+            };
+
+            // Truncate left text if it would overlap with right text
+            let truncated_left = self.truncate_spans_to_width(ui, left_spans, left_available);
+
             // Render left part
-            self.render_content_spans(ui, left_spans);
+            self.render_content_spans(ui, &truncated_left);
 
             // Render right part if present
             if let Some(spans) = right_spans {
@@ -241,6 +253,109 @@ impl FogRandoTracker {
                 ContentSpan::DeathIcon => icon_size,
             })
             .sum()
+    }
+
+    /// Truncate content spans to fit within a maximum width, adding ellipsis if needed
+    fn truncate_spans_to_width(
+        &self,
+        ui: &hudhook::imgui::Ui,
+        spans: &[ContentSpan],
+        max_width: f32,
+    ) -> Vec<ContentSpan> {
+        let current_width = self.calculate_spans_width(ui, spans);
+
+        // If it fits, return as-is
+        if current_width <= max_width {
+            return spans.to_vec();
+        }
+
+        let ellipsis = "…";
+        let ellipsis_width = ui.calc_text_size(ellipsis)[0];
+
+        // If even ellipsis doesn't fit, return empty
+        if max_width < ellipsis_width {
+            return vec![];
+        }
+
+        let target_width = max_width - ellipsis_width;
+        let mut result: Vec<ContentSpan> = Vec::new();
+        let mut accumulated_width = 0.0;
+
+        for span in spans {
+            match span {
+                ContentSpan::Text(text_span) => {
+                    let span_width = ui.calc_text_size(&text_span.text)[0];
+
+                    if accumulated_width + span_width <= target_width {
+                        // Span fits entirely
+                        result.push(span.clone());
+                        accumulated_width += span_width;
+                    } else {
+                        // Need to truncate this span
+                        let remaining_width = target_width - accumulated_width;
+                        if remaining_width > 0.0 {
+                            let truncated =
+                                self.truncate_text_to_width(ui, &text_span.text, remaining_width);
+                            if !truncated.is_empty() {
+                                result.push(ContentSpan::text(truncated, text_span.color.clone()));
+                            }
+                        }
+                        // Add ellipsis and stop
+                        result.push(ContentSpan::text(
+                            ellipsis.to_string(),
+                            text_span.color.clone(),
+                        ));
+                        return result;
+                    }
+                }
+                // Icons are not truncated - either include fully or stop before them
+                ContentSpan::RuneIcons | ContentSpan::KindlingIcon | ContentSpan::DeathIcon => {
+                    let span_width = self.calculate_spans_width(ui, &[span.clone()]);
+
+                    if accumulated_width + span_width <= target_width {
+                        result.push(span.clone());
+                        accumulated_width += span_width;
+                    } else {
+                        // Icon doesn't fit, add ellipsis and stop
+                        result.push(ContentSpan::text(
+                            ellipsis.to_string(),
+                            TemplateColor::Default,
+                        ));
+                        return result;
+                    }
+                }
+            }
+        }
+
+        // We processed all spans but need ellipsis (shouldn't happen if logic is correct)
+        result
+    }
+
+    /// Truncate text to fit within a maximum width (without ellipsis)
+    fn truncate_text_to_width(
+        &self,
+        ui: &hudhook::imgui::Ui,
+        text: &str,
+        max_width: f32,
+    ) -> String {
+        // Binary search for the longest prefix that fits
+        let chars: Vec<char> = text.chars().collect();
+        let mut low = 0;
+        let mut high = chars.len();
+
+        while low < high {
+            let mid = (low + high + 1) / 2;
+            let prefix: String = chars[..mid].iter().collect();
+            let width = ui.calc_text_size(&prefix)[0];
+
+            if width <= max_width {
+                low = mid;
+            } else {
+                high = mid - 1;
+            }
+        }
+
+        chars[..low].iter().collect()
     }
 
     /// Render a sequence of content spans (text and images)
