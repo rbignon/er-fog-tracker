@@ -9,9 +9,9 @@ use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
 // KEY STATE CACHE
 // =============================================================================
 
-/// Thread-local cache for key states to avoid multiple GetAsyncKeyState calls
-/// for the same key in a single frame. This fixes the bug where multiple hotkeys
-/// with the same base key (e.g., "f9" and "ctrl+f9") would interfere with each other.
+// Thread-local cache for key states to avoid multiple GetAsyncKeyState calls
+// for the same key in a single frame. This fixes the bug where multiple hotkeys
+// with the same base key (e.g., "f9" and "ctrl+f9") would interfere with each other.
 thread_local! {
     static KEY_STATE_CACHE: RefCell<KeyStateCache> = RefCell::new(KeyStateCache::new());
 }

@@ -140,6 +140,15 @@ mod dll_entry {
 #[no_mangle]
 #[allow(clippy::missing_safety_doc)]
 pub unsafe extern "system" fn DllMain(hmodule: HINSTANCE, reason: u32, _: *mut c_void) -> bool {
+    // NOTE: DLL unloading is not supported. Once loaded, this DLL must remain
+    // loaded for the lifetime of the game process. Attempting to unload it
+    // (via injector eject or FreeLibrary) may crash the game due to:
+    // - Race conditions between active hook calls and detour disable
+    // - Background threads (WebSocket) accessing unmapped memory
+    // - Rust static variables not having Drop called on DLL unload
+    //
+    // This is standard practice for game mods - they are typically not
+    // designed to be unloaded cleanly.
     if reason == DLL_PROCESS_ATTACH {
         // Check game version
         if libeldenring::version::check_version().is_err() {

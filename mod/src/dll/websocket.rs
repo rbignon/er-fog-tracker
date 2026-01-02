@@ -177,9 +177,27 @@ impl WebSocketClient {
         // Clone settings for the thread
         let settings = self.settings.clone();
 
-        // Spawn the WebSocket thread
+        // Spawn the WebSocket thread with panic protection
+        // A panic in the thread would otherwise crash the game process
         let handle = thread::spawn(move || {
-            websocket_thread(settings, outgoing_rx, incoming_tx, shutdown_flag);
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                websocket_thread(settings, outgoing_rx, incoming_tx.clone(), shutdown_flag);
+            }));
+
+            if let Err(panic_info) = result {
+                // Log panic and notify main thread via channel
+                let panic_msg = if let Some(s) = panic_info.downcast_ref::<&str>() {
+                    format!("WebSocket thread panicked: {}", s)
+                } else if let Some(s) = panic_info.downcast_ref::<String>() {
+                    format!("WebSocket thread panicked: {}", s)
+                } else {
+                    "WebSocket thread panicked with unknown error".to_string()
+                };
+
+                error!("{}", panic_msg);
+                let _ = incoming_tx.send(IncomingMessage::Error(panic_msg));
+                let _ = incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Error));
+            }
         });
 
         self.thread_handle = Some(handle);
