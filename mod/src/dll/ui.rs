@@ -154,6 +154,18 @@ impl FogRandoTracker {
             self.show_exits = !self.show_exits;
             debug!(show_exits = self.show_exits, "Exits toggled");
         }
+        if self
+            .config
+            .keybindings
+            .toggle_undiscovered_only
+            .is_just_pressed()
+        {
+            self.show_undiscovered_only = !self.show_undiscovered_only;
+            debug!(
+                show_undiscovered_only = self.show_undiscovered_only,
+                "Undiscovered-only filter toggled"
+            );
+        }
         if self.config.keybindings.upload_logs.is_just_pressed() {
             debug!("Upload logs hotkey pressed");
             self.trigger_log_upload();
@@ -546,7 +558,27 @@ impl FogRandoTracker {
             return;
         }
 
-        for exit in self.current_exits() {
+        // Filter exits if undiscovered-only mode is active
+        let exits_to_show: Vec<_> = if self.show_undiscovered_only {
+            self.current_exits()
+                .iter()
+                .filter(|e| e.target == "???")
+                .collect()
+        } else {
+            self.current_exits().iter().collect()
+        };
+
+        // Show filter indicator when undiscovered-only mode is active
+        if self.show_undiscovered_only {
+            let total_undiscovered = exits_to_show.len();
+            let hotkey = self.config.keybindings.toggle_undiscovered_only.name();
+            ui.text_disabled(format!(
+                "[Undiscovered only: {} exits] ({} to show all)",
+                total_undiscovered, hotkey
+            ));
+        }
+
+        for exit in exits_to_show {
             let dest_color = if exit.target == "???" {
                 undiscovered_color
             } else {

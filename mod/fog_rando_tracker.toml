@@ -42,6 +42,8 @@
 toggle_ui = "f9"
 # Key to fold/unfold exits list
 toggle_exits = "f10"
+# Key to show only undiscovered exits (filter toggle)
+toggle_undiscovered_only = "shift+f10"
 
 # Key to toggle debug info (map_id, server URL, etc.)
 toggle_debug = "ctrl+f11"
