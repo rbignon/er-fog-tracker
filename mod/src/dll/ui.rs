@@ -129,7 +129,18 @@ impl ImguiRenderLoop for FogRandoTracker {
                     self.render_debug_section(ui);
                     ui.separator();
                 }
-                self.render_exits_section(ui);
+
+                // Calculate font scale and max exits based on max_height
+                let (exits_font_scale, max_exits) = self.calculate_exits_layout(ui);
+
+                if exits_font_scale < 1.0 {
+                    ui.set_window_font_scale(exits_font_scale);
+                }
+                self.render_exits_section(ui, max_exits);
+                if exits_font_scale < 1.0 {
+                    ui.set_window_font_scale(1.0);
+                }
+
                 self.render_status_message(ui);
             });
     }
@@ -234,6 +245,158 @@ impl FogRandoTracker {
             .overlay
             .icon_size
             .unwrap_or(self.config.overlay.font_size)
+    }
+
+    /// Calculate exits layout: font scale and max exits to show
+    ///
+    /// Returns (font_scale, max_exits):
+    /// - font_scale: 1.0 if no scaling needed, or scaled down to fit (min: exits_min_font_scale)
+    /// - max_exits: None if all exits fit, Some(n) if truncation needed
+    ///
+    /// Logic:
+    /// 1. If exits fit at normal size -> (1.0, None)
+    /// 2. If exits fit with scaling -> (scale, None)
+    /// 3. If exits don't fit even at min scale -> (min_scale, Some(n))
+    fn calculate_exits_layout(&self, ui: &hudhook::imgui::Ui) -> (f32, Option<usize>) {
+        let max_height = match self.config.overlay.max_height {
+            Some(h) => h,
+            None => return (1.0, None), // No limit configured
+        };
+
+        // Get current cursor position (height used by header + debug + separators)
+        let current_y = ui.cursor_pos()[1];
+
+        // Reserve space for status message (1 line + separator if status exists)
+        let line_height = ui.text_line_height_with_spacing();
+        let status_reserve = if self.get_status().is_some() {
+            line_height + 4.0 // separator + 1 line
+        } else {
+            0.0
+        };
+
+        // Calculate remaining height for exits
+        let remaining_height = max_height - current_y - status_reserve;
+        if remaining_height <= 0.0 {
+            return (self.config.overlay.exits_min_font_scale, Some(0));
+        }
+
+        // Calculate natural height of exits section
+        let exits_height = self.estimate_exits_height(ui);
+        if exits_height <= 0.0 {
+            return (1.0, None);
+        }
+
+        // Case 1: Fits at normal size
+        if exits_height <= remaining_height {
+            return (1.0, None);
+        }
+
+        // Case 2: Calculate scale needed
+        let scale_needed = remaining_height / exits_height;
+        let min_scale = self.config.overlay.exits_min_font_scale;
+
+        if scale_needed >= min_scale {
+            // Fits with scaling, no truncation needed
+            return (scale_needed, None);
+        }
+
+        // Case 3: Need to truncate at min scale
+        // Calculate how many exits fit at min scale
+        let scaled_line_height = line_height * min_scale;
+        let max_exits = self.calculate_exits_that_fit(remaining_height, scaled_line_height);
+
+        (min_scale, max_exits)
+    }
+
+    /// Estimate the natural height of the exits section (at scale 1.0)
+    fn estimate_exits_height(&self, ui: &hudhook::imgui::Ui) -> f32 {
+        let line_height = ui.text_line_height_with_spacing();
+
+        // If no exits or exits hidden, just 1 line
+        if self.current_exits().is_empty() || !self.show_exits {
+            return line_height;
+        }
+
+        // Filter exits like render_exits_section does
+        let exits_to_show: Vec<_> = if self.show_undiscovered_only {
+            self.current_exits()
+                .iter()
+                .filter(|e| e.target == "???")
+                .collect()
+        } else {
+            self.current_exits().iter().collect()
+        };
+
+        let mut line_count = 0;
+
+        // Header line for undiscovered-only mode
+        if self.show_undiscovered_only {
+            line_count += 1;
+        }
+
+        // Count lines for each exit
+        for exit in &exits_to_show {
+            line_count += 1; // Target zone line
+            if !exit.description.is_empty() {
+                line_count += 1; // Description line
+            }
+        }
+
+        line_count as f32 * line_height
+    }
+
+    /// Calculate how many exits fit in the given height at the given line height
+    fn calculate_exits_that_fit(&self, available_height: f32, line_height: f32) -> Option<usize> {
+        // Get the filtered exits list
+        let exits_to_show: Vec<_> = if self.show_undiscovered_only {
+            self.current_exits()
+                .iter()
+                .filter(|e| e.target == "???")
+                .collect()
+        } else {
+            self.current_exits().iter().collect()
+        };
+
+        if exits_to_show.is_empty() {
+            return None;
+        }
+
+        // Calculate how many lines we can show
+        let mut available_lines = (available_height / line_height) as usize;
+
+        // Reserve 1 line for undiscovered-only header if active
+        if self.show_undiscovered_only && available_lines > 0 {
+            available_lines -= 1;
+        }
+
+        // Count how many exits fit
+        let mut exits_that_fit = 0;
+        let mut lines_used = 0;
+
+        for exit in &exits_to_show {
+            let lines_for_exit = if exit.description.is_empty() { 1 } else { 2 };
+
+            // Reserve 1 line for "+ X others" if we might need to truncate
+            let reserve_for_truncation = if exits_that_fit < exits_to_show.len() - 1 {
+                1
+            } else {
+                0
+            };
+
+            if lines_used + lines_for_exit + reserve_for_truncation <= available_lines {
+                lines_used += lines_for_exit;
+                exits_that_fit += 1;
+            } else {
+                break;
+            }
+        }
+
+        // If all exits fit, no truncation needed
+        if exits_that_fit >= exits_to_show.len() {
+            None
+        } else {
+            Some(exits_that_fit)
+        }
     }
 
     /// Calculate the total width of content spans (text + icons)
@@ -650,7 +813,10 @@ impl FogRandoTracker {
     }
 
     /// Render fog exits section
-    fn render_exits_section(&self, ui: &hudhook::imgui::Ui) {
+    ///
+    /// `max_exits` limits how many exits to show. If Some(n), only n exits are shown
+    /// and a "+ X others" line is added. If None, all exits are shown.
+    fn render_exits_section(&self, ui: &hudhook::imgui::Ui, max_exits: Option<usize>) {
         // Get colors from config
         let discovered_color = parse_hex_color(&self.config.overlay.discovered_color, 1.0);
         let undiscovered_color = parse_hex_color(&self.config.overlay.undiscovered_color, 1.0);
@@ -693,7 +859,12 @@ impl FogRandoTracker {
             ));
         }
 
-        for exit in exits_to_show {
+        // Determine how many exits to display
+        let total_exits = exits_to_show.len();
+        let display_count = max_exits.unwrap_or(total_exits).min(total_exits);
+        let truncated = display_count < total_exits;
+
+        for exit in exits_to_show.iter().take(display_count) {
             let dest_color = if exit.target == "???" {
                 undiscovered_color
             } else {
@@ -711,6 +882,16 @@ impl FogRandoTracker {
             if !exit.description.is_empty() {
                 ui.text_disabled(format!("  {}", exit.description));
             }
+        }
+
+        // Show truncation indicator
+        if truncated {
+            let remaining = total_exits - display_count;
+            ui.text_disabled(format!(
+                "  + {} other{}",
+                remaining,
+                if remaining > 1 { "s" } else { "" }
+            ));
         }
     }
 

@@ -122,6 +122,18 @@ pub struct OverlaySettings {
     /// If not set, uses font_size
     #[serde(default)]
     pub icon_size: Option<f32>,
+
+    /// Maximum overlay height in pixels
+    /// If the overlay exceeds this height, the exits section font will be scaled
+    /// down (to exits_min_font_scale). If it still doesn't fit, the list is
+    /// truncated with a "+ X others" indicator. If not set, no height limit.
+    #[serde(default)]
+    pub max_height: Option<f32>,
+
+    /// Minimum font scale for exits section when max_height is exceeded (0.0 to 1.0)
+    /// Default: 0.5 (50% of original size). Below this, exits are truncated instead.
+    #[serde(default = "default_exits_min_font_scale")]
+    pub exits_min_font_scale: f32,
 }
 
 fn default_font_path() -> String {
@@ -160,6 +172,9 @@ fn default_status_template() -> String {
 fn default_zone_unknown_text() -> String {
     "(traverse a fog to identify)".to_string()
 }
+fn default_exits_min_font_scale() -> f32 {
+    0.5
+}
 
 impl Default for OverlaySettings {
     fn default() -> Self {
@@ -177,6 +192,8 @@ impl Default for OverlaySettings {
             status_template: default_status_template(),
             zone_unknown_text: default_zone_unknown_text(),
             icon_size: None,
+            max_height: None,
+            exits_min_font_scale: default_exits_min_font_scale(),
         }
     }
 }

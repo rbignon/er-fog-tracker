@@ -72,6 +72,18 @@ font_size = 16.0
 # If not set, uses font_size
 # icon_size = 24.0
 
+# Maximum overlay height in pixels (optional)
+# If the overlay exceeds this height, the exits section font will be scaled
+# down (to exits_min_font_scale). If it still doesn't fit, the exits list
+# will be truncated with a "+ X others" indicator.
+# If not set, no height limit is applied.
+# max_height = 300.0
+
+# Minimum font scale for exits section when max_height is exceeded (0.0 to 1.0)
+# Default: 0.5 (50% of original size). Below this threshold, exits are
+# truncated instead of further scaled down.
+# exits_min_font_scale = 0.5
+
 # Background color and opacity
 background_color = "#141414"
 background_opacity = 0.3  # 0.0 = fully transparent, 1.0 = fully opaque
