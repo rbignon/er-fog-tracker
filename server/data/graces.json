@@ -847,7 +847,7 @@
     },
     "32072951": {
       "grace_name": "Rear Gael Tunnel Entrance",
-      "zone": "Caelid",
+      "zone": "Caelid - Rear Gael Tunnel",
       "map_id": null
     },
     "32082950": {
@@ -2089,6 +2089,11 @@
      "grace_name": "Ensis Moongazing Grounds",
      "zone": "Castle Ensis - Rellana, Twin Moon Knight",
      "map_id": "m61_48_44_00"
+    },
+    "16002960": {
+     "grace_name": "Audience Pathway",
+     "zone": "Volcano Manor - Audience Pathway",
+     "map_id": "m16_00_00_00"
     }
   }
 }
