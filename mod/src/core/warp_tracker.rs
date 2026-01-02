@@ -97,17 +97,20 @@ enum TriggerSource {
     Animation,
     /// Triggered by a Fog Gate Randomizer entity ID (755890xxx range)
     FogRando,
+    /// Triggered by a vanilla warp (coffins, scripted teleports) with no known animation
+    VanillaWarp,
 }
 
 impl TriggerSource {
     /// Get the transport type for this trigger.
     ///
     /// For Animation triggers, the transport type comes from the frame's detected animation.
-    /// For FogRando triggers, it's always "FOG_RANDO" since the animation is unknown.
+    /// For FogRando/VanillaWarp triggers, it's a fixed string since the animation is unknown.
     fn transport_type(self, frame: &FrameState) -> String {
         match self {
             TriggerSource::Animation => frame.transport_type.clone(),
             TriggerSource::FogRando => "FOG_RANDO".to_string(),
+            TriggerSource::VanillaWarp => "VANILLA_WARP".to_string(),
         }
     }
 }
@@ -286,8 +289,13 @@ impl WarpTracker {
             return Some(source);
         }
 
-        // Fog Rando entity trigger (catches unknown animations)
+        // Fog Rando entity trigger (catches unknown animations with fog rando entity)
         if let Some(source) = self.check_fog_rando_trigger(frame) {
+            return Some(source);
+        }
+
+        // Vanilla warp trigger (catches coffins, scripted teleports with vanilla entity)
+        if let Some(source) = self.check_vanilla_warp_trigger(frame) {
             return Some(source);
         }
 
@@ -332,6 +340,32 @@ impl WarpTracker {
         }
     }
 
+    /// Check if vanilla warp trigger should fire.
+    ///
+    /// Fires when:
+    /// - warp_requested just became true
+    /// - dest_entity_id is NOT in Fog Rando range (already handled by Trigger B)
+    /// - dest_entity_id != 0 (not death/respawn/remembrance)
+    /// - target_grace == 0 (not fast travel)
+    /// - No pending warp exists
+    ///
+    /// This catches vanilla warps like coffins (e.g., after Valiant Gargoyles)
+    /// that have no distinctive animation.
+    fn check_vanilla_warp_trigger(&self, frame: &FrameState) -> Option<TriggerSource> {
+        let warp_just_requested = frame.warp_requested && !self.was_warp_requested;
+
+        if warp_just_requested
+            && !is_fog_rando_entity(frame.dest_entity_id)
+            && frame.dest_entity_id != 0
+            && frame.target_grace == 0
+            && self.pending_warp.is_none()
+        {
+            Some(TriggerSource::VanillaWarp)
+        } else {
+            None
+        }
+    }
+
     /// Create a pending warp from the trigger that fired.
     fn create_pending_from_trigger(&mut self, source: TriggerSource, frame: &FrameState) {
         let Some(pos) = frame.position.clone() else {
@@ -361,6 +395,14 @@ impl WarpTracker {
                     dest_entity = frame.dest_entity_id,
                     map = pos.map_id_str,
                     "[WARP] Pending created by Fog Rando trigger"
+                );
+                (frame.dest_entity_id, true) // warp_was_requested already true since that's how we triggered
+            }
+            TriggerSource::VanillaWarp => {
+                tracing::debug!(
+                    dest_entity = frame.dest_entity_id,
+                    map = pos.map_id_str,
+                    "[WARP] Pending created by vanilla warp trigger"
                 );
                 (frame.dest_entity_id, true) // warp_was_requested already true since that's how we triggered
             }
@@ -467,9 +509,19 @@ impl WarpTracker {
         Some(Self::complete_pending(pending, exit_pos, false))
     }
 
-    /// Try delayed completion when position becomes readable after animation ended.
+    /// Try delayed completion when position becomes readable after a loading screen.
+    ///
+    /// This handles cases where:
+    /// - Animation ended during loading and we're now readable (Trigger A)
+    /// - VanillaWarp pending created, went through loading, now readable (Trigger C)
+    ///
+    /// Key requirement: position must have been unreadable last frame (just exited loading).
+    /// This prevents completing immediately when a pending is created.
     fn try_delayed_completion(&mut self, frame: &FrameState) -> Option<DiscoveryEvent> {
-        if frame.is_teleport_anim || !frame.position_readable() {
+        // Only complete when exiting a loading screen (position just became readable)
+        let just_exited_loading = frame.position_readable() && !self.was_position_readable;
+
+        if frame.is_teleport_anim || !just_exited_loading {
             return None;
         }
 
@@ -1674,5 +1726,193 @@ mod tests {
         assert_eq!(d.exit.map_id, 0x0C040000, "Exit should be Astel area");
         assert_eq!(d.transport_type, "Waygate");
         assert!(d.is_valid(), "Discovery should be valid");
+    }
+
+    #[test]
+    fn test_vanilla_warp_coffin_after_gargoyles() {
+        // Test case: Coffin after Valiant Gargoyles
+        // - Animation 3000000 (idle) is not a known teleport animation
+        // - Entity 12092400 is not in Fog Rando range
+        // - warp_requested becomes true with target_grace=0
+        // - Trigger C (VanillaWarp) should fire
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0C050000, 100.0, 50.0, 200.0)), // Before coffin
+                Some(make_pos(0x0C050000, 100.0, 50.0, 200.0)), // Entering coffin
+                None,                                           // Loading
+                Some(make_pos(0x0C060000, -50.0, 100.0, 150.0)), // Deeproot Depths
+            ],
+            vec![
+                Some(0),       // Idle
+                Some(3000000), // Coffin animation (idle-like, not a known teleport)
+                Some(3000000),
+                Some(0), // After loading
+            ],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: warp_requested becomes true with vanilla entity (not fog rando)
+        // Animation 3000000 is not a known teleport, so Trigger A doesn't fire
+        // Entity 12092400 is not in 755890xxx range, so Trigger B doesn't fire
+        // But: warp_requested=true, dest_entity!=0, target_grace=0 → Trigger C fires
+        warp.set_warp(true, 12092400, 0x0C060000); // Vanilla entity
+        let result = tracker.check_warp(&game_state, &warp);
+        assert!(result.is_none(), "No discovery yet");
+        assert!(
+            tracker.has_pending_warp(),
+            "Pending should be created by VanillaWarp trigger"
+        );
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "VANILLA_WARP"
+        );
+        assert_eq!(
+            tracker.pending_warp().unwrap().destination_entity_id,
+            12092400
+        );
+        game_state.advance_frame();
+
+        // Frame 2: Loading
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        game_state.advance_frame();
+
+        // Frame 3: Arrived at Deeproot Depths
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(discovery.is_some(), "Discovery should be emitted");
+        let d = discovery.unwrap();
+        assert_eq!(d.transport_type, "VANILLA_WARP");
+        assert_eq!(d.destination_entity_id, 12092400);
+        assert_eq!(d.entry.map_id, 0x0C050000);
+        assert_eq!(d.exit.map_id, 0x0C060000);
+        assert!(d.is_valid(), "VanillaWarp discovery should be valid");
+    }
+
+    #[test]
+    fn test_vanilla_warp_not_triggered_for_fast_travel() {
+        // Ensure Trigger C doesn't fire when target_grace != 0 (fast travel)
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A0A0000, 100.0, 50.0, 200.0)),
+                Some(make_pos(0x0A0A0000, 100.0, 50.0, 200.0)),
+            ],
+            vec![Some(0), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: warp_requested with target_grace (fast travel)
+        warp.set_warp(true, 12345678, 0x0B0B0000);
+        warp.set_target_grace(1042362951);
+        tracker.check_warp(&game_state, &warp);
+        assert!(
+            !tracker.has_pending_warp(),
+            "No pending should be created for fast travel"
+        );
+    }
+
+    #[test]
+    fn test_vanilla_warp_not_triggered_for_death() {
+        // Ensure Trigger C doesn't fire when dest_entity_id == 0 (death/respawn)
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A0A0000, 100.0, 50.0, 200.0)),
+                Some(make_pos(0x0A0A0000, 100.0, 50.0, 200.0)),
+            ],
+            vec![Some(0), Some(0)],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: warp_requested with dest_entity=0 (death/respawn)
+        warp.set_warp(true, 0, 0x0B0B0000);
+        tracker.check_warp(&game_state, &warp);
+        assert!(
+            !tracker.has_pending_warp(),
+            "No pending should be created for death/respawn"
+        );
+    }
+
+    #[test]
+    fn test_vanilla_warp_blocked_by_fog_rando() {
+        // Ensure Fog Rando trigger (B) takes priority over VanillaWarp trigger (C)
+        // when dest_entity is in Fog Rando range
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A0A0000, 100.0, 50.0, 200.0)),
+                Some(make_pos(0x0A0A0000, 100.0, 50.0, 200.0)),
+            ],
+            vec![Some(0), Some(0)], // No known teleport animation
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: warp_requested with Fog Rando entity (755890xxx range)
+        warp.set_warp(true, 755890123, 0x0B0B0000);
+        tracker.check_warp(&game_state, &warp);
+
+        // Fog Rando trigger should win, not VanillaWarp
+        assert!(tracker.has_pending_warp());
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "FOG_RANDO",
+            "Fog Rando trigger should take priority over VanillaWarp"
+        );
+    }
+
+    #[test]
+    fn test_vanilla_warp_blocked_by_animation() {
+        // Ensure Animation trigger (A) takes priority over VanillaWarp trigger (C)
+        // when a known teleport animation is playing
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x0A0A0000, 100.0, 50.0, 200.0)),
+                Some(make_pos(0x0A0A0000, 100.0, 50.0, 200.0)),
+            ],
+            vec![
+                Some(0),
+                Some(Animation::FogWall.as_u32()), // Known teleport animation
+            ],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: FogWall animation + warp_requested with vanilla entity
+        warp.set_warp(true, 12345678, 0x0B0B0000); // Vanilla entity (not fog rando)
+        tracker.check_warp(&game_state, &warp);
+
+        // Animation trigger should win, not VanillaWarp
+        assert!(tracker.has_pending_warp());
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "FogWall",
+            "Animation trigger should take priority over VanillaWarp"
+        );
     }
 }

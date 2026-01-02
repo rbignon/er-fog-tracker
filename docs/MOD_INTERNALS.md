@@ -100,33 +100,41 @@ GlobalPosition
 
 ## Teleport Detection
 
-The mod uses a **dual-trigger detection strategy**:
+The mod uses a **three-trigger detection strategy**:
 
-1. **Animation trigger**: Detects known teleport animations (fog walls, waygates, etc.)
-2. **Entity trigger**: Detects when `warp_requested` becomes true with a Fog Rando entity ID (755890000-755899999), even if the animation is unknown
+1. **Trigger A (Animation)**: Detects known teleport animations (fog walls, waygates, etc.)
+2. **Trigger B (FogRando)**: Detects when `warp_requested` becomes true with a Fog Rando entity ID (755890000-755899999), even if the animation is unknown
+3. **Trigger C (VanillaWarp)**: Detects vanilla warps (coffins, scripted teleports) when `warp_requested` becomes true with:
+   - `dest_entity_id != 0` (not death/respawn/reminiscence)
+   - `target_grace == 0` (not fast travel)
+   - Entity not in Fog Rando range (not already handled by Trigger B)
 
-This dual approach ensures we catch:
+This approach ensures we catch:
 - All standard fog gate traversals (via animation detection)
 - Fog gates with unknown/new animations (via entity ID detection)
+- Vanilla warps like coffins (e.g., after Valiant Gargoyles) that have no distinctive animation
+
+**Trigger Priority**: Triggers are evaluated in order A → B → C. The first to match wins. This ensures known animations get their specific transport type, Fog Rando warps are labeled "FOG_RANDO", and unknown vanilla warps get "VANILLA_WARP".
 
 **Validation**: ALL discoveries require `warp_requested` to have been true at some point during the warp. This filters false positives like cutscene animations that play without an actual warp occurring.
 
 ### Supported Teleport Types
 
-| Type | Animation ID | Notes |
-|------|-------------|-------|
-| Fog Wall | `60060` | Most common |
-| Back to Entrance | `60460` | Ground teleporter after defeating dungeon boss |
-| Waygate | `60490` | Sending gates to other areas |
-| Sending Gate (Blue) | `60470` | Portal-style gates |
-| Sending Gate (Red) | `60472` | Portal-style gates |
-| Medal | `50340` | Pureblood Knight's Medal item use |
-| Horned Remains | `60010` | Teleport to Regal Ancestor Spirit (Nokron) |
-| Liurnia Tower Door | `12202126` | Opening the door at the bottom of the inverted tower |
-| Post Boss Warp | `12020210` | Warp after defeating a boss (e.g., Maliketh) |
-| Erdtree Burn | `68110` | Cutscene warp when burning the Erdtree with Melina |
-| Placidusax Lie Down | `67010` | Lie down animation to access Placidusax boss arena |
-| FOG_RANDO | (any) | Entity-triggered detection for unknown animations |
+| Type | Animation ID | Trigger | Notes |
+|------|-------------|---------|-------|
+| Fog Wall | `60060` | A | Most common |
+| Back to Entrance | `60460` | A | Ground teleporter after defeating dungeon boss |
+| Waygate | `60490` | A | Sending gates to other areas |
+| Sending Gate (Blue) | `60470` | A | Portal-style gates |
+| Sending Gate (Red) | `60472` | A | Portal-style gates |
+| Medal | `50340` | A | Pureblood Knight's Medal item use |
+| Horned Remains | `60010` | A | Teleport to Regal Ancestor Spirit (Nokron) |
+| Liurnia Tower Door | `12202126` | A | Opening the door at the bottom of the inverted tower |
+| Post Boss Warp | `12020210` | A | Warp after defeating a boss (e.g., Maliketh) |
+| Erdtree Burn | `68110` | A | Cutscene warp when burning the Erdtree with Melina |
+| Placidusax Lie Down | `67010` | A | Lie down animation to access Placidusax boss arena |
+| FOG_RANDO | (any) | B | Entity-triggered detection for unknown animations (755890xxx) |
+| VANILLA_WARP | (any) | C | Vanilla warps with no known animation (coffins, scripted) |
 
 ### Warp Timeline (Player Perspective)
 
@@ -190,30 +198,35 @@ The complete warp detection workflow:
         ▼
 ┌───────────────────────────────────────────────────────────────────────────────┐
 │                           2. ENTRY DETECTION                                  │
-│                        (two possible triggers)                                │
+│                        (three possible triggers)                              │
+│                                                                               │
+│  Triggers are evaluated in priority order: A → B → C (first match wins)      │
 │                                                                               │
 │  IMPORTANT: A new pending is NOT created if an existing pending has          │
 │  warp_was_requested=true (warp in progress, don't overwrite with animations  │
 │  playing on the destination map)                                             │
 └───────────────────────────────────────────────────────────────────────────────┘
         │
-        ├─────────────────────────────────────┬─────────────────────────────────┐
-        ▼                                     ▼                                 │
-┌─────────────────────────────┐   ┌─────────────────────────────────┐          │
-│   TRIGGER A: ANIMATION      │   │   TRIGGER B: ENTITY             │          │
-│   ─────────────────────────│   │   ───────────────────────────── │          │
-│   Known teleport animation  │   │   warp_requested: false → true  │          │
-│   just started              │   │   AND                           │          │
-│   (was_in_anim=false →true) │   │   dest_entity_id ∈              │          │
-│   AND                       │   │     [755890000, 755899999]      │          │
-│   no active warp in progress│   │   AND                           │          │
-│                             │   │   pending_warp = None           │          │
-│   → Create PendingWarp      │   │                                 │          │
-│     transport_type = label  │   │   → Create PendingWarp          │          │
-│     warp_was_requested=false│   │     transport_type = "FOG_RANDO"│          │
-│     dest_entity_id = 0      │   │     warp_was_requested = true   │          │
-│                             │   │     dest_entity_id = captured   │          │
-└─────────────────────────────┘   └─────────────────────────────────┘          │
+        ├─────────────────────────────┬─────────────────────────────┬───────────┐
+        ▼                             ▼                             ▼           │
+┌───────────────────────┐   ┌───────────────────────┐   ┌───────────────────────┐
+│  TRIGGER A: ANIMATION │   │  TRIGGER B: FOG RANDO │   │  TRIGGER C: VANILLA   │
+│  ─────────────────────│   │  ─────────────────────│   │  ─────────────────────│
+│  Known teleport anim  │   │  warp_requested:      │   │  warp_requested:      │
+│  just started         │   │    false → true       │   │    false → true       │
+│  AND                  │   │  AND                  │   │  AND                  │
+│  no active warp       │   │  dest_entity_id ∈     │   │  dest_entity_id != 0  │
+│                       │   │    [755890000,        │   │  AND                  │
+│  → PendingWarp        │   │     755899999]        │   │  target_grace == 0    │
+│    type = anim label  │   │  AND pending = None   │   │  AND not fog rando    │
+│    warp_req = false   │   │                       │   │  AND pending = None   │
+│    dest_entity = 0    │   │  → PendingWarp        │   │                       │
+│                       │   │    type = "FOG_RANDO" │   │  → PendingWarp        │
+│                       │   │    warp_req = true    │   │    type = "VANILLA_   │
+│                       │   │    dest_entity = val  │   │           WARP"       │
+│                       │   │                       │   │    warp_req = true    │
+│                       │   │                       │   │    dest_entity = val  │
+└───────────────────────┘   └───────────────────────┘   └───────────────────────┘
         │                                                                       │
         └───────────────────────────────────────────────────────────────────────┘
                                        │

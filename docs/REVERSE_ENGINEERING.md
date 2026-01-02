@@ -182,16 +182,16 @@ Each node:
 | **Back to Entrance** | `60460` | - | Ground point after boss |
 | **Waygate** | `60490` | - | Hand turns blue |
 | **Sending Gate** | `60490` | - | Same animation as waygate |
-| **Coffin** | None | `warp_requested` + `dest_entity_id == 0` | Exclusion-based |
 | **Medal** | `50340` | `tae_queued_use_item == 0x40000870` | Pureblood Knight's Medal |
 | **Post-Boss Warp** | `12020210` | `warp_requested` validation | After defeating boss |
 | **Erdtree Burn** | `68110` | - | Burning Erdtree cutscene |
+| **Vanilla Warp** | None | `warp_requested` + `dest_entity != 0` + `target_grace == 0` | Coffins, scripted teleports |
 
 ### Events to Track (Position Awareness Only)
 
 | Type | Detection | Notes |
 |------|-----------|-------|
-| **Fast Travel** | `warp_requested` + `dest_entity_id != 0` + no animation | Menu teleport |
+| **Fast Travel** | `warp_requested` + `target_grace != 0` + no fog/waygate animation | Menu teleport to grace |
 
 ### Events to Ignore
 
@@ -201,20 +201,36 @@ Each node:
 | **Memory of Grace** | Animation `50230` + SpEffect `3226` | Not randomized |
 | **Trap Chest** | Disabled in randomizer | N/A |
 
-### Detection Algorithm
+### Detection Algorithm (Three-Trigger Architecture)
+
+The mod uses three triggers evaluated in priority order. The first to match wins:
 
 ```
-1. If animation 60060 → FOG WALL
-2. If animation 60460 → BACK TO ENTRANCE
-3. If animation 60490 → WAYGATE / SENDING GATE
-4. If animation 50340 + tae_queued_use_item == 0x40000870 → MEDAL
-5. If animation 12020210 + warp_requested was true → POST-BOSS WARP
-6. If animation 68110 → ERDTREE BURN
-7. If warp_requested + no animation + dest_entity_id == 0 → COFFIN
-8. If warp_requested + no animation + dest_entity_id != 0 → FAST TRAVEL
-9. If animation 4xxx/20xxx → DEATH (ignore)
-10. If animation 50230 + SpEffect 3226 → MEMORY OF GRACE (ignore)
+TRIGGER A (Animation) - Priority 1
+  When: Known teleport animation just started AND no active warp in progress
+  Result: Create pending with specific transport_type (FogWall, Waygate, etc.)
+
+TRIGGER B (FogRando) - Priority 2
+  When: warp_requested just became true
+        AND dest_entity_id in 755890000-755899999 range
+        AND no pending exists
+  Result: Create pending with transport_type = "FOG_RANDO"
+
+TRIGGER C (VanillaWarp) - Priority 3
+  When: warp_requested just became true
+        AND dest_entity_id != 0 (not death/respawn)
+        AND target_grace == 0 (not fast travel)
+        AND dest_entity_id NOT in Fog Rando range
+        AND no pending exists
+  Result: Create pending with transport_type = "VANILLA_WARP"
 ```
+
+**Validation**: ALL discoveries require `warp_requested` to have been true at some point. This filters false positives from cutscene animations.
+
+**Events to ignore**:
+- Death: Animation `4xxx` or `20xxx` → dest_entity_id = 0, filtered by Trigger C condition
+- Fast Travel: target_grace != 0, filtered by Trigger C condition
+- Memory of Grace: Animation `50230` + SpEffect `3226`, not a known teleport animation
 
 ### Cutscene Animation Validation
 
@@ -581,20 +597,20 @@ Direct read: `GameDataMan → +0x8 → +0xFF` (byte value = equipped rune index)
 
 ## Implementation Notes
 
-### TeleportType Enum
+### TeleportType / Transport Types
 
-```rust
-pub enum TeleportType {
-    FogWall,        // animation 60060
-    BackToEntrance, // animation 60460
-    Waygate,        // animation 60490 (includes sending gates)
-    Medal,          // animation 50340 + item ID check
-    Coffin,         // exclusion: warp_requested + no anim + dest_entity == 0
-    PostBossWarp,   // animation 12020210 + warp_requested validation
-    ErdtreeBurn,    // animation 68110
-    FastTravel,     // warp_requested without other events
-}
-```
+The mod uses string-based transport types rather than an enum. Known types:
+
+| Transport Type | Trigger | Description |
+|----------------|---------|-------------|
+| `FogWall` | A | Animation 60060 |
+| `BackToEntrance` | A | Animation 60460 |
+| `Waygate` | A | Animation 60490 (includes sending gates) |
+| `Medal` | A | Animation 50340 + item ID check |
+| `PostBossWarp` | A | Animation 12020210 + warp_requested validation |
+| `ErdtreeBurn` | A | Animation 68110 |
+| `FOG_RANDO` | B | Fog Rando entity (755890xxx) with unknown animation |
+| `VANILLA_WARP` | C | Vanilla warp (coffins, scripted) with no known animation |
 
 ### GameManReader
 
