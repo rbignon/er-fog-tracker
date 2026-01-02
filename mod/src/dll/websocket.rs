@@ -65,6 +65,8 @@ pub enum OutgoingMessage {
     },
     /// Respond to server ping
     Pong,
+    /// Upload logs to server
+    UploadLogs { content: String },
     /// Shutdown the connection
     Shutdown,
 }
@@ -98,6 +100,11 @@ pub enum IncomingMessage {
     Error(String),
     /// Server sent a ping
     Ping,
+    /// Upload logs acknowledgment
+    UploadLogsAck {
+        success: bool,
+        message: Option<String>,
+    },
 }
 
 // =============================================================================
@@ -255,6 +262,13 @@ impl WebSocketClient {
                 play_region_id,
                 grace_entity_id,
             });
+        }
+    }
+
+    /// Send logs to the server
+    pub fn send_upload_logs(&self, content: String) {
+        if let Some(tx) = &self.tx {
+            let _ = tx.try_send(OutgoingMessage::UploadLogs { content });
         }
     }
 
@@ -571,6 +585,16 @@ fn message_loop(
                     .map_err(|e| e.to_string())?;
                 last_ping_response = Instant::now();
             }
+            Ok(OutgoingMessage::UploadLogs { ref content }) => {
+                debug!(bytes = content.len(), "[WS TX] UploadLogs");
+                let msg = ServerMessage::UploadLogs {
+                    content: content.clone(),
+                };
+                let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
+                socket
+                    .send(Message::Text(json))
+                    .map_err(|e| e.to_string())?;
+            }
             Ok(OutgoingMessage::Shutdown) => {
                 debug!("[WS TX] Shutdown");
                 return Ok(());
@@ -661,6 +685,20 @@ fn message_loop(
                         ServerResponse::Error { ref message } => {
                             error!(message, "[WS RX] Error");
                             let _ = incoming_tx.send(IncomingMessage::Error(message.clone()));
+                        }
+                        ServerResponse::UploadLogsAck {
+                            success,
+                            ref message,
+                        } => {
+                            debug!(
+                                success,
+                                message = message.as_deref().unwrap_or(""),
+                                "[WS RX] UploadLogsAck"
+                            );
+                            let _ = incoming_tx.send(IncomingMessage::UploadLogsAck {
+                                success,
+                                message: message.clone(),
+                            });
                         }
                         _ => {
                             debug!(response = ?resp, "[WS RX] Other");

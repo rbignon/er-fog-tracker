@@ -10,6 +10,8 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use super::log_reader::{read_recent_logs, LogReadError};
+
 use tracing::{debug, error, info, warn};
 use windows::Win32::Foundation::HINSTANCE;
 
@@ -203,6 +205,9 @@ pub struct FogRandoTracker {
 
     // Icon atlas texture (loaded in initialize())
     pub(crate) icon_atlas: Option<IconAtlas>,
+
+    // Path to log file (resolved during init, for log upload feature)
+    log_file_path: Option<PathBuf>,
 }
 
 impl FogRandoTracker {
@@ -269,6 +274,18 @@ impl FogRandoTracker {
         // Pre-load font data (will be used in initialize())
         let font_data = Self::load_font_data(&dll_dir, &config.overlay.font_path);
 
+        // Resolve log file path (for log upload feature)
+        let log_file_path = if config.logging.log_file.is_empty() {
+            None
+        } else {
+            let path = PathBuf::from(&config.logging.log_file);
+            if path.is_absolute() {
+                Some(path)
+            } else {
+                Some(dll_dir.join(&config.logging.log_file))
+            }
+        };
+
         Some(Self {
             game_state,
             sp_effect,
@@ -288,6 +305,7 @@ impl FogRandoTracker {
             last_logged_warp_requested: false,
             debug_items_dumped: false,
             icon_atlas: None,
+            log_file_path,
         })
     }
 
@@ -398,6 +416,45 @@ impl FogRandoTracker {
                 None
             }
         })
+    }
+
+    /// Upload recent logs to the server
+    pub fn trigger_log_upload(&mut self) {
+        let log_path = match &self.log_file_path {
+            Some(path) => path,
+            None => {
+                self.set_status("No log file configured".to_string());
+                return;
+            }
+        };
+
+        if !self.ws_client.is_connected() {
+            self.set_status("Not connected to server".to_string());
+            return;
+        }
+
+        // Read last 5 minutes of logs
+        let duration = Duration::from_secs(5 * 60);
+        match read_recent_logs(log_path, duration) {
+            Ok(content) => {
+                info!(bytes = content.len(), "[LOG UPLOAD] Sending logs to server");
+                self.ws_client.send_upload_logs(content);
+                self.set_status("Logs uploaded to server".to_string());
+            }
+            Err(LogReadError::FileNotFound) => {
+                self.set_status("Log file not found".to_string());
+            }
+            Err(LogReadError::EmptyFile) => {
+                self.set_status("Log file is empty".to_string());
+            }
+            Err(LogReadError::NoRecentLogs) => {
+                self.set_status("No logs in last 5 minutes".to_string());
+            }
+            Err(LogReadError::IoError(e)) => {
+                error!(error = %e, "[LOG UPLOAD] IO error reading logs");
+                self.set_status(format!("Error reading logs: {}", e));
+            }
+        }
     }
 
     /// Returns the player's current map_id and its string representation

@@ -154,6 +154,10 @@ impl FogRandoTracker {
             self.show_exits = !self.show_exits;
             debug!(show_exits = self.show_exits, "Exits toggled");
         }
+        if self.config.keybindings.upload_logs.is_just_pressed() {
+            debug!("Upload logs hotkey pressed");
+            self.trigger_log_upload();
+        }
     }
 
     /// Build template context from current tracker state

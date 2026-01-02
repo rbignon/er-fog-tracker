@@ -11,10 +11,13 @@ This script:
    - REPORT.md with description and resolution instructions
 
 Usage:
-    ./report.py <game_id>
+    ./report.py <game_id> [output_dir]
+
+The output directory defaults to: $FOG_TRACKER_REPORTS_DIR/{game_id}/{YYmmdd_HHMM}/
 
 Example:
     ./report.py b12d5475-0b87-455a-a318-e81279b5a942
+    ./report.py b12d5475-0b87-455a-a318-e81279b5a942 /tmp/my_report
 """
 
 import asyncio
@@ -121,6 +124,7 @@ def generate_report_md(
         "- `entity_mapping.json` - Entity ID to zone mapping",
         "- `discovered_zone_links.json` - Currently discovered links",
         "- `fogtracker.log` - Recent server logs",
+        "- `mod.log` - Recent mod logs (optional, uploaded via Ctrl+F12 in-game)",
         "",
         "## Reference Files (not included)",
         "",
@@ -186,12 +190,29 @@ def generate_report_md(
 
 
 async def main() -> None:
-    if len(sys.argv) != 2:
-        print("Usage: ./report.py <game_id>")
+    if len(sys.argv) < 2 or len(sys.argv) > 3:
+        print("Usage: ./report.py <game_id> [output_dir]")
         print("Example: ./report.py b12d5475-0b87-455a-a318-e81279b5a942")
+        print("         ./report.py b12d5475-0b87-455a-a318-e81279b5a942 /tmp/my_report")
+        print()
+        print("Default output: $FOG_TRACKER_REPORTS_DIR/{game_id}/{YYmmdd_HHMM}/")
         sys.exit(1)
 
     game_id = sys.argv[1]
+
+    # Determine output directory
+    if len(sys.argv) == 3:
+        # Custom output directory specified
+        report_dir = Path(sys.argv[2])
+    else:
+        # Default: $FOG_TRACKER_REPORTS_DIR/{game_id}/{YYmmdd_HHMM}/
+        reports_base = os.environ.get("FOG_TRACKER_REPORTS_DIR")
+        if not reports_base:
+            print("Error: FOG_TRACKER_REPORTS_DIR not set and no output_dir specified", file=sys.stderr)
+            print("Set the environment variable or provide an output directory as argv[2]", file=sys.stderr)
+            sys.exit(1)
+        timestamp = datetime.now().strftime("%y%m%d_%H%M")
+        report_dir = Path(reports_base) / game_id / timestamp
 
     # Prompt for problem description
     print("Describe the problem (Ctrl+D when done):", file=sys.stderr)
@@ -206,9 +227,6 @@ async def main() -> None:
         sys.exit(1)
 
     # Create report directory
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    short_id = game_id[:8]
-    report_dir = script_dir / "reports" / f"{timestamp}_{short_id}"
     report_dir.mkdir(parents=True, exist_ok=True)
     print(f"Created report directory: {report_dir}", file=sys.stderr)
 

@@ -57,6 +57,8 @@ toggle_ui = "f9"
 toggle_debug = "f10"
 # Key to fold/unfold exits list
 toggle_exits = "f11"
+# Key to upload last 5 minutes of logs to server (for debugging)
+upload_logs = "ctrl+f12"
 
 # =============================================================================
 # OVERLAY SETTINGS

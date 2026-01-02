@@ -495,6 +495,40 @@ Update tags on a zone.
 }
 ```
 
+#### Mod → Server: `upload_logs`
+
+Upload recent mod logs to server for debugging.
+
+```json
+{
+  "type": "upload_logs",
+  "content": "2024-01-15 14:30:45.123 INFO ...\n..."
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `content` | Log file content (last 5 minutes) |
+
+#### Server → Mod: `upload_logs_ack`
+
+Acknowledgment of log upload.
+
+```json
+{
+  "type": "upload_logs_ack",
+  "success": true,
+  "message": null
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `success` | Whether the upload was successful |
+| `message` | Error message if `success` is false (e.g., "Reports directory not configured on server") |
+
+Logs are saved to: `$FOG_TRACKER_REPORTS_DIR/{game_id}/{YYmmdd_HHMM}/mod.log`
+
 ---
 
 ### Host Messages

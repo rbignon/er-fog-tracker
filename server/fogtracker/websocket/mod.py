@@ -4,6 +4,9 @@ Mod WebSocket client handler.
 
 import contextlib
 import logging
+import os
+from datetime import datetime
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import WebSocket
@@ -53,6 +56,7 @@ class ModClient(Client):
             "zone_query": self._handle_zone_query,
             "debug_log": self._handle_debug_log,
             "tag_update": self._handle_tag_update,
+            "upload_logs": self._handle_upload_logs,
         }
 
     async def _handle_pong(self, data: dict):
@@ -62,6 +66,46 @@ class ModClient(Client):
         """Handle debug log from mod."""
         message = data.get("message", "")
         logger.info("[MOD DEBUG] %s", message)
+
+    async def _handle_upload_logs(self, data: dict):
+        """Handle log upload from mod.
+
+        Saves the log content to: $FOG_TRACKER_REPORTS_DIR/{game_id}/{YYmmdd_HHMM}/mod.log
+        """
+        content = data.get("content", "")
+
+        reports_dir = os.environ.get("FOG_TRACKER_REPORTS_DIR")
+        if not reports_dir:
+            logger.warning("[MOD] Log upload failed: FOG_TRACKER_REPORTS_DIR not configured")
+            await self.send(
+                {
+                    "type": "upload_logs_ack",
+                    "success": False,
+                    "message": "Reports directory not configured on server",
+                }
+            )
+            return
+
+        # Create directory: {reports_dir}/{game_id}/{YYmmdd_HHMM}/
+        timestamp_dir = datetime.now().strftime("%y%m%d_%H%M")
+        output_dir = Path(reports_dir) / str(self.game_id) / timestamp_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = output_dir / "mod.log"
+        file_path.write_text(content, encoding="utf-8")
+
+        logger.info(
+            "[MOD] Logs uploaded: %d bytes -> %s",
+            len(content),
+            file_path,
+        )
+
+        await self.send(
+            {
+                "type": "upload_logs_ack",
+                "success": True,
+            }
+        )
 
     # -------------------------------------------------------------------------
     # Helper methods for zone resolution and discovery

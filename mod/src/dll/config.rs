@@ -25,6 +25,9 @@ pub struct KeyBindings {
     /// Key to toggle exits list (fold/unfold)
     #[serde(default = "default_toggle_exits")]
     pub toggle_exits: Hotkey,
+    /// Key to upload recent logs to server
+    #[serde(default = "default_upload_logs")]
+    pub upload_logs: Hotkey,
 }
 
 fn default_toggle_ui() -> Hotkey {
@@ -39,12 +42,17 @@ fn default_toggle_exits() -> Hotkey {
     Hotkey::from_name("f11").expect("f11 is a valid key")
 }
 
+fn default_upload_logs() -> Hotkey {
+    Hotkey::from_name("ctrl+f12").expect("ctrl+f12 is a valid key")
+}
+
 impl Default for KeyBindings {
     fn default() -> Self {
         Self {
             toggle_ui: default_toggle_ui(),
             toggle_debug: default_toggle_debug(),
             toggle_exits: default_toggle_exits(),
+            upload_logs: default_upload_logs(),
         }
     }
 }

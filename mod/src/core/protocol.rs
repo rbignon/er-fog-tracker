@@ -93,6 +93,8 @@ pub enum ServerMessage {
     },
     /// Pong response to server ping
     Pong,
+    /// Upload recent logs to server
+    UploadLogs { content: String },
 }
 
 // =============================================================================
@@ -148,6 +150,12 @@ pub enum ServerResponse {
     Ping,
     /// Error message from server
     Error { message: String },
+    /// Upload logs acknowledgment
+    UploadLogsAck {
+        success: bool,
+        #[serde(default)]
+        message: Option<String>,
+    },
 }
 
 // =============================================================================
