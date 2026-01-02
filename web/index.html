@@ -536,8 +536,9 @@
                     <h4>Keyboard shortcuts</h4>
                     <table class="help-table">
                         <tr><td><kbd>F9</kbd></td><td>Toggle overlay visibility</td></tr>
-                        <tr><td><kbd>F10</kbd></td><td>Toggle debug information</td></tr>
-                        <tr><td><kbd>F11</kbd></td><td>Toggle exits list (fold/unfold)</td></tr>
+                        <tr><td><kbd>F10</kbd></td><td>Toggle exits list (fold/unfold)</td></tr>
+                        <tr><td><kbd>Shift+F10</kbd></td><td>Show only undiscovered exits</td></tr>
+                        <tr><td><kbd>Ctrl+F11</kbd></td><td>Toggle debug information</td></tr>
                     </table>
                     <figure class="help-screenshot">
                         <img src="/help/overlay-ingame.png" alt="In-game overlay">
@@ -607,6 +608,7 @@
 # Font settings
 font_path = ""                    # Path to TTF font (empty = system default)
 font_size = 16.0                  # 16 for 1080p, 24 for 4K
+icon_size = 16.0                  # Icon size (optional, defaults to font_size)
 
 # Colors (hex format)
 background_color = "#141414"
@@ -618,7 +620,23 @@ undiscovered_color = "#B3B3B3"    # Gray for ??? exits
 
 # Border
 show_border = false
-border_color = "#404040"</code></pre>
+border_color = "#404040"
+
+# Text shown when zone is unknown
+zone_unknown_text = "(traverse a fog to identify)"</code></pre>
+                </div>
+
+                <div class="help-subsection">
+                    <h3>Overlay size limit</h3>
+                    <p>Prevent the overlay from covering too much of the screen when there are many exits:</p>
+                    <pre class="help-code"><code>[overlay]
+# Maximum overlay height in pixels (optional)
+# If exceeded, exits font is scaled down, then truncated with "+ X others"
+max_height = 300.0
+
+# Minimum font scale for exits (0.0 to 1.0, default 0.5)
+# Below this, exits are truncated instead of scaled further
+exits_min_font_scale = 0.5</code></pre>
                 </div>
 
                 <div class="help-subsection">
@@ -684,9 +702,12 @@ status_template = "{zone}$>{status}$n{rune_icons} {kindling_icon}{kindling}$>{di
                 <div class="help-subsection">
                     <h3>Keyboard shortcuts</h3>
                     <pre class="help-code"><code>[keybindings]
-toggle_ui = "f9"
-toggle_debug = "f10"
-toggle_exits = "f11"</code></pre>
+toggle_ui = "f9"                      # Show/hide overlay
+toggle_exits = "f10"                  # Fold/unfold exits list
+toggle_undiscovered_only = "shift+f10"  # Show only undiscovered exits
+toggle_debug = "ctrl+f11"             # Show debug info (map_id, etc.)
+upload_logs = "ctrl+f12"              # Upload logs for debugging</code></pre>
+                    <p>Keys support modifiers: <code>ctrl+</code>, <code>shift+</code>, <code>alt+</code></p>
                 </div>
             </section>
 
