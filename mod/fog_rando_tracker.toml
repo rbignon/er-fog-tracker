@@ -34,29 +34,17 @@
 # =============================================================================
 
 # =============================================================================
-# LOGGING
-# =============================================================================
-
-[logging]
-# Open a debug console window for real-time logging (true/false)
-# Useful for troubleshooting issues with the mod.
-console = false
-
-# Log file path (relative to DLL directory or absolute). Empty = no file logging.
-# Examples: "fog_tracker.log", "C:\Logs\fog_tracker.log"
-log_file = ""
-
-# =============================================================================
 # KEYBINDINGS
 # =============================================================================
 
 [keybindings]
 # Key to toggle UI visibility
 toggle_ui = "f9"
-# Key to toggle debug info (map_id, server URL, etc.)
-toggle_debug = "f10"
 # Key to fold/unfold exits list
-toggle_exits = "f11"
+toggle_exits = "f10"
+
+# Key to toggle debug info (map_id, server URL, etc.)
+toggle_debug = "ctrl+f11"
 # Key to upload last 5 minutes of logs to server (for debugging)
 upload_logs = "ctrl+f12"
 
@@ -84,7 +72,7 @@ font_size = 16.0
 
 # Background color and opacity
 background_color = "#141414"
-background_opacity = 0.7  # 0.0 = fully transparent, 1.0 = fully opaque
+background_opacity = 0.3  # 0.0 = fully transparent, 1.0 = fully opaque
 
 # Text colors
 text_color = "#FFFFFF"           # Main text
@@ -141,7 +129,20 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   "{death_icon}{deaths}"                               - Death icon with count
 #   "{zone}$n{scaling}$>{status} {discovered}/{total}"   - Two lines with zone scaling
 #
-status_template = "{zone}$>{status} {discovered}/{total}"
+status_template = "{status} {zone}$>{discovered}/{total} | {igt}$n{rune_icons}{kindling_icon}{kindling}$>{death_icon}{deaths}"
 
 # Text shown when zone is unknown (before first fog traversal)
 zone_unknown_text = "(traverse a fog to identify)"
+
+# =============================================================================
+# LOGGING
+# =============================================================================
+
+[logging]
+# Open a debug console window for real-time logging (true/false)
+# Useful for troubleshooting issues with the mod.
+console = false
+
+# Log file path (relative to DLL directory or absolute). Empty = no file logging.
+# Examples: "fog_tracker.log", "C:\Logs\fog_tracker.log"
+log_file = ""
