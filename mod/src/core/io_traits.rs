@@ -69,6 +69,11 @@ pub enum ServerEvent {
     DiscoveryAck(DiscoveryResult),
     /// Server responded to a zone query
     ZoneQueryAck(ZoneQueryResult),
+    /// Server acknowledged log upload
+    UploadLogsAck {
+        success: bool,
+        message: Option<String>,
+    },
     /// Server sent an error message
     Error(String),
 }

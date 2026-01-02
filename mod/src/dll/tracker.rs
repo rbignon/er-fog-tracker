@@ -158,6 +158,9 @@ impl ServerEventReceiver for WebSocketAdapter<'_> {
                 // We'll filter this out in the session
                 ServerEvent::Error("ping".to_string())
             }
+            IncomingMessage::UploadLogsAck { success, message } => {
+                ServerEvent::UploadLogsAck { success, message }
+            }
         })
     }
 }
@@ -400,6 +403,14 @@ impl FogRandoTracker {
                         error!(error = %msg, "WebSocket error");
                     }
                 }
+                SessionEvent::LogsUploaded { success, message } => {
+                    if success {
+                        self.set_status("Logs uploaded successfully".to_string());
+                    } else {
+                        let msg = message.unwrap_or_else(|| "Unknown error".to_string());
+                        self.set_status(format!("Log upload failed: {}", msg));
+                    }
+                }
             }
         }
     }
@@ -441,7 +452,7 @@ impl FogRandoTracker {
             Ok(content) => {
                 info!(bytes = content.len(), "[LOG UPLOAD] Sending logs to server");
                 self.ws_client.send_upload_logs(content);
-                self.set_status("Logs uploaded to server".to_string());
+                self.set_status("Uploading logs...".to_string());
             }
             Err(LogReadError::FileNotFound) => {
                 self.set_status("Log file not found".to_string());

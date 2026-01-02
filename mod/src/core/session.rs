@@ -28,6 +28,11 @@ pub enum SessionEvent {
     ZoneUpdated(ZoneQueryResult),
     /// Connection status changed
     ConnectionChanged(ConnectionStatus),
+    /// Log upload result received
+    LogsUploaded {
+        success: bool,
+        message: Option<String>,
+    },
     /// Server error occurred
     ServerError(String),
 }
@@ -261,6 +266,9 @@ impl TrackerSession {
                     // Clear pending state
                     self.pre_loading_map_id = None;
                     events.push(SessionEvent::ZoneUpdated(result));
+                }
+                ServerEvent::UploadLogsAck { success, message } => {
+                    events.push(SessionEvent::LogsUploaded { success, message });
                 }
                 ServerEvent::Error(msg) => {
                     events.push(SessionEvent::ServerError(msg));
