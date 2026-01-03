@@ -23,7 +23,6 @@ from fogtracker.game_logic import (
     format_zone_resolution,
     propagate_discovery,
 )
-from fogtracker.grace_resolver import resolve_zone_by_grace_entity_id
 from fogtracker.websocket.auth import authenticate_ws, verify_game_access
 from fogtracker.websocket.base import Client
 from fogtracker.websocket.manager import manager
@@ -384,8 +383,9 @@ class ModClient(Client):
             resolution_method = None
 
             # 1. Try grace entity ID resolution (most precise for fast travel)
+            resolver = get_resolver()
             if grace_entity_id:
-                grace_zone = resolve_zone_by_grace_entity_id(grace_entity_id)
+                grace_zone = resolver.resolve_zone_by_grace_entity_id(grace_entity_id)
                 if grace_zone:
                     # Verify the grace zone is discovered (it should be if player can fast travel)
                     if grace_zone in discovered_zones:
@@ -398,7 +398,6 @@ class ModClient(Client):
                         )
 
             # 2. Try Col resolution if grace didn't work
-            resolver = get_resolver()
             if not zone_display and play_region_id:
                 col = f"h{play_region_id:06x}"
                 zone_internal, zone_display = resolver.resolve_by_col(map_id, col)

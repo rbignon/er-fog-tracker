@@ -47,6 +47,7 @@ async def lifespan(app: FastAPI):
         "zone_resolver_initialized",
         map_rules=len(resolver.map_rules),
         zone_names=len(resolver.zone_display_names),
+        grace_entries=len(resolver.grace_mapping),
     )
 
     yield

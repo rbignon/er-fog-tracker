@@ -2117,15 +2117,13 @@ class TestZoneQueryGraceEntityId:
             ("limgrave", "Limgrave"),
             ("stormveil", "Stormveil Castle"),
         ]
+        # Grace resolver on the mock
+        mock_resolver.resolve_zone_by_grace_entity_id.return_value = "Limgrave"
 
         with (
             patch("fogtracker.websocket.mod.async_session") as mock_session,
             patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
-            patch(
-                "fogtracker.websocket.mod.resolve_zone_by_grace_entity_id",
-                return_value="Limgrave",
-            ) as mock_grace_resolve,
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -2139,7 +2137,7 @@ class TestZoneQueryGraceEntityId:
             )
 
         # Should call grace resolver
-        mock_grace_resolve.assert_called_once_with(1042362951)
+        mock_resolver.resolve_zone_by_grace_entity_id.assert_called_once_with(1042362951)
 
         # Should return Limgrave (from grace resolution, not position)
         call_args = mock_client.send.call_args[0][0]
@@ -2155,15 +2153,13 @@ class TestZoneQueryGraceEntityId:
         mock_resolver = MagicMock()
         mock_resolver.resolve_by_col.return_value = (None, None)
         mock_resolver.resolve_all_candidates.return_value = []
+        # Grace resolves to Limgrave (but Limgrave is not discovered)
+        mock_resolver.resolve_zone_by_grace_entity_id.return_value = "Limgrave"
 
         with (
             patch("fogtracker.websocket.mod.async_session") as mock_session,
             patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
-            patch(
-                "fogtracker.websocket.mod.resolve_zone_by_grace_entity_id",
-                return_value="Limgrave",  # Grace resolves to Limgrave
-            ),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -2189,15 +2185,13 @@ class TestZoneQueryGraceEntityId:
         mock_resolver = MagicMock()
         # Col resolution finds the zone
         mock_resolver.resolve_by_col.return_value = ("limgrave", "Limgrave")
+        # Grace not found in mapping
+        mock_resolver.resolve_zone_by_grace_entity_id.return_value = None
 
         with (
             patch("fogtracker.websocket.mod.async_session") as mock_session,
             patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
-            patch(
-                "fogtracker.websocket.mod.resolve_zone_by_grace_entity_id",
-                return_value=None,  # Grace not found in mapping
-            ),
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -2229,7 +2223,6 @@ class TestZoneQueryGraceEntityId:
             patch("fogtracker.websocket.mod.async_session") as mock_session,
             patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
-            patch("fogtracker.websocket.mod.resolve_zone_by_grace_entity_id") as mock_grace_resolve,
         ):
             self._setup_db_mock(mock_session, mock_game)
 
@@ -2243,7 +2236,7 @@ class TestZoneQueryGraceEntityId:
             )
 
         # Should NOT call grace resolver
-        mock_grace_resolve.assert_not_called()
+        mock_resolver.resolve_zone_by_grace_entity_id.assert_not_called()
 
         # Should use Col resolution
         call_args = mock_client.send.call_args[0][0]
@@ -2259,15 +2252,13 @@ class TestZoneQueryGraceEntityId:
         mock_resolver = MagicMock()
         # Col would resolve to different zone
         mock_resolver.resolve_by_col.return_value = ("stormveil", "Stormveil Castle")
+        # Grace resolves to Limgrave
+        mock_resolver.resolve_zone_by_grace_entity_id.return_value = "Limgrave"
 
         with (
             patch("fogtracker.websocket.mod.async_session") as mock_session,
             patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
-            patch(
-                "fogtracker.websocket.mod.resolve_zone_by_grace_entity_id",
-                return_value="Limgrave",
-            ),
         ):
             self._setup_db_mock(mock_session, mock_game)
 

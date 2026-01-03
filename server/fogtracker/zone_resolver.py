@@ -7,6 +7,7 @@ Resolves (map_id, position) to zone name using game data files:
 - foglocations2.txt: Col-to-zone mappings (fallback)
 """
 
+import json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -79,6 +80,8 @@ class ZoneResolver:
         self.col_zones: dict[tuple[str, str], str] = {}
         # Detail text (from ASide/BSide) -> internal zone name (for fallback matching)
         self.detail_text_to_zone: dict[str, str] = {}
+        # Grace entity ID -> grace info (from graces.json)
+        self.grace_mapping: dict[str, dict] = {}
 
         # Reverse lookup structures (for test simulation)
         # internal_name -> ZoneMetadata (enriched zone info)
@@ -128,6 +131,15 @@ class ZoneResolver:
             logger.info(
                 "Loaded zone data for %d maps from foglocations2.txt",
                 len(self.map_zones),
+            )
+
+        # Load graces.json
+        graces_path = self.data_dir / "graces.json"
+        if graces_path.exists():
+            self._load_graces(graces_path)
+            logger.info(
+                "Loaded grace mapping: %d entries",
+                len(self.grace_mapping),
             )
 
     def _load_submaps(self, path: Path):
@@ -430,6 +442,16 @@ class ZoneResolver:
                     self.map_zones[current_fog_map] = set()
                 for area in areas:
                     self.map_zones[current_fog_map].add(area)
+
+    def _load_graces(self, path: Path):
+        """Parse graces.json for grace entity ID -> zone mapping."""
+        try:
+            with open(path) as f:
+                data = json.load(f)
+                self.grace_mapping = data.get("mapping", {})
+        except Exception as e:
+            logger.error("Failed to load grace mapping: %s", e)
+            self.grace_mapping = {}
 
     def resolve(self, map_id: str, x: float, y: float, z: float) -> tuple[str | None, str | None]:
         """
@@ -956,6 +978,46 @@ class ZoneResolver:
                 if map_id not in all_map_ids:
                     all_map_ids.append(map_id)
         return all_map_ids, None, None
+
+    # =========================================================================
+    # Grace entity ID resolution (from graces.json)
+    # =========================================================================
+
+    def resolve_zone_by_grace_entity_id(self, grace_entity_id: int | str) -> str | None:
+        """Resolve zone display name from grace entity ID.
+
+        Args:
+            grace_entity_id: The entity ID of the grace (e.g., 1042362951 for "The First Step")
+
+        Returns:
+            Zone display name if found, None otherwise.
+        """
+        entity_id_str = str(grace_entity_id)
+        entry = self.grace_mapping.get(entity_id_str)
+        if entry:
+            zone = entry.get("zone")
+            grace_name = entry.get("grace_name")
+            logger.debug(
+                "Grace entity %s resolved to zone '%s' (grace: %s)",
+                entity_id_str,
+                zone,
+                grace_name,
+            )
+            return zone
+
+        logger.debug("Grace entity %s not found in mapping", entity_id_str)
+        return None
+
+    def get_grace_info(self, grace_entity_id: int | str) -> dict | None:
+        """Get full grace info from entity ID.
+
+        Args:
+            grace_entity_id: The entity ID of the grace
+
+        Returns:
+            Dict with grace_name, zone, map_id if found, None otherwise.
+        """
+        return self.grace_mapping.get(str(grace_entity_id))
 
 
 # Global instance

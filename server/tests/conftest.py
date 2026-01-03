@@ -14,8 +14,17 @@ from pathlib import Path
 
 import pytest
 
+from fogtracker.zone_resolver import init_resolver
+
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 SPOILER_LOGS_DIR = FIXTURES_DIR / "spoiler_logs"
+DATA_DIR = Path(__file__).parent.parent / "data"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def init_data_files():
+    """Initialize zone resolver (includes grace mapping) for all tests."""
+    init_resolver(DATA_DIR)
 
 
 def pytest_addoption(parser):
