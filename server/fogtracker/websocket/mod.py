@@ -4,7 +4,6 @@ Mod WebSocket client handler.
 
 import contextlib
 import logging
-import os
 from datetime import datetime
 from pathlib import Path
 from uuid import UUID
@@ -13,6 +12,7 @@ from fastapi import WebSocket
 from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
 
+from fogtracker.config import get_settings
 from fogtracker.database import Game, async_session
 from fogtracker.game_logic import (
     DiscoveryResult,
@@ -70,13 +70,13 @@ class ModClient(Client):
     async def _handle_upload_logs(self, data: dict):
         """Handle log upload from mod.
 
-        Saves the log content to: $FOG_TRACKER_REPORTS_DIR/{game_id}/{YYmmdd_HHMM}/mod.log
+        Saves the log content to: {reports_dir}/{game_id}/{YYmmdd_HHMM}/mod.log
         """
         content = data.get("content", "")
 
-        reports_dir = os.environ.get("FOG_TRACKER_REPORTS_DIR")
+        reports_dir = get_settings().reports_dir
         if not reports_dir:
-            logger.warning("[MOD] Log upload failed: FOG_TRACKER_REPORTS_DIR not configured")
+            logger.warning("[MOD] Log upload failed: REPORTS_DIR not configured")
             await self.send(
                 {
                     "type": "upload_logs_ack",

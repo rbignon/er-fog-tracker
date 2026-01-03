@@ -13,7 +13,7 @@ This script:
 Usage:
     ./report.py <game_id> [output_dir]
 
-The output directory defaults to: $FOG_TRACKER_REPORTS_DIR/{game_id}/{YYmmdd_HHMM}/
+The output directory defaults to: reports/{game_id}/{YYmmdd_HHMM}/
 
 Example:
     ./report.py b12d5475-0b87-455a-a318-e81279b5a942
@@ -39,6 +39,9 @@ from scripts.export_game import export_game  # noqa: E402
 
 # Log file location
 LOG_FILE = script_dir.parent / "fogtracker.log"
+
+# Default report dir
+DEFAULT_REPORTS_DIR = script_dir / "reports"
 
 # Time window for log extraction (in minutes)
 LOG_WINDOW_MINUTES = 5
@@ -195,7 +198,7 @@ async def main() -> None:
         print("Example: ./report.py b12d5475-0b87-455a-a318-e81279b5a942")
         print("         ./report.py b12d5475-0b87-455a-a318-e81279b5a942 /tmp/my_report")
         print()
-        print("Default output: $FOG_TRACKER_REPORTS_DIR/{game_id}/{YYmmdd_HHMM}/")
+        print("Default output: %s/{game_id}/{YYmmdd_HHMM}/" % DEFAULT_REPORTS_DIR)
         sys.exit(1)
 
     game_id = sys.argv[1]
@@ -205,12 +208,7 @@ async def main() -> None:
         # Custom output directory specified
         report_dir = Path(sys.argv[2])
     else:
-        # Default: $FOG_TRACKER_REPORTS_DIR/{game_id}/{YYmmdd_HHMM}/
-        reports_base = os.environ.get("FOG_TRACKER_REPORTS_DIR")
-        if not reports_base:
-            print("Error: FOG_TRACKER_REPORTS_DIR not set and no output_dir specified", file=sys.stderr)
-            print("Set the environment variable or provide an output directory as argv[2]", file=sys.stderr)
-            sys.exit(1)
+        reports_base = DEFAULT_REPORTS_DIR
         timestamp = datetime.now().strftime("%y%m%d_%H%M")
         report_dir = Path(reports_base) / game_id / timestamp
 

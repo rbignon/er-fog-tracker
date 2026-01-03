@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # Data files (fog randomizer data)
     data_dir: str = "data"
 
+    # Directory to store uploaded mod logs (reports)
+    reports_dir: str | None = None
+
     # WebSocket
     heartbeat_interval: int = 15
     heartbeat_timeout: int = 10
