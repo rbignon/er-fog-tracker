@@ -515,7 +515,7 @@
                         <li>Select your game in the launcher</li>
                         <li>Click <strong>Connect</strong></li>
                         <li>The launcher will wait for Elden Ring to start</li>
-                        <li>Launch Elden Ring through your usual method (Steam, Mod Engine, etc.)</li>
+                        <li>Launch Elden Ring through the Fog Gate Randomizer</li>
                         <li>The mod injects automatically once the game is detected</li>
                     </ol>
                     <figure class="help-screenshot vertical">
@@ -627,9 +627,12 @@ zone_unknown_text = "(traverse a fog to identify)"</code></pre>
                 </div>
 
                 <div class="help-subsection">
-                    <h3>Overlay size limit</h3>
-                    <p>Prevent the overlay from covering too much of the screen when there are many exits:</p>
+                    <h3>Overlay size and position</h3>
                     <pre class="help-code"><code>[overlay]
+# Position relative to the top-right corner (in pixels)
+position_offset_x = 20.0    # Margin from the right edge
+position_offset_y = 20.0    # Margin from the top edge
+
 # Maximum overlay height in pixels (optional)
 # If exceeded, exits font is scaled down, then truncated with "+ X others"
 max_height = 300.0
@@ -653,7 +656,7 @@ exits_min_font_scale = 0.5</code></pre>
                         <tr><td><code>{map}</code></td><td>Current map ID (e.g., m60_44_36_00)</td></tr>
                         <tr><td><code>{deaths}</code></td><td>Total death count</td></tr>
                         <tr><td><code>{igt}</code></td><td>In-game time (H:MM:SS)</td></tr>
-                        <tr><td><code>{runes}</code></td><td>Number of Great Runes (0-8)</td></tr>
+                        <tr><td><code>{runes}</code></td><td>Number of Great Runes (0-7)</td></tr>
                         <tr><td><code>{kindling}</code></td><td>Number of Messmer's Kindling (DLC)</td></tr>
                         <tr><td><code>{scaling}</code></td><td>Zone scaling info</td></tr>
                     </table>
