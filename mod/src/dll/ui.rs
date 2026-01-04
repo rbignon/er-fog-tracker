@@ -118,7 +118,10 @@ impl ImguiRenderLoop for FogRandoTracker {
         let max_width = 320.0 * scale;
 
         ui.window("FogRandoTracker")
-            .position([dw - 350.0 * scale, 20.0], Condition::FirstUseEver)
+            .position(
+                [dw - max_width - s.position_offset_x, s.position_offset_y],
+                Condition::FirstUseEver,
+            )
             .flags(window_flags)
             .build(|| {
                 // Header: no text wrap (user controls line breaks with $n)

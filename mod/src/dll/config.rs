@@ -134,6 +134,16 @@ pub struct OverlaySettings {
     /// Default: 0.5 (50% of original size). Below this, exits are truncated instead.
     #[serde(default = "default_exits_min_font_scale")]
     pub exits_min_font_scale: f32,
+
+    /// Horizontal margin from the right edge of the screen in pixels.
+    /// This is the gap between the overlay's right edge and the screen's right edge.
+    #[serde(default = "default_position_offset_x")]
+    pub position_offset_x: f32,
+
+    /// Vertical margin from the top edge of the screen in pixels.
+    /// This is the gap between the overlay's top edge and the screen's top edge.
+    #[serde(default = "default_position_offset_y")]
+    pub position_offset_y: f32,
 }
 
 fn default_font_path() -> String {
@@ -175,6 +185,12 @@ fn default_zone_unknown_text() -> String {
 fn default_exits_min_font_scale() -> f32 {
     0.5
 }
+fn default_position_offset_x() -> f32 {
+    20.0
+}
+fn default_position_offset_y() -> f32 {
+    20.0
+}
 
 impl Default for OverlaySettings {
     fn default() -> Self {
@@ -194,6 +210,8 @@ impl Default for OverlaySettings {
             icon_size: None,
             max_height: None,
             exits_min_font_scale: default_exits_min_font_scale(),
+            position_offset_x: default_position_offset_x(),
+            position_offset_y: default_position_offset_y(),
         }
     }
 }

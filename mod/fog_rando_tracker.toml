@@ -84,6 +84,12 @@ font_size = 16.0
 # truncated instead of further scaled down.
 # exits_min_font_scale = 0.5
 
+# Overlay position (relative to top-right corner of the screen)
+# position_offset_x: horizontal margin from the right edge (in pixels)
+# position_offset_y: vertical margin from the top edge (in pixels)
+# position_offset_x = 20.0
+# position_offset_y = 20.0
+
 # Background color and opacity
 background_color = "#141414"
 background_opacity = 0.3  # 0.0 = fully transparent, 1.0 = fully opaque
