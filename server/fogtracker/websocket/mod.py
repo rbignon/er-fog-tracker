@@ -175,6 +175,8 @@ class ModClient(Client):
         all_discovery_results: list[DiscoveryResult],
         target_candidates: list[tuple[str, str]],
         error_msg_if_empty: str,
+        warp_type: str | None = None,
+        resolution_method: str | None = None,
     ):
         """Finalize discovery: compute stats, log, send ack, and broadcast.
 
@@ -237,6 +239,8 @@ class ModClient(Client):
                 discovered_by="mod",
                 total_discovered=stats["discovered"],
                 total_links=stats["total"],
+                warp_type=warp_type,
+                resolution_method=resolution_method,
             )
             for line in summary.split("\n"):
                 logger.info(line)
@@ -561,11 +565,14 @@ class ModClient(Client):
                 medal_target_key = medal_link.get("target_key")
 
                 match_found = False
+                resolution_method = None
                 if medal_target_key and medal_target_key in target_keys:
                     match_found = True
+                    resolution_method = "zone_keys"
                     logger.info("[MOD] Medal target matched by key: %s", medal_target)
                 elif medal_target in target_display_names:
                     match_found = True
+                    resolution_method = "display_name"
                     logger.info("[MOD] Medal target matched by display name: %s", medal_target)
 
                 if match_found:
@@ -596,6 +603,8 @@ class ModClient(Client):
                 all_discovery_results,
                 target_candidates,
                 error_msg_if_empty="Medal target not found in candidates",
+                warp_type="Medal",
+                resolution_method=resolution_method,
             )
 
     async def _handle_discovery_v2(self, data: dict):
@@ -703,6 +712,7 @@ class ModClient(Client):
             # Collect all discovery results to merge them for the summary
             all_discovery_results: list[DiscoveryResult] = []
             resolved_links = []
+            resolution_method = None
 
             if game and game.zone_links:
                 # If entity_mapping is available, use it to improve zone candidate ordering
@@ -833,6 +843,7 @@ class ModClient(Client):
                                     min_cost,
                                 )
 
+                            resolution_method = "zone_keys"
                             for source_display, target_display, _, cost in best_matches:
                                 logger.debug(
                                     "[MOD] Discovered (by keys, cost=%d): '%s' -> '%s'",
@@ -909,6 +920,7 @@ class ModClient(Client):
                                     min_cost,
                                 )
 
+                            resolution_method = "display_name"
                             for source_display, target_display, _, cost in best_matches:
                                 logger.debug(
                                     "[MOD] Discovered (by display name, cost=%d): '%s' -> '%s'",
@@ -956,6 +968,8 @@ class ModClient(Client):
                 all_discovery_results,
                 target_candidates,
                 error_msg_if_empty="No matching link found in spoiler log",
+                warp_type=warp_type,
+                resolution_method=resolution_method,
             )
 
     @classmethod

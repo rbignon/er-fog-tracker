@@ -132,6 +132,28 @@ class TestFormatDiscoverySummary:
 
         assert "Progress:" not in summary
 
+    def test_with_warp_type_and_resolution_method(self):
+        """Test that warp_type and resolution_method are displayed."""
+        result = DiscoveryResult(origin="Limgrave")
+        result.main_links.append(DiscoveredLink("Limgrave", "Stormveil Castle", "random"))
+
+        summary = format_discovery_summary(
+            result, "mod", warp_type="FogGate", resolution_method="zone_keys"
+        )
+
+        assert "Warp type:  FogGate" in summary
+        assert "Resolved:   zone_keys" in summary
+
+    def test_warp_type_only(self):
+        """Test that warp_type is displayed without resolution_method."""
+        result = DiscoveryResult(origin="Zone A")
+        result.main_links.append(DiscoveredLink("Zone A", "Zone B", "random"))
+
+        summary = format_discovery_summary(result, "mod", warp_type="Medal")
+
+        assert "Warp type:  Medal" in summary
+        assert "Resolved:" not in summary
+
     def test_full_scenario(self):
         """Test a complete discovery scenario with all propagation types."""
         result = DiscoveryResult(origin="Limgrave (Field)")

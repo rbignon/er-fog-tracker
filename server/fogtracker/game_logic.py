@@ -79,6 +79,8 @@ def format_discovery_summary(
     discovered_by: str,
     total_discovered: int | None = None,
     total_links: int | None = None,
+    warp_type: str | None = None,
+    resolution_method: str | None = None,
 ) -> str:
     """Format a discovery result as a visual summary for logging."""
     lines = []
@@ -86,6 +88,10 @@ def format_discovery_summary(
     # Header
     lines.append("╭─ Discovery Summary ─────────────────────────────────────────")
     lines.append(f"│ Origin:     {result.origin}")
+    if warp_type:
+        lines.append(f"│ Warp type:  {warp_type}")
+    if resolution_method:
+        lines.append(f"│ Resolved:   {resolution_method}")
 
     # Main discovered link(s)
     if result.main_links:
