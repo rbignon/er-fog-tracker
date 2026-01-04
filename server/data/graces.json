@@ -347,7 +347,7 @@
     },
     "14002953": {
       "grace_name": "Schoolhouse Classroom",
-      "zone": "Academy of Raya Lucaria - Schoolhouse Classroom",
+      "zone": "Academy of Raya Lucaria",
       "map_id": null
     },
     "15002950": {
@@ -895,9 +895,14 @@
       "zone": "Capital Outskirts - Sealed Tunnel",
       "map_id": null
     },
-    "34142951": {
+    "34142950": {
       "grace_name": "Divine Tower of East Altus",
       "zone": "Divine Tower of East Altus",
+      "map_id": null
+    },
+    "34142951": {
+      "grace_name": "Divine Tower of East Altus",
+      "zone": "Divine Tower of East Altus Interior",
       "map_id": null
     },
     "34152950": {
@@ -1317,12 +1322,12 @@
     },
     "1035502950": {
       "grace_name": "Manor Upper Level",
-      "zone": "Liurnia",
+      "zone": "Liurnia - Caria Manor",
       "map_id": "m60_35_50_00"
     },
     "1035502951": {
       "grace_name": "Manor Lower Level",
-      "zone": "Liurnia",
+      "zone": "Liurnia - Caria Manor",
       "map_id": "m60_35_50_00"
     },
     "1035502952": {
@@ -1332,7 +1337,7 @@
     },
     "1035502953": {
       "grace_name": "Main Caria Manor Gate",
-      "zone": "Liurnia",
+      "zone": "Liurnia - Caria Manor",
       "map_id": "m60_35_50_00"
     },
     "1036412950": {
@@ -2055,6 +2060,11 @@
       "zone": "After Redmane Castle Boss",
       "map_id": "m60_51_36_00"
     },
+    "12022960": {
+      "grace_name": "Siofra Aqueduct",
+      "zone": "Nokron - Aqueduct-Facing Cliffs",
+      "map_id": "m12_02_00_00"
+    },
     "12022973": {
       "grace_name": "Siofra Aqueduct",
       "zone": "Siofra Aqueduct",
@@ -2094,6 +2104,16 @@
      "grace_name": "Audience Pathway",
      "zone": "Volcano Manor - Audience Pathway",
      "map_id": "m16_00_00_00"
+    },
+    "34132951": {
+     "grace_name": "Divine Tower of Caelid: Basement",
+     "zone": "Divine Tower of Caelid",
+     "map_id": "m34_13_00_00"
+    },
+    "34132952": {
+     "grace_name": "Divine Tower of Caelid: Center",
+     "zone": "Divine Tower of Caelid",
+     "map_id": "m34_13_00_00"
     }
   }
 }
