@@ -875,9 +875,11 @@ def compute_zone_exits(
                 continue
             seen_link_ids.add(pair_id)
 
-        # Check if target is in the same merged group (skip internal links)
-        if to_zone in merged_zones:
-            continue
+        # NOTE: We intentionally do NOT skip random links where to_zone is in merged_zones.
+        # Random links represent randomized fog gate destinations and should always be shown.
+        # Even if the target zone is reachable via preexisting (e.g., dropping down), the
+        # fog gate may have been randomized to go there, and players need to know about it.
+        # The "skip internal links" logic was removed to fix parallel link display issues.
 
         # Check if this link has been discovered
         discovered = is_link_discovered(discovered_links, pair_source, pair_target, zone_pairs)

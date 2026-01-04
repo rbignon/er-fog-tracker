@@ -1124,6 +1124,60 @@ class TestComputeZoneExits:
         assert "Upper Area" in merged_from_upper
         assert "Lower Area" in merged_from_upper
 
+    def test_random_link_parallel_to_preexisting_shown_as_exit(self):
+        """
+        Test that a random link is shown as an exit even when a parallel preexisting
+        link connects the same zones.
+
+        Bug scenario (Nokron):
+        - Nokron - Ancestral Woods -> Nokron to Siofra Path (preexisting, dropping down)
+        - Nokron - Ancestral Woods -> Nokron to Siofra Path (random, using Horned Remains)
+
+        Both links should appear as exits because they represent different warp mechanisms.
+        The random link should NOT be skipped just because the target is reachable via
+        preexisting.
+        """
+        zone_pairs = [
+            {
+                "id": "link-preexisting-dropdown",
+                "source": "Nokron - Ancestral Woods",
+                "target": "Nokron to Siofra Path",
+                "type": "preexisting",
+                "source_details": None,
+                "target_details": "dropping down below the east-side bridge",
+                "is_one_way": True,
+            },
+            {
+                "id": "link-random-horned-remains",
+                "source": "Nokron - Ancestral Woods",
+                "target": "Nokron to Siofra Path",
+                "type": "random",
+                "source_details": "using Horned Remains in Nokron",
+                "target_details": "arriving at the lake between Nokron and lower Siofra",
+                "is_one_way": True,
+            },
+        ]
+
+        # Both random links discovered
+        discovered = [
+            {"zone_link_id": "link-preexisting-dropdown"},
+            {"zone_link_id": "link-random-horned-remains"},
+        ]
+
+        # From Nokron - Ancestral Woods, the random exit should be shown
+        exits = compute_zone_exits(zone_pairs, discovered, "Nokron - Ancestral Woods")
+
+        # The random link should appear as an exit
+        exit_ids = [e.get("id") for e in exits]
+        assert (
+            "link-random-horned-remains" in exit_ids
+        ), "Random link should be shown as exit even when parallel preexisting exists"
+
+        # Verify the exit has the correct description
+        horned_exit = next(e for e in exits if e["id"] == "link-random-horned-remains")
+        assert horned_exit["description"] == "using Horned Remains in Nokron"
+        assert horned_exit["target"] == "Nokron to Siofra Path"
+
 
 class TestBackpropPreexistingPropagation:
     """
