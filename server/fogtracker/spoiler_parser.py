@@ -15,9 +15,12 @@ if TYPE_CHECKING:
 
 # Patterns that ALWAYS indicate a one-way connection
 ALWAYS_ONE_WAY_PATTERNS = [
-    # "sending gate" only triggers one-way when actively being used as a teleport
+    # "sending gate" triggers one-way when:
+    # - actively being used as a teleport (source): "using the sending gate"
+    # - arriving at a sending gate destination (target): "arriving at the sending gate"
     # NOT when mentioned as a location landmark (e.g., "opposite the Sending Gate")
     re.compile(r"using (?:the|a|an|either|a new) (?:new )?sending gate", re.IGNORECASE),
+    re.compile(r"arriving at (?:the|a) sending gate", re.IGNORECASE),
     re.compile(r"abducted", re.IGNORECASE),
     re.compile(r"dying", re.IGNORECASE),
     re.compile(r"burning the Sealing Tree", re.IGNORECASE),

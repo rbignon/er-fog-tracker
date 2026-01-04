@@ -409,6 +409,7 @@ class TestOneWayDetection:
         "description,expected_one_way",
         [
             ("using the sending gate", True),
+            ("arriving at the sending gate after some grace", True),  # Sending gate destination
             ("abducted by maiden", True),
             ("warp to destination", True),
             ("resting in the coffin", True),
@@ -476,6 +477,25 @@ class TestOneWayDetection:
         )
         conn = _parse_connection_line(line)
         assert conn is not None
+        assert conn.is_one_way is True
+
+    def test_arriving_at_sending_gate_destination_is_one_way(self):
+        """Arriving at a sending gate destination (in target_details) should be one-way.
+
+        When target_details mentions "arriving at the sending gate", it indicates
+        the destination is a vanilla sending gate location - these are teleport-only
+        destinations and should be one-way.
+        """
+        line = (
+            "  Random: Divine Tower of Liurnia "
+            "(opening the door at the bottom of the flipped tower) "
+            "--> Siofra River "
+            "(arriving at the sending gate after the Worshippers' Woods grace)"
+        )
+        conn = _parse_connection_line(line)
+        assert conn is not None
+        assert conn.source == "Divine Tower of Liurnia"
+        assert conn.target == "Siofra River"
         assert conn.is_one_way is True
 
     def test_return_to_entrance_fog_gate_is_bidirectional(self):
