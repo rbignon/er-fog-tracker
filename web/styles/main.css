@@ -45,7 +45,7 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background: 
+    background:
         radial-gradient(ellipse at 20% 30%, rgba(180, 140, 80, 0.03) 0%, transparent 50%),
         radial-gradient(ellipse at 80% 70%, rgba(120, 80, 40, 0.03) 0%, transparent 50%),
         url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
@@ -79,7 +79,7 @@ body::before {
     color: #d4c4a8;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     margin-bottom: 8px;
 }
 
@@ -163,7 +163,7 @@ body::before {
     border-color: #6a5d45;
     background: linear-gradient(135deg, #3a3530 0%, #2a2824 100%);
     color: #d4c4a8;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 /* Upload footer */
@@ -233,7 +233,7 @@ body::before {
     color: #d4c4a8;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .subtitle {
@@ -312,7 +312,6 @@ body::before {
     font-weight: 500;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
-
 
 #reset-exploration-btn {
     background: rgba(139, 69, 69, 0.3);
@@ -619,8 +618,13 @@ body::before {
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }
 
 /* Overlay mode (OBS browser source) */
@@ -693,7 +697,8 @@ body.overlay-mode .node.boss.viewer-selected .selection-ring {
 }
 
 @keyframes pulse-ring {
-    0%, 100% {
+    0%,
+    100% {
         transform: scale(1);
         opacity: 0.8;
     }
@@ -714,7 +719,9 @@ body.overlay-mode .node.boss.viewer-selected .selection-ring {
     border: 1px solid rgba(201, 162, 39, 0.5);
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
     z-index: 1000;
-    transition: opacity 0.3s, transform 0.3s;
+    transition:
+        opacity 0.3s,
+        transform 0.3s;
     min-width: 120px;
 }
 
@@ -849,9 +856,15 @@ body:not(.overlay-mode) #viewer-discovery-counter {
 
 /* Subtle pulse animation when count changes */
 @keyframes counter-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(201, 162, 39, 0.6); }
-    50% { box-shadow: 0 0 12px 4px rgba(201, 162, 39, 0.4); }
-    100% { box-shadow: 0 0 0 0 rgba(201, 162, 39, 0); }
+    0% {
+        box-shadow: 0 0 0 0 rgba(201, 162, 39, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 12px 4px rgba(201, 162, 39, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(201, 162, 39, 0);
+    }
 }
 
 #viewer-discovery-counter.updated {
@@ -872,7 +885,7 @@ label:hover {
     color: #c4b998;
 }
 
-input[type="checkbox"] {
+input[type='checkbox'] {
     appearance: none;
     width: 16px;
     height: 16px;
@@ -883,12 +896,12 @@ input[type="checkbox"] {
     transition: all 0.2s;
 }
 
-input[type="checkbox"]:checked {
+input[type='checkbox']:checked {
     background: #3a3020;
     border-color: #8a7d55;
 }
 
-input[type="checkbox"]:checked::after {
+input[type='checkbox']:checked::after {
     content: '✓';
     position: absolute;
     top: 50%;
@@ -1061,7 +1074,9 @@ input[type="checkbox"]:checked::after {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 svg {
@@ -1073,7 +1088,9 @@ svg {
 .link {
     fill: none;
     stroke-opacity: 0.6;
-    transition: stroke-opacity 0.2s, stroke-width 0.2s;
+    transition:
+        stroke-opacity 0.2s,
+        stroke-width 0.2s;
 }
 
 .link.random {
@@ -1285,12 +1302,14 @@ marker path {
     font-size: 11px;
     fill: #a09080;
     pointer-events: none;
-    text-shadow: 
+    text-shadow:
         -1px -1px 2px #0a0a0c,
         1px -1px 2px #0a0a0c,
         -1px 1px 2px #0a0a0c,
         1px 1px 2px #0a0a0c;
-    transition: fill 0.2s, opacity 0.2s;
+    transition:
+        fill 0.2s,
+        opacity 0.2s;
 }
 
 .node:hover text,
@@ -1449,7 +1468,7 @@ marker path {
     max-width: 450px;
     max-height: 70vh;
     overflow-y: auto;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 #tooltip.visible {
@@ -1502,7 +1521,6 @@ marker path {
     letter-spacing: 0.1em;
     margin-bottom: 6px;
 }
-
 
 #tooltip .conn-item .requires-info {
     font-size: 0.75rem;
@@ -1626,13 +1644,7 @@ marker path {
 }
 
 .legend-line.preexisting {
-    background: repeating-linear-gradient(
-        90deg,
-        #5a6a7a 0px,
-        #5a6a7a 6px,
-        transparent 6px,
-        transparent 10px
-    );
+    background: repeating-linear-gradient(90deg, #5a6a7a 0px, #5a6a7a 6px, transparent 6px, transparent 10px);
 }
 
 .legend-node {
@@ -1938,17 +1950,17 @@ marker path {
     #mod-status {
         display: none !important;
     }
-    
+
     /* Mode selector compact on mobile */
     #mode-selector {
         padding: 2px;
     }
-    
+
     .mode-btn {
         padding: 6px 10px;
         font-size: 0.8rem;
     }
-    
+
     /* Make header stack vertically on mobile */
     #header {
         grid-template-columns: 1fr;
@@ -1994,7 +2006,7 @@ marker path {
         width: 100%;
         justify-content: space-between;
     }
-    
+
     /* Tooltip fixed at bottom on mobile */
     #tooltip {
         position: fixed !important;
@@ -2012,12 +2024,12 @@ marker path {
         padding: 16px;
         box-sizing: border-box;
     }
-    
+
     #tooltip h3 {
         cursor: default; /* Disable drag cursor on mobile */
         padding-right: 30px;
     }
-    
+
     #tooltip .close-btn {
         font-size: 1.5rem;
         top: 12px;
@@ -2052,7 +2064,9 @@ marker path {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     opacity: 0;
     transform: translateY(20px);
-    transition: opacity 0.3s, transform 0.3s;
+    transition:
+        opacity 0.3s,
+        transform 0.3s;
     pointer-events: auto;
     max-width: 500px;
     position: relative;
@@ -2238,7 +2252,7 @@ marker path {
     color: #d4c4a8;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     margin-bottom: 8px;
 }
 
@@ -2377,7 +2391,9 @@ marker path {
     overflow: hidden;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s;
     border: 1px solid #3a3530;
 }
 
@@ -2586,7 +2602,10 @@ marker path {
 .mod-setup-content {
     max-height: 500px;
     overflow: hidden;
-    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    transition:
+        max-height 0.3s ease,
+        opacity 0.3s ease,
+        padding 0.3s ease;
     opacity: 1;
     padding: 0 20px 20px 20px;
     border-top: 1px solid #2a2520;
@@ -2943,7 +2962,7 @@ marker path {
     margin-bottom: 6px;
 }
 
-.form-row input[type="text"] {
+.form-row input[type='text'] {
     width: 100%;
     padding: 10px 12px;
     background: #0a0908;
@@ -2953,7 +2972,7 @@ marker path {
     font-size: 0.95rem;
 }
 
-.form-row input[type="text"]:focus {
+.form-row input[type='text']:focus {
     outline: none;
     border-color: #6a5d45;
 }
@@ -2972,7 +2991,6 @@ marker path {
     gap: 12px;
     margin-top: 20px;
 }
-
 
 .error-message {
     color: #c45a2c;
@@ -3060,7 +3078,9 @@ marker path {
     height: 40px;
     color: #9146ff;
     border-radius: 8px;
-    transition: background 0.2s, color 0.2s;
+    transition:
+        background 0.2s,
+        color 0.2s;
 }
 
 .user-games-header .twitch-link:hover {
@@ -3191,19 +3211,59 @@ marker path {
 }
 
 /* Counter position classes for main UI (used in /play mode) */
-#viewer-discovery-counter.counter-pos-br { bottom: 24px; right: 24px; }
-#viewer-discovery-counter.counter-pos-bl { bottom: 24px; left: 24px; }
-#viewer-discovery-counter.counter-pos-tr { top: 24px; right: 24px; }
-#viewer-discovery-counter.counter-pos-tl { top: 24px; left: 24px; }
-#viewer-discovery-counter.counter-pos-t { top: 24px; left: 50%; transform: translateX(-50%); }
-#viewer-discovery-counter.counter-pos-b { bottom: 24px; left: 50%; transform: translateX(-50%); }
-#viewer-discovery-counter.counter-pos-l { left: 24px; top: 50%; transform: translateY(-50%); }
-#viewer-discovery-counter.counter-pos-r { right: 24px; top: 50%; transform: translateY(-50%); }
+#viewer-discovery-counter.counter-pos-br {
+    bottom: 24px;
+    right: 24px;
+}
+#viewer-discovery-counter.counter-pos-bl {
+    bottom: 24px;
+    left: 24px;
+}
+#viewer-discovery-counter.counter-pos-tr {
+    top: 24px;
+    right: 24px;
+}
+#viewer-discovery-counter.counter-pos-tl {
+    top: 24px;
+    left: 24px;
+}
+#viewer-discovery-counter.counter-pos-t {
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+#viewer-discovery-counter.counter-pos-b {
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+#viewer-discovery-counter.counter-pos-l {
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+#viewer-discovery-counter.counter-pos-r {
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+}
 
-#viewer-discovery-counter.counter-size-sm { font-size: 1rem; padding: 8px 12px; }
-#viewer-discovery-counter.counter-size-md { font-size: 1.4rem; padding: 12px 18px; }
-#viewer-discovery-counter.counter-size-lg { font-size: 2rem; padding: 16px 24px; }
-#viewer-discovery-counter.counter-size-xl { font-size: 2.8rem; padding: 20px 32px; }
+#viewer-discovery-counter.counter-size-sm {
+    font-size: 1rem;
+    padding: 8px 12px;
+}
+#viewer-discovery-counter.counter-size-md {
+    font-size: 1.4rem;
+    padding: 12px 18px;
+}
+#viewer-discovery-counter.counter-size-lg {
+    font-size: 2rem;
+    padding: 16px 24px;
+}
+#viewer-discovery-counter.counter-size-xl {
+    font-size: 2.8rem;
+    padding: 20px 32px;
+}
 
 /* ============================================================
    Help Page
@@ -3218,6 +3278,39 @@ marker path {
     max-width: 900px;
     margin: 0 auto;
     padding: 40px 48px;
+}
+
+.help-toc {
+    background: rgba(58, 53, 47, 0.3);
+    border: 1px solid #3a352f;
+    border-radius: 8px;
+    padding: 20px 24px 20px 48px;
+    margin-bottom: 32px;
+}
+
+.help-toc ol {
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, auto);
+    grid-auto-flow: column;
+    gap: 8px 32px;
+}
+
+.help-toc li {
+    color: #9a8d75;
+    font-size: 0.95rem;
+}
+
+.help-toc a {
+    color: #d4c4a0;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.help-toc a:hover {
+    color: #c9a227;
 }
 
 .help-section {
@@ -3495,6 +3588,14 @@ marker path {
 
     .help-subsection {
         padding-left: 0;
+    }
+
+    .help-toc {
+        padding: 16px 16px 16px 40px;
+    }
+
+    .help-toc ol {
+        grid-template-columns: 1fr;
     }
 
     .help-table td:first-child {

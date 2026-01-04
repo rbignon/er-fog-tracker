@@ -245,6 +245,9 @@ async function initPlayMode(gameId) {
         const hasPositions = State.getNodePositions().size > 0;
         State.emit('graphNeedsRender', { preservePositions: hasPositions });
 
+        // Update mode buttons (show Reset button if in explorer mode)
+        UI.updateModeButtons();
+
         // Hide loading after render starts (graph will appear shortly)
         setGraphLoading(false);
     } catch (e) {

@@ -1,70 +1,293 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fog Gate Randomizer Tracker</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="stylesheet" href="/styles/main.css">
-</head>
-<body>
-    <!-- =========================================================================
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Fog Gate Randomizer Tracker</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+        <link rel="stylesheet" href="/styles/main.css" />
+    </head>
+    <body>
+        <!-- =========================================================================
          Landing Page (/)
          ========================================================================= -->
-    <div id="landing-page" class="page">
-        <div class="landing-content">
-            <h1>Fog Gate Randomizer Tracker</h1>
-            <p class="subtitle">Visualize, track, and share your Fog Gate Randomizer exploration progress with your stream audience in real-time.</p>
+        <div id="landing-page" class="page">
+            <div class="landing-content">
+                <h1>Fog Gate Randomizer Tracker</h1>
+                <p class="subtitle">
+                    Visualize, track, and share your Fog Gate Randomizer exploration progress with your stream audience
+                    in real-time.
+                </p>
 
-            <div class="landing-screenshots">
-                <a href="/help">
-                    <figure>
-                        <img src="/help/ingame.png" alt="In-game overlay showing current zone and exits">
-                    </figure>
-                </a>
-                <a href="/help">
-                    <figure>
-                        <img src="/help/web-graph.png" alt="Interactive web graph visualization">
-                    </figure>
-                </a>
-            </div>
-
-            <div class="landing-about">
-                <p>The <a href="https://www.nexusmods.com/eldenring/mods/3295" target="_blank">Fog Gate Randomizer</a> is a mod for Elden Ring that randomizes where each fog gate leads. Instead of predictable connections, every fog gate becomes a mystery — stepping through might take you to a late-game area, a boss arena, or somewhere completely unexpected.</p>
-                <p>This transforms Elden Ring into a roguelike exploration experience where you must carefully navigate the world, discover new paths, and adapt your route based on what you find.</p>
-
-                <h3>What does this tracker do?</h3>
-                <p>The <strong>Fog Gate Randomizer Tracker</strong> helps you keep track of your discoveries:</p>
-                <ul>
-                    <li><strong>Interactive graph</strong> — Visualize all zones and their connections as you discover them</li>
-                    <li><strong>In-game overlay</strong> — See your current zone and available exits without leaving the game</li>
-                    <li><strong>Automatic tracking</strong> — The mod detects fog gate traversals and updates the graph in real-time</li>
-                    <li><strong>Exploration mode</strong> — Undiscovered connections show as "???" to avoid spoilers</li>
-                    <li><strong>Stream integration</strong> — Share your progress with viewers via an OBS overlay or interactive link</li>
-                </ul>
-            </div>
-
-            <div class="landing-actions">
-                <button id="login-twitch-btn" class="btn-twitch">
-                    <svg class="twitch-icon" viewBox="0 0 24 24" width="20" height="20">
-                        <path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
-                    </svg>
-                    Login with Twitch
-                </button>
-
-                <div class="landing-divider">
-                    <span>or</span>
+                <div class="landing-screenshots">
+                    <a href="/help">
+                        <figure>
+                            <img src="/help/ingame.png" alt="In-game overlay showing current zone and exits" />
+                        </figure>
+                    </a>
+                    <a href="/help">
+                        <figure>
+                            <img src="/help/web-graph.png" alt="Interactive web graph visualization" />
+                        </figure>
+                    </a>
                 </div>
 
-                <a href="/?offline=true" class="btn-secondary">Use Offline Mode</a>
+                <div class="landing-about">
+                    <p>
+                        The
+                        <a href="https://www.nexusmods.com/eldenring/mods/3295" target="_blank">Fog Gate Randomizer</a>
+                        is a mod for Elden Ring that randomizes where each fog gate leads. Instead of predictable
+                        connections, every fog gate becomes a mystery — stepping through might take you to a late-game
+                        area, a boss arena, or somewhere completely unexpected.
+                    </p>
+                    <p>
+                        This transforms Elden Ring into a roguelike exploration experience where you must carefully
+                        navigate the world, discover new paths, and adapt your route based on what you find.
+                    </p>
+
+                    <h3>What does this tracker do?</h3>
+                    <p>The <strong>Fog Gate Randomizer Tracker</strong> helps you keep track of your discoveries:</p>
+                    <ul>
+                        <li>
+                            <strong>Interactive graph</strong> — Visualize all zones and their connections as you
+                            discover them
+                        </li>
+                        <li>
+                            <strong>In-game overlay</strong> — See your current zone and available exits without leaving
+                            the game
+                        </li>
+                        <li>
+                            <strong>Automatic tracking</strong> — The mod detects fog gate traversals and updates the
+                            graph in real-time
+                        </li>
+                        <li>
+                            <strong>Exploration mode</strong> — Undiscovered connections show as "???" to avoid spoilers
+                        </li>
+                        <li>
+                            <strong>Stream integration</strong> — Share your progress with viewers via an OBS overlay or
+                            interactive link
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="landing-actions">
+                    <button id="login-twitch-btn" class="btn-twitch">
+                        <svg class="twitch-icon" viewBox="0 0 24 24" width="20" height="20">
+                            <path
+                                fill="currentColor"
+                                d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"
+                            />
+                        </svg>
+                        Login with Twitch
+                    </button>
+
+                    <div class="landing-divider">
+                        <span>or</span>
+                    </div>
+
+                    <a href="/?offline=true" class="btn-secondary">Use Offline Mode</a>
+                </div>
+
+                <p class="landing-help-link">Need help getting started? <a href="/help">Read the Setup Guide →</a></p>
+
+                <footer class="landing-footer">
+                    <p>Developed by <strong>wospins</strong></p>
+                    <p class="footer-links">
+                        <a href="https://github.com/rbignon/er-fog-tracker" target="_blank">GitHub</a>
+                        <span class="separator">•</span>
+                        <a href="https://www.nexusmods.com/eldenring/mods/3295" target="_blank"
+                            >Fog Gate Randomizer Mod</a
+                        >
+                    </p>
+                </footer>
+            </div>
+        </div>
+
+        <!-- =========================================================================
+         Dashboard Page (/dashboard)
+         ========================================================================= -->
+        <div id="dashboard-page" class="page hidden">
+            <header class="page-header dashboard-header">
+                <div class="dashboard-title">
+                    <h1>Your Games</h1>
+                </div>
+                <div class="dashboard-user">
+                    <img id="dashboard-avatar" class="user-avatar" src="" alt="" />
+                    <span id="dashboard-username"></span>
+                    <button id="logout-btn" class="btn-secondary btn-small">Logout</button>
+                </div>
+            </header>
+
+            <main class="dashboard-main">
+                <!-- Mod Setup Banner -->
+                <div id="mod-setup-banner" class="mod-setup-banner">
+                    <div class="mod-setup-header" id="mod-setup-toggle">
+                        <span class="mod-setup-title">Automatic Tracking with the In-Game Mod</span>
+                        <span class="mod-setup-chevron" id="mod-setup-chevron">▲</span>
+                    </div>
+                    <div class="mod-setup-content" id="mod-setup-content">
+                        <div class="mod-setup-steps">
+                            <div class="mod-setup-step">
+                                <span class="step-number">①</span>
+                                <span class="step-text">Download the launcher</span>
+                                <a
+                                    href="https://github.com/rbignon/er-fog-tracker/releases"
+                                    target="_blank"
+                                    class="btn-primary btn-download"
+                                >
+                                    Download for Windows
+                                </a>
+                            </div>
+                            <div class="mod-setup-step">
+                                <span class="step-number">②</span>
+                                <span class="step-text">Configure the launcher with these credentials:</span>
+                            </div>
+                            <div class="mod-setup-credentials">
+                                <div class="credential-field">
+                                    <label>Server URL</label>
+                                    <div class="credential-input-row">
+                                        <input type="text" id="mod-server-url" readonly />
+                                        <button
+                                            class="btn-icon btn-copy-field"
+                                            data-target="mod-server-url"
+                                            title="Copy"
+                                        >
+                                            📋
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="credential-field">
+                                    <label>Your Token</label>
+                                    <div class="credential-input-row">
+                                        <input type="password" id="mod-token-field" readonly />
+                                        <button
+                                            class="btn-icon btn-toggle-visibility"
+                                            data-target="mod-token-field"
+                                            title="Show/Hide"
+                                        >
+                                            👁
+                                        </button>
+                                        <button
+                                            class="btn-icon btn-copy-field"
+                                            data-target="mod-token-field"
+                                            title="Copy"
+                                        >
+                                            📋
+                                        </button>
+                                    </div>
+                                    <button id="regenerate-token-btn" class="btn-secondary btn-small btn-regenerate">
+                                        Regenerate token
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mod-setup-step">
+                                <span class="step-number">③</span>
+                                <span class="step-text"
+                                    >Select or create a game in the launcher — it will sync automatically!</span
+                                >
+                                <span class="step-tip"
+                                    >💡 Tip: Creating the game from the launcher parses the fog randomizer directory for
+                                    more accurate automatic tracking.</span
+                                >
+                            </div>
+                        </div>
+                        <div class="mod-setup-help">
+                            <a href="/help">Need more help? Read the full setup guide →</a>
+                        </div>
+                    </div>
+                </div>
+                <div id="games-list" class="games-grid">
+                    <!-- Game cards populated dynamically, including placeholder card -->
+                </div>
+                <div id="games-loading" class="games-loading">
+                    <p>Loading your games...</p>
+                </div>
+                <!-- Hidden file input for new game -->
+                <input type="file" id="new-game-file-input" accept=".txt,.log" class="hidden" />
+            </main>
+        </div>
+
+        <!-- New Game Modal -->
+        <div id="new-game-modal" class="modal hidden">
+            <div class="modal-content">
+                <button id="close-new-game-modal" class="modal-close-btn">&times;</button>
+                <h3>Create New Game</h3>
+                <div class="form-row">
+                    <label for="new-game-label">Game Label (optional)</label>
+                    <input type="text" id="new-game-label" placeholder="e.g., Malenia Run" />
+                </div>
+                <div class="form-row">
+                    <span class="seed-info">Seed: <span id="new-game-seed"></span></span>
+                </div>
+                <div id="new-game-error" class="error-message hidden"></div>
+                <div class="form-actions">
+                    <button id="cancel-new-game-btn" class="btn-secondary">Cancel</button>
+                    <button id="create-game-btn" class="btn-primary">Create Game</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================================
+         User Games Page (/watch/:username)
+         ========================================================================= -->
+        <div id="user-games-page" class="page hidden">
+            <header class="page-header user-games-header">
+                <img id="user-games-avatar" class="user-avatar" src="" alt="Avatar" />
+                <h1><span id="user-games-displayname"></span>'s Games</h1>
+                <a
+                    id="user-games-twitch-link"
+                    class="twitch-link"
+                    href="#"
+                    target="_blank"
+                    rel="noopener"
+                    title="Watch on Twitch"
+                >
+                    <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"
+                        />
+                    </svg>
+                </a>
+            </header>
+
+            <main class="user-games-main">
+                <div id="user-games-list" class="games-grid">
+                    <!-- Populated dynamically -->
+                </div>
+                <div id="user-games-empty" class="games-empty hidden">
+                    <p>This user has no public games.</p>
+                </div>
+                <div id="user-games-loading" class="games-loading">
+                    <p>Loading games...</p>
+                </div>
+                <div id="user-games-error" class="error-message hidden"></div>
+            </main>
+        </div>
+
+        <!-- =========================================================================
+         Offline Upload Screen (/?offline=true)
+         ========================================================================= -->
+        <div id="upload-screen" class="page hidden">
+            <a href="/" class="back-btn offline-back">← Back to Login</a>
+            <h1>Fog Gate Randomizer Tracker</h1>
+            <p class="subtitle">Offline Mode</p>
+
+            <div id="drop-zone" class="drop-zone">
+                <div class="icon">📂</div>
+                <p>Drop your spoiler log file here</p>
+                <p class="hint">or click to browse</p>
+            </div>
+            <input type="file" id="file-input" accept=".txt,.log" />
+
+            <div id="demo-section">
+                <p class="demo-separator">— or —</p>
+                <button id="demo-btn">Try Demo (Seed 561689827)</button>
             </div>
 
-            <p class="landing-help-link">
-                Need help getting started? <a href="/help">Read the Setup Guide →</a>
-            </p>
+            <div id="error-message" class="error-message"></div>
 
-            <footer class="landing-footer">
+            <footer id="upload-footer">
                 <p>Developed by <strong>wospins</strong></p>
                 <p class="footer-links">
                     <a href="https://github.com/rbignon/er-fog-tracker" target="_blank">GitHub</a>
@@ -73,538 +296,478 @@
                 </p>
             </footer>
         </div>
-    </div>
 
-    <!-- =========================================================================
-         Dashboard Page (/dashboard)
-         ========================================================================= -->
-    <div id="dashboard-page" class="page hidden">
-        <header class="page-header dashboard-header">
-            <div class="dashboard-title">
-                <h1>Your Games</h1>
-            </div>
-            <div class="dashboard-user">
-                <img id="dashboard-avatar" class="user-avatar" src="" alt="">
-                <span id="dashboard-username"></span>
-                <button id="logout-btn" class="btn-secondary btn-small">Logout</button>
-            </div>
-        </header>
-
-        <main class="dashboard-main">
-            <!-- Mod Setup Banner -->
-            <div id="mod-setup-banner" class="mod-setup-banner">
-                <div class="mod-setup-header" id="mod-setup-toggle">
-                    <span class="mod-setup-title">Automatic Tracking with the In-Game Mod</span>
-                    <span class="mod-setup-chevron" id="mod-setup-chevron">▲</span>
-                </div>
-                <div class="mod-setup-content" id="mod-setup-content">
-                    <div class="mod-setup-steps">
-                        <div class="mod-setup-step">
-                            <span class="step-number">①</span>
-                            <span class="step-text">Download the launcher</span>
-                            <a href="https://github.com/rbignon/er-fog-tracker/releases" target="_blank" class="btn-primary btn-download">
-                                Download for Windows
-                            </a>
-                        </div>
-                        <div class="mod-setup-step">
-                            <span class="step-number">②</span>
-                            <span class="step-text">Configure the launcher with these credentials:</span>
-                        </div>
-                        <div class="mod-setup-credentials">
-                            <div class="credential-field">
-                                <label>Server URL</label>
-                                <div class="credential-input-row">
-                                    <input type="text" id="mod-server-url" readonly>
-                                    <button class="btn-icon btn-copy-field" data-target="mod-server-url" title="Copy">📋</button>
-                                </div>
-                            </div>
-                            <div class="credential-field">
-                                <label>Your Token</label>
-                                <div class="credential-input-row">
-                                    <input type="password" id="mod-token-field" readonly>
-                                    <button class="btn-icon btn-toggle-visibility" data-target="mod-token-field" title="Show/Hide">👁</button>
-                                    <button class="btn-icon btn-copy-field" data-target="mod-token-field" title="Copy">📋</button>
-                                </div>
-                                <button id="regenerate-token-btn" class="btn-secondary btn-small btn-regenerate">Regenerate token</button>
-                            </div>
-                        </div>
-                        <div class="mod-setup-step">
-                            <span class="step-number">③</span>
-                            <span class="step-text">Select or create a game in the launcher — it will sync automatically!</span>
-                            <span class="step-tip">💡 Tip: Creating the game from the launcher parses the fog randomizer directory for more accurate automatic tracking.</span>
-                        </div>
-                    </div>
-                    <div class="mod-setup-help">
-                        <a href="/help">Need more help? Read the full setup guide →</a>
-                    </div>
-                </div>
-            </div>
-            <div id="games-list" class="games-grid">
-                <!-- Game cards populated dynamically, including placeholder card -->
-            </div>
-            <div id="games-loading" class="games-loading">
-                <p>Loading your games...</p>
-            </div>
-            <!-- Hidden file input for new game -->
-            <input type="file" id="new-game-file-input" accept=".txt,.log" class="hidden">
-        </main>
-    </div>
-
-    <!-- New Game Modal -->
-    <div id="new-game-modal" class="modal hidden">
-        <div class="modal-content">
-            <button id="close-new-game-modal" class="modal-close-btn">&times;</button>
-            <h3>Create New Game</h3>
-            <div class="form-row">
-                <label for="new-game-label">Game Label (optional)</label>
-                <input type="text" id="new-game-label" placeholder="e.g., Malenia Run">
-            </div>
-            <div class="form-row">
-                <span class="seed-info">Seed: <span id="new-game-seed"></span></span>
-            </div>
-            <div id="new-game-error" class="error-message hidden"></div>
-            <div class="form-actions">
-                <button id="cancel-new-game-btn" class="btn-secondary">Cancel</button>
-                <button id="create-game-btn" class="btn-primary">Create Game</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- =========================================================================
-         User Games Page (/watch/:username)
-         ========================================================================= -->
-    <div id="user-games-page" class="page hidden">
-        <header class="page-header user-games-header">
-            <img id="user-games-avatar" class="user-avatar" src="" alt="Avatar">
-            <h1><span id="user-games-displayname"></span>'s Games</h1>
-            <a id="user-games-twitch-link" class="twitch-link" href="#" target="_blank" rel="noopener" title="Watch on Twitch">
-                <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
-                </svg>
-            </a>
-        </header>
-
-        <main class="user-games-main">
-            <div id="user-games-list" class="games-grid">
-                <!-- Populated dynamically -->
-            </div>
-            <div id="user-games-empty" class="games-empty hidden">
-                <p>This user has no public games.</p>
-            </div>
-            <div id="user-games-loading" class="games-loading">
-                <p>Loading games...</p>
-            </div>
-            <div id="user-games-error" class="error-message hidden"></div>
-        </main>
-    </div>
-
-    <!-- =========================================================================
-         Offline Upload Screen (/?offline=true)
-         ========================================================================= -->
-    <div id="upload-screen" class="page hidden">
-        <a href="/" class="back-btn offline-back">← Back to Login</a>
-        <h1>Fog Gate Randomizer Tracker</h1>
-        <p class="subtitle">Offline Mode</p>
-
-        <div id="drop-zone" class="drop-zone">
-            <div class="icon">📂</div>
-            <p>Drop your spoiler log file here</p>
-            <p class="hint">or click to browse</p>
-        </div>
-        <input type="file" id="file-input" accept=".txt,.log">
-
-        <div id="demo-section">
-            <p class="demo-separator">— or —</p>
-            <button id="demo-btn">Try Demo (Seed 561689827)</button>
-        </div>
-
-        <div id="error-message" class="error-message"></div>
-
-        <footer id="upload-footer">
-            <p>Developed by <strong>wospins</strong></p>
-            <p class="footer-links">
-                <a href="https://github.com/rbignon/er-fog-tracker" target="_blank">GitHub</a>
-                <span class="separator">•</span>
-                <a href="https://www.nexusmods.com/eldenring/mods/3295" target="_blank">Fog Gate Randomizer Mod</a>
-            </p>
-        </footer>
-    </div>
-
-    <!-- =========================================================================
+        <!-- =========================================================================
          Main Graph UI (/play/:gameId, /watch/:username/:gameId, offline after upload)
          ========================================================================= -->
-    <div id="main-ui" class="page hidden">
-        <div id="header">
-            <div class="header-left">
-                <a id="header-title-link" href="/" class="title-link"><h1>Fog Gate Randomizer Tracker</h1></a>
-                <div class="subtitle">
-                    <span id="seed-info">Loading...</span>
-                    <a id="header-back-link" href="/dashboard" class="back-link hidden">← Dashboard</a>
+        <div id="main-ui" class="page hidden">
+            <div id="header">
+                <div class="header-left">
+                    <a id="header-title-link" href="/" class="title-link"><h1>Fog Gate Randomizer Tracker</h1></a>
+                    <div class="subtitle">
+                        <span id="seed-info">Loading...</span>
+                        <a id="header-back-link" href="/dashboard" class="back-link hidden">← Dashboard</a>
+                    </div>
+                </div>
+                <div class="header-center">
+                    <div id="search-container">
+                        <input type="text" id="search" placeholder="Search area..." />
+                        <button id="search-clear" class="search-clear hidden" type="button" title="Clear search">
+                            &times;
+                        </button>
+                        <div id="search-dropdown"></div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div id="explorer-controls" class="hidden">
+                        <button id="reset-exploration-btn" title="Reset exploration progress">Reset</button>
+                    </div>
+                    <div id="mode-selector">
+                        <button id="mode-explorer" class="mode-btn active" title="Discover areas as you play">
+                            Explorer
+                        </button>
+                        <button id="mode-spoiler" class="mode-btn" title="See the entire map">Full Spoiler</button>
+                    </div>
+                    <div id="mod-status" class="mod-status hidden" title="Mod connection status">
+                        <span class="mod-status-indicator"></span>
+                        <span class="mod-status-text">Mod</span>
+                    </div>
+                    <button id="stream-btn" title="Share viewer URL for OBS">Stream</button>
+                    <button id="new-file-btn">Load New File</button>
                 </div>
             </div>
-            <div class="header-center">
-                <div id="search-container">
-                    <input type="text" id="search" placeholder="Search area...">
-                    <button id="search-clear" class="search-clear hidden" type="button" title="Clear search">&times;</button>
-                    <div id="search-dropdown"></div>
+
+            <div id="graph-container">
+                <div id="graph-loading" class="graph-loading">
+                    <div class="loading-spinner"></div>
+                    <span>Loading game...</span>
+                </div>
+                <svg></svg>
+            </div>
+
+            <div id="tooltip">
+                <span class="close-btn">&times;</span>
+                <h3></h3>
+                <div class="content"></div>
+            </div>
+
+            <div id="legend">
+                <h4>Legend</h4>
+                <div class="legend-item">
+                    <div class="legend-line random"></div>
+                    <span>Randomized Fog Gate</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line preexisting"></div>
+                    <span>Pre-existing Connection</span>
+                </div>
+                <div class="legend-item hidden" id="legend-requires-item">
+                    <div class="legend-line requires-item"></div>
+                    <span>Requires Key Item</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-node start"></div>
+                    <span>Starting Area</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-node normal"></div>
+                    <span>Normal Area</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-node boss"></div>
+                    <span>Boss Arena</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-node end"></div>
+                    <span>End Area</span>
+                </div>
+                <div class="legend-item legend-separator">
+                    <div class="legend-node normal"></div>
+                    <span>Passage (≤2 links)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-node normal hub"></div>
+                    <span>Interchange (3+ links)</span>
                 </div>
             </div>
-            <div class="header-right">
-                <div id="explorer-controls" class="hidden">
-                    <button id="reset-exploration-btn" title="Reset exploration progress">Reset</button>
+
+            <div id="stats">
+                <div id="stats-options">
+                    <label title="Highlight unexplored areas and their access points">
+                        <input type="checkbox" id="show-frontier-checkbox" />
+                        Frontier
+                    </label>
+                    <label title="When clicking a node, highlight the path from Chapel of Anticipation">
+                        <input type="checkbox" id="show-path-from-start" checked />
+                        Path from start
+                    </label>
                 </div>
-                <div id="mode-selector">
-                    <button id="mode-explorer" class="mode-btn active" title="Discover areas as you play">Explorer</button>
-                    <button id="mode-spoiler" class="mode-btn" title="See the entire map">Full Spoiler</button>
+                <div id="stats-tags" class="hidden">
+                    <div class="stats-tags-title">Tags</div>
+                    <div id="stats-tags-list"></div>
                 </div>
-                <div id="mod-status" class="mod-status hidden" title="Mod connection status">
-                    <span class="mod-status-indicator"></span>
-                    <span class="mod-status-text">Mod</span>
+                <div id="stats-numbers">
+                    <p id="discovered-stat" class="hidden">
+                        Discovered: <span id="discovered-count">0</span>/<span id="total-areas">0</span> (<span
+                            id="discovered-percent"
+                            >0</span
+                        >%)
+                    </p>
+                    <p>Areas: <span id="area-count">0</span></p>
+                    <p>Interchanges: <span id="hub-count">0</span></p>
+                    <p>Fog Gates: <span id="random-count">0</span></p>
+                    <p>Pre-existing: <span id="preexisting-count">0</span></p>
                 </div>
-                <button id="stream-btn" title="Share viewer URL for OBS">Stream</button>
-                <button id="new-file-btn">Load New File</button>
+            </div>
+
+            <div id="help">
+                Scroll to zoom • Drag to pan<br />
+                Click node for details panel<br />
+                Hover connections for travel info<br />
+                <strong>D</strong> discover • <strong>U</strong> undiscover • <strong>F</strong> frontier •
+                <strong>P</strong> path • <strong>Esc</strong> close
+            </div>
+
+            <!-- Viewer mode discovery counter (OBS overlay) -->
+            <div id="viewer-discovery-counter" class="hidden">
+                <div class="counter-text">
+                    <span id="viewer-discovered">0</span>/<span id="viewer-total">0</span>
+                    <span id="viewer-percent" class="counter-percent"></span>
+                </div>
+                <div class="counter-progress">
+                    <div id="viewer-progress-bar" class="counter-progress-fill"></div>
+                </div>
             </div>
         </div>
 
-        <div id="graph-container">
-            <div id="graph-loading" class="graph-loading">
-                <div class="loading-spinner"></div>
-                <span>Loading game...</span>
-            </div>
-            <svg></svg>
-        </div>
-
-        <div id="tooltip">
-            <span class="close-btn">&times;</span>
-            <h3></h3>
-            <div class="content"></div>
-        </div>
-
-        <div id="legend">
-            <h4>Legend</h4>
-            <div class="legend-item">
-                <div class="legend-line random"></div>
-                <span>Randomized Fog Gate</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-line preexisting"></div>
-                <span>Pre-existing Connection</span>
-            </div>
-            <div class="legend-item hidden" id="legend-requires-item">
-                <div class="legend-line requires-item"></div>
-                <span>Requires Key Item</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-node start"></div>
-                <span>Starting Area</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-node normal"></div>
-                <span>Normal Area</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-node boss"></div>
-                <span>Boss Arena</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-node end"></div>
-                <span>End Area</span>
-            </div>
-            <div class="legend-item legend-separator">
-                <div class="legend-node normal"></div>
-                <span>Passage (≤2 links)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-node normal hub"></div>
-                <span>Interchange (3+ links)</span>
-            </div>
-        </div>
-
-        <div id="stats">
-            <div id="stats-options">
-                <label title="Highlight unexplored areas and their access points">
-                    <input type="checkbox" id="show-frontier-checkbox">
-                    Frontier
-                </label>
-                <label title="When clicking a node, highlight the path from Chapel of Anticipation">
-                    <input type="checkbox" id="show-path-from-start" checked>
-                    Path from start
-                </label>
-            </div>
-            <div id="stats-tags" class="hidden">
-                <div class="stats-tags-title">Tags</div>
-                <div id="stats-tags-list"></div>
-            </div>
-            <div id="stats-numbers">
-                <p id="discovered-stat" class="hidden">Discovered: <span id="discovered-count">0</span>/<span id="total-areas">0</span> (<span id="discovered-percent">0</span>%)</p>
-                <p>Areas: <span id="area-count">0</span></p>
-                <p>Interchanges: <span id="hub-count">0</span></p>
-                <p>Fog Gates: <span id="random-count">0</span></p>
-                <p>Pre-existing: <span id="preexisting-count">0</span></p>
-            </div>
-        </div>
-
-        <div id="help">
-            Scroll to zoom • Drag to pan<br>
-            Click node for details panel<br>
-            Hover connections for travel info<br>
-            <strong>D</strong> discover • <strong>U</strong> undiscover • <strong>F</strong> frontier • <strong>P</strong> path • <strong>Esc</strong> close
-        </div>
-
-        <!-- Viewer mode discovery counter (OBS overlay) -->
-        <div id="viewer-discovery-counter" class="hidden">
-            <div class="counter-text">
-                <span id="viewer-discovered">0</span>/<span id="viewer-total">0</span>
-                <span id="viewer-percent" class="counter-percent"></span>
-            </div>
-            <div class="counter-progress">
-                <div id="viewer-progress-bar" class="counter-progress-fill"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- =========================================================================
+        <!-- =========================================================================
          Stream Modal - Share Links
          ========================================================================= -->
-    <div id="stream-modal" class="modal hidden">
-        <div class="stream-modal-content stream-modal-wide">
-            <button id="close-stream-modal" class="modal-close-btn">&times;</button>
-            <h3>Streamer links</h3>
+        <div id="stream-modal" class="modal hidden">
+            <div class="stream-modal-content stream-modal-wide">
+                <button id="close-stream-modal" class="modal-close-btn">&times;</button>
+                <h3>Streamer links</h3>
 
-            <!-- Viewer Link Section -->
-            <div class="stream-section">
-                <h4>Viewer Link</h4>
-                <p class="stream-section-desc">Share with your chat or Discord for read-only viewing</p>
-                <div class="stream-url-row">
-                    <input type="text" id="viewer-url-input" class="stream-url-input" readonly>
-                    <button id="copy-viewer-url-btn" class="btn-icon" title="Copy">📋</button>
+                <!-- Viewer Link Section -->
+                <div class="stream-section">
+                    <h4>Viewer Link</h4>
+                    <p class="stream-section-desc">Share with your chat or Discord for read-only viewing</p>
+                    <div class="stream-url-row">
+                        <input type="text" id="viewer-url-input" class="stream-url-input" readonly />
+                        <button id="copy-viewer-url-btn" class="btn-icon" title="Copy">📋</button>
+                    </div>
                 </div>
-            </div>
 
-            <!-- OBS Overlay Section -->
-            <div class="stream-section">
-                <h4>OBS Overlay</h4>
-                <p class="stream-section-desc">Browser source URL for streaming</p>
-                <div class="stream-url-row">
-                    <input type="text" id="stream-url-input" class="stream-url-input" readonly>
-                    <button id="copy-url-btn" class="btn-icon" title="Copy">📋</button>
-                </div>
-                <div class="stream-options">
-                    <div class="form-row">
-                        <label for="counter-position">Counter Position:</label>
-                        <select id="counter-position">
-                            <option value="br">Bottom Right</option>
-                            <option value="bl">Bottom Left</option>
-                            <option value="tr">Top Right</option>
-                            <option value="tl">Top Left</option>
-                            <option value="t">Top Center</option>
-                            <option value="b">Bottom Center</option>
-                            <option value="l">Left Center</option>
-                            <option value="r">Right Center</option>
-                            <option value="off">Hidden</option>
-                        </select>
+                <!-- OBS Overlay Section -->
+                <div class="stream-section">
+                    <h4>OBS Overlay</h4>
+                    <p class="stream-section-desc">Browser source URL for streaming</p>
+                    <div class="stream-url-row">
+                        <input type="text" id="stream-url-input" class="stream-url-input" readonly />
+                        <button id="copy-url-btn" class="btn-icon" title="Copy">📋</button>
                     </div>
-                    <div class="form-row">
-                        <label for="counter-size">Counter Size:</label>
-                        <select id="counter-size">
-                            <option value="sm">Small</option>
-                            <option value="md" selected>Medium</option>
-                            <option value="lg">Large</option>
-                            <option value="xl">Extra Large</option>
-                        </select>
+                    <div class="stream-options">
+                        <div class="form-row">
+                            <label for="counter-position">Counter Position:</label>
+                            <select id="counter-position">
+                                <option value="br">Bottom Right</option>
+                                <option value="bl">Bottom Left</option>
+                                <option value="tr">Top Right</option>
+                                <option value="tl">Top Left</option>
+                                <option value="t">Top Center</option>
+                                <option value="b">Bottom Center</option>
+                                <option value="l">Left Center</option>
+                                <option value="r">Right Center</option>
+                                <option value="off">Hidden</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label for="counter-size">Counter Size:</label>
+                            <select id="counter-size">
+                                <option value="sm">Small</option>
+                                <option value="md" selected>Medium</option>
+                                <option value="lg">Large</option>
+                                <option value="xl">Extra Large</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div class="obs-help">
-                    <div class="stream-preview">
-                        <img src="/stream.png" alt="OBS overlay example">
-                    </div>
-                    <div class="obs-instructions">
-                        <div class="obs-instructions-title">How to add to OBS</div>
-                        <ol>
-                            <li>In OBS, click <strong>+</strong> under Sources</li>
-                            <li>Select <strong>Browser</strong></li>
-                            <li>Paste the URL above</li>
-                            <li>Set dimensions to <strong>1920 x 1080</strong></li>
-                        </ol>
+                    <div class="obs-help">
+                        <div class="stream-preview">
+                            <img src="/stream.png" alt="OBS overlay example" />
+                        </div>
+                        <div class="obs-instructions">
+                            <div class="obs-instructions-title">How to add to OBS</div>
+                            <ol>
+                                <li>In OBS, click <strong>+</strong> under Sources</li>
+                                <li>Select <strong>Browser</strong></li>
+                                <li>Paste the URL above</li>
+                                <li>Set dimensions to <strong>1920 x 1080</strong></li>
+                            </ol>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- =========================================================================
+        <!-- =========================================================================
          Help Page (/help)
          ========================================================================= -->
-    <div id="help-page" class="page hidden">
-        <header class="page-header">
-            <a href="/" class="back-btn">← Back</a>
-            <h1>Setup Guide</h1>
-        </header>
+        <div id="help-page" class="page hidden">
+            <header class="page-header">
+                <a href="/" class="back-btn">← Back</a>
+                <h1>Setup Guide</h1>
+            </header>
 
-        <main class="help-content">
-            <figure class="help-screenshot already-fit">
-                <img src="/help/ingame.png" alt="Ingame screenshot">
-            </figure>
+            <main class="help-content">
+                <figure class="help-screenshot already-fit">
+                    <img src="/help/ingame.png" alt="Ingame screenshot" />
+                </figure>
 
-            <!-- Section 1: Installation -->
-            <section class="help-section" id="installation">
-                <h2>1. Installation</h2>
-
-                <div class="help-subsection">
-                    <h3>Download the launcher</h3>
-                    <p>Download the latest release from GitHub:</p>
-                    <a href="https://github.com/rbignon/er-fog-tracker/releases" target="_blank" class="btn-primary btn-download">
-                        Download for Windows
-                    </a>
-                </div>
-
-                <div class="help-subsection">
-                    <h3>Extract and launch</h3>
+                <nav class="help-toc">
                     <ol>
-                        <li>Extract the ZIP archive to a folder of your choice</li>
-                        <li>Run <code>FogRandoTracker.exe</code></li>
+                        <li><a href="#installation">Installation</a></li>
+                        <li><a href="#configuration">Launcher Configuration</a></li>
+                        <li><a href="#playing">Playing with the Mod</a></li>
+                        <li><a href="#sharing">Sharing with Viewers</a></li>
+                        <li><a href="#customization">Customizing the Overlay</a></li>
+                        <li><a href="#faq">FAQ</a></li>
                     </ol>
-                </div>
-            </section>
+                </nav>
 
-            <!-- Section 2: Configuration -->
-            <section class="help-section" id="configuration">
-                <h2>2. Launcher Configuration</h2>
+                <!-- Section 1: Installation -->
+                <section class="help-section" id="installation">
+                    <h2>1. Installation</h2>
 
-                <div class="help-subsection">
-                    <h3>Connect to the server</h3>
-                    <p>In the launcher, enter your credentials from the <a href="/dashboard">dashboard</a>:</p>
-                    <ul>
-                        <li><strong>Server URL</strong> — Copy from the dashboard's "Automatic Tracking" section</li>
-                        <li><strong>Token</strong> — Your personal authentication token (keep it secret!)</li>
-                    </ul>
-                    <p>Click <strong>Validate</strong> to verify the connection.</p>
-                    <figure class="help-screenshot vertical">
-                        <img src="/help/launcher-config.png" alt="Launcher connection screen">
-                    </figure>
-                </div>
-
-                <div class="help-subsection">
-                    <h3>Create a new game</h3>
-                    <p>Click <strong>Create New Game</strong> and select your Fog Gate Randomizer folder. The launcher will parse the randomizer files to set up accurate initial tracking.</p>
-                    <div class="help-tip">
-                        <span class="tip-icon">💡</span>
-                        <span class="tip-text">Creating the game from the launcher is recommended for more accurate automatic tracking.</span>
+                    <div class="help-subsection">
+                        <h3>Download the launcher</h3>
+                        <p>Download the latest release from GitHub:</p>
+                        <a
+                            href="https://github.com/rbignon/er-fog-tracker/releases"
+                            target="_blank"
+                            class="btn-primary btn-download"
+                        >
+                            Download for Windows
+                        </a>
                     </div>
-                    <figure class="help-screenshot vertical">
-                        <img src="/help/launcher-new-game.png" alt="Creating a new game">
-                    </figure>
-                </div>
 
-                <div class="help-subsection">
-                    <h3>Select a game and connect</h3>
-                    <p>Select your game from the list, then click <strong>Inject</strong> to start tracking. The launcher will wait for Elden Ring to start and inject the mod automatically.</p>
-                    <figure class="help-screenshot vertical">
-                        <img src="/help/launcher-games.png" alt="Game list with Inject button">
-                    </figure>
-                </div>
-            </section>
+                    <div class="help-subsection">
+                        <h3>Extract and launch</h3>
+                        <ol>
+                            <li>Extract the ZIP archive to a folder of your choice</li>
+                            <li>Run <code>FogRandoTracker.exe</code></li>
+                        </ol>
+                    </div>
+                </section>
 
-            <!-- Section 3: Playing -->
-            <section class="help-section" id="playing">
-                <h2>3. Playing with the Mod</h2>
+                <!-- Section 2: Configuration -->
+                <section class="help-section" id="configuration">
+                    <h2>2. Launcher Configuration</h2>
 
-                <div class="help-subsection">
-                    <h3>Launch the game</h3>
-                    <ol>
-                        <li>Select your game in the launcher</li>
-                        <li>Click <strong>Connect</strong></li>
-                        <li>The launcher will wait for Elden Ring to start</li>
-                        <li>Launch Elden Ring through the Fog Gate Randomizer</li>
-                        <li>The mod injects automatically once the game is detected</li>
-                    </ol>
-                    <figure class="help-screenshot vertical">
-                        <img src="/help/launcher-waiting.png" alt="Launcher waiting for Elden Ring">
-                    </figure>
-                </div>
+                    <div class="help-subsection">
+                        <h3>Connect to the server</h3>
+                        <p>In the launcher, enter your credentials from the <a href="/dashboard">dashboard</a>:</p>
+                        <ul>
+                            <li>
+                                <strong>Server URL</strong> — Copy from the dashboard's "Automatic Tracking" section
+                            </li>
+                            <li><strong>Token</strong> — Your personal authentication token (keep it secret!)</li>
+                        </ul>
+                        <p>Click <strong>Connect</strong> to verify the connection.</p>
+                        <figure class="help-screenshot vertical">
+                            <img src="/help/launcher-config.png" alt="Launcher connection screen" />
+                        </figure>
+                    </div>
 
-                <div class="help-subsection">
-                    <h3>The in-game overlay</h3>
-                    <p>Once injected, an overlay appears in the top-right corner showing:</p>
-                    <ul>
-                        <li><strong>Current zone</strong> — Where you are right now</li>
-                        <li><strong>Progress counter</strong> — Discovered zones / Total zones</li>
-                        <li><strong>Connection status</strong> — Green dot when connected to server</li>
-                        <li><strong>Zone exits</strong> — List of fog gates with their destinations (discovered or ???)</li>
-                    </ul>
+                    <div class="help-subsection">
+                        <h3>Create a new game</h3>
+                        <p>
+                            Click <strong>Create New Game</strong> and select your Fog Gate Randomizer folder. The
+                            launcher will parse the randomizer files to set up accurate initial tracking.
+                        </p>
+                        <div class="help-tip">
+                            <span class="tip-icon">💡</span>
+                            <span class="tip-text"
+                                >Creating the game from the launcher is recommended for more accurate automatic
+                                tracking.</span
+                            >
+                        </div>
+                        <figure class="help-screenshot vertical">
+                            <img src="/help/launcher-new-game.png" alt="Creating a new game" />
+                        </figure>
+                    </div>
 
-                    <h4>Keyboard shortcuts</h4>
-                    <table class="help-table">
-                        <tr><td><kbd>F9</kbd></td><td>Toggle overlay visibility</td></tr>
-                        <tr><td><kbd>F10</kbd></td><td>Toggle exits list (fold/unfold)</td></tr>
-                        <tr><td><kbd>Shift+F10</kbd></td><td>Show only undiscovered exits</td></tr>
-                        <tr><td><kbd>Ctrl+F11</kbd></td><td>Toggle debug information</td></tr>
-                    </table>
-                    <figure class="help-screenshot">
-                        <img src="/help/overlay-ingame.png" alt="In-game overlay">
-                    </figure>
-                </div>
+                    <div class="help-subsection">
+                        <h3>Select a game and connect</h3>
+                        <p>
+                            Select your game from the list, then click <strong>Inject</strong> to start tracking. The
+                            launcher will wait for Elden Ring to start and inject the mod automatically.
+                        </p>
+                        <figure class="help-screenshot vertical">
+                            <img src="/help/launcher-games.png" alt="Game list with Inject button" />
+                        </figure>
+                    </div>
+                </section>
 
-                <div class="help-subsection">
-                    <h3>The web graph</h3>
-                    <p>Open your game on the <a href="/dashboard">dashboard</a> to see the interactive graph:</p>
-                    <ul>
-                        <li>The graph updates automatically when you traverse a fog gate</li>
-                        <li>Your current zone is highlighted</li>
-                        <li>Click on zones to see their connections and add tags</li>
-                        <li>Use the search bar to find specific zones</li>
-                        <li>Toggle "Frontier" to highlight zones with undiscovered exits</li>
-                    </ul>
-                    <figure class="help-screenshot">
-                        <img src="/help/web-graph.png" alt="Web graph with a zone selected">
-                    </figure>
-                </div>
-            </section>
+                <!-- Section 3: Playing -->
+                <section class="help-section" id="playing">
+                    <h2>3. Playing with the Mod</h2>
 
-            <!-- Section 4: Sharing -->
-            <section class="help-section" id="sharing">
-                <h2>4. Sharing with Viewers</h2>
+                    <div class="help-subsection">
+                        <h3>Launch the game</h3>
+                        <ol>
+                            <li>Select your game in the launcher</li>
+                            <li>Click <strong>Inject</strong></li>
+                            <li>The launcher will wait for Elden Ring to start</li>
+                            <li>Launch Elden Ring through the Fog Gate Randomizer</li>
+                            <li>The mod injects automatically once the game is detected</li>
+                        </ol>
+                        <figure class="help-screenshot vertical">
+                            <img src="/help/launcher-waiting.png" alt="Launcher waiting for Elden Ring" />
+                        </figure>
+                    </div>
 
-                <div class="help-subsection">
-                    <h3>Viewer link (interactive)</h3>
-                    <p>Share a link with your chat or Discord for read-only viewing:</p>
-                    <ol>
-                        <li>Open your game on the dashboard</li>
-                        <li>Click the <strong>Stream</strong> button</li>
-                        <li>Copy the <strong>Viewer Link</strong></li>
-                    </ol>
-                    <p>Viewers can navigate the graph freely, zoom, search, and click on zones — but they can't modify anything.</p>
-                </div>
+                    <div class="help-subsection">
+                        <h3>The in-game overlay</h3>
+                        <p>Once injected, an overlay appears in the top-right corner showing:</p>
+                        <ul>
+                            <li>
+                                <strong>Current zone</strong> — Where you are right now (with connection status dot)
+                            </li>
+                            <li>
+                                <strong>Progress counter</strong> — Discovered links / Total links, and in-game time
+                            </li>
+                            <li><strong>Great Runes</strong> — Icons showing which Great Runes you've collected</li>
+                            <li><strong>Stats</strong> — Death count</li>
+                            <li>
+                                <strong>Zone exits</strong> — List of fog gates with their destinations (discovered in
+                                color, undiscovered as ???)
+                            </li>
+                        </ul>
 
-                <div class="help-subsection">
-                    <h3>OBS overlay (stream)</h3>
-                    <p>Add the graph as an overlay on your stream:</p>
-                    <ol>
-                        <li>Click the <strong>Stream</strong> button</li>
-                        <li>Configure the counter position and size</li>
-                        <li>Copy the <strong>OBS Overlay</strong> URL</li>
-                        <li>In OBS, add a new <strong>Browser</strong> source</li>
-                        <li>Paste the URL and set dimensions to <strong>1920 x 1080</strong></li>
-                    </ol>
-                    <p>The overlay has a transparent background and syncs with your view — when you select a zone or use frontier mode, viewers see the same thing.</p>
-                    <figure class="help-screenshot">
-                        <img src="/help/obs-overlay.png" alt="OBS overlay configuration">
-                    </figure>
-                </div>
-            </section>
+                        <h4>Keyboard shortcuts</h4>
+                        <table class="help-table">
+                            <tr>
+                                <td><kbd>F9</kbd></td>
+                                <td>Toggle overlay visibility</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>F10</kbd></td>
+                                <td>Toggle exits list (fold/unfold)</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Shift+F10</kbd></td>
+                                <td>Show only undiscovered exits</td>
+                            </tr>
+                        </table>
 
-            <!-- Section 5: Customization -->
-            <section class="help-section" id="customization">
-                <h2>5. Customizing the Overlay</h2>
+                        <figure class="help-screenshot">
+                            <img src="/help/overlay-ingame.png" alt="In-game overlay" />
+                        </figure>
+                    </div>
 
-                <div class="help-subsection">
-                    <h3>Configuration file location</h3>
-                    <p>Create a file named <code>fog_rando_tracker.toml</code> in the same folder as the DLL (your Fog Gate Randomizer folder).</p>
-                </div>
+                    <div class="help-subsection">
+                        <h3>Auto-detection</h3>
+                        <p>
+                            When you traverse a fog gate, the mod automatically detects the transition and updates your
+                            progress:
+                        </p>
+                        <ol>
+                            <li>
+                                <strong>Entry detection</strong> — The mod monitors the game for teleport animations
+                                (fog walls, waygates, sending gates, etc.) and records your position when one starts
+                            </li>
+                            <li>
+                                <strong>Exit detection</strong> — After the loading screen, the mod captures your new
+                                position
+                            </li>
+                            <li>
+                                <strong>Server resolution</strong> — The entry and exit positions are sent to the
+                                server, which identifies the zones and marks the link as discovered
+                            </li>
+                        </ol>
+                        <p>
+                            The detection works for most fog gate types: randomized fog walls, waygates, sending gates,
+                            coffin rides, boss teleports, etc.
+                        </p>
+                        <div class="help-tip">
+                            <span class="tip-icon">⚠️</span>
+                            <span class="tip-text"
+                                ><strong>Auto-detection is not 100% reliable.</strong> Some transitions may fail to be
+                                detected due to unknown animations, ambiguous positions, or edge cases. If a discovery
+                                is missed, you can manually mark zones as discovered on the web graph.</span
+                            >
+                        </div>
+                    </div>
 
-                <div class="help-subsection">
-                    <h3>Font and colors</h3>
-                    <pre class="help-code"><code>[overlay]
+                    <div class="help-subsection">
+                        <h3>The web graph</h3>
+                        <p>Open your game on the <a href="/dashboard">dashboard</a> to see the interactive graph:</p>
+                        <ul>
+                            <li>The graph updates automatically when you traverse a fog gate</li>
+                            <li>Your current zone is highlighted</li>
+                            <li>Click on zones to see their connections and add tags</li>
+                            <li>Use the search bar to find specific zones</li>
+                            <li>Toggle "Frontier" to highlight zones with undiscovered exits</li>
+                        </ul>
+                        <figure class="help-screenshot">
+                            <img src="/help/web-graph.png" alt="Web graph with a zone selected" />
+                        </figure>
+                    </div>
+                </section>
+
+                <!-- Section 4: Sharing -->
+                <section class="help-section" id="sharing">
+                    <h2>4. Sharing with Viewers</h2>
+
+                    <div class="help-subsection">
+                        <h3>Viewer link (interactive)</h3>
+                        <p>Share a link with your chat or Discord for read-only viewing:</p>
+                        <ol>
+                            <li>Open your game on the dashboard</li>
+                            <li>Click the <strong>Stream</strong> button</li>
+                            <li>Copy the <strong>Viewer Link</strong></li>
+                        </ol>
+                        <p>
+                            Viewers can navigate the graph freely, zoom, search, and click on zones — but they can't
+                            modify anything.
+                        </p>
+                    </div>
+
+                    <div class="help-subsection">
+                        <h3>OBS overlay (stream)</h3>
+                        <p>Add the graph as an overlay on your stream:</p>
+                        <ol>
+                            <li>Click the <strong>Stream</strong> button</li>
+                            <li>Configure the counter position and size</li>
+                            <li>Copy the <strong>OBS Overlay</strong> URL</li>
+                            <li>In OBS, add a new <strong>Browser</strong> source</li>
+                            <li>Paste the URL and set dimensions to <strong>1920 x 1080</strong></li>
+                        </ol>
+                        <p>
+                            The overlay has a transparent background and syncs with your view — when you select a zone
+                            or use frontier mode, viewers see the same thing.
+                        </p>
+                        <figure class="help-screenshot">
+                            <img src="/help/obs-overlay.png" alt="OBS overlay configuration" />
+                        </figure>
+                    </div>
+                </section>
+
+                <!-- Section 5: Customization -->
+                <section class="help-section" id="customization">
+                    <h2>5. Customizing the Overlay</h2>
+
+                    <div class="help-subsection">
+                        <h3>Configuration file location</h3>
+                        <p>
+                            Create a file named <code>fog_rando_tracker.toml</code> in the same folder as the DLL (your
+                            Fog Gate Randomizer folder).
+                        </p>
+                    </div>
+
+                    <div class="help-subsection">
+                        <h3>Font and colors</h3>
+                        <pre class="help-code"><code>[overlay]
 # Font settings
 font_path = ""                    # Path to TTF font (empty = system default)
 font_size = 16.0                  # 16 for 1080p, 24 for 4K
@@ -624,11 +787,11 @@ border_color = "#404040"
 
 # Text shown when zone is unknown
 zone_unknown_text = "(traverse a fog to identify)"</code></pre>
-                </div>
+                    </div>
 
-                <div class="help-subsection">
-                    <h3>Overlay size and position</h3>
-                    <pre class="help-code"><code>[overlay]
+                    <div class="help-subsection">
+                        <h3>Overlay size and position</h3>
+                        <pre class="help-code"><code>[overlay]
 # Position relative to the top-right corner (in pixels)
 position_offset_x = 20.0    # Margin from the right edge
 position_offset_y = 20.0    # Margin from the top edge
@@ -640,50 +803,111 @@ max_height = 300.0
 # Minimum font scale for exits (0.0 to 1.0, default 0.5)
 # Below this, exits are truncated instead of scaled further
 exits_min_font_scale = 0.5</code></pre>
-                </div>
+                    </div>
 
-                <div class="help-subsection">
-                    <h3>Status line template</h3>
-                    <p>Customize what's shown in the overlay header:</p>
+                    <div class="help-subsection">
+                        <h3>Status line template</h3>
+                        <p>Customize what's shown in the overlay header:</p>
 
-                    <h4>Text variables</h4>
-                    <table class="help-table">
-                        <tr><td><code>{zone}</code></td><td>Current zone name</td></tr>
-                        <tr><td><code>{discovered}</code></td><td>Number of discovered links</td></tr>
-                        <tr><td><code>{total}</code></td><td>Total number of random links</td></tr>
-                        <tr><td><code>{progress}</code></td><td>Progress percentage (0-100)</td></tr>
-                        <tr><td><code>{status}</code></td><td>Connection status indicator (●)</td></tr>
-                        <tr><td><code>{map}</code></td><td>Current map ID (e.g., m60_44_36_00)</td></tr>
-                        <tr><td><code>{deaths}</code></td><td>Total death count</td></tr>
-                        <tr><td><code>{igt}</code></td><td>In-game time (H:MM:SS)</td></tr>
-                        <tr><td><code>{runes}</code></td><td>Number of Great Runes (0-7)</td></tr>
-                        <tr><td><code>{kindling}</code></td><td>Number of Messmer's Kindling (DLC)</td></tr>
-                        <tr><td><code>{scaling}</code></td><td>Zone scaling info</td></tr>
-                    </table>
+                        <h4>Text variables</h4>
+                        <table class="help-table">
+                            <tr>
+                                <td><code>{zone}</code></td>
+                                <td>Current zone name</td>
+                            </tr>
+                            <tr>
+                                <td><code>{discovered}</code></td>
+                                <td>Number of discovered links</td>
+                            </tr>
+                            <tr>
+                                <td><code>{total}</code></td>
+                                <td>Total number of random links</td>
+                            </tr>
+                            <tr>
+                                <td><code>{progress}</code></td>
+                                <td>Progress percentage (0-100)</td>
+                            </tr>
+                            <tr>
+                                <td><code>{status}</code></td>
+                                <td>Connection status indicator (●)</td>
+                            </tr>
+                            <tr>
+                                <td><code>{map}</code></td>
+                                <td>Current map ID (e.g., m60_44_36_00)</td>
+                            </tr>
+                            <tr>
+                                <td><code>{deaths}</code></td>
+                                <td>Total death count</td>
+                            </tr>
+                            <tr>
+                                <td><code>{igt}</code></td>
+                                <td>In-game time (H:MM:SS)</td>
+                            </tr>
+                            <tr>
+                                <td><code>{runes}</code></td>
+                                <td>Number of Great Runes (0-7)</td>
+                            </tr>
+                            <tr>
+                                <td><code>{kindling}</code></td>
+                                <td>Number of Messmer's Kindling (DLC)</td>
+                            </tr>
+                            <tr>
+                                <td><code>{scaling}</code></td>
+                                <td>Zone scaling info</td>
+                            </tr>
+                        </table>
 
-                    <h4>Icon variables</h4>
-                    <table class="help-table">
-                        <tr><td><code>{rune_icons}</code></td><td>Great Runes as icons (filled/empty)</td></tr>
-                        <tr><td><code>{kindling_icon}</code></td><td>Kindling icon (DLC)</td></tr>
-                        <tr><td><code>{death_icon}</code></td><td>Death icon (skull)</td></tr>
-                    </table>
+                        <h4>Icon variables</h4>
+                        <table class="help-table">
+                            <tr>
+                                <td><code>{rune_icons}</code></td>
+                                <td>Great Runes as icons (filled/empty)</td>
+                            </tr>
+                            <tr>
+                                <td><code>{kindling_icon}</code></td>
+                                <td>Kindling icon (DLC)</td>
+                            </tr>
+                            <tr>
+                                <td><code>{death_icon}</code></td>
+                                <td>Death icon (skull)</td>
+                            </tr>
+                        </table>
 
-                    <h4>Colors</h4>
-                    <p>Add a color to any variable with <code>{variable:color}</code>:</p>
-                    <table class="help-table">
-                        <tr><td>Named</td><td><code>red</code>, <code>green</code>, <code>blue</code>, <code>yellow</code>, <code>orange</code>, <code>cyan</code>, <code>magenta</code>, <code>gray</code>, <code>white</code></td></tr>
-                        <tr><td>Config</td><td><code>discovered</code>, <code>undiscovered</code>, <code>disabled</code></td></tr>
-                        <tr><td>Hex</td><td><code>#RRGGBB</code> (e.g., <code>#FF0000</code>)</td></tr>
-                    </table>
+                        <h4>Colors</h4>
+                        <p>Add a color to any variable with <code>{variable:color}</code>:</p>
+                        <table class="help-table">
+                            <tr>
+                                <td>Named</td>
+                                <td>
+                                    <code>red</code>, <code>green</code>, <code>blue</code>, <code>yellow</code>,
+                                    <code>orange</code>, <code>cyan</code>, <code>magenta</code>, <code>gray</code>,
+                                    <code>white</code>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Config</td>
+                                <td><code>discovered</code>, <code>undiscovered</code>, <code>disabled</code></td>
+                            </tr>
+                            <tr>
+                                <td>Hex</td>
+                                <td><code>#RRGGBB</code> (e.g., <code>#FF0000</code>)</td>
+                            </tr>
+                        </table>
 
-                    <h4>Layout markers</h4>
-                    <table class="help-table">
-                        <tr><td><code>$n</code></td><td>New line</td></tr>
-                        <tr><td><code>$&gt;</code></td><td>Right-align the rest of the line</td></tr>
-                    </table>
+                        <h4>Layout markers</h4>
+                        <table class="help-table">
+                            <tr>
+                                <td><code>$n</code></td>
+                                <td>New line</td>
+                            </tr>
+                            <tr>
+                                <td><code>$&gt;</code></td>
+                                <td>Right-align the rest of the line</td>
+                            </tr>
+                        </table>
 
-                    <h4>Examples</h4>
-                    <pre class="help-code"><code># Default: zone on the left, status and progress on the right
+                        <h4>Examples</h4>
+                        <pre class="help-code"><code># Default: zone on the left, status and progress on the right
 status_template = "{zone}$>{status} {discovered}/{total}"
 
 # With percentage
@@ -700,135 +924,176 @@ status_template = "{zone}$>{status} {discovered:green}/{total}"
 
 # DLC with kindling
 status_template = "{zone}$>{status}$n{rune_icons} {kindling_icon}{kindling}$>{discovered}/{total}"</code></pre>
-                </div>
+                    </div>
 
-                <div class="help-subsection">
-                    <h3>Keyboard shortcuts</h3>
-                    <pre class="help-code"><code>[keybindings]
+                    <div class="help-subsection">
+                        <h3>Keyboard shortcuts</h3>
+                        <pre class="help-code"><code>[keybindings]
 toggle_ui = "f9"                      # Show/hide overlay
 toggle_exits = "f10"                  # Fold/unfold exits list
 toggle_undiscovered_only = "shift+f10"  # Show only undiscovered exits
 toggle_debug = "ctrl+f11"             # Show debug info (map_id, etc.)
 upload_logs = "ctrl+f12"              # Upload logs for debugging</code></pre>
-                    <p>Keys support modifiers: <code>ctrl+</code>, <code>shift+</code>, <code>alt+</code></p>
-                </div>
-            </section>
+                        <p>Keys support modifiers: <code>ctrl+</code>, <code>shift+</code>, <code>alt+</code></p>
+                    </div>
+                </section>
 
-            <!-- Section 6: FAQ -->
-            <section class="help-section" id="faq">
-                <h2>6. FAQ</h2>
+                <!-- Section 6: FAQ -->
+                <section class="help-section" id="faq">
+                    <h2>6. FAQ</h2>
 
-                <div class="faq-list">
-                    <div class="faq-item">
-                        <div class="faq-question">
-                            <span class="faq-icon">▶</span>
-                            <span>The mod doesn't inject / overlay doesn't appear</span>
+                    <div class="faq-list">
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span class="faq-icon">▶</span>
+                                <span>The mod doesn't inject / overlay doesn't appear</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Make sure you:</p>
+                                <ul>
+                                    <li>Run the launcher <strong>before</strong> starting Elden Ring</li>
+                                    <li>Don't have other overlay software conflicting (Discord overlay, etc.)</li>
+                                    <li>Have the DLL in your Fog Gate Randomizer folder</li>
+                                </ul>
+                                <p>Try running the launcher as administrator if the issue persists.</p>
+                            </div>
                         </div>
-                        <div class="faq-answer">
-                            <p>Make sure you:</p>
-                            <ul>
-                                <li>Run the launcher <strong>before</strong> starting Elden Ring</li>
-                                <li>Use the same game version as the mod (check the releases page)</li>
-                                <li>Don't have other overlay software conflicting (Discord overlay, etc.)</li>
-                                <li>Have the DLL in your Fog Gate Randomizer folder</li>
-                            </ul>
-                            <p>Try running the launcher as administrator if the issue persists.</p>
+
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span class="faq-icon">▶</span>
+                                <span>The overlay shows "???" for zones I've already visited</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>
+                                    The mod only tracks fog gate traversals it observes directly. If you visited a zone
+                                    before installing the mod, it won't know about it.
+                                </p>
+                                <p>
+                                    You can manually discover zones on the web graph by clicking on them and selecting
+                                    "Mark as discovered".
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span class="faq-icon">▶</span>
+                                <span>Zone detection is wrong or missing</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>
+                                    Zone detection depends on the randomizer's spoiler log. If you created the game from
+                                    the web instead of the launcher, some connections might be missing.
+                                </p>
+                                <p>
+                                    For best results, always create games from the launcher by selecting your Fog Gate
+                                    Randomizer folder.
+                                </p>
+                                <p>
+                                    Note that zone detection is not 100% reliable — some edge cases may not be handled
+                                    correctly. If you encounter a persistent detection issue, please
+                                    <a href="https://github.com/rbignon/er-fog-tracker/issues" target="_blank"
+                                        >open an issue on GitHub</a
+                                    >
+                                    with details about the zone and how you reached it.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span class="faq-icon">▶</span>
+                                <span>Can I use this with other mods?</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>
+                                    Yes! The tracker is designed to work alongside other mods. It uses the same
+                                    injection method as other popular tools like Practice Tool.
+                                </p>
+                                <p>
+                                    If you're using Mod Engine 2, make sure the Fog Gate Randomizer is properly
+                                    configured.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span class="faq-icon">▶</span>
+                                <span>The connection status shows red / disconnected</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Check that:</p>
+                                <ul>
+                                    <li>Your token is correct (regenerate it from the dashboard if needed)</li>
+                                    <li>The server URL is correct</li>
+                                    <li>Your firewall isn't blocking the connection</li>
+                                </ul>
+                                <p>The mod will automatically try to reconnect if the connection is lost.</p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span class="faq-icon">▶</span>
+                                <span>Can viewers modify my game or graph?</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>
+                                    No. Viewers have read-only access. They can navigate, zoom, and search, but they
+                                    cannot discover zones, add tags, or change anything.
+                                </p>
+                                <p>Only you (the host) can modify the game state.</p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span class="faq-icon">▶</span>
+                                <span>How do I reset my progress / start a new run?</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>
+                                    Create a new game from the launcher with your new randomizer seed. Each game is
+                                    independent — your old games remain accessible from the dashboard.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span class="faq-icon">▶</span>
+                                <span>Does this work offline?</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>
+                                    The web tracker has an offline mode where you can load a spoiler log locally.
+                                    However, the in-game mod requires a server connection to sync discoveries.
+                                </p>
+                                <p>
+                                    If you just want to visualize a spoiler log without tracking, use the offline mode
+                                    from the landing page.
+                                </p>
+                            </div>
                         </div>
                     </div>
+                </section>
+            </main>
 
-                    <div class="faq-item">
-                        <div class="faq-question">
-                            <span class="faq-icon">▶</span>
-                            <span>The overlay shows "???" for zones I've already visited</span>
-                        </div>
-                        <div class="faq-answer">
-                            <p>The mod only tracks fog gate traversals it observes directly. If you visited a zone before installing the mod, it won't know about it.</p>
-                            <p>You can manually discover zones on the web graph by clicking on them and selecting "Mark as discovered".</p>
-                        </div>
-                    </div>
+            <footer class="help-footer">
+                <p>
+                    Still have questions?
+                    <a href="https://github.com/rbignon/er-fog-tracker/issues" target="_blank"
+                        >Open an issue on GitHub</a
+                    >
+                </p>
+            </footer>
+        </div>
 
-                    <div class="faq-item">
-                        <div class="faq-question">
-                            <span class="faq-icon">▶</span>
-                            <span>Zone detection is wrong or missing</span>
-                        </div>
-                        <div class="faq-answer">
-                            <p>Zone detection depends on the randomizer's spoiler log. If you created the game from the web instead of the launcher, some connections might be missing.</p>
-                            <p>For best results, always create games from the launcher by selecting your Fog Gate Randomizer folder.</p>
-                            <p>Note that zone detection is not 100% reliable — some edge cases may not be handled correctly. If you encounter a persistent detection issue, please <a href="https://github.com/rbignon/er-fog-tracker/issues" target="_blank">open an issue on GitHub</a> with details about the zone and how you reached it.</p>
-                        </div>
-                    </div>
+        <!-- Toast notifications container -->
+        <div id="toast-container"></div>
 
-                    <div class="faq-item">
-                        <div class="faq-question">
-                            <span class="faq-icon">▶</span>
-                            <span>Can I use this with other mods?</span>
-                        </div>
-                        <div class="faq-answer">
-                            <p>Yes! The tracker is designed to work alongside other mods. It uses the same injection method as other popular tools like Practice Tool.</p>
-                            <p>If you're using Mod Engine 2, make sure the Fog Gate Randomizer is properly configured.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item">
-                        <div class="faq-question">
-                            <span class="faq-icon">▶</span>
-                            <span>The connection status shows red / disconnected</span>
-                        </div>
-                        <div class="faq-answer">
-                            <p>Check that:</p>
-                            <ul>
-                                <li>Your token is correct (regenerate it from the dashboard if needed)</li>
-                                <li>The server URL is correct</li>
-                                <li>Your firewall isn't blocking the connection</li>
-                            </ul>
-                            <p>The mod will automatically try to reconnect if the connection is lost.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item">
-                        <div class="faq-question">
-                            <span class="faq-icon">▶</span>
-                            <span>Can viewers modify my game or graph?</span>
-                        </div>
-                        <div class="faq-answer">
-                            <p>No. Viewers have read-only access. They can navigate, zoom, and search, but they cannot discover zones, add tags, or change anything.</p>
-                            <p>Only you (the host) can modify the game state.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item">
-                        <div class="faq-question">
-                            <span class="faq-icon">▶</span>
-                            <span>How do I reset my progress / start a new run?</span>
-                        </div>
-                        <div class="faq-answer">
-                            <p>Create a new game from the launcher with your new randomizer seed. Each game is independent — your old games remain accessible from the dashboard.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item">
-                        <div class="faq-question">
-                            <span class="faq-icon">▶</span>
-                            <span>Does this work offline?</span>
-                        </div>
-                        <div class="faq-answer">
-                            <p>The web tracker has an offline mode where you can load a spoiler log locally. However, the in-game mod requires a server connection to sync discoveries.</p>
-                            <p>If you just want to visualize a spoiler log without tracking, use the offline mode from the landing page.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <footer class="help-footer">
-            <p>Still have questions? <a href="https://github.com/rbignon/er-fog-tracker/issues" target="_blank">Open an issue on GitHub</a></p>
-        </footer>
-    </div>
-
-    <!-- Toast notifications container -->
-    <div id="toast-container"></div>
-
-    <script type="module" src="/js/main.js"></script>
-</body>
+        <script type="module" src="/js/main.js"></script>
+    </body>
 </html>
