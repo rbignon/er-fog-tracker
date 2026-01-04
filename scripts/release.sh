@@ -36,7 +36,11 @@ sed -i "s/^__version__ = \".*\"/__version__ = \"$VERSION\"/" "$ROOT_DIR/server/f
 echo "  - mod/Cargo.toml"
 sed -i "0,/^version = /s/^version = \".*\"/version = \"$VERSION\"/" "$ROOT_DIR/mod/Cargo.toml"
 
-# 4. Update web/js/version.js
+# 4. Regenerate mod/Cargo.lock to match updated Cargo.toml
+echo "  - mod/Cargo.lock"
+cargo update --manifest-path "$ROOT_DIR/mod/Cargo.toml" --workspace
+
+# 5. Update web/js/version.js
 echo "  - web/js/version.js"
 cat > "$ROOT_DIR/web/js/version.js" << EOF
 /**
@@ -50,12 +54,13 @@ echo ""
 echo "Version updated to $VERSION in all files."
 echo ""
 
-# 5. Git commit and tag
+# 6. Git commit and tag
 echo "Creating git commit and tag..."
 git -C "$ROOT_DIR" add \
     server/pyproject.toml \
     server/fogtracker/__init__.py \
     mod/Cargo.toml \
+    mod/Cargo.lock \
     web/js/version.js
 
 git -C "$ROOT_DIR" commit -m "release: v$VERSION"
