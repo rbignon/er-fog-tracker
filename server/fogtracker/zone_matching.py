@@ -147,8 +147,9 @@ def link_exists(
 ) -> bool:
     """Check if a link already exists in discovered_links.
 
-    For bidirectional random links, also checks the reverse direction since
-    discovering A→B is equivalent to discovering B→A for the same fog gate.
+    For bidirectional links (both random and preexisting), also checks the
+    reverse direction since discovering A→B is equivalent to discovering B→A
+    for the same connection.
 
     Args:
         source_id: Source zone_key
@@ -169,10 +170,9 @@ def link_exists(
         if zp_source_id == source_id and zp_target_id == target_id:
             return True
 
-        # For bidirectional random links, also check reverse
+        # For bidirectional links (random or preexisting), also check reverse
         if (
-            zp["type"] == "random"
-            and not zp.get("is_one_way", False)
+            not zp.get("is_one_way", False)
             and zp_source_id == target_id
             and zp_target_id == source_id
         ):

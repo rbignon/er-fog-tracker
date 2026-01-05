@@ -603,6 +603,32 @@ class TestLinkExists:
             simple_zone_pairs,
         )
 
+    def test_reverse_direction_for_bidirectional_preexisting(self, simple_zone_pairs):
+        """Bidirectional preexisting links should be found in reverse direction.
+
+        link-2 is stored as limgrave → stormveil_castle (preexisting, bidirectional).
+        Checking stormveil_castle → limgrave should also return True.
+
+        This is a regression test for a bug where only random links were checked
+        in reverse direction, causing preexisting links to be re-discovered
+        multiple times when traversed in the opposite direction.
+        """
+        discovered_preexisting = [{"zone_link_id": "link-2"}]
+        # Direct direction should be found
+        assert link_exists(
+            discovered_preexisting,
+            "limgrave",
+            "stormveil_castle",
+            simple_zone_pairs,
+        )
+        # Reverse direction should ALSO be found (bidirectional preexisting)
+        assert link_exists(
+            discovered_preexisting,
+            "stormveil_castle",
+            "limgrave",
+            simple_zone_pairs,
+        )
+
 
 class TestFindZonePairByIds:
     """Tests for find_zone_pair_by_ids function."""
