@@ -45,8 +45,8 @@ pub enum OutgoingMessage {
         source_play_region_id: Option<u32>,
         /// Source zone display name (from cached session state, for disambiguation)
         source_zone: Option<String>,
-        /// Source zone internal key (from cached session state, for disambiguation)
-        source_zone_key: Option<String>,
+        /// Source zone key (from cached session state, for disambiguation)
+        source_zone_id: Option<String>,
         target_map_id: u32,
         target_pos: Position,
         target_play_region_id: Option<u32>,
@@ -80,8 +80,8 @@ pub enum IncomingMessage {
     DiscoveryAck {
         propagated: Vec<PropagatedLink>,
         current_zone: Option<String>,
-        /// Internal zone key (e.g., "limgrave_stormhill")
-        current_zone_key: Option<String>,
+        /// Zone key (e.g., "limgrave_stormhill")
+        current_zone_id: Option<String>,
         exits: Vec<FogExit>,
         stats: DiscoveryStats,
         /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
@@ -90,8 +90,8 @@ pub enum IncomingMessage {
     /// Zone query response (after fast travel)
     ZoneQueryAck {
         zone: Option<String>,
-        /// Internal zone key (e.g., "limgrave_stormhill")
-        zone_key: Option<String>,
+        /// Zone key (e.g., "limgrave_stormhill")
+        zone_id: Option<String>,
         exits: Vec<FogExit>,
         /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
         scaling: Option<String>,
@@ -230,7 +230,7 @@ impl WebSocketClient {
         source_pos: (f32, f32, f32),
         source_play_region_id: Option<u32>,
         source_zone: Option<String>,
-        source_zone_key: Option<String>,
+        source_zone_id: Option<String>,
         target_map_id: u32,
         target_pos: (f32, f32, f32),
         target_play_region_id: Option<u32>,
@@ -247,7 +247,7 @@ impl WebSocketClient {
                 },
                 source_play_region_id,
                 source_zone,
-                source_zone_key,
+                source_zone_id,
                 target_map_id,
                 target_pos: Position {
                     x: target_pos.0,
@@ -391,7 +391,7 @@ fn websocket_thread(
                     let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
                         propagated: vec![],
                         current_zone: None,
-                        current_zone_key: None,
+                        current_zone_id: None,
                         exits: vec![],
                         stats,
                         scaling: None,
@@ -532,7 +532,7 @@ fn message_loop(
                 ref source_pos,
                 source_play_region_id,
                 ref source_zone,
-                ref source_zone_key,
+                ref source_zone_id,
                 target_map_id,
                 ref target_pos,
                 target_play_region_id,
@@ -558,7 +558,7 @@ fn message_loop(
                     source_pos: source_pos.clone(),
                     source_play_region_id,
                     source_zone: source_zone.clone(),
-                    source_zone_key: source_zone_key.clone(),
+                    source_zone_id: source_zone_id.clone(),
                     target_map_id: target_map_str,
                     target_pos: target_pos.clone(),
                     target_play_region_id,
@@ -635,14 +635,14 @@ fn message_loop(
                         ServerResponse::DiscoveryV2Ack {
                             ref propagated,
                             ref current_zone,
-                            ref current_zone_key,
+                            ref current_zone_id,
                             ref exits,
                             ref stats,
                             ref scaling,
                         } => {
                             debug!(
                                 zone = current_zone.as_deref().unwrap_or("?"),
-                                zone_key = current_zone_key.as_deref().unwrap_or("?"),
+                                zone_id = current_zone_id.as_deref().unwrap_or("?"),
                                 propagated = propagated.len(),
                                 exits = exits.len(),
                                 discovered = stats.discovered,
@@ -653,7 +653,7 @@ fn message_loop(
                             let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
                                 propagated: propagated.clone(),
                                 current_zone: current_zone.clone(),
-                                current_zone_key: current_zone_key.clone(),
+                                current_zone_id: current_zone_id.clone(),
                                 exits: exits.clone(),
                                 stats: stats.clone(),
                                 scaling: scaling.clone(),
@@ -674,7 +674,7 @@ fn message_loop(
                             let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
                                 propagated: propagated.clone(),
                                 current_zone: None,
-                                current_zone_key: None,
+                                current_zone_id: None,
                                 exits: vec![],
                                 stats: stats.clone(),
                                 scaling: None,
@@ -682,20 +682,20 @@ fn message_loop(
                         }
                         ServerResponse::ZoneQueryAck {
                             ref zone,
-                            ref zone_key,
+                            ref zone_id,
                             ref exits,
                             ref scaling,
                         } => {
                             debug!(
                                 zone = zone.as_deref().unwrap_or("?"),
-                                zone_key = zone_key.as_deref().unwrap_or("?"),
+                                zone_id = zone_id.as_deref().unwrap_or("?"),
                                 exits = exits.len(),
                                 scaling = scaling.as_deref().unwrap_or(""),
                                 "[WS RX] ZoneQueryAck"
                             );
                             let _ = incoming_tx.send(IncomingMessage::ZoneQueryAck {
                                 zone: zone.clone(),
-                                zone_key: zone_key.clone(),
+                                zone_id: zone_id.clone(),
                                 exits: exits.clone(),
                                 scaling: scaling.clone(),
                             });

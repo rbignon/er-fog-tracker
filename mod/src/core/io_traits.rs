@@ -37,8 +37,8 @@ pub struct DiscoveryResult {
     pub propagated: Vec<PropagatedLink>,
     /// Current zone name (after the warp)
     pub current_zone: Option<String>,
-    /// Current zone internal key (e.g., "limgrave_stormhill")
-    pub current_zone_key: Option<String>,
+    /// Zone key (e.g., "limgrave_stormhill")
+    pub current_zone_id: Option<String>,
     /// Available exits from current zone
     pub exits: Vec<FogExit>,
     /// Updated discovery statistics
@@ -52,8 +52,8 @@ pub struct DiscoveryResult {
 pub struct ZoneQueryResult {
     /// Current zone name
     pub zone: Option<String>,
-    /// Zone internal key (e.g., "limgrave_stormhill")
-    pub zone_key: Option<String>,
+    /// Zone key (e.g., "limgrave_stormhill")
+    pub zone_id: Option<String>,
     /// Available exits from current zone
     pub exits: Vec<FogExit>,
     /// Zone scaling text (e.g., "Scaling: tier 1, previously 2")
@@ -92,13 +92,13 @@ pub trait DiscoverySender {
 
     /// Send a fog gate discovery to the server
     ///
-    /// The `source_zone` and `source_zone_key` parameters are the mod's cached zone info,
+    /// The `source_zone` and `source_zone_id` parameters are the mod's cached zone info,
     /// used by the server for disambiguation. Pass `None` if not available.
     fn send_discovery(
         &self,
         event: &DiscoveryEvent,
         source_zone: Option<&str>,
-        source_zone_key: Option<&str>,
+        source_zone_id: Option<&str>,
     );
 
     /// Send a zone query (after loading screen exit)
@@ -194,7 +194,7 @@ pub mod mocks {
             self.queue_event(ServerEvent::DiscoveryAck(DiscoveryResult {
                 propagated: Vec::new(),
                 current_zone: zone,
-                current_zone_key: None,
+                current_zone_id: None,
                 exits,
                 stats,
                 scaling: None,
@@ -205,7 +205,7 @@ pub mod mocks {
         pub fn queue_zone_ack(&self, zone: Option<String>, exits: Vec<FogExit>) {
             self.queue_event(ServerEvent::ZoneQueryAck(ZoneQueryResult {
                 zone,
-                zone_key: None,
+                zone_id: None,
                 exits,
                 scaling: None,
             }));
@@ -271,7 +271,7 @@ pub mod mocks {
             &self,
             event: &DiscoveryEvent,
             _source_zone: Option<&str>,
-            _source_zone_key: Option<&str>,
+            _source_zone_id: Option<&str>,
         ) {
             self.discoveries_sent.borrow_mut().push(event.clone());
         }

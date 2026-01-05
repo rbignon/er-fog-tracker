@@ -76,7 +76,7 @@ impl DiscoverySender for WebSocketAdapter<'_> {
         &self,
         event: &DiscoveryEvent,
         source_zone: Option<&str>,
-        source_zone_key: Option<&str>,
+        source_zone_id: Option<&str>,
     ) {
         debug!(
             transport_type = event.transport_type,
@@ -91,7 +91,7 @@ impl DiscoverySender for WebSocketAdapter<'_> {
             event.entry.pos(),
             event.entry.play_region_id,
             source_zone.map(|s| s.to_string()),
-            source_zone_key.map(|s| s.to_string()),
+            source_zone_id.map(|s| s.to_string()),
             event.exit.map_id,
             event.exit.pos(),
             event.exit.play_region_id,
@@ -129,26 +129,26 @@ impl ServerEventReceiver for WebSocketAdapter<'_> {
             IncomingMessage::DiscoveryAck {
                 propagated,
                 current_zone,
-                current_zone_key,
+                current_zone_id,
                 exits,
                 stats,
                 scaling,
             } => ServerEvent::DiscoveryAck(DiscoveryResult {
                 propagated,
                 current_zone,
-                current_zone_key,
+                current_zone_id,
                 exits,
                 stats,
                 scaling,
             }),
             IncomingMessage::ZoneQueryAck {
                 zone,
-                zone_key,
+                zone_id,
                 exits,
                 scaling,
             } => ServerEvent::ZoneQueryAck(ZoneQueryResult {
                 zone,
-                zone_key,
+                zone_id,
                 exits,
                 scaling,
             }),
