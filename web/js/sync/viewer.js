@@ -75,6 +75,7 @@ function buildGraphFromSessionData(data) {
 
         nodes.push({
             id: id,
+            name: nodeState.name || id, // Display name from sync data
             isBoss: nodeState.isBoss || false,
             scaling: nodeState.scaling || null,
             x: nodeState.x,
@@ -567,13 +568,9 @@ export async function connectAsViewer(gameId) {
 
             // Discovery from server
             if (data.type === 'discovery') {
-                handleDiscoveryFromServer(
-                    data.propagated,
-                    data.discovered_zone_links,
-                    data.stats,
-                    false,
-                    data.focus_target
-                );
+                // Use focus_target_id (zone_key) if available, fallback to focus_target
+                const focusZoneId = data.focus_target_id || data.focus_target;
+                handleDiscoveryFromServer(data.propagated, data.discovered_zone_links, data.stats, false, focusZoneId);
                 return;
             }
 

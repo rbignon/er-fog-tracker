@@ -133,6 +133,7 @@ function getFullSyncState() {
         nodesState[d.id] = {
             x: x,
             y: y,
+            name: d.name || d.id, // Display name for viewer labels
             visible: nodeEl.style('display') !== 'none',
             highlighted: nodeEl.classed('highlighted'),
             dimmed: nodeEl.classed('dimmed'),
@@ -176,6 +177,7 @@ function getFullSyncState() {
                 nodesState[n.id] = {
                     x: 0,
                     y: 0,
+                    name: n.name || n.id, // Display name for viewer labels
                     visible: false,
                     highlighted: false,
                     dimmed: false,
@@ -536,13 +538,9 @@ export async function connectAsHost(gameId) {
 
             // Discovery from mod
             if (data.type === 'discovery') {
-                handleDiscoveryFromServer(
-                    data.propagated,
-                    data.discovered_zone_links,
-                    data.stats,
-                    false,
-                    data.focus_target
-                );
+                // Use focus_target_id (zone_key) if available, fallback to focus_target
+                const focusZoneId = data.focus_target_id || data.focus_target;
+                handleDiscoveryFromServer(data.propagated, data.discovered_zone_links, data.stats, false, focusZoneId);
                 return;
             }
 

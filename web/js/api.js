@@ -161,13 +161,15 @@ export async function parseSpoilerLog(spoilerLog) {
 
 /**
  * Transform zones from API format to frontend format.
- * @param {Array} zones - Zones from API (snake_case)
+ * @param {Object|Array} zones - Zones from API (dict keyed by zone_key, or legacy array)
  * @returns {Array} Zones in frontend format (camelCase)
  */
 export function transformZonesFromApi(zones) {
-    return zones.map((zone, index) => ({
-        id: zone.name,
-        uuid: zone.id,
+    // Handle both dict (new format) and array (legacy)
+    const zoneArray = Array.isArray(zones) ? zones : Object.values(zones);
+    return zoneArray.map((zone, index) => ({
+        id: zone.id, // zone_key (primary identifier)
+        name: zone.name, // display name (for labels)
         isBoss: zone.is_boss || false,
         scaling: zone.scaling || null,
         order: index,
@@ -182,12 +184,10 @@ export function transformZonesFromApi(zones) {
 export function transformLinksFromApi(links) {
     return links.map(link => ({
         id: link.id,
-        source: link.source,
-        sourceId: link.source_id || null,
-        sourceKey: link.source_key || null,
-        target: link.target,
-        targetId: link.target_id || null,
-        targetKey: link.target_key || null,
+        source: link.source_id, // zone_key for D3 binding
+        sourceName: link.source, // display name for labels
+        target: link.target_id, // zone_key for D3 binding
+        targetName: link.target, // display name for labels
         type: link.type,
         sourceDetails: link.source_details || '',
         targetDetails: link.target_details || '',
@@ -204,8 +204,8 @@ export function transformLinksFromApi(links) {
  */
 export function transformZonesToApi(nodes) {
     return nodes.map(node => ({
-        id: node.uuid || node.id,
-        name: node.id,
+        id: node.id, // zone_key
+        name: node.name || node.id, // display name (fallback to id)
         is_boss: node.isBoss || false,
         scaling: node.scaling || null,
     }));
@@ -222,12 +222,10 @@ export function transformLinksToApi(links, getLinkEndpoints) {
         const { sourceId, targetId } = getLinkEndpoints(link);
         return {
             id: link.id,
-            source: sourceId,
-            source_id: link.sourceId || null,
-            source_key: link.sourceKey || null,
-            target: targetId,
-            target_id: link.targetId || null,
-            target_key: link.targetKey || null,
+            source: link.sourceName || sourceId, // display name
+            source_id: sourceId, // zone_key
+            target: link.targetName || targetId, // display name
+            target_id: targetId, // zone_key
             type: link.type || 'random',
             source_details: link.sourceDetails || null,
             target_details: link.targetDetails || null,
@@ -286,11 +284,11 @@ export async function regenerateModToken() {
 /**
  * Create a discovery.
  * @param {string} gameId - Game UUID
- * @param {Object} data - { source, target, link_id? }
+ * @param {Object} data - { source_id, target_id, link_id? }
  * @returns {Promise<{ propagated: Array<{ source, target }>, discovered_zone_links: Array }>}
  */
-export async function createDiscovery(gameId, { source, target, link_id }) {
-    const body = { source, target };
+export async function createDiscovery(gameId, { source_id, target_id, link_id }) {
+    const body = { source_id, target_id };
     if (link_id) {
         body.link_id = link_id;
     }
@@ -303,13 +301,13 @@ export async function createDiscovery(gameId, { source, target, link_id }) {
 /**
  * Undiscover a zone (and cascade to unreachable zones).
  * @param {string} gameId - Game UUID
- * @param {string} zone - Zone ID to undiscover
+ * @param {string} zoneId - Zone key to undiscover
  * @returns {Promise<{ removed: string[], discovered_zone_links: Array }>}
  */
-export async function undiscoverZone(gameId, zone) {
+export async function undiscoverZone(gameId, zoneId) {
     return apiFetch(`/api/games/${gameId}/undiscoveries`, {
         method: 'POST',
-        body: JSON.stringify({ zone }),
+        body: JSON.stringify({ zone_id: zoneId }),
     });
 }
 

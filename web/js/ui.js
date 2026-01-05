@@ -66,12 +66,18 @@ async function processSpoilerLogText(text) {
     // Parse via API
     const apiData = await parseSpoilerLog(text);
 
+    // Set starting zone before loading exploration state
+    if (apiData.starting_zone_id) {
+        State.setStartNodeId(apiData.starting_zone_id);
+    }
+
     // Transform API response to frontend format
     const parsedData = {
         nodes: transformZonesFromApi(apiData.zones),
         links: transformLinksFromApi(apiData.zone_links),
         metadata: {
             seed: apiData.seed,
+            startingZoneId: apiData.starting_zone_id,
         },
     };
 

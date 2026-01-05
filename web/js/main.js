@@ -228,6 +228,11 @@ async function initPlayMode(gameId) {
         // Check version compatibility after API call
         checkAndNotifyVersion();
 
+        // Set starting zone before loading exploration state
+        if (game.starting_zone_id) {
+            State.setStartNodeId(game.starting_zone_id);
+        }
+
         // Convert server data to graph format
         const graphData = await convertServerDataToGraph(game);
 
@@ -271,6 +276,11 @@ async function initViewerMode(gameId) {
         // Check version compatibility after API call
         checkAndNotifyVersion();
 
+        // Set starting zone before loading exploration state
+        if (game.starting_zone_id) {
+            State.setStartNodeId(game.starting_zone_id);
+        }
+
         // Convert server data to graph format
         const graphData = await convertServerDataToGraph(game);
 
@@ -302,57 +312,52 @@ async function initViewerMode(gameId) {
  * Convert server game data to client graph format.
  */
 async function convertServerDataToGraph(game) {
-    const { transformLinksFromApi } = await import('./api.js');
+    const { transformLinksFromApi, transformZonesFromApi } = await import('./api.js');
 
-    // Build zone metadata map if available
-    // Note: zones have UUID id but links use zone names, so key by name
-    const zoneMetadata = new Map();
-    if (game.zones) {
-        for (const zone of game.zones) {
-            if (zone.name) {
-                zoneMetadata.set(zone.name, {
-                    uuid: zone.id,
-                    isBoss: zone.is_boss || false,
-                    scaling: zone.scaling || null,
-                });
-            }
-        }
-    }
+    // Transform zones using centralized function (handles dict or array)
+    // zones is now a dict keyed by zone_key
+    const nodes = game.zones ? transformZonesFromApi(game.zones) : [];
 
-    // Transform links using centralized function (required_item comes from API)
+    // Build node map by zone_key for enrichment
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+    // Transform links using centralized function
     const links = transformLinksFromApi(game.zone_links);
 
-    // Build nodes from links (zones might not include all nodes)
-    const nodes = new Map();
+    // Ensure all link endpoints have corresponding nodes
+    // (in case zones dict is incomplete)
     for (const link of links) {
-        if (!nodes.has(link.source)) {
-            const meta = zoneMetadata.get(link.source) || {};
-            nodes.set(link.source, {
+        if (!nodeMap.has(link.source)) {
+            const node = {
                 id: link.source,
-                uuid: meta.uuid || null,
-                isBoss: meta.isBoss || false,
-                scaling: meta.scaling || null,
-            });
+                name: link.sourceName || link.source,
+                isBoss: false,
+                scaling: null,
+            };
+            nodes.push(node);
+            nodeMap.set(link.source, node);
         }
-        if (!nodes.has(link.target)) {
-            const meta = zoneMetadata.get(link.target) || {};
-            nodes.set(link.target, {
+        if (!nodeMap.has(link.target)) {
+            const node = {
                 id: link.target,
-                uuid: meta.uuid || null,
-                isBoss: meta.isBoss || false,
-                scaling: meta.scaling || null,
-            });
+                name: link.targetName || link.target,
+                isBoss: false,
+                scaling: null,
+            };
+            nodes.push(node);
+            nodeMap.set(link.target, node);
         }
     }
 
     return {
-        nodes: Array.from(nodes.values()),
+        nodes,
         links,
         metadata: {
             seed: game.seed,
             label: game.label,
             discoveryCount: game.discovery_count,
             totalZones: game.total_zones,
+            startingZoneId: game.starting_zone_id,
         },
     };
 }
@@ -363,7 +368,8 @@ async function convertServerDataToGraph(game) {
  */
 function loadExplorationFromServer(game) {
     // Build discovered nodes from discovered zone links
-    const discovered = new Set(['Chapel of Anticipation']);
+    // Always include starting zone (zone_key)
+    const discovered = new Set([State.getStartNodeId()]);
     const discoveredLinks = new Set();
 
     // Use linkIndex (already built by setGraphData) to resolve zone_link_id → source/target
@@ -384,7 +390,7 @@ function loadExplorationFromServer(game) {
         }
     }
 
-    // Build tags map
+    // Build tags map (keys are now zone_keys)
     const tags = new Map();
     for (const [zone, zoneTags] of Object.entries(game.tags || {})) {
         tags.set(zone, zoneTags);
@@ -397,7 +403,7 @@ function loadExplorationFromServer(game) {
         tags,
     });
 
-    // Load node positions
+    // Load node positions (keys are now zone_keys)
     if (game.node_positions) {
         const positions = new Map();
         for (const [nodeId, pos] of Object.entries(game.node_positions)) {

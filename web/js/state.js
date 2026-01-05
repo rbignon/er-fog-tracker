@@ -22,7 +22,7 @@ const state = {
     // Exploration mode
     explorationMode: true, // true = Explorer, false = Full Spoiler
     explorationState: {
-        discovered: new Set(['Chapel of Anticipation']), // Start with starting area discovered
+        discovered: new Set(), // Will be initialized with starting zone on load
         discoveredLinks: new Set(), // Link UUIDs that have been traversed
         tags: new Map(),
     },
@@ -527,6 +527,7 @@ export function saveAllNodePositions() {
 // ============================================================
 
 const STORAGE_KEY_PREFIX = 'er-fog-exploration-';
+const STORAGE_VERSION = 3; // Version 3: zone_key migration (from display names)
 
 function getStorageKey(seed) {
     return STORAGE_KEY_PREFIX + seed;
@@ -536,6 +537,7 @@ export function saveExplorationToStorage() {
     if (!state.seed || !state.explorationState) return;
 
     const toSave = {
+        version: STORAGE_VERSION,
         discovered: Array.from(state.explorationState.discovered),
         discoveredLinks: Array.from(state.explorationState.discoveredLinks),
         tags: Object.fromEntries(state.explorationState.tags),
@@ -554,6 +556,14 @@ export function loadExplorationFromStorage(seed) {
 
     try {
         const parsed = JSON.parse(saved);
+
+        // Version 3+ uses zone_keys, older versions used display names
+        if (!parsed.version || parsed.version < STORAGE_VERSION) {
+            console.log('Old storage format detected (version < 3), clearing...');
+            localStorage.removeItem(getStorageKey(seed));
+            return null; // Force fresh start with zone_keys
+        }
+
         return {
             discovered: new Set(parsed.discovered || []),
             discoveredLinks: new Set(parsed.discoveredLinks || []),
@@ -636,7 +646,30 @@ export function getOfflineGameSeeds() {
 // CONSTANTS
 // ============================================================
 
-export const START_NODE = 'Chapel of Anticipation';
+// Dynamic starting zone (zone_key)
+let startNodeId = 'chapel_start'; // Default zone_key for starting zone
+
+/**
+ * Get the starting zone ID (zone_key).
+ * @returns {string} The zone_key of the starting zone
+ */
+export function getStartNodeId() {
+    return startNodeId;
+}
+
+/**
+ * Set the starting zone ID (zone_key).
+ * Should be called when loading a game with starting_zone_id from server.
+ * @param {string} zoneKey - The zone_key of the starting zone
+ */
+export function setStartNodeId(zoneKey) {
+    if (zoneKey) {
+        startNodeId = zoneKey;
+    }
+}
+
+// Legacy constant for backward compatibility (now uses zone_key)
+export const START_NODE = 'chapel_start';
 
 export const AVAILABLE_TAGS = [
     { id: 'warning', emoji: '⚠️' },

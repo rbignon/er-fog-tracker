@@ -256,8 +256,8 @@ export function handleDiscoveryFromServer(
     // If server sent full discovered_zone_links, use it directly (server is source of truth)
     if (discoveredZoneLinks && Array.isArray(discoveredZoneLinks)) {
         // Rebuild discovered nodes and links from server state
-        // Always include START_NODE (same as server-side logic)
-        const newDiscovered = new Set([State.START_NODE]);
+        // Always include starting zone (same as server-side logic)
+        const newDiscovered = new Set([State.getStartNodeId()]);
         const newDiscoveredLinks = new Set();
 
         for (const link of discoveredZoneLinks) {

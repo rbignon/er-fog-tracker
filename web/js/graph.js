@@ -302,6 +302,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
                     placeholderNodes.push({
                         id: placeholderIdForward,
                         realId: targetId,
+                        name: realNode?.name || targetId, // Display name for label
                         isPlaceholder: true,
                         isUndiscoveredLink: true,
                         isBoss: realNode?.isBoss || false,
@@ -327,6 +328,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
                         placeholderNodes.push({
                             id: placeholderIdBackward,
                             realId: sourceId,
+                            name: realNode?.name || sourceId, // Display name for label
                             isPlaceholder: true,
                             isUndiscoveredLink: true,
                             isBoss: realNode?.isBoss || false,
@@ -353,6 +355,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
                 placeholderNodes.push({
                     id: placeholderId,
                     realId: targetId,
+                    name: realNode?.name || targetId, // Display name for label
                     isPlaceholder: true,
                     isBoss: realNode?.isBoss || false,
                     scaling: realNode?.scaling || null,
@@ -376,6 +379,7 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
                 placeholderNodes.push({
                     id: placeholderId,
                     realId: sourceId,
+                    name: realNode?.name || sourceId, // Display name for label
                     isPlaceholder: true,
                     isBoss: realNode?.isBoss || false,
                     scaling: realNode?.scaling || null,
@@ -609,8 +613,9 @@ function getNodeClass(d, explorationMode) {
         cls += ' undiscovered';
         if (d.explorationStatus.accessible) cls += ' accessible';
     } else {
-        if (d.id === State.START_NODE) cls += ' start';
-        else if (d.id === 'Stone Platform') cls += ' end';
+        if (d.id === State.getStartNodeId()) cls += ' start';
+        else if (d.id === 'stone_platform')
+            cls += ' end'; // zone_key for Stone Platform
         else if (d.isBoss) cls += ' boss';
         else cls += ' normal';
         if (d.isHub) cls += ' hub';
@@ -629,7 +634,8 @@ function getNodeLabel(d, explorationMode, explorationState) {
         return '???';
     }
 
-    let label = d.id;
+    // Use d.name for display label, fallback to d.id (zone_key)
+    let label = d.name || d.id;
     if (explorationMode && explorationState && explorationState.tags) {
         const tags = explorationState.tags.get(d.id);
         if (tags && tags.length > 0) {
@@ -978,7 +984,8 @@ function buildTooltipContent(
         html = `<h3>??? (Unknown Area)</h3>`;
         html += `<p class="scaling" style="font-style: italic; color: #6a5a4a;">Discover this area to reveal its details</p>`;
     } else {
-        html = `<h3>${d.id}${d.isBoss ? '<span class="boss-badge">Boss</span>' : ''}</h3>`;
+        // Use d.name for display, fallback to d.id (zone_key)
+        html = `<h3>${d.name || d.id}${d.isBoss ? '<span class="boss-badge">Boss</span>' : ''}</h3>`;
 
         if (d.scaling) {
             html += `<p class="scaling">Scaling: ${d.scaling}</p>`;
@@ -1053,7 +1060,7 @@ function buildTooltipContent(
         html += `<button class="discover-btn" data-node-id="${d.id}">Mark as discovered</button>`;
     }
 
-    if (explorationMode && !isUndiscovered && pinned && d.id !== State.START_NODE && !State.isViewerMode()) {
+    if (explorationMode && !isUndiscovered && pinned && d.id !== State.getStartNodeId() && !State.isViewerMode()) {
         html += `<button class="undiscover-btn" data-node-id="${d.id}">↩️ Mark as undiscovered</button>`;
     }
 
@@ -1081,8 +1088,13 @@ function buildConnectionsList(
         const actualSource = reversed ? linkTargetId : linkSourceId;
         const actualTarget = reversed ? linkSourceId : linkTargetId;
 
+        // Get display names from link (fallback to zone_key)
+        const sourceName = reversed ? link.targetName || linkTargetId : link.sourceName || linkSourceId;
+        const targetName = reversed ? link.sourceName || linkSourceId : link.targetName || linkTargetId;
+
         // The neighbor is the node we're connecting to (not the current node)
-        const neighborName = direction === 'incoming' ? actualSource : actualTarget;
+        // Use display name for neighbor, zone_key for state checks
+        const neighborName = direction === 'incoming' ? sourceName : targetName;
 
         // Details also need to be swapped for reversed links
         const fromDetails = reversed ? link.targetDetails || '' : link.sourceDetails || '';

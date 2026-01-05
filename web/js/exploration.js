@@ -20,7 +20,7 @@ export function initExplorationState() {
     });
 
     // Discover starting area and propagate through pre-existing connections
-    discoverWithPreexisting(State.START_NODE, null, null);
+    discoverWithPreexisting(State.getStartNodeId(), null, null);
     State.saveExplorationToStorage();
 }
 
@@ -83,7 +83,7 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
         State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: areaId });
 
         // Send to server - response will contain full state with back-propagation
-        Api.createDiscovery(gameId, { source: fromNodeId, target: areaId, link_id: viaLink?.id })
+        Api.createDiscovery(gameId, { source_id: fromNodeId, target_id: areaId, link_id: viaLink?.id })
             .then(response => {
                 // Server response contains discovered_zone_links and stats - apply them
                 if (response && response.discovered_zone_links) {
@@ -140,7 +140,7 @@ function applyServerDiscoveryState(discoveredZoneLinks, discoveryCount, totalZon
     const linkIndex = State.getLinkIndex();
 
     // Rebuild state from server data
-    const newDiscovered = new Set([State.START_NODE]);
+    const newDiscovered = new Set([State.getStartNodeId()]);
     const newDiscoveredLinks = new Set();
 
     for (const link of discoveredZoneLinks) {
@@ -184,7 +184,7 @@ function applyServerDiscoveryState(discoveredZoneLinks, discoveryCount, totalZon
  * Undiscover an area and all areas that become unreachable (except starting area)
  */
 export function undiscoverArea(areaId) {
-    if (areaId === State.START_NODE) return;
+    if (areaId === State.getStartNodeId()) return;
 
     State.saveAllNodePositions();
 
@@ -229,7 +229,7 @@ function performLocalUndiscovery(areaId, graphData, explorationState) {
     State.undiscoverLinksForNode(areaId);
 
     // Find all nodes that are no longer reachable from START_NODE
-    const reachableFromStart = findReachableNodes(State.START_NODE, graphData.links, explorationState.discovered);
+    const reachableFromStart = findReachableNodes(State.getStartNodeId(), graphData.links, explorationState.discovered);
 
     // Undiscover all nodes that are no longer reachable
     const toUndiscover = [];
@@ -382,15 +382,15 @@ export function propagatePreexistingDiscoveries() {
  * Check if a node is accessible from START_NODE via discovered links.
  */
 function isAccessibleFromStart(nodeId) {
-    if (nodeId === State.START_NODE) return true;
+    if (nodeId === State.getStartNodeId()) return true;
 
     const explorationState = State.getExplorationState();
     const linkIndex = State.getLinkIndex();
     if (!explorationState || !linkIndex) return false;
 
     // BFS through discovered links
-    const visited = new Set([State.START_NODE]);
-    const queue = [State.START_NODE];
+    const visited = new Set([State.getStartNodeId()]);
+    const queue = [State.getStartNodeId()];
 
     while (queue.length > 0) {
         const current = queue.shift();
@@ -426,7 +426,7 @@ function isAccessibleFromStart(nodeId) {
  * Returns array of {fromNodeId, toNodeId, link} for each step.
  */
 function findPathPrioritizingDiscovered(targetId) {
-    if (targetId === State.START_NODE) return [];
+    if (targetId === State.getStartNodeId()) return [];
 
     const graphData = State.getGraphData();
     const explorationState = State.getExplorationState();
@@ -435,8 +435,8 @@ function findPathPrioritizingDiscovered(targetId) {
     const nodeConnections = buildNodeConnectionsMap(graphData);
 
     // BFS with priority for discovered nodes
-    const visited = new Set([State.START_NODE]);
-    const queue = [{ nodeId: State.START_NODE, path: [] }];
+    const visited = new Set([State.getStartNodeId()]);
+    const queue = [{ nodeId: State.getStartNodeId(), path: [] }];
 
     while (queue.length > 0) {
         const { nodeId: current, path } = queue.shift();
@@ -495,8 +495,8 @@ export function discoverPathTo(targetId) {
 
     // BFS to find shortest path (using all nodes, not just discovered)
     // Track both nodes and the links used to reach them
-    const visited = new Set([State.START_NODE]);
-    const queue = [[State.START_NODE, [{ nodeId: State.START_NODE, fromNodeId: null, viaLink: null }]]];
+    const visited = new Set([State.getStartNodeId()]);
+    const queue = [[State.getStartNodeId(), [{ nodeId: State.getStartNodeId(), fromNodeId: null, viaLink: null }]]];
 
     while (queue.length > 0) {
         const [currentId, pathSteps] = queue.shift();
@@ -530,8 +530,8 @@ export function discoverPathTo(targetId) {
 
                     // Send to server - server will back-propagate
                     Api.createDiscovery(gameId, {
-                        source: lastStep.fromNodeId,
-                        target: targetId,
+                        source_id: lastStep.fromNodeId,
+                        target_id: targetId,
                         link_id: lastStep.viaLink?.id,
                     })
                         .then(response => {
@@ -598,8 +598,8 @@ export function discoverPathTo(targetId) {
  * Find path from start node to target using BFS
  */
 export function findPathFromStart(targetNodeId) {
-    if (targetNodeId === State.START_NODE) {
-        return { nodes: new Set([State.START_NODE]), links: new Set() };
+    if (targetNodeId === State.getStartNodeId()) {
+        return { nodes: new Set([State.getStartNodeId()]), links: new Set() };
     }
 
     const graphData = State.getGraphData();
@@ -620,8 +620,8 @@ export function findPathFromStart(targetNodeId) {
         return State.isLinkDiscovered(fromId, toId) || State.isLinkDiscovered(toId, fromId);
     };
 
-    const visited = new Set([State.START_NODE]);
-    const queue = [[State.START_NODE, [], []]]; // [nodeId, pathNodes, pathLinks]
+    const visited = new Set([State.getStartNodeId()]);
+    const queue = [[State.getStartNodeId(), [], []]]; // [nodeId, pathNodes, pathLinks]
 
     while (queue.length > 0) {
         const [currentId, pathNodes, pathLinks] = queue.shift();
