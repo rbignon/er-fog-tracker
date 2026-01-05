@@ -272,8 +272,8 @@
     },
     "12072951": {
       "grace_name": "Nokron, Eternal City",
-      "zone": "early in Nokron, Eternal City",
-      "map_id": null
+      "zone": "Nokron before Mimic Tear",
+      "map_id": "m12_07_00_00"
     },
     "13002950": {
       "grace_name": "Maliketh, the Black Blade",
@@ -517,12 +517,12 @@
     },
     "21002958": {
       "grace_name": "Tree-Worship Passage",
-      "zone": "Shadow Keep",
+      "zone": "Shadow Keep - Tree-Worship Sanctum",
       "map_id": null
     },
     "21002959": {
       "grace_name": "Tree-Worship Sanctum",
-      "zone": "Shadow Keep",
+      "zone": "Shadow Keep - Tree-Worship Sanctum",
       "map_id": null
     },
     "21012950": {
@@ -582,12 +582,12 @@
     },
     "22002953": {
       "grace_name": "Fissure Waypoint",
-      "zone": "Stone Coffin Fissure",
+      "zone": "Stone Coffin Fissure - After Waypoint",
       "map_id": null
     },
     "22002954": {
       "grace_name": "Fissure Depths",
-      "zone": "Stone Coffin Fissure",
+      "zone": "Stone Coffin Fissure - After Waypoint",
       "map_id": null
     },
     "25002950": {
@@ -877,7 +877,7 @@
     },
     "34112951": {
       "grace_name": "Liurnia Tower Bridge",
-      "zone": "Liurnia",
+      "zone": "Divine Tower of Liurnia Interior",
       "map_id": null
     },
     "34112952": {
@@ -1220,10 +1220,20 @@
       "zone": "Castle Ensis",
       "map_id": "m60_48_44_00"
     },
+    "2048442951": {
+      "grace_name": "Castle-Lord's Chamber",
+      "zone": "Castle Ensis",
+      "map_id": "m60_48_44_00"
+    },
     "1048442951": {
       "grace_name": "Castle-Lord's Chamber",
       "zone": "Castle Ensis",
       "map_id": "m60_48_44_00"
+    },
+    "2047442951": {
+      "grace_name": "Castle Ensis Checkpoint",
+      "zone": "Castle Ensis",
+      "map_id": "m61_47_44_0"
     },
     "1033402950": {
       "grace_name": "Altar South",
