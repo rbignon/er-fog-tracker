@@ -439,4 +439,6 @@ async def create_undiscovery(
     return UndiscoveryResponse(
         removed=removed_zones,
         discovered_zone_links=response_links,
+        discovery_count=stats["discovered"],
+        total_zones=stats["total"],
     )

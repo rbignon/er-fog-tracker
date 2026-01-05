@@ -206,6 +206,8 @@ class UndiscoveryResponse(BaseModel):
 
     removed: list[str]  # Zones that were undiscovered
     discovered_zone_links: list[DiscoveredZoneLink]
+    discovery_count: int
+    total_zones: int
 
 
 # =============================================================================

@@ -291,6 +291,28 @@ Create a discovery (REST fallback, prefer WebSocket).
 |-------|-------------|
 | `source_id` | Source zone key |
 | `target_id` | Target zone key |
+| `link_id` | Optional link UUID for disambiguation |
+
+**Response**:
+```json
+{
+  "propagated": [
+    {"source": "Limgrave", "target": "Stormveil Castle"}
+  ],
+  "discovered_zone_links": [
+    {"zone_link_id": "uuid", "discovered_at": "2024-01-01T12:00:00Z", "discovered_by": "host"}
+  ],
+  "discovery_count": 15,
+  "total_zones": 100
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `propagated` | Links discovered in this request (including back-propagation) |
+| `discovered_zone_links` | Full list of all discovered links |
+| `discovery_count` | Number of discovered zones |
+| `total_zones` | Total number of zones |
 
 **Side effect**: Broadcasts a `discovery` message to all connected viewers via WebSocket.
 
@@ -309,6 +331,25 @@ Undiscover a zone and cascade.
 | Field | Description |
 |-------|-------------|
 | `zone_id` | Zone key of zone to undiscover |
+
+**Response**:
+```json
+{
+  "removed": ["limgrave", "stormveil"],
+  "discovered_zone_links": [
+    {"zone_link_id": "uuid", "discovered_at": "2024-01-01T12:00:00Z", "discovered_by": "host"}
+  ],
+  "discovery_count": 13,
+  "total_zones": 100
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `removed` | Zone keys of zones that were undiscovered (cascade) |
+| `discovered_zone_links` | Full list of remaining discovered links |
+| `discovery_count` | Number of discovered zones (after removal) |
+| `total_zones` | Total number of zones |
 
 **Side effect**: Broadcasts a `discovery` message (with updated state) to all connected viewers via WebSocket.
 

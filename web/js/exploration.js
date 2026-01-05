@@ -158,25 +158,33 @@ function applyServerDiscoveryState(discoveredZoneLinks, discoveryCount, totalZon
         }
     }
 
-    // Check if state actually changed
-    const changed =
+    // Check if exploration state changed
+    const explorationChanged =
         newDiscovered.size !== explorationState.discovered.size ||
         newDiscoveredLinks.size !== explorationState.discoveredLinks.size;
 
-    if (changed) {
+    if (explorationChanged) {
         explorationState.discovered = newDiscovered;
         explorationState.discoveredLinks = newDiscoveredLinks;
         State.saveExplorationToStorage();
-        State.emit('graphNeedsRender', { preservePositions: true });
     }
 
     // Update stats from server (server is source of truth for stats)
+    let statsChanged = false;
     if (discoveryCount !== undefined && totalZones !== undefined) {
         const graphData = State.getGraphData();
         if (graphData?.metadata) {
-            graphData.metadata.discoveryCount = discoveryCount;
-            graphData.metadata.totalZones = totalZones;
+            if (graphData.metadata.discoveryCount !== discoveryCount || graphData.metadata.totalZones !== totalZones) {
+                graphData.metadata.discoveryCount = discoveryCount;
+                graphData.metadata.totalZones = totalZones;
+                statsChanged = true;
+            }
         }
+    }
+
+    // Re-render if anything changed
+    if (explorationChanged || statsChanged) {
+        State.emit('graphNeedsRender', { preservePositions: true });
     }
 }
 
@@ -205,9 +213,13 @@ export function undiscoverArea(areaId) {
         // Send to server - response will contain authoritative state
         Api.undiscoverZone(gameId, areaId)
             .then(response => {
-                // Server response contains discovered_zone_links - apply it
+                // Server response contains discovered_zone_links and stats - apply them
                 if (response && response.discovered_zone_links) {
-                    applyServerDiscoveryState(response.discovered_zone_links);
+                    applyServerDiscoveryState(
+                        response.discovered_zone_links,
+                        response.discovery_count,
+                        response.total_zones
+                    );
                 }
             })
             .catch(err => console.error('Failed to persist undiscovery:', err));
