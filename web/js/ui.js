@@ -221,8 +221,8 @@ function handleSearch(query) {
     const graphData = State.getGraphData();
     if (!graphData) return;
 
-    // Find matching nodes
-    const matching = graphData.nodes.filter(n => n.id.toLowerCase().includes(query.toLowerCase()));
+    // Find matching nodes (search on display name, fallback to id)
+    const matching = graphData.nodes.filter(n => (n.name || n.id).toLowerCase().includes(query.toLowerCase()));
 
     State.emit('searchMatched', { matchingIds: new Set(matching.map(n => n.id)) });
 
@@ -237,7 +237,7 @@ function handleSearch(query) {
                 html += `
                     <div class="search-result">
                         <div>
-                            <span class="search-result-name">${n.id}</span>
+                            <span class="search-result-name">${n.name || n.id}</span>
                             <span class="search-result-status">(not discovered)</span>
                         </div>
                         <button class="search-result-btn" data-node-id="${n.id}">🎯 I've reached</button>
