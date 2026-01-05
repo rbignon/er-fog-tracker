@@ -833,7 +833,7 @@ export function buildNodeConnectionsMap(graphData) {
 /**
  * Show discovery notification
  */
-function showDiscoveryNotification(count, targetName) {
+function showDiscoveryNotification(count, targetId) {
     let notification = document.getElementById('discovery-notification');
     if (!notification) {
         notification = document.createElement('div');
@@ -841,7 +841,12 @@ function showDiscoveryNotification(count, targetName) {
         document.body.appendChild(notification);
     }
 
-    notification.textContent = `✓ ${count} area${count > 1 ? 's' : ''} discovered on path to "${targetName}"`;
+    // Look up display name from graph data
+    const graphData = State.getGraphData();
+    const node = graphData?.nodes?.find(n => n.id === targetId);
+    const displayName = node?.name || targetId;
+
+    notification.textContent = `✓ ${count} area${count > 1 ? 's' : ''} discovered on path to "${displayName}"`;
     notification.classList.add('visible');
 
     setTimeout(() => {

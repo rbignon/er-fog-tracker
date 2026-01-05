@@ -368,8 +368,12 @@ export function handleDiscoveryFromServer(
 
         // Show toast for each newly discovered zone (skip on initial sync)
         if (!isInitialSync) {
+            const graphData = State.getGraphData();
+            const nodeMap = graphData?.nodes ? new Map(graphData.nodes.map(n => [n.id, n])) : new Map();
             for (const zone of newlyDiscoveredZones) {
-                Toast.show(`Discovered: ${zone}`, { type: 'info' });
+                const node = nodeMap.get(zone);
+                const displayName = node?.name || zone;
+                Toast.show(`Discovered: ${displayName}`, { type: 'info' });
             }
         }
     }
