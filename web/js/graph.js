@@ -1494,13 +1494,12 @@ export function centerOnNode(nodeId, duration = 500) {
 State.subscribe('nodeTagsUpdated', ({ nodeId, tags }) => {
     // Update node label in graph
     const svg = d3.select('#graph-container svg');
-    const explorationState = State.getExplorationState();
 
     svg.selectAll('.node')
         .filter(d => d.id === nodeId)
         .select('text')
         .text(d => {
-            let label = d.id;
+            let label = d.name || d.id;
             if (tags && tags.length > 0) {
                 const emojis = tags
                     .map(tagId => {
