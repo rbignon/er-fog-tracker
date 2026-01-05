@@ -576,7 +576,7 @@ export async function connectAsViewer(gameId) {
 
             // Tag update from host/mod
             if (data.type === 'tag_update') {
-                handleTagUpdateFromServer(data.zone, data.tags);
+                handleTagUpdateFromServer(data.zone_id, data.tags);
                 return;
             }
         };

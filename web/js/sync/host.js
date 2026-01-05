@@ -409,7 +409,7 @@ State.subscribe('nodeTagsChanged', ({ nodeId, tags }) => {
             gameWs.send(
                 JSON.stringify({
                     type: 'tag_update',
-                    zone: nodeId,
+                    zone_id: nodeId,
                     tags: tags || [],
                 })
             );
@@ -557,7 +557,7 @@ export async function connectAsHost(gameId) {
 
             // Tag update from mod
             if (data.type === 'tag_update') {
-                handleTagUpdateFromServer(data.zone, data.tags);
+                handleTagUpdateFromServer(data.zone_id, data.tags);
                 return;
             }
         };
