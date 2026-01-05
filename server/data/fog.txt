@@ -457,7 +457,7 @@ Areas:
   Tags: trivial
 - Name: liurnia_slumbering
   Text: Liurnia - Slumbering Wolf's Shack
-  Maps: m60_36_41_00
+  Maps: m60_36_41_00 m31_05_00_00
   Tags: trivial
 - Name: bellum
   Text: Bellum Highway

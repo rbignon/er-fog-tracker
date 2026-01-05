@@ -861,6 +861,59 @@ class TestShadowKeepChurchDistrictElevator:
         ), "shadowkeep_church should be a candidate for m21_01_00_00"
 
 
+class TestLakesideCrystalCaveExit:
+    """Tests for Lakeside Crystal Cave exit to Slumbering Wolf's Shack.
+
+    Bug fix: The exit from Lakeside Crystal Cave boss room (m31_05_00_00)
+    leads to liurnia_slumbering (Slumbering Wolf's Shack). This zone was
+    originally only mapped to m60_36_41_00 (overworld), causing discovery
+    failures when the player exited the dungeon boss room.
+
+    The fix adds m31_05_00_00 to liurnia_slumbering's Maps: list in fog.txt,
+    since the fog gate AEG099_001_9000 (Bloodhound Knight back) has
+    ASide: liurnia_slumbering, meaning you exit to that zone.
+
+    See: analysis/reports/.../REPORT.md - Volcano Manor Drawing Room →
+         Liurnia - Slumbering Wolf's Shack not found
+    """
+
+    def test_liurnia_slumbering_is_candidate_for_lakeside_cave(self, resolver):
+        """liurnia_slumbering should be a candidate for m31_05_00_00."""
+        zones = resolver.map_zones.get("m31_05_00_00", set())
+        assert (
+            "liurnia_slumbering" in zones
+        ), f"liurnia_slumbering should be in m31_05_00_00 candidates, got: {zones}"
+
+    def test_resolve_all_candidates_includes_slumbering(self, resolver):
+        """resolve_all_candidates for Lakeside Crystal Cave should include Slumbering Wolf's Shack."""
+        # Position from fog gate exit (approximate)
+        candidates = resolver.resolve_all_candidates("m31_05_00_00", -150, 150, -30)
+        candidate_keys = [c[0] for c in candidates]
+        candidate_names = [c[1] for c in candidates]
+
+        assert (
+            "liurnia_slumbering" in candidate_keys
+        ), f"liurnia_slumbering should be in candidates, got: {candidate_keys}"
+        assert (
+            "Liurnia - Slumbering Wolf's Shack" in candidate_names
+        ), f"'Liurnia - Slumbering Wolf's Shack' should be in candidate display names, got: {candidate_names}"
+
+    def test_lakeside_cave_zones_include_expected(self, resolver):
+        """m31_05_00_00 should include cave, boss, and exit zones."""
+        zones = resolver.map_zones.get("m31_05_00_00", set())
+
+        # Core cave zones
+        assert "liurnia_lakesidecave" in zones, "liurnia_lakesidecave should be in m31_05_00_00"
+        assert (
+            "liurnia_lakesidecave_boss" in zones
+        ), "liurnia_lakesidecave_boss should be in m31_05_00_00"
+
+        # Exit zone (the fix)
+        assert (
+            "liurnia_slumbering" in zones
+        ), "liurnia_slumbering should be in m31_05_00_00 (boss room exit)"
+
+
 class TestSiblingMapFallback:
     """Tests for sibling map fallback in zone resolution.
 
