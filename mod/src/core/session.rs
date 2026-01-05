@@ -10,6 +10,7 @@ use crate::core::io_traits::{
 use crate::core::protocol::{DiscoveryStats, FogExit};
 use crate::core::traits::{GameStateReader, WarpDetector};
 use crate::core::warp_tracker::{DiscoveryEvent, WarpTracker};
+use tracing::debug;
 
 // =============================================================================
 // SESSION EVENTS
@@ -35,6 +36,8 @@ pub enum SessionEvent {
     },
     /// Server error occurred
     ServerError(String),
+    /// Stats updated (on reconnection, without zone/exits reset)
+    StatsUpdated(DiscoveryStats),
 }
 
 // =============================================================================
@@ -272,6 +275,16 @@ impl TrackerSession {
                 }
                 ServerEvent::Error(msg) => {
                     events.push(SessionEvent::ServerError(msg));
+                }
+                ServerEvent::StatsUpdated(stats) => {
+                    // Stats-only update (on reconnection) - don't reset zone/exits
+                    debug!(
+                        discovered = stats.discovered,
+                        total = stats.total,
+                        "[SESSION] Stats updated (preserving zone/exits)"
+                    );
+                    self.state.stats = Some(stats.clone());
+                    events.push(SessionEvent::StatsUpdated(stats));
                 }
             }
         }
@@ -1069,5 +1082,102 @@ mod tests {
         assert_eq!(session.current_zone(), Some("Limgrave"));
         assert_eq!(session.exits().len(), 1);
         assert_eq!(session.exits()[0].target, "Stormveil");
+    }
+
+    // -------------------------------------------------------------------------
+    // Stats update tests (reconnection preserves zone/exits)
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_stats_updated_preserves_zone_and_exits() {
+        // When the server sends StatsUpdated (on reconnection), zone and exits
+        // should be preserved, only stats should be updated
+        let game_state = MockGameState::new(
+            vec![Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0))],
+            vec![Some(0)],
+        );
+        let warp = MockWarpDetector::new();
+        let mut server = MockServerConnection::new();
+        let mut session = synced_session(&game_state, &warp);
+
+        // Set initial state (simulating we were in Limgrave before disconnect)
+        session.state.current_zone = Some("Limgrave".to_string());
+        session.state.current_zone_id = Some("limgrave".to_string());
+        session.state.exits = vec![
+            FogExit {
+                target: "Stormveil Castle".to_string(),
+                description: "North".to_string(),
+                from_zone: None,
+            },
+            FogExit {
+                target: "???".to_string(),
+                description: "East".to_string(),
+                from_zone: None,
+            },
+        ];
+        session.state.stats = Some(DiscoveryStats {
+            discovered: 5,
+            total: 50,
+        });
+        session.state.current_zone_scaling = Some("Scaling: tier 1".to_string());
+
+        // Simulate reconnection: server sends StatsUpdated (only stats, no zone)
+        server.queue_event(ServerEvent::StatsUpdated(DiscoveryStats {
+            discovered: 10,
+            total: 55,
+        }));
+
+        // Process the event
+        let events = session.update(&game_state, &warp, &mut server);
+
+        // Check event was emitted
+        assert_eq!(events.len(), 1);
+        assert!(matches!(&events[0], SessionEvent::StatsUpdated(stats) if stats.discovered == 10));
+
+        // Zone and exits should be PRESERVED (not reset)
+        assert_eq!(session.current_zone(), Some("Limgrave"));
+        assert_eq!(session.current_zone_id(), Some("limgrave"));
+        assert_eq!(session.exits().len(), 2);
+        assert_eq!(session.exits()[0].target, "Stormveil Castle");
+        assert_eq!(session.current_zone_scaling(), Some("Scaling: tier 1"));
+
+        // Only stats should be updated
+        assert_eq!(session.stats().unwrap().discovered, 10);
+        assert_eq!(session.stats().unwrap().total, 55);
+    }
+
+    #[test]
+    fn test_stats_updated_works_with_no_prior_state() {
+        // StatsUpdated should work even if there's no prior zone state
+        let game_state = MockGameState::new(
+            vec![Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0))],
+            vec![Some(0)],
+        );
+        let warp = MockWarpDetector::new();
+        let mut server = MockServerConnection::new();
+        let mut session = synced_session(&game_state, &warp);
+
+        // No initial state (fresh session)
+        assert!(session.current_zone().is_none());
+        assert!(session.stats().is_none());
+
+        // Simulate reconnection: server sends StatsUpdated
+        server.queue_event(ServerEvent::StatsUpdated(DiscoveryStats {
+            discovered: 10,
+            total: 55,
+        }));
+
+        // Process the event
+        let events = session.update(&game_state, &warp, &mut server);
+
+        // Check event was emitted
+        assert_eq!(events.len(), 1);
+
+        // Zone should still be None (no zone info was provided)
+        assert!(session.current_zone().is_none());
+
+        // Stats should be updated
+        assert_eq!(session.stats().unwrap().discovered, 10);
+        assert_eq!(session.stats().unwrap().total, 55);
     }
 }

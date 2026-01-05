@@ -105,6 +105,8 @@ pub enum IncomingMessage {
         success: bool,
         message: Option<String>,
     },
+    /// Stats-only update (used on reconnection, doesn't reset zone/exits)
+    StatsUpdated(DiscoveryStats),
 }
 
 // =============================================================================
@@ -381,21 +383,14 @@ fn websocket_thread(
                     incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Connected));
                 reconnect_delay = Duration::from_secs(1); // Reset on successful connect
 
-                // Send initial stats if provided by server
+                // Send initial stats if provided by server (without resetting zone/exits)
                 if let Some(stats) = initial_stats {
                     debug!(
                         discovered = stats.discovered,
                         total = stats.total,
                         "[WS] Initial stats from auth_ok"
                     );
-                    let _ = incoming_tx.send(IncomingMessage::DiscoveryAck {
-                        propagated: vec![],
-                        current_zone: None,
-                        current_zone_id: None,
-                        exits: vec![],
-                        stats,
-                        scaling: None,
-                    });
+                    let _ = incoming_tx.send(IncomingMessage::StatsUpdated(stats));
                 }
 
                 // Main message loop

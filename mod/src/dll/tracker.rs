@@ -161,6 +161,7 @@ impl ServerEventReceiver for WebSocketAdapter<'_> {
             IncomingMessage::UploadLogsAck { success, message } => {
                 ServerEvent::UploadLogsAck { success, message }
             }
+            IncomingMessage::StatsUpdated(stats) => ServerEvent::StatsUpdated(stats),
         })
     }
 }

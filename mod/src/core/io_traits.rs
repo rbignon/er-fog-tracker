@@ -76,6 +76,8 @@ pub enum ServerEvent {
     },
     /// Server sent an error message
     Error(String),
+    /// Stats-only update (used on reconnection, doesn't reset zone/exits)
+    StatsUpdated(DiscoveryStats),
 }
 
 // =============================================================================
