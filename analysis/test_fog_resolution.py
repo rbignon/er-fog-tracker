@@ -33,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "server"))
 from fogtracker.zone_resolver import ZoneResolver
 from fogtracker.zone_matching import (
     find_all_matching_zone_pairs,
-    find_all_matching_zone_pairs_by_keys,
+    find_all_matching_zone_pairs_by_ids,
     names_match,
 )
 
@@ -196,11 +196,18 @@ def test_fog_resolution(
         random_zone_pairs = [p for p in zone_pairs if p.get("type") == "random"]
 
         if has_zone_keys:
-            all_matches = find_all_matching_zone_pairs_by_keys(
+            # Use zone_id-based matching (V3+ format with source_id/target_id)
+            raw_matches = find_all_matching_zone_pairs_by_ids(
                 random_zone_pairs,
                 source_candidates[:MAX_ZONE_CANDIDATES],
                 target_candidates[:MAX_ZONE_CANDIDATES],
             )
+            # Convert (source_id, target_id, pair) to (source_name, target_name, pair)
+            # for compatibility with the rest of the script
+            all_matches = [
+                (pair.get("source", src_id), pair.get("target", tgt_id), pair)
+                for src_id, tgt_id, pair in raw_matches
+            ]
         else:
             all_matches = find_all_matching_zone_pairs(
                 random_zone_pairs,
