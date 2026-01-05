@@ -3,8 +3,6 @@
 Tests the parsing of Fog Gate Randomizer spoiler logs.
 """
 
-from pathlib import Path
-
 import pytest
 
 from fogtracker.spoiler_parser import (
@@ -21,7 +19,9 @@ from fogtracker.spoiler_parser import (
     parse_spoiler_log,
     validate_spoiler_header,
 )
-from fogtracker.zone_resolver import ZoneResolver
+from fogtracker.zone_resolver import get_resolver
+
+RESOLVER = get_resolver()
 
 
 class TestShouldSkipLine:
@@ -222,11 +222,12 @@ class TestParseAreaLine:
         zone = _parse_area_line("Options and seed:12345")
         assert zone is None
 
-    def test_has_uuid(self):
+    def test_has_id(self):
+        """Zone ID is initially set to display name (will be replaced with zone_key later)."""
         zone = _parse_area_line("Limgrave")
         assert zone is not None
         assert zone.id is not None
-        assert len(zone.id) == 36  # UUID format
+        assert zone.id == zone.name  # Initially set to display name
 
 
 class TestParseConnectionLine:
@@ -309,13 +310,13 @@ class TestParseSpoilerLog:
     def test_minimal_valid_log(self):
         text = """Options and seed:12345 Fog Gate Randomizer
 Chapel of Anticipation
-  Random: Chapel of Anticipation (before boss) --> Limgrave (at start)
-Limgrave
-  Preexisting: Limgrave --> Stormveil Castle
-Stormveil Castle
+  Random: Chapel of Anticipation (before boss) --> Stormhill (at start)
+Stormhill
+  Preexisting: Stormhill --> Stormveil Castle before Gate
+Stormveil Castle before Gate
 Optional areas:
 """
-        result = parse_spoiler_log(text)
+        result = parse_spoiler_log(text, RESOLVER)
         assert result.seed == 12345
         assert len(result.zones) == 3
         assert len(result.connections) == 2
@@ -323,50 +324,50 @@ Optional areas:
     def test_extracts_zone_names(self):
         text = """Options and seed:99999
 Chapel of Anticipation
-  Random: Chapel of Anticipation --> Limgrave
-Limgrave
+  Random: Chapel of Anticipation --> Stormhill
+Stormhill
 """
-        result = parse_spoiler_log(text)
-        zone_names = {z.name for z in result.zones}
+        result = parse_spoiler_log(text, RESOLVER)
+        zone_names = {z.name for z in result.zones.values()}
         assert "Chapel of Anticipation" in zone_names
-        assert "Limgrave" in zone_names
+        assert "Stormhill" in zone_names
 
     def test_connection_types(self):
         text = """Options and seed:99999
-A
-  Random: A --> B
-  Preexisting: A --> C
-B
-C
+Chapel of Anticipation
+  Random: Chapel of Anticipation --> Stormhill
+  Preexisting: Chapel of Anticipation --> Stormveil Castle before Gate
+Stormhill
+Stormveil Castle before Gate
 """
-        result = parse_spoiler_log(text)
+        result = parse_spoiler_log(text, RESOLVER)
         types = {c.conn_type for c in result.connections}
         assert "random" in types
         assert "preexisting" in types
 
     def test_boss_zone_marked(self):
         text = """Options and seed:99999
-Stormveil Castle <<<<<
-  Preexisting: Stormveil Castle --> Liurnia
-Liurnia
+Stormveil Castle before Gate <<<<<
+  Preexisting: Stormveil Castle before Gate --> Stormhill
+Stormhill
 """
-        result = parse_spoiler_log(text)
-        boss_zones = [z for z in result.zones if z.is_boss]
+        result = parse_spoiler_log(text, RESOLVER)
+        boss_zones = [z for z in result.zones.values() if z.is_boss]
         assert len(boss_zones) == 1
-        assert boss_zones[0].name == "Stormveil Castle"
+        assert boss_zones[0].name == "Stormveil Castle before Gate"
 
     def test_stops_at_optional_areas(self):
         text = """Options and seed:99999
-A
-  Random: A --> B
-B
+Chapel of Anticipation
+  Random: Chapel of Anticipation --> Stormhill
+Stormhill
 Optional areas:
 C
   Random: C --> D
 D
 """
-        result = parse_spoiler_log(text)
-        zone_names = {z.name for z in result.zones}
+        result = parse_spoiler_log(text, RESOLVER)
+        zone_names = {z.name for z in result.zones.values()}
         # C and D should not be parsed (after Optional areas:)
         assert "C" not in zone_names
         assert "D" not in zone_names
@@ -374,30 +375,30 @@ D
     def test_empty_log_raises(self):
         # Empty string goes through seed parsing first, which fails
         with pytest.raises(SpoilerParseError, match="Could not find seed"):
-            parse_spoiler_log("")
+            parse_spoiler_log("", RESOLVER)
 
     def test_no_seed_raises(self):
         with pytest.raises(SpoilerParseError, match="Could not find seed"):
-            parse_spoiler_log("Invalid header\nLimgrave")
+            parse_spoiler_log("Invalid header\nLimgrave", RESOLVER)
 
     def test_no_zones_raises(self):
         with pytest.raises(SpoilerParseError, match="No zones found"):
-            parse_spoiler_log("Options and seed:12345\nOptional areas:")
+            parse_spoiler_log("Options and seed:12345\nOptional areas:", RESOLVER)
 
     def test_no_connections_raises(self):
         with pytest.raises(SpoilerParseError, match="No connections found"):
-            parse_spoiler_log("Options and seed:12345\nLimgrave\nCaelid")
+            parse_spoiler_log("Options and seed:12345\nLimgrave\nCaelid", RESOLVER)
 
     def test_zone_ids_linked_to_connections(self):
         text = """Options and seed:99999
-A
-  Random: A --> B
-B
+Chapel of Anticipation
+  Random: Chapel of Anticipation --> Stormhill
+Stormhill
 """
-        result = parse_spoiler_log(text)
+        result = parse_spoiler_log(text, RESOLVER)
         conn = result.connections[0]
-        zone_a = next(z for z in result.zones if z.name == "A")
-        zone_b = next(z for z in result.zones if z.name == "B")
+        zone_a = next(z for z in result.zones.values() if z.name == "Chapel of Anticipation")
+        zone_b = next(z for z in result.zones.values() if z.name == "Stormhill")
         assert conn.source_id == zone_a.id
         assert conn.target_id == zone_b.id
 
@@ -620,7 +621,7 @@ class TestDataclasses:
 
     def test_parse_result_defaults(self):
         result = ParseResult(seed=12345)
-        assert result.zones == []
+        assert result.zones == {}
         assert result.connections == []
         assert result.options == ""
 
@@ -629,57 +630,57 @@ class TestWithRealSpoilerLogs:
     """Tests using real spoiler log files."""
 
     def test_parse_seed_1078869800(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800)
+        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
         assert result.seed == 1078869800
         assert len(result.zones) > 50
         assert len(result.connections) > 100
 
     def test_parse_seed_1851144969(self, spoiler_log_1851144969):
-        result = parse_spoiler_log(spoiler_log_1851144969)
+        result = parse_spoiler_log(spoiler_log_1851144969, RESOLVER)
         assert result.seed == 1851144969
         assert len(result.zones) > 50
         assert len(result.connections) > 100
 
     def test_all_connections_have_valid_zones(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800)
-        zone_names = {z.name for z in result.zones}
+        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+        zone_names = {z.name for z in result.zones.values()}
         for conn in result.connections:
             assert conn.source in zone_names, f"Source '{conn.source}' not in zones"
             assert conn.target in zone_names, f"Target '{conn.target}' not in zones"
 
     def test_connections_have_valid_zone_ids(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800)
-        zone_ids = {z.id for z in result.zones}
+        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+        zone_ids = {z.id for z in result.zones.values()}
         for conn in result.connections:
             assert conn.source_id in zone_ids, f"source_id '{conn.source_id}' not found"
             assert conn.target_id in zone_ids, f"target_id '{conn.target_id}' not found"
 
     def test_has_both_connection_types(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800)
+        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
         types = {c.conn_type for c in result.connections}
         assert "random" in types
         assert "preexisting" in types
 
     def test_has_boss_zones(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800)
-        boss_zones = [z for z in result.zones if z.is_boss]
+        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+        boss_zones = [z for z in result.zones.values() if z.is_boss]
         assert len(boss_zones) > 0
 
     def test_has_scaling_info(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800)
-        zones_with_scaling = [z for z in result.zones if z.scaling]
+        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+        zones_with_scaling = [z for z in result.zones.values() if z.scaling]
         assert len(zones_with_scaling) > 0
 
     def test_has_one_way_connections(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800)
+        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
         one_way = [c for c in result.connections if c.is_one_way]
         # Real spoiler logs typically have some one-way connections (sending gates, etc.)
         assert len(one_way) > 0
 
     def test_chapel_of_anticipation_exists(self, spoiler_log_1078869800):
         """Chapel of Anticipation is always the starting zone."""
-        result = parse_spoiler_log(spoiler_log_1078869800)
-        zone_names = {z.name for z in result.zones}
+        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+        zone_names = {z.name for z in result.zones.values()}
         assert "Chapel of Anticipation" in zone_names
 
 
@@ -694,8 +695,7 @@ class TestEnrichConnectionsOneWay:
     @pytest.fixture
     def resolver(self):
         """Create a ZoneResolver with real data."""
-        data_dir = Path(__file__).parent.parent.parent / "data"
-        return ZoneResolver(data_dir)
+        return get_resolver()
 
     def test_one_way_preexisting_from_fog_txt(self, resolver):
         """Preexisting link should be marked one-way from fog.txt To: structure."""
@@ -713,8 +713,8 @@ class TestEnrichConnectionsOneWay:
         enriched = enrich_connections_with_zone_keys([conn], resolver)
         result = enriched[0]
 
-        assert result.source_key == "shadowkeep_church_lower"
-        assert result.target_key == "shadowkeep_sanctum"
+        assert result.source_id == "shadowkeep_church_lower"
+        assert result.target_id == "shadowkeep_sanctum"
         assert result.is_one_way is True  # Should be corrected to True
 
     def test_already_one_way_not_changed(self, resolver):

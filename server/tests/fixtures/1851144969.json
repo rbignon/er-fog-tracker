@@ -1,1822 +1,2342 @@
 [
-    {
-        "source": "Chapel of Anticipation",
-        "destination": "Cave of Knowledge - From Seaside Ruins",
-        "type": "random",
-        "source_details": "before Grafted Scion's arena",
-        "target_details": "at the back entrance from the Seaside Ruins beach"
-    },
-    {
-        "source": "Cave of Knowledge - From Seaside Ruins",
-        "destination": "Cave of Knowledge",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Cave of Knowledge - After Soldier of Godrick",
-        "destination": "Cave of Knowledge",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Cave of Knowledge",
-        "destination": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
-        "type": "random",
-        "source_details": "before Soldier of Godrick's arena",
-        "target_details": "at the front of Onyx Lord's arena"
-    },
-    {
-        "source": "Cave of Knowledge",
-        "destination": "Caelid - Sellia Crystal Tunnel",
-        "type": "random",
-        "source_details": "at the door to Stranded Graveyard",
-        "target_details": "at the entrance from Caelid"
-    },
-    {
-        "source": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
-        "destination": "Leyndell - before Divine Tower",
-        "type": "random",
-        "source_details": "return to entrance after Onyx Lord",
-        "target_details": "at the base of the elevator to the Divine Tower of East Altus"
-    },
-    {
-        "source": "Leyndell",
-        "destination": "Leyndell - before Divine Tower",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the heavy door below East Capital Rampart"
-    },
-    {
-        "source": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
-        "destination": "Leyndell - Elden Throne",
-        "type": "random",
-        "source_details": "at the back of Onyx Lord's arena",
-        "target_details": "at the back of Morgott's arena"
-    },
-    {
-        "source": "Caelid - Sellia Crystal Tunnel",
-        "destination": "Commander Niall",
-        "type": "random",
-        "source_details": "before Fallingstar Beast's arena",
-        "target_details": "at the front of Commander Niall's arena"
-    },
-    {
-        "source": "Chapel of Anticipation",
-        "destination": "Roundtable Hold",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "accessing an overworld grace"
-    },
-    {
-        "source": "Leyndell - Elden Throne",
-        "destination": "Academy of Raya Lucaria after Red Wolf",
-        "type": "random",
-        "source_details": "at the front of Morgott's arena",
-        "target_details": "on the steps to Raya Lucaria rooftops section"
-    },
-    {
-        "source": "Academy of Raya Lucaria Rooftops",
-        "destination": "Academy of Raya Lucaria after Red Wolf",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping back down to the courtyard at the start of rooftops section"
-    },
-    {
-        "source": "Commander Niall",
-        "destination": "Ashen Leyndell - Queen's Bedchamber",
-        "type": "random",
-        "source_details": "at the back of Commander Niall's arena",
-        "target_details": "before Hoarah Loux's arena"
-    },
-    {
-        "source": "Roundtable Hold",
-        "destination": "Royal Knight Loretta",
-        "type": "random",
-        "source_details": "in Roundtable Hold in the main room",
-        "target_details": "at the front of Loretta's arena"
-    },
-    {
-        "source": "Ashen Leyndell - Queen's Bedchamber",
-        "destination": "Ashen Leyndell - Erdtree Sanctuary",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping into the boss fight"
-    },
-    {
-        "source": "Ashen Leyndell - Queen's Bedchamber",
-        "destination": "Ashen Leyndell - Behind Erdtree Sanctuary",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "instead of entering the sanctuary, dropping down to the left"
-    },
-    {
-        "source": "Ashen Leyndell - Queen's Bedchamber",
-        "destination": "Ashen Leyndell",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "instead of entering the sanctuary, dropping down to the right"
-    },
-    {
-        "source": "Ancient Ruins of Rauh - After Romina",
-        "destination": "Ashen Leyndell",
-        "type": "random",
-        "source_details": "burning the Sealing Tree",
-        "target_details": "warp to the start of Ashen Leyndell"
-    },
-    {
-        "source": "Ashen Leyndell - Queen's Bedchamber",
-        "destination": "Scaduview - Scadutree Chalice",
-        "type": "random",
-        "source_details": "outside of Gideon's arena at the base of a shortcut ladder, accessed from an open window on a second-floor rooftop",
-        "target_details": "after Gaius's arena"
-    },
-    {
-        "source": "Ashen Leyndell - Behind Erdtree Sanctuary",
-        "destination": "Carian Study Hall",
-        "type": "random",
-        "source_details": "outside of Gideon's arena at the leftmost back exit, the one without the branch",
-        "target_details": "at the entrance from Liurnia"
-    },
-    {
-        "source": "Ashen Leyndell - Behind Erdtree Sanctuary",
-        "destination": "Leyndell - Erdtree Sanctuary Stairs",
-        "type": "random",
-        "source_details": "outside of Gideon's arena at the rightmost back exit, the one with the branch",
-        "target_details": "outside of Godfrey's arena at the stairs which go down to the Marika statue"
-    },
-    {
-        "source": "Leyndell - Queen's Bedchamber",
-        "destination": "Leyndell - Erdtree Sanctuary Stairs",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "instead of entering the sanctuary, dropping down to the right"
-    },
-    {
-        "source": "Ashen Leyndell - Behind Erdtree Sanctuary",
-        "destination": "Redmane Castle",
-        "type": "random",
-        "source_details": "outside of Gideon's arena at the center back exit",
-        "target_details": "arriving at the cliffside path to Redmane Castle"
-    },
-    {
-        "source": "Leyndell - Erdtree Sanctuary Stairs",
-        "destination": "Leyndell",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down, like near Bolt of Gransax"
-    },
-    {
-        "source": "Ashen Leyndell - South of Erdtree Sanctuary",
-        "destination": "Leyndell",
-        "type": "random",
-        "source_details": "at the side entrance to Gideon's arena from the branches",
-        "target_details": "at the Leyndell entrance from Capital Rampart"
-    },
-    {
-        "source": "Chapel of Anticipation",
-        "destination": "Leyndell",
-        "type": "random",
-        "source_details": "using the Pureblood Knight's Medal from anywhere",
-        "target_details": "arriving at the start of Leyndell from Deeproot"
-    },
-    {
-        "source": "Academy of Raya Lucaria after Red Wolf",
-        "destination": "Red Wolf of Radagon",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down in the southeast corner of the courtyard"
-    },
-    {
-        "source": "Academy of Raya Lucaria after Red Wolf",
-        "destination": "Dragonlord Placidusax",
-        "type": "random",
-        "source_details": "using the sending gate before the elevator to Grand Library",
-        "target_details": "arriving in Placidusax's arena"
-    },
-    {
-        "source": "Academy of Raya Lucaria after Red Wolf",
-        "destination": "Loretta, Knight of the Haligtree",
-        "type": "random",
-        "source_details": "before Rennala's arena",
-        "target_details": "at the front of Loretta's arena"
-    },
-    {
-        "source": "Academy of Raya Lucaria after Red Wolf",
-        "destination": "Malenia, Blade of Miquella",
-        "type": "random",
-        "source_details": "after Red Wolf's arena",
-        "target_details": "at the front of Malenia's arena"
-    },
-    {
-        "source": "Ashen Leyndell",
-        "destination": "Ashen Leyndell - South of Erdtree Sanctuary",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down to the right of the sanctuary entrance from the elevator"
-    },
-    {
-        "source": "Ashen Leyndell",
-        "destination": "Subterranean Shunning-Grounds - Ashen Capital Dropdown",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down through the open sewer grate"
-    },
-    {
-        "source": "Ashen Leyndell",
-        "destination": "Mimic Tear",
-        "type": "random",
-        "source_details": "at the front entrance to Gideon's arena",
-        "target_details": "at the side exit of Mimic Tear's arena"
-    },
-    {
-        "source": "Ashen Leyndell",
-        "destination": "Weeping Peninsula - Morne Tunnel",
-        "type": "random",
-        "source_details": "at the Ashen Capital entrance from Capital Rampart",
-        "target_details": "at the entrance from Weeping Peninsula"
-    },
-    {
-        "source": "Subterranean Shunning-Grounds - Ashen Capital Dropdown",
-        "destination": "Subterranean Shunning-Grounds",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Red Wolf of Radagon",
-        "destination": "Subterranean Shunning-Grounds",
-        "type": "random",
-        "source_details": "at the back left of Red Wolf's arena",
-        "target_details": "before Mohg's arena"
-    },
-    {
-        "source": "Subterranean Shunning-Grounds - From Royal Capital",
-        "destination": "Subterranean Shunning-Grounds",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the one-way door"
-    },
-    {
-        "source": "Redmane Castle",
-        "destination": "Starscourge Radahn",
-        "type": "random",
-        "source_details": "before Redmane Castle Plaza",
-        "target_details": "return to entrance after Starscourge Radahn"
-    },
-    {
-        "source": "Shadow Keep",
-        "destination": "Starscourge Radahn",
-        "type": "random",
-        "source_details": "using the coffin beneath Shadow Keep",
-        "target_details": "arriving at Starscourge Radahn's arena"
-    },
-    {
-        "source": "Leyndell",
-        "destination": "Leyndell - Divine Bridge (taking the elevator from Fortified Manor)",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": null
-    },
-    {
-        "source": "Finger Ruins of Miyr",
-        "destination": "Leyndell - Divine Bridge",
-        "type": "random",
-        "source_details": "using the Hole-Laden Necklace below Manus Metyr",
-        "target_details": "arriving from the Tower of Return"
-    },
-    {
-        "source": "Leyndell",
-        "destination": "Liurnia - Raya Lucaria Crystal Tunnel",
-        "type": "random",
-        "source_details": "before Godfrey's arena from the branches",
-        "target_details": "at the entrance from Liurnia"
-    },
-    {
-        "source": "Leyndell",
-        "destination": "Ainsel River Downstream",
-        "type": "random",
-        "source_details": "at the entrance to Subterranean Shunning-Grounds",
-        "target_details": "before Dragonkin of Nokstella's arena"
-    },
-    {
-        "source": "Above Ainsel River Downstream",
-        "destination": "Ainsel River Downstream",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Leyndell - Divine Bridge",
-        "destination": "Siofra River",
-        "type": "random",
-        "source_details": "using the sending gate after unlocking the elevator in Leyndell or unlocking Ashen Divine Bridge",
-        "target_details": "arriving at the sending gate after the Siofra River Bank grace"
-    },
-    {
-        "source": "Nokron to Siofra Path",
-        "destination": "Siofra River",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down to the north"
-    },
-    {
-        "source": "Deeproot Depths - Fia's Champions",
-        "destination": "Siofra River",
-        "type": "random",
-        "source_details": "using the sending gate after Fia's Champions",
-        "target_details": "arriving at the sending gate after the Worshippers' Woods grace"
-    },
-    {
-        "source": "Siofra River",
-        "destination": "Mohgwyn Palace",
-        "type": "random",
-        "source_details": "using Horned Remains in Siofra",
-        "target_details": "arriving by the Palace Approach grace"
-    },
-    {
-        "source": "Red Wolf of Radagon",
-        "destination": "Mohgwyn Palace",
-        "type": "random",
-        "source_details": "at the front of Red Wolf's arena",
-        "target_details": "before Mohg's arena"
-    },
-    {
-        "source": "Weeping Peninsula - Morne Tunnel",
-        "destination": "Weeping Peninsula - Morne Tunnel - Scaly Misbegotten",
-        "type": "random",
-        "source_details": "before Scaly Misbegotten's arena",
-        "target_details": "at the front of Scaly Misbegotten's arena"
-    },
-    {
-        "source": "Liurnia - Raya Lucaria Crystal Tunnel",
-        "destination": "Stone Coffin Fissure - Before Boss",
-        "type": "random",
-        "source_details": "before Crystalian's arena",
-        "target_details": "before the boss dropdown"
-    },
-    {
-        "source": "Ainsel River Downstream",
-        "destination": "Limgrave Tunnels - Stonedigger Troll",
-        "type": "random",
-        "source_details": "at the top of the Ainsel River Well",
-        "target_details": "at the front of Stonedigger Troll's arena"
-    },
-    {
-        "source": "Before Volcano Manor Entrance",
-        "destination": "Volcano Manor Entrance",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the first door into Volcano Manor"
-    },
-    {
-        "source": "Volcano Manor - Hallway Opposite Sending Gate",
-        "destination": "Volcano Manor Entrance",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "using a Stonesword Key, dropping down, and opening a door"
-    },
-    {
-        "source": "Siofra River",
-        "destination": "Nokron to Siofra Path",
-        "type": "random",
-        "source_details": "using the sending gate after the Siofra River Bank grace",
-        "target_details": "arriving at the lake between Nokron and lower Siofra"
-    },
-    {
-        "source": "Nokron - Ancestral Woods",
-        "destination": "Nokron to Siofra Path",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down below the east-side bridge"
-    },
-    {
-        "source": "Siofra River",
-        "destination": "Farum Azula - Crumbling Beast Grave",
-        "type": "random",
-        "source_details": "using the sending gate after the Worshippers' Woods grace",
-        "target_details": "arriving at the start of Farum Azula"
-    },
-    {
-        "source": "Siofra River",
-        "destination": "Siofra River before Ancestor Spirit",
-        "type": "random",
-        "source_details": "using the sending gate atop rubble before the Worshippers' Woods grace",
-        "target_details": "arriving in the area before Ancestor Spirit's arena"
-    },
-    {
-        "source": "Siofra River",
-        "destination": "Liurnia - Raya Lucaria Crystal Tunnel - Crystalian",
-        "type": "random",
-        "source_details": "at the top of the Siofra River Well",
-        "target_details": "at the front of Crystalian's arena"
-    },
-    {
-        "source": "Siofra River",
-        "destination": "Consecrated Snowfield - Yelough Anix Tunnel",
-        "type": "random",
-        "source_details": "at the top of the Deep Siofra Well",
-        "target_details": "at the entrance from Consecrated Snowfield"
-    },
-    {
-        "source": "Farum Azula - Crumbling Beast Grave",
-        "destination": "Farum Azula - Crumbling Beast Grave Depths",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down after Crumbling Beast Grave grace"
-    },
-    {
-        "source": "Farum Azula - Dragon Temple Lift",
-        "destination": "Farum Azula - Crumbling Beast Grave Depths",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "completing the path atop floating debris"
-    },
-    {
-        "source": "Siofra River before Ancestor Spirit",
-        "destination": "Before Volcano Manor Entrance",
-        "type": "random",
-        "source_details": "before Ancestor Spirit's arena",
-        "target_details": "at the doorway from Mt. Gelmir"
-    },
-    {
-        "source": "Royal Knight Loretta",
-        "destination": "Caelid - Gael Tunnel Start",
-        "type": "random",
-        "source_details": "at the back of Loretta's arena",
-        "target_details": "at the entrance from Caelid"
-    },
-    {
-        "source": "Ashen Leyndell - Erdtree Sanctuary",
-        "destination": "Old Altus Tunnel - Stonedigger Troll",
-        "type": "random",
-        "source_details": "at the front of Gideon's arena",
-        "target_details": "at the front of Stonedigger Troll's arena"
-    },
-    {
-        "source": "Ashen Leyndell - Erdtree Sanctuary",
-        "destination": "Altus Tunnel - Crystalian Duo",
-        "type": "random",
-        "source_details": "in Gideon's arena at the South entrance by the branches",
-        "target_details": "return to entrance after Crystalian Duo"
-    },
-    {
-        "source": "Ashen Leyndell - Erdtree Sanctuary",
-        "destination": "Divine Tower of West Altus",
-        "type": "random",
-        "source_details": "in Gideon's arena at the rightmost East exit, the one without the branch",
-        "target_details": "after Sealed Tunnel boss"
-    },
-    {
-        "source": "Ashen Leyndell - Erdtree Sanctuary",
-        "destination": "Shadow Keep - Church District",
-        "type": "random",
-        "source_details": "in Gideon's arena at the leftmost East exit, the one with the branch",
-        "target_details": "at the top of the elevator to Specimen Storehouse"
-    },
-    {
-        "source": "Ashen Leyndell - Erdtree Sanctuary",
-        "destination": "Volcano Manor - Abductor Virgins",
-        "type": "random",
-        "source_details": "in Gideon's arena at the Southwest exit with a shortcut ladder behind it",
-        "target_details": "at the back of Abductor Virgins' arena"
-    },
-    {
-        "source": "Ashen Leyndell - Erdtree Sanctuary",
-        "destination": "Stone Coffin Fissure - After Putrescent Knight",
-        "type": "random",
-        "source_details": "in Gideon's arena at the Southeast exit with treasure behind it",
-        "target_details": "after Putrescent Knight's arena"
-    },
-    {
-        "source": "Ashen Leyndell - Erdtree Sanctuary",
-        "destination": "Elphael, Brace of the Haligtree",
-        "type": "random",
-        "source_details": "in Gideon's arena at the center East exit",
-        "target_details": "before Malenia's arena"
-    },
-    {
-        "source": "Caelid - Gael Tunnel Start",
-        "destination": "Caelid - Gael Tunnel",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Weeping Peninsula - Morne Tunnel - Scaly Misbegotten",
-        "destination": "Roundtable Hold Balcony",
-        "type": "random",
-        "source_details": "return to entrance after Scaly Misbegotten",
-        "target_details": "in Roundtable Hold at the balcony overlooking the first floor"
-    },
-    {
-        "source": "Stone Coffin Fissure - Before Boss",
-        "destination": "Stone Coffin Fissure - After Waypoint",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "going back before the fog gate"
-    },
-    {
-        "source": "Stone Coffin Fissure",
-        "destination": "Stone Coffin Fissure - After Waypoint",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Stone Coffin Fissure - Before Boss",
-        "destination": "Stone Coffin Fissure - Putrescent Knight",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Limgrave Tunnels - Stonedigger Troll",
-        "destination": "Farum Azula - Dragon Temple",
-        "type": "random",
-        "source_details": "return to entrance after Stonedigger Troll",
-        "target_details": "outside the balcony above Godskin Duo's arena"
-    },
-    {
-        "source": "Farum Azula - Crumbling Beast Grave Depths",
-        "destination": "Farum Azula - Dragon Temple",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down to the platform before the Dragon Temple grace"
-    },
-    {
-        "source": "Liurnia - Raya Lucaria Crystal Tunnel - Crystalian",
-        "destination": "Ancient Ruins of Rauh - East",
-        "type": "random",
-        "source_details": "return to entrance after Crystalian",
-        "target_details": "at the Viaduct Minor Tower after West Rampart"
-    },
-    {
-        "source": "Consecrated Snowfield - Yelough Anix Tunnel",
-        "destination": "Haligtree Town",
-        "type": "random",
-        "source_details": "before Astel, Stars of Darkness' arena",
-        "target_details": "before Loretta's arena"
-    },
-    {
-        "source": "Loretta, Knight of the Haligtree",
-        "destination": "Farum Azula Rooftop and Bridge",
-        "type": "random",
-        "source_details": "at back of Loretta's arena",
-        "target_details": "before Maliketh's arena"
-    },
-    {
-        "source": "Mimic Tear",
-        "destination": "Scadu Altus - Manus Metyr",
-        "type": "random",
-        "source_details": "at the front of Mimic Tear's arena",
-        "target_details": "at the main entrance gate"
-    },
-    {
-        "source": "Old Altus Tunnel - Stonedigger Troll",
-        "destination": "Stranded Graveyard",
-        "type": "random",
-        "source_details": "return to entrance after Stonedigger Troll",
-        "target_details": "at the exit to Limgrave"
-    },
-    {
-        "source": "Limgrave - Fringefolk Hero's Grave",
-        "destination": "Stranded Graveyard",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "going backwards through Imp Seal"
-    },
-    {
-        "source": "Altus Tunnel - Crystalian Duo",
-        "destination": "Old Altus Tunnel",
-        "type": "random",
-        "source_details": "at the front of Crystalian Duo's arena",
-        "target_details": "before Stonedigger Troll's arena"
-    },
-    {
-        "source": "Shadow Keep - Church District",
-        "destination": "Shadow Keep - Drained Church District",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "in map"
-    },
-    {
-        "source": "Shadow Keep - Church District",
-        "destination": "Hidden Path to the Haligtree",
-        "type": "random",
-        "source_details": "at the tunnel entrance from Scadu Altus",
-        "target_details": "at exit to Consecrated Snowfield"
-    },
-    {
-        "source": "Volcano Manor - Abductor Virgins",
-        "destination": "Academy of Raya Lucaria Rooftops",
-        "type": "random",
-        "source_details": "at the front of Abductor Virgins' arena",
-        "target_details": "at the top of the steps before Raya Lucaria rooftops section"
-    },
-    {
-        "source": "Elphael, Brace of the Haligtree",
-        "destination": "After Loretta, Knight of the Haligtree",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "at the start of Elphael"
-    },
-    {
-        "source": "Caelid - Gael Tunnel",
-        "destination": "Caelid - Rear Gael Tunnel",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the door"
-    },
-    {
-        "source": "Caelid - Gael Tunnel",
-        "destination": "Shadow Keep - Tree-Worship Sanctum",
-        "type": "random",
-        "source_details": "before Magma Wyrm's arena",
-        "target_details": "before Scadutree Avatar's arena"
-    },
-    {
-        "source": "Shadow Keep - Drained Church District",
-        "destination": "Shadow Keep - Tree-Worship Sanctum",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "in map"
-    },
-    {
-        "source": "Stranded Graveyard",
-        "destination": "Limgrave - Fringefolk Hero's Grave",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "using two Stonesword Keys"
-    },
-    {
-        "source": "Stranded Graveyard",
-        "destination": "Deeproot Depths - Fia's Champions",
-        "type": "random",
-        "source_details": "at the door from Cave of Knowledge",
-        "target_details": "at the front of the Deeproot Depths boss arena"
-    },
-    {
-        "source": "After Loretta, Knight of the Haligtree",
-        "destination": "Dragonkin Soldier of Nokstella",
-        "type": "random",
-        "source_details": "after Loretta's arena",
-        "target_details": "at the back of Dragonkin of Nokstella's arena"
-    },
-    {
-        "source": "Caelid - Rear Gael Tunnel",
-        "destination": "Scaduview - Commander Gaius",
-        "type": "random",
-        "source_details": "at the Gael Tunnel rear exit, North of the Third Church of Marika",
-        "target_details": "at the front of Gaius's arena"
-    },
-    {
-        "source": "Volcano Manor Prison Town Church",
-        "destination": "Volcano Manor Prison Town",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the door"
-    },
-    {
-        "source": "Academy of Raya Lucaria",
-        "destination": "Volcano Manor Prison Town",
-        "type": "random",
-        "source_details": "getting abducted at the bottom of the elevator. this requires dying in the bottom 30 meters, not above that",
-        "target_details": "arriving in Volcano Manor after abduction. get to the main town by hopping across two lava streams then jumping off the southewst edge into the lava below"
-    },
-    {
-        "source": "Volcano Manor - Hallway Opposite Sending Gate",
-        "destination": "Volcano Manor Prison Town",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "using a Stonesword Key and dropping down"
-    },
-    {
-        "source": "Stone Coffin Fissure - After Waypoint",
-        "destination": "Magma Wrym Makar",
-        "type": "random",
-        "source_details": "before the boss at Fissure Depths",
-        "target_details": "at the back of Magma Wyrm Makar's arena"
-    },
-    {
-        "source": "Farum Azula - Dragon Temple",
-        "destination": "Farum Azula - Dragon Temple Transept",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "jumping to the stairs west of the Dragon Temple grace and dropping down again"
-    },
-    {
-        "source": "Farum Azula - Dragon Temple",
-        "destination": "Specimen Storehouse - Messmer the Impaler",
-        "type": "random",
-        "source_details": "before back right of Godskin Duo arena, down Dragon Temple stairs",
-        "target_details": "at the front of Messmer's arena"
-    },
-    {
-        "source": "Farum Azula - Dragon Temple",
-        "destination": "Liurnia Behind Caria Manor",
-        "type": "random",
-        "source_details": "before back left of Godskin Duo arena, by the crumbled stairs",
-        "target_details": "after Loretta's arena"
-    },
-    {
-        "source": "Leyndell - Queen's Bedchamber",
-        "destination": "Leyndell - Erdtree Sanctuary",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping into the boss fight"
-    },
-    {
-        "source": "Magma Wrym Makar",
-        "destination": "Leyndell - Erdtree Sanctuary",
-        "type": "random",
-        "source_details": "at the front of Magma Wyrm Makar's arena",
-        "target_details": "in Godfrey's arena at the normal South entrance from the branches"
-    },
-    {
-        "source": "Farum Azula - Dragon Temple Transept",
-        "destination": "Leyndell - Queen's Bedchamber",
-        "type": "random",
-        "source_details": "up the stairs from Dragon Temple Transept",
-        "target_details": "before Morgott's arena"
-    },
-    {
-        "source": "Leyndell - Queen's Bedchamber",
-        "destination": "Leyndell - Behind Erdtree Sanctuary",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "instead of entering the sanctuary, dropping down to the left"
-    },
-    {
-        "source": "Leyndell - Queen's Bedchamber",
-        "destination": "Fire Giant",
-        "type": "random",
-        "source_details": "outside of Godfrey's arena at the base of a shortcut ladder, accessed from an open window on a second-floor rooftop",
-        "target_details": "in the right front of Fire Giant's arena, farther from the forge"
-    },
-    {
-        "source": "Leyndell - Behind Erdtree Sanctuary",
-        "destination": "Volcano Manor Prison Town Church",
-        "type": "random",
-        "source_details": "outside of Godfrey's arena at the leftmost back exit, the one without the branch",
-        "target_details": "behind the altar coming from the manor"
-    },
-    {
-        "source": "Leyndell - Behind Erdtree Sanctuary",
-        "destination": "Maliketh the Black Blade",
-        "type": "random",
-        "source_details": "outside of Godfrey's arena at the rightmost back exit, the one with the branch",
-        "target_details": "at the front of Maliketh's arena"
-    },
-    {
-        "source": "Leyndell - Behind Erdtree Sanctuary",
-        "destination": "Ashen Leyndell - Elden Throne",
-        "type": "random",
-        "source_details": "outside of Godfrey's arena at the center back exit",
-        "target_details": "at the back of Hoarah Loux's arena"
-    },
-    {
-        "source": "Farum Azula Rooftop and Bridge",
-        "destination": "Caelid - Gael Tunnel - Magma Wyrm",
-        "type": "random",
-        "source_details": "after Godskin Duo arena",
-        "target_details": "return to entrance after Magma Wyrm"
-    },
-    {
-        "source": "Farum Azula Rooftop and Bridge",
-        "destination": "Weeping Peninsula - Castle Morne",
-        "type": "random",
-        "source_details": "at the Imp Seal leading up to the Dragon Temple Lift grace",
-        "target_details": "at the entrance from Weeping Peninsula"
-    },
-    {
-        "source": "Scadu Altus - Manus Metyr",
-        "destination": "Divine Tower of Caelid - After Godskin Apostle",
-        "type": "random",
-        "source_details": "at the side entrance, the right North gate",
-        "target_details": "after Godskin Apostle's arena"
-    },
-    {
-        "source": "Scadu Altus - Manus Metyr",
-        "destination": "Stone Coffin Fissure",
-        "type": "random",
-        "source_details": "at the side entrance, the left South gate",
-        "target_details": "at the entrance from Cerulean Coast"
-    },
-    {
-        "source": "Old Altus Tunnel",
-        "destination": "Weeping Peninsula - Beside the Rampart Gaol",
-        "type": "random",
-        "source_details": "at the entrance from Altus Plateau",
-        "target_details": "before Leonine Misbegotten's arena"
-    },
-    {
-        "source": "Weeping Peninsula - Castle Morne",
-        "destination": "Weeping Peninsula - Beside the Rampart Gaol",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down behind Castle Morne"
-    },
-    {
-        "source": "Academy of Raya Lucaria Rooftops",
-        "destination": "Academy of Raya Lucaria",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "completing the loop back to the Church of Cuckoo"
-    },
-    {
-        "source": "Academy of Raya Lucaria Main Entrance",
-        "destination": "Academy of Raya Lucaria",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the doors to the Church of Cuckoo"
-    },
-    {
-        "source": "Divine Tower of Caelid - After Godskin Apostle",
-        "destination": "Gravesite Plain - Dragon's Pit",
-        "type": "random",
-        "source_details": "return to entrance after After Godskin Apostle",
-        "target_details": "at the entrance from Gravesite Plain"
-    },
-    {
-        "source": "Caelid - Gael Tunnel - Magma Wyrm",
-        "destination": "Volcano Manor - Hallway Opposite Sending Gate",
-        "type": "random",
-        "source_details": "at the front of Magma Wyrm's arena",
-        "target_details": "in the hallway towards the Imp Seal back to main Volcano Manor"
-    },
-    {
-        "source": "Academy of Raya Lucaria",
-        "destination": "Ashen Leyndell - before Divine Tower",
-        "type": "random",
-        "source_details": "before Red Wolf's arena",
-        "target_details": "at the base of the elevator to the Divine Tower of East Altus"
-    },
-    {
-        "source": "Volcano Manor - Hallway Opposite Sending Gate",
-        "destination": "Volcano Manor after Temple of Eiglay",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "jumping over the balcony"
-    },
-    {
-        "source": "Volcano Manor - Room Before Sending Gate",
-        "destination": "Volcano Manor after Temple of Eiglay",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "jumping into the lava behind the Sending Gate. this requires some vigor and flasks"
-    },
-    {
-        "source": "Volcano Manor - Temple of Eiglay",
-        "destination": "Volcano Manor after Temple of Eiglay",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "riding the elevator up and dropping down outside"
-    },
-    {
-        "source": "Gravesite Plain - Dragon's Pit",
-        "destination": "Gravesite Plain - Dragon's Pit - Before Boss",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Stone Coffin Fissure - Putrescent Knight",
-        "destination": "Divine Tower of East Altus",
-        "type": "random",
-        "source_details": "at the back of Putrescent Knight's arena",
-        "target_details": "at the exit to Forbidden Lands"
-    },
-    {
-        "source": "Gravesite Plain - Dragon's Pit - Before Boss",
-        "destination": "Divine Tower of Caelid",
-        "type": "random",
-        "source_details": "before Ancient Dragon-Man's arena",
-        "target_details": "up the stairs to Caelid Divine Tower's Two Fingers"
-    },
-    {
-        "source": "Ancient Ruins of Rauh - East",
-        "destination": "Ancient Ruins of Rauh - West",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Divine Tower of East Altus (approaching the Divine Tower of East Altus gate, or using the grace menu)",
-        "destination": "Midra's Manse",
-        "type": "random",
-        "source_details": null,
-        "target_details": "before Midra's arena"
-    },
-    {
-        "source": "Dragonkin Soldier of Nokstella",
-        "destination": "Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness",
-        "type": "random",
-        "source_details": "at the front of Dragonkin of Nokstella's arena",
-        "target_details": "at the front of Astel, Stars of Darkness' arena"
-    },
-    {
-        "source": "Scaduview - Commander Gaius",
-        "destination": "Liurnia - Caria Manor",
-        "type": "random",
-        "source_details": "at the back of Gaius's arena",
-        "target_details": "before Loretta's arena"
-    },
-    {
-        "source": "Liurnia Behind Caria Manor",
-        "destination": "Liurnia - Caria Manor",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down into the manor by Pidia"
-    },
-    {
-        "source": "Volcano Manor Prison Town",
-        "destination": "After Redmane Castle Boss",
-        "type": "random",
-        "source_details": "before Abductor Virgins' arena. it can be reached from main town dropping down outside Temple of Eiglay",
-        "target_details": "at the bottom of the elevator before the Radahn warp"
-    },
-    {
-        "source": "Volcano Manor Prison Town",
-        "destination": "Ancestor Spirit",
-        "type": "random",
-        "source_details": "before Godskin Noble's arena",
-        "target_details": "at the front of Ancestor Spirit's arena"
-    },
-    {
-        "source": "Volcano Manor after Temple of Eiglay",
-        "destination": "Volcano Manor - Temple of Eiglay Shortcut Elevator",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "unlocking the elevator shortcut back to the temple"
-    },
-    {
-        "source": "Volcano Manor after Temple of Eiglay",
-        "destination": "Volcano Manor - Room Before Sending Gate",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the door"
-    },
-    {
-        "source": "After Redmane Castle Boss",
-        "destination": "Redmane Castle Boss",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down past Jerren's platform"
-    },
-    {
-        "source": "After Redmane Castle Boss",
-        "destination": "Deeproot Depths",
-        "type": "random",
-        "source_details": "after Redmane Castle Plaza",
-        "target_details": "before the Deeproot Depths boss arena"
-    },
-    {
-        "source": "Divine Tower of Liurnia",
-        "destination": "Deeproot Depths",
-        "type": "random",
-        "source_details": "opening the door at the bottom of the flipped tower",
-        "target_details": "arriving by the Great Waterfall Crest grace"
-    },
-    {
-        "source": "Deeproot Depths from Proscription",
-        "destination": "Deeproot Depths",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "traversing down the roots"
-    },
-    {
-        "source": "Volcano Manor - Temple of Eiglay Shortcut Elevator",
-        "destination": "Shadow Keep - Golden Hippopotamus",
-        "type": "random",
-        "source_details": "after Godskin Noble's arena to the back left, down the shortcut elevator",
-        "target_details": "at the left side of Golden Hippopotamus's arena"
-    },
-    {
-        "source": "Volcano Manor - Room Before Sending Gate",
-        "destination": "Isolated Divine Tower",
-        "type": "random",
-        "source_details": "using the Sending Gate after Volcano Manor temple",
-        "target_details": "arriving at the tower"
-    },
-    {
-        "source": "Volcano Manor - Room Before Sending Gate",
-        "destination": "Belurat - Divine Beast Dancing Lion",
-        "type": "random",
-        "source_details": "on the doorway on the second story opposite the Sending Gate",
-        "target_details": "at the side of Divine Beast Dancing Lion's arena"
-    },
-    {
-        "source": "Carian Study Hall",
-        "destination": "Divine Tower of Liurnia",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "using Carian Inverted Statue"
-    },
-    {
-        "source": "Divine Tower of Caelid",
-        "destination": "After Commander Niall",
-        "type": "random",
-        "source_details": "before Godskin Apostle's arena",
-        "target_details": "after Commander Niall's arena"
-    },
-    {
-        "source": "Divine Tower of Caelid",
-        "destination": "Leyndell - Erdtree Sanctuary Treasure",
-        "type": "random",
-        "source_details": "at the left exit to Dragonbarrow, facing north",
-        "target_details": "outside of Godfrey's arena with a treasure item"
-    },
-    {
-        "source": "Divine Tower of Caelid",
-        "destination": "Academy of Raya Lucaria - Grand Library",
-        "type": "random",
-        "source_details": "at the middle exit to Dragonbarrow",
-        "target_details": "at the front of Rennala's arena"
-    },
-    {
-        "source": "Divine Tower of Caelid",
-        "destination": "Mohg, Lord of Blood",
-        "type": "random",
-        "source_details": "at the right exit to Dragonbarrow, facing north",
-        "target_details": "at the back left of Mohg's arena"
-    },
-    {
-        "source": "Midra's Manse",
-        "destination": "Ancient Ruins of Rauh - Romina, Saint of the Bud",
-        "type": "random",
-        "source_details": "at the entrance to Midra's Manse",
-        "target_details": "at the front of Romina's arena"
-    },
-    {
-        "source": "Ruin-Strewn Precipice",
-        "destination": "Ancient Ruins of Rauh - Romina, Saint of the Bud",
-        "type": "random",
-        "source_details": "before Magma Worm Makar's arena",
-        "target_details": "at the back of Romina's arena"
-    },
-    {
-        "source": "Fire Giant",
-        "destination": "Divine Tower of Limgrave after Sending Gate",
-        "type": "random",
-        "source_details": "burning the erdtree at the Forge of the Giants, or repeating the warp using the grace",
-        "target_details": "arriving in the second half of the Divine Tower of Limgrave"
-    },
-    {
-        "source": "Fire Giant",
-        "destination": "Specimen Storehouse - Before Messmer",
-        "type": "random",
-        "source_details": "in the left front of Fire Giant's arena, closer to the forge",
-        "target_details": "before Messmer's arena"
-    },
-    {
-        "source": "Specimen Storehouse",
-        "destination": "Specimen Storehouse - Before Messmer",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the door"
-    },
-    {
-        "source": "Maliketh the Black Blade",
-        "destination": "Nokron - Ancestral Woods",
-        "type": "random",
-        "source_details": "warp after defeathing Maliketh, or repeating the warp using the grace",
-        "target_details": "arriving at the Ancestral Woods grace"
-    },
-    {
-        "source": "Ashen Leyndell - Elden Throne",
-        "destination": "Mohg, the Omen",
-        "type": "random",
-        "source_details": "at the front of Hoarah Loux's arena",
-        "target_details": "at the front of Mohg's arena"
-    },
-    {
-        "source": "Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness",
-        "destination": "Volcano Manor - Audience Pathway",
-        "type": "random",
-        "source_details": "return to entrance after Astel, Stars of Darkness",
-        "target_details": "before Rykard's arena"
-    },
-    {
-        "source": "Nokron - Ancestral Woods",
-        "destination": "Volcano Manor - Audience Pathway",
-        "type": "random",
-        "source_details": "using Horned Remains in Nokron",
-        "target_details": "arriving at Audience Pathway"
-    },
-    {
-        "source": "Liurnia - Caria Manor",
-        "destination": "Scadu Altus - Darklight Catacombs",
-        "type": "random",
-        "source_details": "using the new sending gate at the Caria Manor entrance",
-        "target_details": "at the entrance from Lower Scadu Altus"
-    },
-    {
-        "source": "Divine Tower of East Altus",
-        "destination": "Divine Tower of East Altus Interior",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the heavy door"
-    },
-    {
-        "source": "Redmane Castle Boss",
-        "destination": "Godskin Duo",
-        "type": "random",
-        "source_details": "at the front of Redmane Castle Plaza",
-        "target_details": "at the back left of Godskin Duo's arena"
-    },
-    {
-        "source": "Redmane Castle Boss",
-        "destination": "Godskin Duo",
-        "type": "random",
-        "source_details": "at the back of Redmane Castle Plaza",
-        "target_details": "at the back right of Godskin Duo's arena"
-    },
-    {
-        "source": "Farum Azula - Dragon Temple Balcony",
-        "destination": "Godskin Duo",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Deeproot Depths",
-        "destination": "Divine Tower of Liurnia Interior",
-        "type": "random",
-        "source_details": "resting in the coffin by the Nameless Eternal City grace",
-        "target_details": "arriving after the Carian Study Hall door"
-    },
-    {
-        "source": "Nokron - Ancestral Woods",
-        "destination": "Nokron - Aqueduct-Facing Cliffs",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down past Aqueduct-Facing Cliffs grace"
-    },
-    {
-        "source": "Nokron - Aqueduct-Facing Cliffs Room",
-        "destination": "Nokron - Aqueduct-Facing Cliffs",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down the small waterfall"
-    },
-    {
-        "source": "Nokron - Ancestral Woods",
-        "destination": "Nokron - Night's Sacred Grounds",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down south of the Ancestral Grounds grace"
-    },
-    {
-        "source": "Nokron - Ancestral Woods",
-        "destination": "Belurat",
-        "type": "random",
-        "source_details": "after Mimic Tear's arena",
-        "target_details": "before Divine Beast Dancing Lion's arena"
-    },
-    {
-        "source": "Belurat Swamp",
-        "destination": "Belurat",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the shortcut door"
-    },
-    {
-        "source": "Scadu Altus - Darklight Catacombs",
-        "destination": "Leyndell - Erdtree Entrance",
-        "type": "random",
-        "source_details": "before Jori's arena",
-        "target_details": "the path up to the Erdtree"
-    },
-    {
-        "source": "Ancient Ruins of Rauh - West",
-        "destination": "Ancient Ruins of Rauh - Belfry Area",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "in map"
-    },
-    {
-        "source": "Divine Tower of Limgrave",
-        "destination": "Ancient Ruins of Rauh - Belfry Area",
-        "type": "random",
-        "source_details": "using the sending gate in the first half of the Divine Tower of Limgrave",
-        "target_details": "arriving in the isolated section of Rauh Ruins"
-    },
-    {
-        "source": "Ancient Ruins of Rauh - West",
-        "destination": "Ancient Ruins of Rauh - Central Stairs",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "using the sealed spiritspring"
-    },
-    {
-        "source": "Ancient Ruins of Rauh - West",
-        "destination": "Regal Ancestor Spirit",
-        "type": "random",
-        "source_details": "before Romina's arena",
-        "target_details": "return to entrance after Regal Ancestor Spirit"
-    },
-    {
-        "source": "Nokron - Night's Sacred Grounds",
-        "destination": "Ainsel River Main",
-        "type": "random",
-        "source_details": "using the sending gate before the Fingerslayer Blade chest",
-        "target_details": "arriving at the start of Ainsel River Main"
-    },
-    {
-        "source": "Shadow Keep",
-        "destination": "Ainsel River Main",
-        "type": "random",
-        "source_details": "at the top of the elevator to Specimen Storehouse",
-        "target_details": "in the tunnel leading to Ainsel River Downstream"
-    },
-    {
-        "source": "Lake of Rot",
-        "destination": "Ainsel River Main",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "in map"
-    },
-    {
-        "source": "Nokron - Aqueduct-Facing Cliffs",
-        "destination": "Godrick the Grafted",
-        "type": "random",
-        "source_details": "before Valiant Gargoyles' arena",
-        "target_details": "at the front of Godrick's arena"
-    },
-    {
-        "source": "Belurat",
-        "destination": "Belurat Swamp",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "in map"
-    },
-    {
-        "source": "Enir-Ilim - Belurat",
-        "destination": "Belurat Swamp",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Belurat",
-        "destination": "Nokron from Limgrave",
-        "type": "random",
-        "source_details": "at the entrance from Gravesite Plain",
-        "target_details": "at the start of Nokron from Limgrave"
-    },
-    {
-        "source": "Ancestor Spirit",
-        "destination": "Ruin-Strewn Precipice",
-        "type": "random",
-        "source_details": "return to entrance after Ancestor Spirit",
-        "target_details": "at the entrance from Liurnia"
-    },
-    {
-        "source": "Divine Tower of East Altus",
-        "destination": "Divine Tower of East Altus Start",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "at the Morgott the Grace-Given gate coming from Forbidden Lands"
-    },
-    {
-        "source": "Leyndell - Erdtree Sanctuary",
-        "destination": "Scadutree Base - Scadutree Avatar",
-        "type": "random",
-        "source_details": "in Godfrey's arena at the West entrance to the Marika statue",
-        "target_details": "at the front of Scadutree Avatar's arena"
-    },
-    {
-        "source": "Leyndell - Erdtree Sanctuary",
-        "destination": "Farum Azula - Dragon Temple Lift",
-        "type": "random",
-        "source_details": "in Godfrey's arena at the rightmost East exit, the one without the branch",
-        "target_details": "down the elevator from Dragon Temple Lift grace"
-    },
-    {
-        "source": "Leyndell - Erdtree Sanctuary",
-        "destination": "Altus Tunnel",
-        "type": "random",
-        "source_details": "in Godfrey's arena at the leftmost East exit, the one with the branch",
-        "target_details": "before Crystalian Duo's arena"
-    },
-    {
-        "source": "Leyndell - Erdtree Sanctuary",
-        "destination": "Castle Ensis - Rellana, Twin Moon Knight",
-        "type": "random",
-        "source_details": "in Godfrey's arena at the Southwest exit with a shortcut ladder behind it",
-        "target_details": "at the front of Rellana's arena"
-    },
-    {
-        "source": "Leyndell - Erdtree Sanctuary",
-        "destination": "Castle Sol",
-        "type": "random",
-        "source_details": "in Godfrey's arena at the Southeast exit with treasure behind it",
-        "target_details": "arriving at the entrance to Castle Sol"
-    },
-    {
-        "source": "Leyndell - Erdtree Sanctuary",
-        "destination": "Farum Azula - Dragon Temple Balcony",
-        "type": "random",
-        "source_details": "in Godfrey's arena at the center East exit",
-        "target_details": "on the balcony above Godskin Duo's arena"
-    },
-    {
-        "source": "Shadow Keep - Golden Hippopotamus",
-        "destination": "Belurat - After Divine Beast Dancing Lion",
-        "type": "random",
-        "source_details": "at the right side of Golden Hippopotamus's arena",
-        "target_details": "after Divine Beast Dancing Lion's arena"
-    },
-    {
-        "source": "Belurat - Divine Beast Dancing Lion",
-        "destination": "Volcano Manor - Temple of Eiglay",
-        "type": "random",
-        "source_details": "at the front of Divine Beast Dancing Lion's arena",
-        "target_details": "at the back left of Godskin Noble's arena"
-    },
-    {
-        "source": "Godskin Duo",
-        "destination": "Volcano Manor - Temple of Eiglay",
-        "type": "random",
-        "source_details": "at the front right of Godskin Duo's arena",
-        "target_details": "at the front of Godskin Noble's arena"
-    },
-    {
-        "source": "Mohg, Lord of Blood",
-        "destination": "Shadow Keep - West Rampart",
-        "type": "random",
-        "source_details": "at the back right of Mohg's arena",
-        "target_details": "at the elevator to West Rampart"
-    },
-    {
-        "source": "Mohg, Lord of Blood",
-        "destination": "After Dragonkin Soldier of Nokstella",
-        "type": "random",
-        "source_details": "at the front of Mohg's arena",
-        "target_details": "after Dragonkin of Nokstella"
-    },
-    {
-        "source": "Divine Tower of East Altus Start",
-        "destination": "Stormveil Castle before Gate",
-        "type": "random",
-        "source_details": "at the elevator to the Divine Tower of East Altus",
-        "target_details": "after Margit's arena"
-    },
-    {
-        "source": "Stormveil Castle after Gate",
-        "destination": "Stormveil Castle before Gate",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the gate"
-    },
-    {
-        "source": "Belurat - After Divine Beast Dancing Lion",
-        "destination": "Belurat - Stairs before Enir-Ilim",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the door"
-    },
-    {
-        "source": "Enir-Ilim",
-        "destination": "Belurat - Stairs before Enir-Ilim",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "in map after burning the Sealing Tree"
-    },
-    {
-        "source": "Nokron from Limgrave",
-        "destination": "Nokron before Mimic Tear",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down to the first Nokron grace"
-    },
-    {
-        "source": "Godskin Duo",
-        "destination": "Divine Tower of Caelid - Godskin Apostle",
-        "type": "random",
-        "source_details": "at the front left of Godskin Duo's arena",
-        "target_details": "at the back of Godskin Apostle's arena"
-    },
-    {
-        "source": "Altus Tunnel",
-        "destination": "Valiant Gargoyles",
-        "type": "random",
-        "source_details": "at the entrance from Altus Plateau",
-        "target_details": "at the side entrance to Valiant Gargoyles' arena, next to the main entrance"
-    },
-    {
-        "source": "Castle Sol",
-        "destination": "Specimen Storehouse - Back Section",
-        "type": "random",
-        "source_details": "before Commander Niall's arena",
-        "target_details": "before Gaius's arena"
-    },
-    {
-        "source": "Shadow Keep - West Rampart",
-        "destination": "Subterranean Shunning-Grounds - From Royal Capital",
-        "type": "random",
-        "source_details": "at the exit to Rauh Ruins",
-        "target_details": "at the entrance from Leyndell, Royal Capital"
-    },
-    {
-        "source": "Subterranean Shunning-Grounds",
-        "destination": "Subterranean Shunning-Grounds - From Royal Capital",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "backwards through the door from Royal Capital"
-    },
-    {
-        "source": "Nokron before Mimic Tear",
-        "destination": "Castle Ensis",
-        "type": "random",
-        "source_details": "before Mimic Tear's arena",
-        "target_details": "before Rellana's arena"
-    },
-    {
-        "source": "Scadu Altus - Manus Metyr",
-        "destination": "Finger Ruins of Miyr",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "in map"
-    },
-    {
-        "source": "Regal Ancestor Spirit",
-        "destination": "Ancient Ruins of Rauh - After Romina",
-        "type": "random",
-        "source_details": "at the front of Regal Ancestor Spirit's arena",
-        "target_details": "after Romina's arena"
-    },
-    {
-        "source": "Divine Tower of Caelid - Godskin Apostle",
-        "destination": "Shadow Keep",
-        "type": "random",
-        "source_details": "at the front of Godskin Apostle's arena",
-        "target_details": "at the shortcut door to the right of Golden Hippopotamus's arena"
-    },
-    {
-        "source": "Specimen Storehouse - Back Section",
-        "destination": "Specimen Storehouse",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Specimen Storehouse - Back Section",
-        "destination": "Cave of Knowledge - After Soldier of Godrick",
-        "type": "random",
-        "source_details": "at the entrance from Shadow Keep Church District",
-        "target_details": "after Soldier of Godrick's arena"
-    },
-    {
-        "source": "Godrick the Grafted",
-        "destination": "Stormveil Castle Throne Room",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the door after the boss"
-    },
-    {
-        "source": "Stormveil Castle Throne Room",
-        "destination": "Shaded Castle - Elemer of the Briar",
-        "type": "random",
-        "source_details": "at the rear exit to Liurnia",
-        "target_details": "at the front of Elemer of the Briar's arena"
-    },
-    {
-        "source": "Castle Ensis",
-        "destination": "Before Radahn",
-        "type": "random",
-        "source_details": "on the bridge from Gravesite Plain",
-        "target_details": "at the bottom of the elevator before the Radahn warp"
-    },
-    {
-        "source": "Before Radahn",
-        "destination": "Before Astel, Naturalborn of the Void",
-        "type": "random",
-        "source_details": "using the Sending Gate before Starscourge Radahn",
-        "target_details": "arriving in the area before Astel's arena"
-    },
-    {
-        "source": "Before Astel, Naturalborn of the Void",
-        "destination": "Midra's Manse - Midra, Lord of Frenzied Flame",
-        "type": "random",
-        "source_details": "before Astel's arena",
-        "target_details": "at the front of Midra's arena"
-    },
-    {
-        "source": "Castle Ensis - Rellana, Twin Moon Knight",
-        "destination": "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man",
-        "type": "random",
-        "source_details": "at the back of Rellana's arena",
-        "target_details": "return to entrance after Ancient Dragon-Man"
-    },
-    {
-        "source": "Shadow Keep",
-        "destination": "Jagged Peak - Bayle",
-        "type": "random",
-        "source_details": "at the normal exit to the left of Golden Hippopotamus's arena",
-        "target_details": "at the front of Bayle's arena"
-    },
-    {
-        "source": "Specimen Storehouse",
-        "destination": "Astel, Naturalborn of the Void",
-        "type": "random",
-        "source_details": "at the top of the elevator to Specimen Storehouse",
-        "target_details": "at the front of Astel's arena"
-    },
-    {
-        "source": "Specimen Storehouse",
-        "destination": "Margit, the Fell Omen",
-        "type": "random",
-        "source_details": "at the entrance from Shadow Keep",
-        "target_details": "at the back of Margit's arena"
-    },
-    {
-        "source": "Divine Tower of West Altus",
-        "destination": "Divine Tower of West Altus Interior",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the heavy door"
-    },
-    {
-        "source": "Valiant Gargoyles",
-        "destination": "Finger Birthing Grounds - Metyr, Mother of Fingers",
-        "type": "random",
-        "source_details": "resting in the coffin after defeating the boss",
-        "target_details": "arriving at Finger Birthing Grounds"
-    },
-    {
-        "source": "Valiant Gargoyles",
-        "destination": "Before Regal Ancestor Spirit",
-        "type": "random",
-        "source_details": "at the main entrance of Valiant Gargoyles' arena",
-        "target_details": "before Regal Ancestor Spirit's arena"
-    },
-    {
-        "source": "Lake of Rot",
-        "destination": "Before Regal Ancestor Spirit",
-        "type": "random",
-        "source_details": "resting in the coffin at the bottom of the Grand Cloister",
-        "target_details": "arriving in the area before Regal Ancestor Spirit's arena"
-    },
-    {
-        "source": "Mohg, the Omen",
-        "destination": "Above Frenzied Flame Proscription",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "at the Morgott the Grace-Given gate after Mohg the Omen's arena"
-    },
-    {
-        "source": "Ainsel River Main",
-        "destination": "Lake of Rot",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "in map"
-    },
-    {
-        "source": "Above Frenzied Flame Proscription",
-        "destination": "Frenzied Flame Proscription",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down the beams"
-    },
-    {
-        "source": "Frenzied Flame Proscription",
-        "destination": "Deeproot Depths from Proscription",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down past two illusory walls"
-    },
-    {
-        "source": "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man",
-        "destination": "Gravesite Plain - Dragon's Pit - After Boss",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the door"
-    },
-    {
-        "source": "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man",
-        "destination": "Cave of Knowledge - Soldier of Godrick",
-        "type": "random",
-        "source_details": "at the front of Ancient Dragon-Man's arena",
-        "target_details": "at the back of Soldier of Godrick's arena"
-    },
-    {
-        "source": "Gravesite Plain - Dragon's Pit - After Boss",
-        "destination": "Academy of Raya Lucaria Main Entrance",
-        "type": "random",
-        "source_details": "at the exit to Jagged Peak",
-        "target_details": "arriving at Raya Lucaria Main Academy Gate from the East"
-    },
-    {
-        "source": "Academy of Raya Lucaria",
-        "destination": "Academy of Raya Lucaria Main Entrance",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "going backwards through Church of Cuckoo doors"
-    },
-    {
-        "source": "Astel, Naturalborn of the Void",
-        "destination": "Caelid - Sellia Crystal Tunnel - Fallingstar Beast",
-        "type": "random",
-        "source_details": "at the back of Astel's arena",
-        "target_details": "return to entrance after Fallingstar Beast"
-    },
-    {
-        "source": "Margit, the Fell Omen",
-        "destination": "Capital Outskirts - Sealed Tunnel",
-        "type": "random",
-        "source_details": "at the front of Margit's arena",
-        "target_details": "at the entrance from Capital Outskirts"
-    },
-    {
-        "source": "Stormveil Castle before Gate",
-        "destination": "Stormveil Castle after Gate",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "with Rusty Key or talking to Gostoc"
-    },
-    {
-        "source": "Caelid - Sellia Crystal Tunnel - Fallingstar Beast",
-        "destination": "Capital Outskirts - Sealed Tunnel Before Boss",
-        "type": "random",
-        "source_details": "at the front of Fallingstar Beast's arena",
-        "target_details": "before Onyx Lord's arena"
-    },
-    {
-        "source": "Capital Outskirts - Sealed Tunnel",
-        "destination": "Capital Outskirts - Sealed Tunnel Before Boss",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Shadow Keep - Golden Hippopotamus",
-        "destination": "Deep Ainsel Well",
-        "type": "random",
-        "source_details": "at the front of Golden Hippopotamus's arena",
-        "target_details": "at the top of the Deep Ainsel Well"
-    },
-    {
-        "source": "Academy of Raya Lucaria - Grand Library",
-        "destination": "Academy of Raya Lucaria - Grand Library Chest",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the locked chest using the Discarded Palace Key"
-    },
-    {
-        "source": "Deep Ainsel Well",
-        "destination": "Leonine Misbegotten",
-        "type": "random",
-        "source_details": "after Astel's arena",
-        "target_details": "at the front of Leonine Misbegotten's arena"
-    },
-    {
-        "source": "Stormveil Castle after Gate",
-        "destination": "Shaded Castle",
-        "type": "random",
-        "source_details": "before Godrick's arena",
-        "target_details": "arriving at the entrance to Shaded Castle"
-    },
-    {
-        "source": "Stormveil Castle after Gate",
-        "destination": "After Mohg, Lord of Blood",
-        "type": "random",
-        "source_details": "at the side path to Limgrave Divine Tower",
-        "target_details": "after Mohg's arena at the back left"
-    },
-    {
-        "source": "After Mohg, Lord of Blood",
-        "destination": "Rykard, Lord of Blasphemy",
-        "type": "random",
-        "source_details": "after Mohg's arena at the back right",
-        "target_details": "at the front of Rykard's arena"
-    },
-    {
-        "source": "Shaded Castle",
-        "destination": "Nokron - Aqueduct-Facing Cliffs Room",
-        "type": "random",
-        "source_details": "before Elemer of the Briar's arena",
-        "target_details": "after Valiant Gargoyles in the small room next to the main entrance"
-    },
-    {
-        "source": "Leyndell - Erdtree Entrance",
-        "destination": "Ashen Leyndell - Erdtree Entrance",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "after burning the Erdtree by defeating the boss in Maliketh's arena"
-    },
-    {
-        "source": "Volcano Manor Entrance",
-        "destination": "Volcano Manor Drawing Room",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "using Drawing-Room Key"
-    },
-    {
-        "source": "Volcano Manor Drawing Room",
-        "destination": "Divine Tower of Limgrave",
-        "type": "random",
-        "source_details": "at the end of the dark hallway leading to Prison Town",
-        "target_details": "at the entrance from Stormveil Castle"
-    },
-    {
-        "source": "Isolated Divine Tower",
-        "destination": "Isolated Divine Tower Interior",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the heavy door"
-    },
-    {
-        "source": "Divine Tower of Limgrave after Sending Gate",
-        "destination": "Divine Tower of Limgrave Interior",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "opening the heavy doors"
-    },
-    {
-        "source": "Cave of Knowledge - Soldier of Godrick",
-        "destination": "Divine Tower of Caelid Interior",
-        "type": "random",
-        "source_details": "at the front of Soldier of Godrick's arena",
-        "target_details": "at the door to Caelid Divine Tower's Two Fingers"
-    },
-    {
-        "source": "Specimen Storehouse - Back Section",
-        "destination": "Scadu Altus - Darklight Catacombs - Jori, Elder Inquisitor",
-        "type": "random",
-        "source_details": "past the statue after using O Mother",
-        "target_details": "at the front of Jori's arena"
-    },
-    {
-        "source": "Academy of Raya Lucaria Main Entrance",
-        "destination": "Limgrave Tunnels",
-        "type": "random",
-        "source_details": "using South-facing gate at Raya Lucaria Main Entrance",
-        "target_details": "at the entrance from Limgrave"
-    },
-    {
-        "source": "Limgrave Tunnels",
-        "destination": "Above Ainsel River Downstream",
-        "type": "random",
-        "source_details": "before Stonedigger Troll's arena",
-        "target_details": "after the tunnel from Ainsel River Main"
-    },
-    {
-        "source": "Scadu Altus - Darklight Catacombs - Jori, Elder Inquisitor",
-        "destination": "Divine Tower of East Altus - Fell Twins (inside the Fell Twins' arena)",
-        "type": "random",
-        "source_details": "at the back of Jori's arena",
-        "target_details": null
-    },
-    {
-        "source": "Ashen Leyndell - Erdtree Entrance",
-        "destination": "Stone Platform",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "touching the golden light"
-    },
-    {
-        "source": "Farum Azula Rooftop and Bridge",
-        "destination": "Enir-Ilim",
-        "type": "random",
-        "source_details": "lying down in front of the tempest below the great bridge",
-        "target_details": "arriving at Enir-Ilim's Outer Wall"
-    },
-    {
-        "source": "Enir-Ilim - After Leda",
-        "destination": "Enir-Ilim",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "going back after defeating Leda"
-    },
-    {
-        "source": "Belurat - Stairs before Enir-Ilim",
-        "destination": "Enir-Ilim",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "in map after burning the Sealing Tree"
-    },
-    {
-        "source": "Enir-Ilim",
-        "destination": "Enir-Ilim - Belurat",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "dropping down"
-    },
-    {
-        "source": "Enir-Ilim",
-        "destination": "Enir-Ilim - After Leda",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "defeating Leda"
-    },
-    {
-        "source": "Enir-Ilim - After Leda",
-        "destination": "Enir-Ilim - Promised Consort Radahn",
-        "type": "preexisting",
-        "source_details": null,
-        "target_details": "before Promised Consort Radahn's arena"
-    }
+  {
+    "source": "Chapel of Anticipation",
+    "type": "random",
+    "source_details": "before Grafted Scion's arena",
+    "target_details": "at the back entrance from the Seaside Ruins beach",
+    "target": "Cave of Knowledge - From Seaside Ruins",
+    "source_id": "chapel_start",
+    "target_id": "graveyard_cave_back"
+  },
+  {
+    "source": "Cave of Knowledge - From Seaside Ruins",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Cave of Knowledge",
+    "source_id": "graveyard_cave_back",
+    "target_id": "graveyard_cave"
+  },
+  {
+    "source": "Cave of Knowledge - After Soldier of Godrick",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Cave of Knowledge",
+    "source_id": "graveyard_cave_postboss",
+    "target_id": "graveyard_cave"
+  },
+  {
+    "source": "Cave of Knowledge",
+    "type": "random",
+    "source_details": "before Soldier of Godrick's arena",
+    "target_details": "at the front of Onyx Lord's arena",
+    "target": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
+    "source_id": "graveyard_cave",
+    "target_id": "outskirts_sealedtunnel_boss"
+  },
+  {
+    "source": "Cave of Knowledge",
+    "type": "random",
+    "source_details": "at the door to Stranded Graveyard",
+    "target_details": "at the entrance from Caelid",
+    "target": "Caelid - Sellia Crystal Tunnel",
+    "source_id": "graveyard_cave",
+    "target_id": "caelid_selliatunnel"
+  },
+  {
+    "source": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
+    "type": "random",
+    "source_details": "return to entrance after Onyx Lord",
+    "target_details": "at the base of the elevator to the Divine Tower of East Altus",
+    "target": "Leyndell - before Divine Tower",
+    "source_id": "outskirts_sealedtunnel_boss",
+    "target_id": "leyndell_pretower"
+  },
+  {
+    "source": "Leyndell",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the heavy door below East Capital Rampart",
+    "target": "Leyndell - before Divine Tower",
+    "source_id": "leyndell",
+    "target_id": "leyndell_pretower"
+  },
+  {
+    "source": "Capital Outskirts - Sealed Tunnel - Onyx Lord",
+    "type": "random",
+    "source_details": "at the back of Onyx Lord's arena",
+    "target_details": "at the back of Morgott's arena",
+    "target": "Leyndell - Elden Throne",
+    "source_id": "outskirts_sealedtunnel_boss",
+    "target_id": "leyndell_throne"
+  },
+  {
+    "source": "Caelid - Sellia Crystal Tunnel",
+    "type": "random",
+    "source_details": "before Fallingstar Beast's arena",
+    "target_details": "at the front of Commander Niall's arena",
+    "target": "Commander Niall",
+    "source_id": "caelid_selliatunnel",
+    "target_id": "mountaintops_sol_boss"
+  },
+  {
+    "source": "Chapel of Anticipation",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "accessing an overworld grace",
+    "target": "Roundtable Hold",
+    "source_id": "chapel_start",
+    "target_id": "roundtable"
+  },
+  {
+    "source": "Leyndell - Elden Throne",
+    "type": "random",
+    "source_details": "at the front of Morgott's arena",
+    "target_details": "on the steps to Raya Lucaria rooftops section",
+    "target": "Academy of Raya Lucaria after Red Wolf",
+    "source_id": "leyndell_throne",
+    "target_id": "academy_courtyard"
+  },
+  {
+    "source": "Academy of Raya Lucaria Rooftops",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping back down to the courtyard at the start of rooftops section",
+    "target": "Academy of Raya Lucaria after Red Wolf",
+    "source_id": "academy_rooftops",
+    "target_id": "academy_courtyard"
+  },
+  {
+    "source": "Commander Niall",
+    "type": "random",
+    "source_details": "at the back of Commander Niall's arena",
+    "target_details": "before Hoarah Loux's arena",
+    "target": "Ashen Leyndell - Queen's Bedchamber",
+    "source_id": "mountaintops_sol_boss",
+    "target_id": "leyndell2_bedchamber"
+  },
+  {
+    "source": "Roundtable Hold",
+    "type": "random",
+    "source_details": "in Roundtable Hold in the main room",
+    "target_details": "at the front of Loretta's arena",
+    "target": "Royal Knight Loretta",
+    "source_id": "roundtable",
+    "target_id": "liurnia_loretta"
+  },
+  {
+    "source": "Ashen Leyndell - Queen's Bedchamber",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping into the boss fight",
+    "target": "Ashen Leyndell - Erdtree Sanctuary",
+    "source_id": "leyndell2_bedchamber",
+    "target_id": "leyndell2_sanctuary"
+  },
+  {
+    "source": "Ashen Leyndell - Queen's Bedchamber",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "instead of entering the sanctuary, dropping down to the left",
+    "target": "Ashen Leyndell - Behind Erdtree Sanctuary",
+    "source_id": "leyndell2_bedchamber",
+    "target_id": "leyndell2_sanctuaryback"
+  },
+  {
+    "source": "Ashen Leyndell - Queen's Bedchamber",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "instead of entering the sanctuary, dropping down to the right",
+    "target": "Ashen Leyndell",
+    "source_id": "leyndell2_bedchamber",
+    "target_id": "leyndell2"
+  },
+  {
+    "source": "Ancient Ruins of Rauh - After Romina",
+    "type": "random",
+    "source_details": "burning the Sealing Tree",
+    "target_details": "warp to the start of Ashen Leyndell",
+    "target": "Ashen Leyndell",
+    "source_id": "rauhruins_postromina",
+    "target_id": "leyndell2"
+  },
+  {
+    "source": "Ashen Leyndell - Queen's Bedchamber",
+    "type": "random",
+    "source_details": "outside of Gideon's arena at the base of a shortcut ladder, accessed from an open window on a second-floor rooftop",
+    "target_details": "after Gaius's arena",
+    "target": "Scaduview - Scadutree Chalice",
+    "source_id": "leyndell2_bedchamber",
+    "target_id": "scaduview_chalice"
+  },
+  {
+    "source": "Ashen Leyndell - Behind Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "outside of Gideon's arena at the leftmost back exit, the one without the branch",
+    "target_details": "at the entrance from Liurnia",
+    "target": "Carian Study Hall",
+    "source_id": "leyndell2_sanctuaryback",
+    "target_id": "liurnia_studyhall"
+  },
+  {
+    "source": "Ashen Leyndell - Behind Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "outside of Gideon's arena at the rightmost back exit, the one with the branch",
+    "target_details": "outside of Godfrey's arena at the stairs which go down to the Marika statue",
+    "target": "Leyndell - Erdtree Sanctuary Stairs",
+    "source_id": "leyndell2_sanctuaryback",
+    "target_id": "leyndell_sanctuaryfront"
+  },
+  {
+    "source": "Leyndell - Queen's Bedchamber",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "instead of entering the sanctuary, dropping down to the right",
+    "target": "Leyndell - Erdtree Sanctuary Stairs",
+    "source_id": "leyndell_bedchamber",
+    "target_id": "leyndell_sanctuaryfront"
+  },
+  {
+    "source": "Ashen Leyndell - Behind Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "outside of Gideon's arena at the center back exit",
+    "target_details": "arriving at the cliffside path to Redmane Castle",
+    "target": "Redmane Castle",
+    "source_id": "leyndell2_sanctuaryback",
+    "target_id": "caelid_redmane"
+  },
+  {
+    "source": "Leyndell - Erdtree Sanctuary Stairs",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down, like near Bolt of Gransax",
+    "target": "Leyndell",
+    "source_id": "leyndell_sanctuaryfront",
+    "target_id": "leyndell"
+  },
+  {
+    "source": "Ashen Leyndell - South of Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "at the side entrance to Gideon's arena from the branches",
+    "target_details": "at the Leyndell entrance from Capital Rampart",
+    "target": "Leyndell",
+    "source_id": "leyndell2_sanctuaryside",
+    "target_id": "leyndell"
+  },
+  {
+    "source": "Chapel of Anticipation",
+    "type": "random",
+    "source_details": "using the Pureblood Knight's Medal from anywhere",
+    "target_details": "arriving at the start of Leyndell from Deeproot",
+    "target": "Leyndell",
+    "source_id": "chapel_start",
+    "target_id": "leyndell"
+  },
+  {
+    "source": "Academy of Raya Lucaria after Red Wolf",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down in the southeast corner of the courtyard",
+    "target": "Red Wolf of Radagon",
+    "source_id": "academy_courtyard",
+    "target_id": "academy_redwolf"
+  },
+  {
+    "source": "Academy of Raya Lucaria after Red Wolf",
+    "type": "random",
+    "source_details": "using the sending gate before the elevator to Grand Library",
+    "target_details": "arriving in Placidusax's arena",
+    "target": "Dragonlord Placidusax",
+    "source_id": "academy_courtyard",
+    "target_id": "farumazula_placidusax"
+  },
+  {
+    "source": "Academy of Raya Lucaria after Red Wolf",
+    "type": "random",
+    "source_details": "before Rennala's arena",
+    "target_details": "at the front of Loretta's arena",
+    "target": "Loretta, Knight of the Haligtree",
+    "source_id": "academy_courtyard",
+    "target_id": "haligtree_loretta"
+  },
+  {
+    "source": "Academy of Raya Lucaria after Red Wolf",
+    "type": "random",
+    "source_details": "after Red Wolf's arena",
+    "target_details": "at the front of Malenia's arena",
+    "target": "Malenia, Blade of Miquella",
+    "source_id": "academy_courtyard",
+    "target_id": "haligtree_malenia"
+  },
+  {
+    "source": "Ashen Leyndell",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down to the right of the sanctuary entrance from the elevator",
+    "target": "Ashen Leyndell - South of Erdtree Sanctuary",
+    "source_id": "leyndell2",
+    "target_id": "leyndell2_sanctuaryside"
+  },
+  {
+    "source": "Ashen Leyndell",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down through the open sewer grate",
+    "target": "Subterranean Shunning-Grounds - Ashen Capital Dropdown",
+    "source_id": "leyndell2",
+    "target_id": "sewer_ashen"
+  },
+  {
+    "source": "Ashen Leyndell",
+    "type": "random",
+    "source_details": "at the front entrance to Gideon's arena",
+    "target_details": "at the side exit of Mimic Tear's arena",
+    "target": "Mimic Tear",
+    "source_id": "leyndell2",
+    "target_id": "siofra_nokron_mimic"
+  },
+  {
+    "source": "Ashen Leyndell",
+    "type": "random",
+    "source_details": "at the Ashen Capital entrance from Capital Rampart",
+    "target_details": "at the entrance from Weeping Peninsula",
+    "target": "Weeping Peninsula - Morne Tunnel",
+    "source_id": "leyndell2",
+    "target_id": "peninsula_tunnel"
+  },
+  {
+    "source": "Subterranean Shunning-Grounds - Ashen Capital Dropdown",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Subterranean Shunning-Grounds",
+    "source_id": "sewer_ashen",
+    "target_id": "sewer"
+  },
+  {
+    "source": "Red Wolf of Radagon",
+    "type": "random",
+    "source_details": "at the back left of Red Wolf's arena",
+    "target_details": "before Mohg's arena",
+    "target": "Subterranean Shunning-Grounds",
+    "source_id": "academy_redwolf",
+    "target_id": "sewer"
+  },
+  {
+    "source": "Subterranean Shunning-Grounds - From Royal Capital",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the one-way door",
+    "target": "Subterranean Shunning-Grounds",
+    "source_id": "sewer_royal",
+    "target_id": "sewer"
+  },
+  {
+    "source": "Redmane Castle",
+    "type": "random",
+    "source_details": "before Redmane Castle Plaza",
+    "target_details": "return to entrance after Starscourge Radahn",
+    "target": "Starscourge Radahn",
+    "source_id": "caelid_redmane",
+    "target_id": "caelid_radahn"
+  },
+  {
+    "source": "Shadow Keep",
+    "type": "random",
+    "source_details": "using the coffin beneath Shadow Keep",
+    "target_details": "arriving at Starscourge Radahn's arena",
+    "target": "Starscourge Radahn",
+    "source_id": "shadowkeep",
+    "target_id": "caelid_radahn"
+  },
+  {
+    "source": "Leyndell",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": null,
+    "target": "Leyndell - Divine Bridge (taking the elevator from Fortified Manor)",
+    "source_id": "leyndell",
+    "target_id": "leyndell_divinebridge"
+  },
+  {
+    "source": "Finger Ruins of Miyr",
+    "type": "random",
+    "source_details": "using the Hole-Laden Necklace below Manus Metyr",
+    "target_details": "arriving from the Tower of Return",
+    "target": "Leyndell - Divine Bridge",
+    "source_id": "scadualtus_miyr",
+    "target_id": "leyndell_divinebridge"
+  },
+  {
+    "source": "Leyndell",
+    "type": "random",
+    "source_details": "before Godfrey's arena from the branches",
+    "target_details": "at the entrance from Liurnia",
+    "target": "Liurnia - Raya Lucaria Crystal Tunnel",
+    "source_id": "leyndell",
+    "target_id": "liurnia_tunnel"
+  },
+  {
+    "source": "Leyndell",
+    "type": "random",
+    "source_details": "at the entrance to Subterranean Shunning-Grounds",
+    "target_details": "before Dragonkin of Nokstella's arena",
+    "target": "Ainsel River Downstream",
+    "source_id": "leyndell",
+    "target_id": "ainsel_start"
+  },
+  {
+    "source": "Above Ainsel River Downstream",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Ainsel River Downstream",
+    "source_id": "ainsel_abovestart",
+    "target_id": "ainsel_start"
+  },
+  {
+    "source": "Leyndell - Divine Bridge",
+    "type": "random",
+    "source_details": "using the sending gate after unlocking the elevator in Leyndell or unlocking Ashen Divine Bridge",
+    "target_details": "arriving at the sending gate after the Siofra River Bank grace",
+    "target": "Siofra River",
+    "source_id": "leyndell_divinebridge",
+    "target_id": "siofra"
+  },
+  {
+    "source": "Nokron to Siofra Path",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down to the north",
+    "target": "Siofra River",
+    "source_id": "siofra_dragonkin",
+    "target_id": "siofra"
+  },
+  {
+    "source": "Deeproot Depths - Fia's Champions",
+    "type": "random",
+    "source_details": "using the sending gate after Fia's Champions",
+    "target_details": "arriving at the sending gate after the Worshippers' Woods grace",
+    "target": "Siofra River",
+    "source_id": "deeproot_boss",
+    "target_id": "siofra"
+  },
+  {
+    "source": "Siofra River",
+    "type": "random",
+    "source_details": "using Horned Remains in Siofra",
+    "target_details": "arriving by the Palace Approach grace",
+    "target": "Mohgwyn Palace",
+    "source_id": "siofra",
+    "target_id": "mohgwyn"
+  },
+  {
+    "source": "Red Wolf of Radagon",
+    "type": "random",
+    "source_details": "at the front of Red Wolf's arena",
+    "target_details": "before Mohg's arena",
+    "target": "Mohgwyn Palace",
+    "source_id": "academy_redwolf",
+    "target_id": "mohgwyn"
+  },
+  {
+    "source": "Weeping Peninsula - Morne Tunnel",
+    "type": "random",
+    "source_details": "before Scaly Misbegotten's arena",
+    "target_details": "at the front of Scaly Misbegotten's arena",
+    "target": "Weeping Peninsula - Morne Tunnel - Scaly Misbegotten",
+    "source_id": "peninsula_tunnel",
+    "target_id": "peninsula_tunnel_boss"
+  },
+  {
+    "source": "Liurnia - Raya Lucaria Crystal Tunnel",
+    "type": "random",
+    "source_details": "before Crystalian's arena",
+    "target_details": "before the boss dropdown",
+    "target": "Stone Coffin Fissure - Before Boss",
+    "source_id": "liurnia_tunnel",
+    "target_id": "fissure_preboss"
+  },
+  {
+    "source": "Ainsel River Downstream",
+    "type": "random",
+    "source_details": "at the top of the Ainsel River Well",
+    "target_details": "at the front of Stonedigger Troll's arena",
+    "target": "Limgrave Tunnels - Stonedigger Troll",
+    "source_id": "ainsel_start",
+    "target_id": "limgrave_tunnels_boss"
+  },
+  {
+    "source": "Before Volcano Manor Entrance",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the first door into Volcano Manor",
+    "target": "Volcano Manor Entrance",
+    "source_id": "volcano_predoor",
+    "target_id": "volcano"
+  },
+  {
+    "source": "Volcano Manor - Hallway Opposite Sending Gate",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "using a Stonesword Key, dropping down, and opening a door",
+    "target": "Volcano Manor Entrance",
+    "source_id": "volcano_hallway",
+    "target_id": "volcano"
+  },
+  {
+    "source": "Siofra River",
+    "type": "random",
+    "source_details": "using the sending gate after the Siofra River Bank grace",
+    "target_details": "arriving at the lake between Nokron and lower Siofra",
+    "target": "Nokron to Siofra Path",
+    "source_id": "siofra",
+    "target_id": "siofra_dragonkin"
+  },
+  {
+    "source": "Nokron - Ancestral Woods",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down below the east-side bridge",
+    "target": "Nokron to Siofra Path",
+    "source_id": "siofra_nokron",
+    "target_id": "siofra_dragonkin"
+  },
+  {
+    "source": "Siofra River",
+    "type": "random",
+    "source_details": "using the sending gate after the Worshippers' Woods grace",
+    "target_details": "arriving at the start of Farum Azula",
+    "target": "Farum Azula - Crumbling Beast Grave",
+    "source_id": "siofra",
+    "target_id": "farumazula_prestart"
+  },
+  {
+    "source": "Siofra River",
+    "type": "random",
+    "source_details": "using the sending gate atop rubble before the Worshippers' Woods grace",
+    "target_details": "arriving in the area before Ancestor Spirit's arena",
+    "target": "Siofra River before Ancestor Spirit",
+    "source_id": "siofra",
+    "target_id": "siofra_preboss"
+  },
+  {
+    "source": "Siofra River",
+    "type": "random",
+    "source_details": "at the top of the Siofra River Well",
+    "target_details": "at the front of Crystalian's arena",
+    "target": "Liurnia - Raya Lucaria Crystal Tunnel - Crystalian",
+    "source_id": "siofra",
+    "target_id": "liurnia_tunnel_boss"
+  },
+  {
+    "source": "Siofra River",
+    "type": "random",
+    "source_details": "at the top of the Deep Siofra Well",
+    "target_details": "at the entrance from Consecrated Snowfield",
+    "target": "Consecrated Snowfield - Yelough Anix Tunnel",
+    "source_id": "siofra",
+    "target_id": "snowfield_tunnel"
+  },
+  {
+    "source": "Farum Azula - Crumbling Beast Grave",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down after Crumbling Beast Grave grace",
+    "target": "Farum Azula - Crumbling Beast Grave Depths",
+    "source_id": "farumazula_prestart",
+    "target_id": "farumazula_start"
+  },
+  {
+    "source": "Farum Azula - Dragon Temple Lift",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "completing the path atop floating debris",
+    "target": "Farum Azula - Crumbling Beast Grave Depths",
+    "source_id": "farumazula_lift",
+    "target_id": "farumazula_start"
+  },
+  {
+    "source": "Siofra River before Ancestor Spirit",
+    "type": "random",
+    "source_details": "before Ancestor Spirit's arena",
+    "target_details": "at the doorway from Mt. Gelmir",
+    "target": "Before Volcano Manor Entrance",
+    "source_id": "siofra_preboss",
+    "target_id": "volcano_predoor"
+  },
+  {
+    "source": "Royal Knight Loretta",
+    "type": "random",
+    "source_details": "at the back of Loretta's arena",
+    "target_details": "at the entrance from Caelid",
+    "target": "Caelid - Gael Tunnel Start",
+    "source_id": "liurnia_loretta",
+    "target_id": "caelid_gaeltunnel_start"
+  },
+  {
+    "source": "Ashen Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "at the front of Gideon's arena",
+    "target_details": "at the front of Stonedigger Troll's arena",
+    "target": "Old Altus Tunnel - Stonedigger Troll",
+    "source_id": "leyndell2_sanctuary",
+    "target_id": "altus_oldtunnel_boss"
+  },
+  {
+    "source": "Ashen Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Gideon's arena at the South entrance by the branches",
+    "target_details": "return to entrance after Crystalian Duo",
+    "target": "Altus Tunnel - Crystalian Duo",
+    "source_id": "leyndell2_sanctuary",
+    "target_id": "altus_tunnel_boss"
+  },
+  {
+    "source": "Ashen Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Gideon's arena at the rightmost East exit, the one without the branch",
+    "target_details": "after Sealed Tunnel boss",
+    "target": "Divine Tower of West Altus",
+    "source_id": "leyndell2_sanctuary",
+    "target_id": "altus_tower"
+  },
+  {
+    "source": "Ashen Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Gideon's arena at the leftmost East exit, the one with the branch",
+    "target_details": "at the top of the elevator to Specimen Storehouse",
+    "target": "Shadow Keep - Church District",
+    "source_id": "leyndell2_sanctuary",
+    "target_id": "shadowkeep_church"
+  },
+  {
+    "source": "Ashen Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Gideon's arena at the Southwest exit with a shortcut ladder behind it",
+    "target_details": "at the back of Abductor Virgins' arena",
+    "target": "Volcano Manor - Abductor Virgins",
+    "source_id": "leyndell2_sanctuary",
+    "target_id": "volcano_abductors"
+  },
+  {
+    "source": "Ashen Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Gideon's arena at the Southeast exit with treasure behind it",
+    "target_details": "after Putrescent Knight's arena",
+    "target": "Stone Coffin Fissure - After Putrescent Knight",
+    "source_id": "leyndell2_sanctuary",
+    "target_id": "fissure_postboss"
+  },
+  {
+    "source": "Ashen Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Gideon's arena at the center East exit",
+    "target_details": "before Malenia's arena",
+    "target": "Elphael, Brace of the Haligtree",
+    "source_id": "leyndell2_sanctuary",
+    "target_id": "haligtree_elphael"
+  },
+  {
+    "source": "Caelid - Gael Tunnel Start",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Caelid - Gael Tunnel",
+    "source_id": "caelid_gaeltunnel_start",
+    "target_id": "caelid_gaeltunnel"
+  },
+  {
+    "source": "Weeping Peninsula - Morne Tunnel - Scaly Misbegotten",
+    "type": "random",
+    "source_details": "return to entrance after Scaly Misbegotten",
+    "target_details": "in Roundtable Hold at the balcony overlooking the first floor",
+    "target": "Roundtable Hold Balcony",
+    "source_id": "peninsula_tunnel_boss",
+    "target_id": "roundtable_balcony"
+  },
+  {
+    "source": "Stone Coffin Fissure - Before Boss",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "going back before the fog gate",
+    "target": "Stone Coffin Fissure - After Waypoint",
+    "source_id": "fissure_preboss",
+    "target_id": "fissure_depths"
+  },
+  {
+    "source": "Stone Coffin Fissure",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Stone Coffin Fissure - After Waypoint",
+    "source_id": "fissure",
+    "target_id": "fissure_depths"
+  },
+  {
+    "source": "Stone Coffin Fissure - Before Boss",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Stone Coffin Fissure - Putrescent Knight",
+    "source_id": "fissure_preboss",
+    "target_id": "fissure_boss"
+  },
+  {
+    "source": "Limgrave Tunnels - Stonedigger Troll",
+    "type": "random",
+    "source_details": "return to entrance after Stonedigger Troll",
+    "target_details": "outside the balcony above Godskin Duo's arena",
+    "target": "Farum Azula - Dragon Temple",
+    "source_id": "limgrave_tunnels_boss",
+    "target_id": "farumazula_temple"
+  },
+  {
+    "source": "Farum Azula - Crumbling Beast Grave Depths",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down to the platform before the Dragon Temple grace",
+    "target": "Farum Azula - Dragon Temple",
+    "source_id": "farumazula_start",
+    "target_id": "farumazula_temple"
+  },
+  {
+    "source": "Liurnia - Raya Lucaria Crystal Tunnel - Crystalian",
+    "type": "random",
+    "source_details": "return to entrance after Crystalian",
+    "target_details": "at the Viaduct Minor Tower after West Rampart",
+    "target": "Ancient Ruins of Rauh - East",
+    "source_id": "liurnia_tunnel_boss",
+    "target_id": "rauhruins_east"
+  },
+  {
+    "source": "Consecrated Snowfield - Yelough Anix Tunnel",
+    "type": "random",
+    "source_details": "before Astel, Stars of Darkness' arena",
+    "target_details": "before Loretta's arena",
+    "target": "Haligtree Town",
+    "source_id": "snowfield_tunnel",
+    "target_id": "haligtree"
+  },
+  {
+    "source": "Loretta, Knight of the Haligtree",
+    "type": "random",
+    "source_details": "at back of Loretta's arena",
+    "target_details": "before Maliketh's arena",
+    "target": "Farum Azula Rooftop and Bridge",
+    "source_id": "haligtree_loretta",
+    "target_id": "farumazula"
+  },
+  {
+    "source": "Mimic Tear",
+    "type": "random",
+    "source_details": "at the front of Mimic Tear's arena",
+    "target_details": "at the main entrance gate",
+    "target": "Scadu Altus - Manus Metyr",
+    "source_id": "siofra_nokron_mimic",
+    "target_id": "scadualtus_ymir"
+  },
+  {
+    "source": "Old Altus Tunnel - Stonedigger Troll",
+    "type": "random",
+    "source_details": "return to entrance after Stonedigger Troll",
+    "target_details": "at the exit to Limgrave",
+    "target": "Stranded Graveyard",
+    "source_id": "altus_oldtunnel_boss",
+    "target_id": "graveyard"
+  },
+  {
+    "source": "Limgrave - Fringefolk Hero's Grave",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "going backwards through Imp Seal",
+    "target": "Stranded Graveyard",
+    "source_id": "graveyard_grave",
+    "target_id": "graveyard"
+  },
+  {
+    "source": "Altus Tunnel - Crystalian Duo",
+    "type": "random",
+    "source_details": "at the front of Crystalian Duo's arena",
+    "target_details": "before Stonedigger Troll's arena",
+    "target": "Old Altus Tunnel",
+    "source_id": "altus_tunnel_boss",
+    "target_id": "altus_oldtunnel"
+  },
+  {
+    "source": "Shadow Keep - Church District",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "in map",
+    "target": "Shadow Keep - Drained Church District",
+    "source_id": "shadowkeep_church",
+    "target_id": "shadowkeep_church_lower"
+  },
+  {
+    "source": "Shadow Keep - Church District",
+    "type": "random",
+    "source_details": "at the tunnel entrance from Scadu Altus",
+    "target_details": "at exit to Consecrated Snowfield",
+    "target": "Hidden Path to the Haligtree",
+    "source_id": "shadowkeep_church",
+    "target_id": "snowfield_hiddenpath"
+  },
+  {
+    "source": "Volcano Manor - Abductor Virgins",
+    "type": "random",
+    "source_details": "at the front of Abductor Virgins' arena",
+    "target_details": "at the top of the steps before Raya Lucaria rooftops section",
+    "target": "Academy of Raya Lucaria Rooftops",
+    "source_id": "volcano_abductors",
+    "target_id": "academy_rooftops"
+  },
+  {
+    "source": "Elphael, Brace of the Haligtree",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "at the start of Elphael",
+    "target": "After Loretta, Knight of the Haligtree",
+    "source_id": "haligtree_elphael",
+    "target_id": "haligtree_postloretta"
+  },
+  {
+    "source": "Caelid - Gael Tunnel",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the door",
+    "target": "Caelid - Rear Gael Tunnel",
+    "source_id": "caelid_gaeltunnel",
+    "target_id": "caelid_gaeltunnel_rear"
+  },
+  {
+    "source": "Caelid - Gael Tunnel",
+    "type": "random",
+    "source_details": "before Magma Wyrm's arena",
+    "target_details": "before Scadutree Avatar's arena",
+    "target": "Shadow Keep - Tree-Worship Sanctum",
+    "source_id": "caelid_gaeltunnel",
+    "target_id": "shadowkeep_sanctum"
+  },
+  {
+    "source": "Shadow Keep - Drained Church District",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "in map",
+    "target": "Shadow Keep - Tree-Worship Sanctum",
+    "source_id": "shadowkeep_church_lower",
+    "target_id": "shadowkeep_sanctum"
+  },
+  {
+    "source": "Stranded Graveyard",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "using two Stonesword Keys",
+    "target": "Limgrave - Fringefolk Hero's Grave",
+    "source_id": "graveyard",
+    "target_id": "graveyard_grave"
+  },
+  {
+    "source": "Stranded Graveyard",
+    "type": "random",
+    "source_details": "at the door from Cave of Knowledge",
+    "target_details": "at the front of the Deeproot Depths boss arena",
+    "target": "Deeproot Depths - Fia's Champions",
+    "source_id": "graveyard",
+    "target_id": "deeproot_boss"
+  },
+  {
+    "source": "After Loretta, Knight of the Haligtree",
+    "type": "random",
+    "source_details": "after Loretta's arena",
+    "target_details": "at the back of Dragonkin of Nokstella's arena",
+    "target": "Dragonkin Soldier of Nokstella",
+    "source_id": "haligtree_postloretta",
+    "target_id": "ainsel_dragonkin"
+  },
+  {
+    "source": "Caelid - Rear Gael Tunnel",
+    "type": "random",
+    "source_details": "at the Gael Tunnel rear exit, North of the Third Church of Marika",
+    "target_details": "at the front of Gaius's arena",
+    "target": "Scaduview - Commander Gaius",
+    "source_id": "caelid_gaeltunnel_rear",
+    "target_id": "scaduview_gaius"
+  },
+  {
+    "source": "Volcano Manor Prison Town Church",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the door",
+    "target": "Volcano Manor Prison Town",
+    "source_id": "volcano_pretown",
+    "target_id": "volcano_town"
+  },
+  {
+    "source": "Academy of Raya Lucaria",
+    "type": "random",
+    "source_details": "getting abducted at the bottom of the elevator. this requires dying in the bottom 30 meters, not above that",
+    "target_details": "arriving in Volcano Manor after abduction. get to the main town by hopping across two lava streams then jumping off the southewst edge into the lava below",
+    "target": "Volcano Manor Prison Town",
+    "source_id": "academy",
+    "target_id": "volcano_town"
+  },
+  {
+    "source": "Volcano Manor - Hallway Opposite Sending Gate",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "using a Stonesword Key and dropping down",
+    "target": "Volcano Manor Prison Town",
+    "source_id": "volcano_hallway",
+    "target_id": "volcano_town"
+  },
+  {
+    "source": "Stone Coffin Fissure - After Waypoint",
+    "type": "random",
+    "source_details": "before the boss at Fissure Depths",
+    "target_details": "at the back of Magma Wyrm Makar's arena",
+    "target": "Magma Wrym Makar",
+    "source_id": "fissure_depths",
+    "target_id": "precipice_boss"
+  },
+  {
+    "source": "Farum Azula - Dragon Temple",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "jumping to the stairs west of the Dragon Temple grace and dropping down again",
+    "target": "Farum Azula - Dragon Temple Transept",
+    "source_id": "farumazula_temple",
+    "target_id": "farumazula_transept"
+  },
+  {
+    "source": "Farum Azula - Dragon Temple",
+    "type": "random",
+    "source_details": "before back right of Godskin Duo arena, down Dragon Temple stairs",
+    "target_details": "at the front of Messmer's arena",
+    "target": "Specimen Storehouse - Messmer the Impaler",
+    "source_id": "farumazula_temple",
+    "target_id": "storehouse_messmer"
+  },
+  {
+    "source": "Farum Azula - Dragon Temple",
+    "type": "random",
+    "source_details": "before back left of Godskin Duo arena, by the crumbled stairs",
+    "target_details": "after Loretta's arena",
+    "target": "Liurnia Behind Caria Manor",
+    "source_id": "farumazula_temple",
+    "target_id": "liurnia_postmanor"
+  },
+  {
+    "source": "Leyndell - Queen's Bedchamber",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping into the boss fight",
+    "target": "Leyndell - Erdtree Sanctuary",
+    "source_id": "leyndell_bedchamber",
+    "target_id": "leyndell_sanctuary"
+  },
+  {
+    "source": "Magma Wrym Makar",
+    "type": "random",
+    "source_details": "at the front of Magma Wyrm Makar's arena",
+    "target_details": "in Godfrey's arena at the normal South entrance from the branches",
+    "target": "Leyndell - Erdtree Sanctuary",
+    "source_id": "precipice_boss",
+    "target_id": "leyndell_sanctuary"
+  },
+  {
+    "source": "Farum Azula - Dragon Temple Transept",
+    "type": "random",
+    "source_details": "up the stairs from Dragon Temple Transept",
+    "target_details": "before Morgott's arena",
+    "target": "Leyndell - Queen's Bedchamber",
+    "source_id": "farumazula_transept",
+    "target_id": "leyndell_bedchamber"
+  },
+  {
+    "source": "Leyndell - Queen's Bedchamber",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "instead of entering the sanctuary, dropping down to the left",
+    "target": "Leyndell - Behind Erdtree Sanctuary",
+    "source_id": "leyndell_bedchamber",
+    "target_id": "leyndell_sanctuaryback"
+  },
+  {
+    "source": "Leyndell - Queen's Bedchamber",
+    "type": "random",
+    "source_details": "outside of Godfrey's arena at the base of a shortcut ladder, accessed from an open window on a second-floor rooftop",
+    "target_details": "in the right front of Fire Giant's arena, farther from the forge",
+    "target": "Fire Giant",
+    "source_id": "leyndell_bedchamber",
+    "target_id": "flamepeak_firegiant"
+  },
+  {
+    "source": "Leyndell - Behind Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "outside of Godfrey's arena at the leftmost back exit, the one without the branch",
+    "target_details": "behind the altar coming from the manor",
+    "target": "Volcano Manor Prison Town Church",
+    "source_id": "leyndell_sanctuaryback",
+    "target_id": "volcano_pretown"
+  },
+  {
+    "source": "Leyndell - Behind Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "outside of Godfrey's arena at the rightmost back exit, the one with the branch",
+    "target_details": "at the front of Maliketh's arena",
+    "target": "Maliketh the Black Blade",
+    "source_id": "leyndell_sanctuaryback",
+    "target_id": "farumazula_maliketh"
+  },
+  {
+    "source": "Leyndell - Behind Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "outside of Godfrey's arena at the center back exit",
+    "target_details": "at the back of Hoarah Loux's arena",
+    "target": "Ashen Leyndell - Elden Throne",
+    "source_id": "leyndell_sanctuaryback",
+    "target_id": "leyndell2_throne"
+  },
+  {
+    "source": "Farum Azula Rooftop and Bridge",
+    "type": "random",
+    "source_details": "after Godskin Duo arena",
+    "target_details": "return to entrance after Magma Wyrm",
+    "target": "Caelid - Gael Tunnel - Magma Wyrm",
+    "source_id": "farumazula",
+    "target_id": "caelid_gaeltunnel_boss"
+  },
+  {
+    "source": "Farum Azula Rooftop and Bridge",
+    "type": "random",
+    "source_details": "at the Imp Seal leading up to the Dragon Temple Lift grace",
+    "target_details": "at the entrance from Weeping Peninsula",
+    "target": "Weeping Peninsula - Castle Morne",
+    "source_id": "farumazula",
+    "target_id": "peninsula_morne"
+  },
+  {
+    "source": "Scadu Altus - Manus Metyr",
+    "type": "random",
+    "source_details": "at the side entrance, the right North gate",
+    "target_details": "after Godskin Apostle's arena",
+    "target": "Divine Tower of Caelid - After Godskin Apostle",
+    "source_id": "scadualtus_ymir",
+    "target_id": "caelid_tower_postboss"
+  },
+  {
+    "source": "Scadu Altus - Manus Metyr",
+    "type": "random",
+    "source_details": "at the side entrance, the left South gate",
+    "target_details": "at the entrance from Cerulean Coast",
+    "target": "Stone Coffin Fissure",
+    "source_id": "scadualtus_ymir",
+    "target_id": "fissure"
+  },
+  {
+    "source": "Old Altus Tunnel",
+    "type": "random",
+    "source_details": "at the entrance from Altus Plateau",
+    "target_details": "before Leonine Misbegotten's arena",
+    "target": "Weeping Peninsula - Beside the Rampart Gaol",
+    "source_id": "altus_oldtunnel",
+    "target_id": "peninsula_postmorne"
+  },
+  {
+    "source": "Weeping Peninsula - Castle Morne",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down behind Castle Morne",
+    "target": "Weeping Peninsula - Beside the Rampart Gaol",
+    "source_id": "peninsula_morne",
+    "target_id": "peninsula_postmorne"
+  },
+  {
+    "source": "Academy of Raya Lucaria Rooftops",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "completing the loop back to the Church of Cuckoo",
+    "target": "Academy of Raya Lucaria",
+    "source_id": "academy_rooftops",
+    "target_id": "academy"
+  },
+  {
+    "source": "Academy of Raya Lucaria Main Entrance",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the doors to the Church of Cuckoo",
+    "target": "Academy of Raya Lucaria",
+    "source_id": "academy_entrance",
+    "target_id": "academy"
+  },
+  {
+    "source": "Divine Tower of Caelid - After Godskin Apostle",
+    "type": "random",
+    "source_details": "return to entrance after After Godskin Apostle",
+    "target_details": "at the entrance from Gravesite Plain",
+    "target": "Gravesite Plain - Dragon's Pit",
+    "source_id": "caelid_tower_postboss",
+    "target_id": "gravesite_dragonpit"
+  },
+  {
+    "source": "Caelid - Gael Tunnel - Magma Wyrm",
+    "type": "random",
+    "source_details": "at the front of Magma Wyrm's arena",
+    "target_details": "in the hallway towards the Imp Seal back to main Volcano Manor",
+    "target": "Volcano Manor - Hallway Opposite Sending Gate",
+    "source_id": "caelid_gaeltunnel_boss",
+    "target_id": "volcano_hallway"
+  },
+  {
+    "source": "Academy of Raya Lucaria",
+    "type": "random",
+    "source_details": "before Red Wolf's arena",
+    "target_details": "at the base of the elevator to the Divine Tower of East Altus",
+    "target": "Ashen Leyndell - before Divine Tower",
+    "source_id": "academy",
+    "target_id": "leyndell2_pretower"
+  },
+  {
+    "source": "Volcano Manor - Hallway Opposite Sending Gate",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "jumping over the balcony",
+    "target": "Volcano Manor after Temple of Eiglay",
+    "source_id": "volcano_hallway",
+    "target_id": "volcano_posttemple"
+  },
+  {
+    "source": "Volcano Manor - Room Before Sending Gate",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "jumping into the lava behind the Sending Gate. this requires some vigor and flasks",
+    "target": "Volcano Manor after Temple of Eiglay",
+    "source_id": "volcano_sendinggate",
+    "target_id": "volcano_posttemple"
+  },
+  {
+    "source": "Volcano Manor - Temple of Eiglay",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "riding the elevator up and dropping down outside",
+    "target": "Volcano Manor after Temple of Eiglay",
+    "source_id": "volcano_temple",
+    "target_id": "volcano_posttemple"
+  },
+  {
+    "source": "Gravesite Plain - Dragon's Pit",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Gravesite Plain - Dragon's Pit - Before Boss",
+    "source_id": "gravesite_dragonpit",
+    "target_id": "gravesite_dragonpit_preboss"
+  },
+  {
+    "source": "Stone Coffin Fissure - Putrescent Knight",
+    "type": "random",
+    "source_details": "at the back of Putrescent Knight's arena",
+    "target_details": "at the exit to Forbidden Lands",
+    "target": "Divine Tower of East Altus",
+    "source_id": "fissure_boss",
+    "target_id": "leyndell_tower"
+  },
+  {
+    "source": "Gravesite Plain - Dragon's Pit - Before Boss",
+    "type": "random",
+    "source_details": "before Ancient Dragon-Man's arena",
+    "target_details": "up the stairs to Caelid Divine Tower's Two Fingers",
+    "target": "Divine Tower of Caelid",
+    "source_id": "gravesite_dragonpit_preboss",
+    "target_id": "caelid_tower"
+  },
+  {
+    "source": "Ancient Ruins of Rauh - East",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Ancient Ruins of Rauh - West",
+    "source_id": "rauhruins_east",
+    "target_id": "rauhruins_west"
+  },
+  {
+    "source": "Divine Tower of East Altus (approaching the Divine Tower of East Altus gate, or using the grace menu)",
+    "type": "random",
+    "source_details": null,
+    "target_details": "before Midra's arena",
+    "target": "Midra's Manse",
+    "source_id": "leyndell_tower",
+    "target_id": "midramanse"
+  },
+  {
+    "source": "Dragonkin Soldier of Nokstella",
+    "type": "random",
+    "source_details": "at the front of Dragonkin of Nokstella's arena",
+    "target_details": "at the front of Astel, Stars of Darkness' arena",
+    "target": "Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness",
+    "source_id": "ainsel_dragonkin",
+    "target_id": "snowfield_tunnel_boss"
+  },
+  {
+    "source": "Scaduview - Commander Gaius",
+    "type": "random",
+    "source_details": "at the back of Gaius's arena",
+    "target_details": "before Loretta's arena",
+    "target": "Liurnia - Caria Manor",
+    "source_id": "scaduview_gaius",
+    "target_id": "liurnia_manor"
+  },
+  {
+    "source": "Liurnia Behind Caria Manor",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down into the manor by Pidia",
+    "target": "Liurnia - Caria Manor",
+    "source_id": "liurnia_postmanor",
+    "target_id": "liurnia_manor"
+  },
+  {
+    "source": "Volcano Manor Prison Town",
+    "type": "random",
+    "source_details": "before Abductor Virgins' arena. it can be reached from main town dropping down outside Temple of Eiglay",
+    "target_details": "at the bottom of the elevator before the Radahn warp",
+    "target": "After Redmane Castle Boss",
+    "source_id": "volcano_town",
+    "target_id": "caelid_redmane_postboss"
+  },
+  {
+    "source": "Volcano Manor Prison Town",
+    "type": "random",
+    "source_details": "before Godskin Noble's arena",
+    "target_details": "at the front of Ancestor Spirit's arena",
+    "target": "Ancestor Spirit",
+    "source_id": "volcano_town",
+    "target_id": "siofra_boss"
+  },
+  {
+    "source": "Volcano Manor after Temple of Eiglay",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "unlocking the elevator shortcut back to the temple",
+    "target": "Volcano Manor - Temple of Eiglay Shortcut Elevator",
+    "source_id": "volcano_posttemple",
+    "target_id": "volcano_posttemple_elevator"
+  },
+  {
+    "source": "Volcano Manor after Temple of Eiglay",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the door",
+    "target": "Volcano Manor - Room Before Sending Gate",
+    "source_id": "volcano_posttemple",
+    "target_id": "volcano_sendinggate"
+  },
+  {
+    "source": "After Redmane Castle Boss",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down past Jerren's platform",
+    "target": "Redmane Castle Boss",
+    "source_id": "caelid_redmane_postboss",
+    "target_id": "caelid_redmane_boss"
+  },
+  {
+    "source": "After Redmane Castle Boss",
+    "type": "random",
+    "source_details": "after Redmane Castle Plaza",
+    "target_details": "before the Deeproot Depths boss arena",
+    "target": "Deeproot Depths",
+    "source_id": "caelid_redmane_postboss",
+    "target_id": "deeproot"
+  },
+  {
+    "source": "Divine Tower of Liurnia",
+    "type": "random",
+    "source_details": "opening the door at the bottom of the flipped tower",
+    "target_details": "arriving by the Great Waterfall Crest grace",
+    "target": "Deeproot Depths",
+    "source_id": "liurnia_tower",
+    "target_id": "deeproot"
+  },
+  {
+    "source": "Deeproot Depths from Proscription",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "traversing down the roots",
+    "target": "Deeproot Depths",
+    "source_id": "deeproot_start",
+    "target_id": "deeproot"
+  },
+  {
+    "source": "Volcano Manor - Temple of Eiglay Shortcut Elevator",
+    "type": "random",
+    "source_details": "after Godskin Noble's arena to the back left, down the shortcut elevator",
+    "target_details": "at the left side of Golden Hippopotamus's arena",
+    "target": "Shadow Keep - Golden Hippopotamus",
+    "source_id": "volcano_posttemple_elevator",
+    "target_id": "shadowkeep_boss"
+  },
+  {
+    "source": "Volcano Manor - Room Before Sending Gate",
+    "type": "random",
+    "source_details": "using the Sending Gate after Volcano Manor temple",
+    "target_details": "arriving at the tower",
+    "target": "Isolated Divine Tower",
+    "source_id": "volcano_sendinggate",
+    "target_id": "isolated_tower"
+  },
+  {
+    "source": "Volcano Manor - Room Before Sending Gate",
+    "type": "random",
+    "source_details": "on the doorway on the second story opposite the Sending Gate",
+    "target_details": "at the side of Divine Beast Dancing Lion's arena",
+    "target": "Belurat - Divine Beast Dancing Lion",
+    "source_id": "volcano_sendinggate",
+    "target_id": "belurat_boss"
+  },
+  {
+    "source": "Carian Study Hall",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "using Carian Inverted Statue",
+    "target": "Divine Tower of Liurnia",
+    "source_id": "liurnia_studyhall",
+    "target_id": "liurnia_tower"
+  },
+  {
+    "source": "Divine Tower of Caelid",
+    "type": "random",
+    "source_details": "before Godskin Apostle's arena",
+    "target_details": "after Commander Niall's arena",
+    "target": "After Commander Niall",
+    "source_id": "caelid_tower",
+    "target_id": "mountaintops_sol_postboss"
+  },
+  {
+    "source": "Divine Tower of Caelid",
+    "type": "random",
+    "source_details": "at the left exit to Dragonbarrow, facing north",
+    "target_details": "outside of Godfrey's arena with a treasure item",
+    "target": "Leyndell - Erdtree Sanctuary Treasure",
+    "source_id": "caelid_tower",
+    "target_id": "leyndell_sanctuaryleft"
+  },
+  {
+    "source": "Divine Tower of Caelid",
+    "type": "random",
+    "source_details": "at the middle exit to Dragonbarrow",
+    "target_details": "at the front of Rennala's arena",
+    "target": "Academy of Raya Lucaria - Grand Library",
+    "source_id": "caelid_tower",
+    "target_id": "academy_library"
+  },
+  {
+    "source": "Divine Tower of Caelid",
+    "type": "random",
+    "source_details": "at the right exit to Dragonbarrow, facing north",
+    "target_details": "at the back left of Mohg's arena",
+    "target": "Mohg, Lord of Blood",
+    "source_id": "caelid_tower",
+    "target_id": "mohgwyn_boss"
+  },
+  {
+    "source": "Midra's Manse",
+    "type": "random",
+    "source_details": "at the entrance to Midra's Manse",
+    "target_details": "at the front of Romina's arena",
+    "target": "Ancient Ruins of Rauh - Romina, Saint of the Bud",
+    "source_id": "midramanse",
+    "target_id": "rauhruins_romina"
+  },
+  {
+    "source": "Ruin-Strewn Precipice",
+    "type": "random",
+    "source_details": "before Magma Worm Makar's arena",
+    "target_details": "at the back of Romina's arena",
+    "target": "Ancient Ruins of Rauh - Romina, Saint of the Bud",
+    "source_id": "precipice",
+    "target_id": "rauhruins_romina"
+  },
+  {
+    "source": "Fire Giant",
+    "type": "random",
+    "source_details": "burning the erdtree at the Forge of the Giants, or repeating the warp using the grace",
+    "target_details": "arriving in the second half of the Divine Tower of Limgrave",
+    "target": "Divine Tower of Limgrave after Sending Gate",
+    "source_id": "flamepeak_firegiant",
+    "target_id": "limgrave_tower2"
+  },
+  {
+    "source": "Fire Giant",
+    "type": "random",
+    "source_details": "in the left front of Fire Giant's arena, closer to the forge",
+    "target_details": "before Messmer's arena",
+    "target": "Specimen Storehouse - Before Messmer",
+    "source_id": "flamepeak_firegiant",
+    "target_id": "storehouse_premessmer"
+  },
+  {
+    "source": "Specimen Storehouse",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the door",
+    "target": "Specimen Storehouse - Before Messmer",
+    "source_id": "storehouse",
+    "target_id": "storehouse_premessmer"
+  },
+  {
+    "source": "Maliketh the Black Blade",
+    "type": "random",
+    "source_details": "warp after defeathing Maliketh, or repeating the warp using the grace",
+    "target_details": "arriving at the Ancestral Woods grace",
+    "target": "Nokron - Ancestral Woods",
+    "source_id": "farumazula_maliketh",
+    "target_id": "siofra_nokron"
+  },
+  {
+    "source": "Ashen Leyndell - Elden Throne",
+    "type": "random",
+    "source_details": "at the front of Hoarah Loux's arena",
+    "target_details": "at the front of Mohg's arena",
+    "target": "Mohg, the Omen",
+    "source_id": "leyndell2_throne",
+    "target_id": "sewer_mohg_flame"
+  },
+  {
+    "source": "Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness",
+    "type": "random",
+    "source_details": "return to entrance after Astel, Stars of Darkness",
+    "target_details": "before Rykard's arena",
+    "target": "Volcano Manor - Audience Pathway",
+    "source_id": "snowfield_tunnel_boss",
+    "target_id": "volcano_pathway"
+  },
+  {
+    "source": "Nokron - Ancestral Woods",
+    "type": "random",
+    "source_details": "using Horned Remains in Nokron",
+    "target_details": "arriving at Audience Pathway",
+    "target": "Volcano Manor - Audience Pathway",
+    "source_id": "siofra_nokron",
+    "target_id": "volcano_pathway"
+  },
+  {
+    "source": "Liurnia - Caria Manor",
+    "type": "random",
+    "source_details": "using the new sending gate at the Caria Manor entrance",
+    "target_details": "at the entrance from Lower Scadu Altus",
+    "target": "Scadu Altus - Darklight Catacombs",
+    "source_id": "liurnia_manor",
+    "target_id": "scadualtus_catacombs"
+  },
+  {
+    "source": "Divine Tower of East Altus",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the heavy door",
+    "target": "Divine Tower of East Altus Interior",
+    "source_id": "leyndell_tower",
+    "target_id": "leyndell_tower_inner"
+  },
+  {
+    "source": "Redmane Castle Boss",
+    "type": "random",
+    "source_details": "at the front of Redmane Castle Plaza",
+    "target_details": "at the back left of Godskin Duo's arena",
+    "target": "Godskin Duo",
+    "source_id": "caelid_redmane_boss",
+    "target_id": "farumazula_godskinduo"
+  },
+  {
+    "source": "Redmane Castle Boss",
+    "type": "random",
+    "source_details": "at the back of Redmane Castle Plaza",
+    "target_details": "at the back right of Godskin Duo's arena",
+    "target": "Godskin Duo",
+    "source_id": "caelid_redmane_boss",
+    "target_id": "farumazula_godskinduo"
+  },
+  {
+    "source": "Farum Azula - Dragon Temple Balcony",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Godskin Duo",
+    "source_id": "farumazula_balcony",
+    "target_id": "farumazula_godskinduo"
+  },
+  {
+    "source": "Deeproot Depths",
+    "type": "random",
+    "source_details": "resting in the coffin by the Nameless Eternal City grace",
+    "target_details": "arriving after the Carian Study Hall door",
+    "target": "Divine Tower of Liurnia Interior",
+    "source_id": "deeproot",
+    "target_id": "liurnia_tower_inner"
+  },
+  {
+    "source": "Nokron - Ancestral Woods",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down past Aqueduct-Facing Cliffs grace",
+    "target": "Nokron - Aqueduct-Facing Cliffs",
+    "source_id": "siofra_nokron",
+    "target_id": "siofra_nokron_aqueduct"
+  },
+  {
+    "source": "Nokron - Aqueduct-Facing Cliffs Room",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down the small waterfall",
+    "target": "Nokron - Aqueduct-Facing Cliffs",
+    "source_id": "siofra_nokron_aboveaqueduct",
+    "target_id": "siofra_nokron_aqueduct"
+  },
+  {
+    "source": "Nokron - Ancestral Woods",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down south of the Ancestral Grounds grace",
+    "target": "Nokron - Night's Sacred Grounds",
+    "source_id": "siofra_nokron",
+    "target_id": "siofra_nokron_grounds"
+  },
+  {
+    "source": "Nokron - Ancestral Woods",
+    "type": "random",
+    "source_details": "after Mimic Tear's arena",
+    "target_details": "before Divine Beast Dancing Lion's arena",
+    "target": "Belurat",
+    "source_id": "siofra_nokron",
+    "target_id": "belurat"
+  },
+  {
+    "source": "Belurat Swamp",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the shortcut door",
+    "target": "Belurat",
+    "source_id": "belurat_swamp",
+    "target_id": "belurat"
+  },
+  {
+    "source": "Scadu Altus - Darklight Catacombs",
+    "type": "random",
+    "source_details": "before Jori's arena",
+    "target_details": "the path up to the Erdtree",
+    "target": "Leyndell - Erdtree Entrance",
+    "source_id": "scadualtus_catacombs",
+    "target_id": "leyndell_erdtree"
+  },
+  {
+    "source": "Ancient Ruins of Rauh - West",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "in map",
+    "target": "Ancient Ruins of Rauh - Belfry Area",
+    "source_id": "rauhruins_west",
+    "target_id": "rauhruins_limited"
+  },
+  {
+    "source": "Divine Tower of Limgrave",
+    "type": "random",
+    "source_details": "using the sending gate in the first half of the Divine Tower of Limgrave",
+    "target_details": "arriving in the isolated section of Rauh Ruins",
+    "target": "Ancient Ruins of Rauh - Belfry Area",
+    "source_id": "limgrave_tower",
+    "target_id": "rauhruins_limited"
+  },
+  {
+    "source": "Ancient Ruins of Rauh - West",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "using the sealed spiritspring",
+    "target": "Ancient Ruins of Rauh - Central Stairs",
+    "source_id": "rauhruins_west",
+    "target_id": "rauhruins_high"
+  },
+  {
+    "source": "Ancient Ruins of Rauh - West",
+    "type": "random",
+    "source_details": "before Romina's arena",
+    "target_details": "return to entrance after Regal Ancestor Spirit",
+    "target": "Regal Ancestor Spirit",
+    "source_id": "rauhruins_west",
+    "target_id": "siofra_nokron_boss"
+  },
+  {
+    "source": "Nokron - Night's Sacred Grounds",
+    "type": "random",
+    "source_details": "using the sending gate before the Fingerslayer Blade chest",
+    "target_details": "arriving at the start of Ainsel River Main",
+    "target": "Ainsel River Main",
+    "source_id": "siofra_nokron_grounds",
+    "target_id": "ainsel"
+  },
+  {
+    "source": "Shadow Keep",
+    "type": "random",
+    "source_details": "at the top of the elevator to Specimen Storehouse",
+    "target_details": "in the tunnel leading to Ainsel River Downstream",
+    "target": "Ainsel River Main",
+    "source_id": "shadowkeep",
+    "target_id": "ainsel"
+  },
+  {
+    "source": "Lake of Rot",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "in map",
+    "target": "Ainsel River Main",
+    "source_id": "lakeofrot",
+    "target_id": "ainsel"
+  },
+  {
+    "source": "Nokron - Aqueduct-Facing Cliffs",
+    "type": "random",
+    "source_details": "before Valiant Gargoyles' arena",
+    "target_details": "at the front of Godrick's arena",
+    "target": "Godrick the Grafted",
+    "source_id": "siofra_nokron_aqueduct",
+    "target_id": "stormveil_godrick"
+  },
+  {
+    "source": "Belurat",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "in map",
+    "target": "Belurat Swamp",
+    "source_id": "belurat",
+    "target_id": "belurat_swamp"
+  },
+  {
+    "source": "Enir-Ilim - Belurat",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Belurat Swamp",
+    "source_id": "belurat_enirilim",
+    "target_id": "belurat_swamp"
+  },
+  {
+    "source": "Belurat",
+    "type": "random",
+    "source_details": "at the entrance from Gravesite Plain",
+    "target_details": "at the start of Nokron from Limgrave",
+    "target": "Nokron from Limgrave",
+    "source_id": "belurat",
+    "target_id": "siofrabank_prenokron"
+  },
+  {
+    "source": "Ancestor Spirit",
+    "type": "random",
+    "source_details": "return to entrance after Ancestor Spirit",
+    "target_details": "at the entrance from Liurnia",
+    "target": "Ruin-Strewn Precipice",
+    "source_id": "siofra_boss",
+    "target_id": "precipice"
+  },
+  {
+    "source": "Divine Tower of East Altus",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "at the Morgott the Grace-Given gate coming from Forbidden Lands",
+    "target": "Divine Tower of East Altus Start",
+    "source_id": "leyndell_tower",
+    "target_id": "leyndell_tower_start"
+  },
+  {
+    "source": "Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Godfrey's arena at the West entrance to the Marika statue",
+    "target_details": "at the front of Scadutree Avatar's arena",
+    "target": "Scadutree Base - Scadutree Avatar",
+    "source_id": "leyndell_sanctuary",
+    "target_id": "scadutree_base"
+  },
+  {
+    "source": "Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Godfrey's arena at the rightmost East exit, the one without the branch",
+    "target_details": "down the elevator from Dragon Temple Lift grace",
+    "target": "Farum Azula - Dragon Temple Lift",
+    "source_id": "leyndell_sanctuary",
+    "target_id": "farumazula_lift"
+  },
+  {
+    "source": "Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Godfrey's arena at the leftmost East exit, the one with the branch",
+    "target_details": "before Crystalian Duo's arena",
+    "target": "Altus Tunnel",
+    "source_id": "leyndell_sanctuary",
+    "target_id": "altus_tunnel"
+  },
+  {
+    "source": "Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Godfrey's arena at the Southwest exit with a shortcut ladder behind it",
+    "target_details": "at the front of Rellana's arena",
+    "target": "Castle Ensis - Rellana, Twin Moon Knight",
+    "source_id": "leyndell_sanctuary",
+    "target_id": "ensis_boss"
+  },
+  {
+    "source": "Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Godfrey's arena at the Southeast exit with treasure behind it",
+    "target_details": "arriving at the entrance to Castle Sol",
+    "target": "Castle Sol",
+    "source_id": "leyndell_sanctuary",
+    "target_id": "mountaintops_sol"
+  },
+  {
+    "source": "Leyndell - Erdtree Sanctuary",
+    "type": "random",
+    "source_details": "in Godfrey's arena at the center East exit",
+    "target_details": "on the balcony above Godskin Duo's arena",
+    "target": "Farum Azula - Dragon Temple Balcony",
+    "source_id": "leyndell_sanctuary",
+    "target_id": "farumazula_balcony"
+  },
+  {
+    "source": "Shadow Keep - Golden Hippopotamus",
+    "type": "random",
+    "source_details": "at the right side of Golden Hippopotamus's arena",
+    "target_details": "after Divine Beast Dancing Lion's arena",
+    "target": "Belurat - After Divine Beast Dancing Lion",
+    "source_id": "shadowkeep_boss",
+    "target_id": "belurat_postboss"
+  },
+  {
+    "source": "Belurat - Divine Beast Dancing Lion",
+    "type": "random",
+    "source_details": "at the front of Divine Beast Dancing Lion's arena",
+    "target_details": "at the back left of Godskin Noble's arena",
+    "target": "Volcano Manor - Temple of Eiglay",
+    "source_id": "belurat_boss",
+    "target_id": "volcano_temple"
+  },
+  {
+    "source": "Godskin Duo",
+    "type": "random",
+    "source_details": "at the front right of Godskin Duo's arena",
+    "target_details": "at the front of Godskin Noble's arena",
+    "target": "Volcano Manor - Temple of Eiglay",
+    "source_id": "farumazula_godskinduo",
+    "target_id": "volcano_temple"
+  },
+  {
+    "source": "Mohg, Lord of Blood",
+    "type": "random",
+    "source_details": "at the back right of Mohg's arena",
+    "target_details": "at the elevator to West Rampart",
+    "target": "Shadow Keep - West Rampart",
+    "source_id": "mohgwyn_boss",
+    "target_id": "westrampart"
+  },
+  {
+    "source": "Mohg, Lord of Blood",
+    "type": "random",
+    "source_details": "at the front of Mohg's arena",
+    "target_details": "after Dragonkin of Nokstella",
+    "target": "After Dragonkin Soldier of Nokstella",
+    "source_id": "mohgwyn_boss",
+    "target_id": "ainsel_postdragonkin"
+  },
+  {
+    "source": "Divine Tower of East Altus Start",
+    "type": "random",
+    "source_details": "at the elevator to the Divine Tower of East Altus",
+    "target_details": "after Margit's arena",
+    "target": "Stormveil Castle before Gate",
+    "source_id": "leyndell_tower_start",
+    "target_id": "stormveil_start"
+  },
+  {
+    "source": "Stormveil Castle after Gate",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the gate",
+    "target": "Stormveil Castle before Gate",
+    "source_id": "stormveil",
+    "target_id": "stormveil_start"
+  },
+  {
+    "source": "Belurat - After Divine Beast Dancing Lion",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the door",
+    "target": "Belurat - Stairs before Enir-Ilim",
+    "source_id": "belurat_postboss",
+    "target_id": "belurat_stairs"
+  },
+  {
+    "source": "Enir-Ilim",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "in map after burning the Sealing Tree",
+    "target": "Belurat - Stairs before Enir-Ilim",
+    "source_id": "enirilim",
+    "target_id": "belurat_stairs"
+  },
+  {
+    "source": "Nokron from Limgrave",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down to the first Nokron grace",
+    "target": "Nokron before Mimic Tear",
+    "source_id": "siofrabank_prenokron",
+    "target_id": "siofrabank_nokron"
+  },
+  {
+    "source": "Godskin Duo",
+    "type": "random",
+    "source_details": "at the front left of Godskin Duo's arena",
+    "target_details": "at the back of Godskin Apostle's arena",
+    "target": "Divine Tower of Caelid - Godskin Apostle",
+    "source_id": "farumazula_godskinduo",
+    "target_id": "caelid_tower_boss"
+  },
+  {
+    "source": "Altus Tunnel",
+    "type": "random",
+    "source_details": "at the entrance from Altus Plateau",
+    "target_details": "at the side entrance to Valiant Gargoyles' arena, next to the main entrance",
+    "target": "Valiant Gargoyles",
+    "source_id": "altus_tunnel",
+    "target_id": "siofra_nokron_gargoyles"
+  },
+  {
+    "source": "Castle Sol",
+    "type": "random",
+    "source_details": "before Commander Niall's arena",
+    "target_details": "before Gaius's arena",
+    "target": "Specimen Storehouse - Back Section",
+    "source_id": "mountaintops_sol",
+    "target_id": "storehouse_back"
+  },
+  {
+    "source": "Shadow Keep - West Rampart",
+    "type": "random",
+    "source_details": "at the exit to Rauh Ruins",
+    "target_details": "at the entrance from Leyndell, Royal Capital",
+    "target": "Subterranean Shunning-Grounds - From Royal Capital",
+    "source_id": "westrampart",
+    "target_id": "sewer_royal"
+  },
+  {
+    "source": "Subterranean Shunning-Grounds",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "backwards through the door from Royal Capital",
+    "target": "Subterranean Shunning-Grounds - From Royal Capital",
+    "source_id": "sewer",
+    "target_id": "sewer_royal"
+  },
+  {
+    "source": "Nokron before Mimic Tear",
+    "type": "random",
+    "source_details": "before Mimic Tear's arena",
+    "target_details": "before Rellana's arena",
+    "target": "Castle Ensis",
+    "source_id": "siofrabank_nokron",
+    "target_id": "ensis"
+  },
+  {
+    "source": "Scadu Altus - Manus Metyr",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "in map",
+    "target": "Finger Ruins of Miyr",
+    "source_id": "scadualtus_ymir",
+    "target_id": "scadualtus_miyr"
+  },
+  {
+    "source": "Regal Ancestor Spirit",
+    "type": "random",
+    "source_details": "at the front of Regal Ancestor Spirit's arena",
+    "target_details": "after Romina's arena",
+    "target": "Ancient Ruins of Rauh - After Romina",
+    "source_id": "siofra_nokron_boss",
+    "target_id": "rauhruins_postromina"
+  },
+  {
+    "source": "Divine Tower of Caelid - Godskin Apostle",
+    "type": "random",
+    "source_details": "at the front of Godskin Apostle's arena",
+    "target_details": "at the shortcut door to the right of Golden Hippopotamus's arena",
+    "target": "Shadow Keep",
+    "source_id": "caelid_tower_boss",
+    "target_id": "shadowkeep"
+  },
+  {
+    "source": "Specimen Storehouse - Back Section",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Specimen Storehouse",
+    "source_id": "storehouse_back",
+    "target_id": "storehouse"
+  },
+  {
+    "source": "Specimen Storehouse - Back Section",
+    "type": "random",
+    "source_details": "at the entrance from Shadow Keep Church District",
+    "target_details": "after Soldier of Godrick's arena",
+    "target": "Cave of Knowledge - After Soldier of Godrick",
+    "source_id": "storehouse_back",
+    "target_id": "graveyard_cave_postboss"
+  },
+  {
+    "source": "Godrick the Grafted",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the door after the boss",
+    "target": "Stormveil Castle Throne Room",
+    "source_id": "stormveil_godrick",
+    "target_id": "stormveil_throne"
+  },
+  {
+    "source": "Stormveil Castle Throne Room",
+    "type": "random",
+    "source_details": "at the rear exit to Liurnia",
+    "target_details": "at the front of Elemer of the Briar's arena",
+    "target": "Shaded Castle - Elemer of the Briar",
+    "source_id": "stormveil_throne",
+    "target_id": "altus_elemer"
+  },
+  {
+    "source": "Castle Ensis",
+    "type": "random",
+    "source_details": "on the bridge from Gravesite Plain",
+    "target_details": "at the bottom of the elevator before the Radahn warp",
+    "target": "Before Radahn",
+    "source_id": "ensis",
+    "target_id": "caelid_preradahn"
+  },
+  {
+    "source": "Before Radahn",
+    "type": "random",
+    "source_details": "using the Sending Gate before Starscourge Radahn",
+    "target_details": "arriving in the area before Astel's arena",
+    "target": "Before Astel, Naturalborn of the Void",
+    "source_id": "caelid_preradahn",
+    "target_id": "ainsel_preboss"
+  },
+  {
+    "source": "Before Astel, Naturalborn of the Void",
+    "type": "random",
+    "source_details": "before Astel's arena",
+    "target_details": "at the front of Midra's arena",
+    "target": "Midra's Manse - Midra, Lord of Frenzied Flame",
+    "source_id": "ainsel_preboss",
+    "target_id": "midramanse_boss"
+  },
+  {
+    "source": "Castle Ensis - Rellana, Twin Moon Knight",
+    "type": "random",
+    "source_details": "at the back of Rellana's arena",
+    "target_details": "return to entrance after Ancient Dragon-Man",
+    "target": "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man",
+    "source_id": "ensis_boss",
+    "target_id": "gravesite_dragonpit_boss"
+  },
+  {
+    "source": "Shadow Keep",
+    "type": "random",
+    "source_details": "at the normal exit to the left of Golden Hippopotamus's arena",
+    "target_details": "at the front of Bayle's arena",
+    "target": "Jagged Peak - Bayle",
+    "source_id": "shadowkeep",
+    "target_id": "jaggedpeak_bayle"
+  },
+  {
+    "source": "Specimen Storehouse",
+    "type": "random",
+    "source_details": "at the top of the elevator to Specimen Storehouse",
+    "target_details": "at the front of Astel's arena",
+    "target": "Astel, Naturalborn of the Void",
+    "source_id": "storehouse",
+    "target_id": "ainsel_boss"
+  },
+  {
+    "source": "Specimen Storehouse",
+    "type": "random",
+    "source_details": "at the entrance from Shadow Keep",
+    "target_details": "at the back of Margit's arena",
+    "target": "Margit, the Fell Omen",
+    "source_id": "storehouse",
+    "target_id": "stormveil_margit"
+  },
+  {
+    "source": "Divine Tower of West Altus",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the heavy door",
+    "target": "Divine Tower of West Altus Interior",
+    "source_id": "altus_tower",
+    "target_id": "altus_tower_inner"
+  },
+  {
+    "source": "Valiant Gargoyles",
+    "type": "random",
+    "source_details": "resting in the coffin after defeating the boss",
+    "target_details": "arriving at Finger Birthing Grounds",
+    "target": "Finger Birthing Grounds - Metyr, Mother of Fingers",
+    "source_id": "siofra_nokron_gargoyles",
+    "target_id": "fingergrounds"
+  },
+  {
+    "source": "Valiant Gargoyles",
+    "type": "random",
+    "source_details": "at the main entrance of Valiant Gargoyles' arena",
+    "target_details": "before Regal Ancestor Spirit's arena",
+    "target": "Before Regal Ancestor Spirit",
+    "source_id": "siofra_nokron_gargoyles",
+    "target_id": "siofra_nokron_preboss"
+  },
+  {
+    "source": "Lake of Rot",
+    "type": "random",
+    "source_details": "resting in the coffin at the bottom of the Grand Cloister",
+    "target_details": "arriving in the area before Regal Ancestor Spirit's arena",
+    "target": "Before Regal Ancestor Spirit",
+    "source_id": "lakeofrot",
+    "target_id": "siofra_nokron_preboss"
+  },
+  {
+    "source": "Mohg, the Omen",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "at the Morgott the Grace-Given gate after Mohg the Omen's arena",
+    "target": "Above Frenzied Flame Proscription",
+    "source_id": "sewer_mohg_flame",
+    "target_id": "sewer_preflame"
+  },
+  {
+    "source": "Ainsel River Main",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "in map",
+    "target": "Lake of Rot",
+    "source_id": "ainsel",
+    "target_id": "lakeofrot"
+  },
+  {
+    "source": "Above Frenzied Flame Proscription",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down the beams",
+    "target": "Frenzied Flame Proscription",
+    "source_id": "sewer_preflame",
+    "target_id": "sewer_flame"
+  },
+  {
+    "source": "Frenzied Flame Proscription",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down past two illusory walls",
+    "target": "Deeproot Depths from Proscription",
+    "source_id": "sewer_flame",
+    "target_id": "deeproot_start"
+  },
+  {
+    "source": "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the door",
+    "target": "Gravesite Plain - Dragon's Pit - After Boss",
+    "source_id": "gravesite_dragonpit_boss",
+    "target_id": "gravesite_dragonpit_postboss"
+  },
+  {
+    "source": "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man",
+    "type": "random",
+    "source_details": "at the front of Ancient Dragon-Man's arena",
+    "target_details": "at the back of Soldier of Godrick's arena",
+    "target": "Cave of Knowledge - Soldier of Godrick",
+    "source_id": "gravesite_dragonpit_boss",
+    "target_id": "graveyard_cave_boss"
+  },
+  {
+    "source": "Gravesite Plain - Dragon's Pit - After Boss",
+    "type": "random",
+    "source_details": "at the exit to Jagged Peak",
+    "target_details": "arriving at Raya Lucaria Main Academy Gate from the East",
+    "target": "Academy of Raya Lucaria Main Entrance",
+    "source_id": "gravesite_dragonpit_postboss",
+    "target_id": "academy_entrance"
+  },
+  {
+    "source": "Academy of Raya Lucaria",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "going backwards through Church of Cuckoo doors",
+    "target": "Academy of Raya Lucaria Main Entrance",
+    "source_id": "academy",
+    "target_id": "academy_entrance"
+  },
+  {
+    "source": "Astel, Naturalborn of the Void",
+    "type": "random",
+    "source_details": "at the back of Astel's arena",
+    "target_details": "return to entrance after Fallingstar Beast",
+    "target": "Caelid - Sellia Crystal Tunnel - Fallingstar Beast",
+    "source_id": "ainsel_boss",
+    "target_id": "caelid_selliatunnel_boss"
+  },
+  {
+    "source": "Margit, the Fell Omen",
+    "type": "random",
+    "source_details": "at the front of Margit's arena",
+    "target_details": "at the entrance from Capital Outskirts",
+    "target": "Capital Outskirts - Sealed Tunnel",
+    "source_id": "stormveil_margit",
+    "target_id": "outskirts_sealedtunnel"
+  },
+  {
+    "source": "Stormveil Castle before Gate",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "with Rusty Key or talking to Gostoc",
+    "target": "Stormveil Castle after Gate",
+    "source_id": "stormveil_start",
+    "target_id": "stormveil"
+  },
+  {
+    "source": "Caelid - Sellia Crystal Tunnel - Fallingstar Beast",
+    "type": "random",
+    "source_details": "at the front of Fallingstar Beast's arena",
+    "target_details": "before Onyx Lord's arena",
+    "target": "Capital Outskirts - Sealed Tunnel Before Boss",
+    "source_id": "caelid_selliatunnel_boss",
+    "target_id": "outskirts_sealedtunnel_preboss"
+  },
+  {
+    "source": "Capital Outskirts - Sealed Tunnel",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Capital Outskirts - Sealed Tunnel Before Boss",
+    "source_id": "outskirts_sealedtunnel",
+    "target_id": "outskirts_sealedtunnel_preboss"
+  },
+  {
+    "source": "Shadow Keep - Golden Hippopotamus",
+    "type": "random",
+    "source_details": "at the front of Golden Hippopotamus's arena",
+    "target_details": "at the top of the Deep Ainsel Well",
+    "target": "Deep Ainsel Well",
+    "source_id": "shadowkeep_boss",
+    "target_id": "ainsel_postboss"
+  },
+  {
+    "source": "Academy of Raya Lucaria - Grand Library",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the locked chest using the Discarded Palace Key",
+    "target": "Academy of Raya Lucaria - Grand Library Chest",
+    "source_id": "academy_library",
+    "target_id": "academy_chest"
+  },
+  {
+    "source": "Deep Ainsel Well",
+    "type": "random",
+    "source_details": "after Astel's arena",
+    "target_details": "at the front of Leonine Misbegotten's arena",
+    "target": "Leonine Misbegotten",
+    "source_id": "ainsel_postboss",
+    "target_id": "peninsula_leonine"
+  },
+  {
+    "source": "Stormveil Castle after Gate",
+    "type": "random",
+    "source_details": "before Godrick's arena",
+    "target_details": "arriving at the entrance to Shaded Castle",
+    "target": "Shaded Castle",
+    "source_id": "stormveil",
+    "target_id": "altus_shaded"
+  },
+  {
+    "source": "Stormveil Castle after Gate",
+    "type": "random",
+    "source_details": "at the side path to Limgrave Divine Tower",
+    "target_details": "after Mohg's arena at the back left",
+    "target": "After Mohg, Lord of Blood",
+    "source_id": "stormveil",
+    "target_id": "mohgwyn_postboss"
+  },
+  {
+    "source": "After Mohg, Lord of Blood",
+    "type": "random",
+    "source_details": "after Mohg's arena at the back right",
+    "target_details": "at the front of Rykard's arena",
+    "target": "Rykard, Lord of Blasphemy",
+    "source_id": "mohgwyn_postboss",
+    "target_id": "volcano_rykard"
+  },
+  {
+    "source": "Shaded Castle",
+    "type": "random",
+    "source_details": "before Elemer of the Briar's arena",
+    "target_details": "after Valiant Gargoyles in the small room next to the main entrance",
+    "target": "Nokron - Aqueduct-Facing Cliffs Room",
+    "source_id": "altus_shaded",
+    "target_id": "siofra_nokron_aboveaqueduct"
+  },
+  {
+    "source": "Leyndell - Erdtree Entrance",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "after burning the Erdtree by defeating the boss in Maliketh's arena",
+    "target": "Ashen Leyndell - Erdtree Entrance",
+    "source_id": "leyndell_erdtree",
+    "target_id": "leyndell2_erdtree"
+  },
+  {
+    "source": "Volcano Manor Entrance",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "using Drawing-Room Key",
+    "target": "Volcano Manor Drawing Room",
+    "source_id": "volcano",
+    "target_id": "volcano_drawingroom"
+  },
+  {
+    "source": "Volcano Manor Drawing Room",
+    "type": "random",
+    "source_details": "at the end of the dark hallway leading to Prison Town",
+    "target_details": "at the entrance from Stormveil Castle",
+    "target": "Divine Tower of Limgrave",
+    "source_id": "volcano_drawingroom",
+    "target_id": "limgrave_tower"
+  },
+  {
+    "source": "Isolated Divine Tower",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the heavy door",
+    "target": "Isolated Divine Tower Interior",
+    "source_id": "isolated_tower",
+    "target_id": "isolated_tower_inner"
+  },
+  {
+    "source": "Divine Tower of Limgrave after Sending Gate",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "opening the heavy doors",
+    "target": "Divine Tower of Limgrave Interior",
+    "source_id": "limgrave_tower2",
+    "target_id": "limgrave_tower_inner"
+  },
+  {
+    "source": "Cave of Knowledge - Soldier of Godrick",
+    "type": "random",
+    "source_details": "at the front of Soldier of Godrick's arena",
+    "target_details": "at the door to Caelid Divine Tower's Two Fingers",
+    "target": "Divine Tower of Caelid Interior",
+    "source_id": "graveyard_cave_boss",
+    "target_id": "caelid_tower_inner"
+  },
+  {
+    "source": "Specimen Storehouse - Back Section",
+    "type": "random",
+    "source_details": "past the statue after using O Mother",
+    "target_details": "at the front of Jori's arena",
+    "target": "Scadu Altus - Darklight Catacombs - Jori, Elder Inquisitor",
+    "source_id": "storehouse_back",
+    "target_id": "scadualtus_catacombs_boss"
+  },
+  {
+    "source": "Academy of Raya Lucaria Main Entrance",
+    "type": "random",
+    "source_details": "using South-facing gate at Raya Lucaria Main Entrance",
+    "target_details": "at the entrance from Limgrave",
+    "target": "Limgrave Tunnels",
+    "source_id": "academy_entrance",
+    "target_id": "limgrave_tunnels"
+  },
+  {
+    "source": "Limgrave Tunnels",
+    "type": "random",
+    "source_details": "before Stonedigger Troll's arena",
+    "target_details": "after the tunnel from Ainsel River Main",
+    "target": "Above Ainsel River Downstream",
+    "source_id": "limgrave_tunnels",
+    "target_id": "ainsel_abovestart"
+  },
+  {
+    "source": "Scadu Altus - Darklight Catacombs - Jori, Elder Inquisitor",
+    "type": "random",
+    "source_details": "at the back of Jori's arena",
+    "target_details": null,
+    "target": "Divine Tower of East Altus - Fell Twins (inside the Fell Twins' arena)",
+    "source_id": "scadualtus_catacombs_boss",
+    "target_id": "leyndell_tower_boss"
+  },
+  {
+    "source": "Ashen Leyndell - Erdtree Entrance",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "touching the golden light",
+    "target": "Stone Platform",
+    "source_id": "leyndell2_erdtree",
+    "target_id": "erdtree"
+  },
+  {
+    "source": "Farum Azula Rooftop and Bridge",
+    "type": "random",
+    "source_details": "lying down in front of the tempest below the great bridge",
+    "target_details": "arriving at Enir-Ilim's Outer Wall",
+    "target": "Enir-Ilim",
+    "source_id": "farumazula",
+    "target_id": "enirilim"
+  },
+  {
+    "source": "Enir-Ilim - After Leda",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "going back after defeating Leda",
+    "target": "Enir-Ilim",
+    "source_id": "enirilim_stairs",
+    "target_id": "enirilim"
+  },
+  {
+    "source": "Belurat - Stairs before Enir-Ilim",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "in map after burning the Sealing Tree",
+    "target": "Enir-Ilim",
+    "source_id": "belurat_stairs",
+    "target_id": "enirilim"
+  },
+  {
+    "source": "Enir-Ilim",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "dropping down",
+    "target": "Enir-Ilim - Belurat",
+    "source_id": "enirilim",
+    "target_id": "belurat_enirilim"
+  },
+  {
+    "source": "Enir-Ilim",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "defeating Leda",
+    "target": "Enir-Ilim - After Leda",
+    "source_id": "enirilim",
+    "target_id": "enirilim_stairs"
+  },
+  {
+    "source": "Enir-Ilim - After Leda",
+    "type": "preexisting",
+    "source_details": null,
+    "target_details": "before Promised Consort Radahn's arena",
+    "target": "Enir-Ilim - Promised Consort Radahn",
+    "source_id": "enirilim_stairs",
+    "target_id": "enirilim_radahn"
+  }
 ]

@@ -15,12 +15,13 @@ class TestSpoilerParseEndpoint:
 
     def test_parse_valid_spoiler_log(self):
         """Test parsing a valid spoiler log."""
+        # Use real zone names from fog.txt
         spoiler_log = """Options and seed:12345 Fog Gate Randomizer
 Chapel of Anticipation
   Random: Chapel of Anticipation (before boss) --> Limgrave (at start)
 Limgrave
-  Preexisting: Limgrave --> Stormveil Castle (at the main gate)
-Stormveil Castle
+  Preexisting: Limgrave --> Stormveil Castle after Gate (at the main gate)
+Stormveil Castle after Gate
 Optional areas:
 """
         response = client.post(
@@ -36,10 +37,10 @@ Optional areas:
 
         # Check zones
         assert len(data["zones"]) == 3
-        zone_names = {z["name"] for z in data["zones"]}
+        zone_names = {z["name"] for z in data["zones"].values()}
         assert "Chapel of Anticipation" in zone_names
         assert "Limgrave" in zone_names
-        assert "Stormveil Castle" in zone_names
+        assert "Stormveil Castle after Gate" in zone_names
 
         # Check zone_links
         assert len(data["zone_links"]) == 2
@@ -55,7 +56,7 @@ Optional areas:
         # Check second link (preexisting)
         preexisting_link = next(lk for lk in data["zone_links"] if lk["type"] == "preexisting")
         assert preexisting_link["source"] == "Limgrave"
-        assert preexisting_link["target"] == "Stormveil Castle"
+        assert preexisting_link["target"] == "Stormveil Castle after Gate"
 
     def test_parse_invalid_spoiler_log_no_seed(self):
         """Test parsing an invalid spoiler log without seed."""
@@ -108,10 +109,11 @@ Optional areas:
 
     def test_parse_one_way_connection(self):
         """Test parsing a spoiler log with one-way connections."""
+        # Use real zone names from fog.txt
         spoiler_log = """Options and seed:99999 Fog Gate Randomizer
 Divine Bridge
-  Random: Divine Bridge (using the sending gate) --> Isolated Tower (warp destination)
-Isolated Tower
+  Random: Divine Bridge (using the sending gate) --> Isolated Divine Tower (warp destination)
+Isolated Divine Tower
 Optional areas:
 """
         response = client.post(
@@ -128,11 +130,12 @@ Optional areas:
 
     def test_parse_boss_zone(self):
         """Test parsing a spoiler log with boss zones."""
+        # Use real zone names from fog.txt
         spoiler_log = """Options and seed:99999 Fog Gate Randomizer
 Limgrave
-  Preexisting: Limgrave --> Stormveil Castle
-Stormveil Castle <<<<<
-  Preexisting: Stormveil Castle --> Liurnia
+  Preexisting: Limgrave --> Stormveil Castle after Gate
+Stormveil Castle after Gate <<<<<
+  Preexisting: Stormveil Castle after Gate --> Liurnia
 Liurnia
 Optional areas:
 """
@@ -145,9 +148,9 @@ Optional areas:
         data = response.json()
 
         # Check boss zone flag
-        boss_zones = [z for z in data["zones"] if z["is_boss"]]
+        boss_zones = [z for z in data["zones"].values() if z["is_boss"]]
         assert len(boss_zones) == 1
-        assert boss_zones[0]["name"] == "Stormveil Castle"
+        assert boss_zones[0]["name"] == "Stormveil Castle after Gate"
 
     def test_parse_zone_with_scaling(self):
         """Test parsing a spoiler log with scaling info."""
@@ -166,18 +169,19 @@ Optional areas:
         data = response.json()
 
         # Check scaling info
-        limgrave = next(z for z in data["zones"] if z["name"] == "Limgrave")
+        limgrave = next(z for z in data["zones"].values() if z["name"] == "Limgrave")
         assert limgrave["scaling"] == "1-50"
 
-        caelid = next(z for z in data["zones"] if z["name"] == "Caelid")
+        caelid = next(z for z in data["zones"].values() if z["name"] == "Caelid")
         assert caelid["scaling"] == "60-80"
 
     def test_parse_no_auth_required(self):
         """Test that no authentication is required for this endpoint."""
+        # Use real zone names from fog.txt
         spoiler_log = """Options and seed:12345
-A
-  Random: A --> B
-B
+Limgrave
+  Random: Limgrave --> Caelid
+Caelid
 """
         # No Authorization header
         response = client.post(
@@ -189,10 +193,11 @@ B
 
     def test_response_has_all_required_fields(self):
         """Test that response has all documented fields."""
+        # Use real zone names from fog.txt
         spoiler_log = """Options and seed:12345
-A
-  Random: A (at start) --> B (at end)
-B
+Limgrave
+  Random: Limgrave (at start) --> Caelid (at end)
+Caelid
 """
         response = client.post(
             "/api/spoiler/parse",
@@ -208,7 +213,7 @@ B
         assert "zone_links" in data
 
         # Check zone fields
-        zone = data["zones"][0]
+        zone = next(iter(data["zones"].values()))
         assert "id" in zone
         assert "name" in zone
         assert "is_boss" in zone
@@ -228,10 +233,11 @@ B
 
     def test_parse_required_item_detected(self):
         """Test that required items are detected and returned."""
+        # Use real zone names from fog.txt
         spoiler_log = """Options and seed:99999 Fog Gate Randomizer
-Raya Lucaria
-  Random: Raya Lucaria (using the Academy Glintstone Key) --> Academy Entrance
-Academy Entrance
+Academy of Raya Lucaria
+  Random: Academy of Raya Lucaria (using the Academy Glintstone Key) --> Academy of Raya Lucaria Main Entrance
+Academy of Raya Lucaria Main Entrance
 Optional areas:
 """
         response = client.post(
@@ -247,10 +253,11 @@ Optional areas:
 
     def test_parse_required_item_none_when_no_item(self):
         """Test that required_item is null when no item is needed."""
+        # Use real zone names from fog.txt
         spoiler_log = """Options and seed:99999 Fog Gate Randomizer
 Limgrave
-  Random: Limgrave (at the gate) --> Stormveil Castle (at entrance)
-Stormveil Castle
+  Random: Limgrave (at the gate) --> Stormveil Castle after Gate (at entrance)
+Stormveil Castle after Gate
 Optional areas:
 """
         response = client.post(
@@ -283,7 +290,7 @@ class TestWithRealSpoilerLogs:
         assert len(data["zone_links"]) > 100
 
         # Verify Chapel of Anticipation exists
-        zone_names = {z["name"] for z in data["zones"]}
+        zone_names = {z["name"] for z in data["zones"].values()}
         assert "Chapel of Anticipation" in zone_names
 
     def test_parse_real_spoiler_log_1851144969(self, spoiler_log_1851144969):

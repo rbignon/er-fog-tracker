@@ -2,7 +2,7 @@
 
 This document describes the data model for the fog gate graph, including zones, links, discoveries, and how they're stored.
 
-> **Note:** This document uses the **API format (snake_case)**. The frontend transforms these to camelCase via `web/js/api.js` (e.g., `is_boss` → `isBoss`, `source_key` → `sourceKey`).
+> **Note:** This document uses the **API format (snake_case)**. The frontend transforms these to camelCase via `web/js/api.js` (e.g., `is_boss` → `isBoss`, `source_id` → `sourceId`).
 
 ## Concepts
 
@@ -12,7 +12,7 @@ A zone represents an area in Elden Ring. It's a node in the graph.
 
 ```json
 {
-  "id": "92933e09-26b6-4448-bf49-e39a37d72b9f",
+  "id": "limgrave_church_of_elleh",
   "name": "Limgrave - Church of Elleh",
   "is_boss": false,
   "scaling": "tier 1, previously 6"
@@ -21,12 +21,12 @@ A zone represents an area in Elden Ring. It's a node in the graph.
 
 | Field | Description |
 |-------|-------------|
-| `id` | UUID (unique identifier) |
+| `id` | Zone key (internal identifier from fog.txt, e.g., "limgrave_stormhill") |
 | `name` | Display name of the zone |
 | `is_boss` | True if this zone contains a boss (detected via `<<<<<` in spoiler log) |
 | `scaling` | Scaling info from spoiler log (text field, e.g., "tier 1, previously 6") |
 
-> **Frontend note:** The frontend renames `id` → `uuid` and `name` → `id` for internal use. It also computes `isHub` dynamically (true if zone has 3+ distinct connections).
+> **Frontend note:** The `id` field is the zone key (used for D3.js bindings and lookups), while `name` is for display. The frontend computes `isHub` dynamically (true if zone has 3+ distinct connections).
 
 ### Zone Link
 
@@ -36,11 +36,9 @@ A zone link represents a fog gate connection between two zones.
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "source": "Limgrave - Church of Elleh",
-  "source_id": "uuid-of-source-zone",
-  "source_key": "1101_ChurchOfElleh_Exit1",
+  "source_id": "limgrave_church_of_elleh",
   "target": "Liurnia - Academy Gate Town",
-  "target_id": "uuid-of-target-zone",
-  "target_key": "1205_AcademyGateTown_Entry1",
+  "target_id": "liurnia_academy_gate_town",
   "type": "random",
   "is_one_way": false,
   "source_details": "After the boss room",
@@ -54,11 +52,9 @@ A zone link represents a fog gate connection between two zones.
 |-------|-------------|
 | `id` | UUID for this specific link |
 | `source` | Source zone display name |
-| `source_id` | UUID of the source zone |
-| `source_key` | Internal zone key for source (from fog.txt) |
+| `source_id` | Source zone key (from fog.txt) |
 | `target` | Target zone display name |
-| `target_id` | UUID of the target zone |
-| `target_key` | Internal zone key for target (from fog.txt) |
+| `target_id` | Target zone key (from fog.txt) |
 | `type` | `random` (randomized gate) or `preexisting` (always there) |
 | `is_one_way` | True if link can only be traversed in one direction |
 | `source_details` | Description of exit location (from spoiler log) |
@@ -185,10 +181,12 @@ Zone A (discovered) ──► ??? ──► Zone B (discovered)
 ### Placeholder ID Format
 
 ```
-???_{fromNodeId}_{realNodeId}
+???_{fromZoneId}_{realZoneId}
 ```
 
-Example: `???_Limgrave - Church of Elleh_Liurnia - Academy Gate Town`
+Example: `???_limgrave_church_of_elleh_liurnia_academy_gate_town`
+
+Where `fromZoneId` and `realZoneId` are zone keys (not display names).
 
 ### Placeholder Positioning
 
@@ -260,11 +258,12 @@ Undiscover B → Also undiscovers C, D, E (unreachable from START)
 
 ```sql
 -- games table
-zone_links           JSONB  -- array of {id, source, target, type, ...}
-zones                JSONB  -- array of zone metadata (with UUIDs)
+zone_links           JSONB  -- array of {id, source, source_id, target, target_id, type, ...}
+zones                JSONB  -- object keyed by zone_id (zone_key) with zone metadata values
 discovered_zone_links JSONB  -- array of {zone_link_id, discovered_at, discovered_by}
-node_positions       JSONB  -- {zone_id: {x, y}}
-tags                 JSONB  -- {zone_id: [tag_ids]}
+node_positions       JSONB  -- {zone_id: {x, y}} (keyed by zone_key)
+tags                 JSONB  -- {zone_id: [tag_ids]} (keyed by zone_key)
+starting_zone_id     VARCHAR(100)  -- zone_key of starting zone
 entity_mapping       JSONB  -- {dest_entity: {source_map, dest_map}}
 ```
 
@@ -275,18 +274,19 @@ entity_mapping       JSONB  -- {dest_entity: {source_map, dest_map}}
 ```javascript
 // Key: er-fog-exploration-{seed}
 {
-  "version": 2,
-  "discovered": ["Zone A", "Zone B", ...],
+  "version": 3,
+  "discovered": ["limgrave", "stormveil", ...],
   "discoveredLinks": ["uuid1", "uuid2", ...],
-  "tags": {"Zone A": ["tag1", "tag2"]}
+  "tags": {"limgrave": ["tag1", "tag2"]}
 }
 ```
 
 **Version history**:
 - v1: `discoveredLinks` stored as `"sourceId|targetId"` strings
-- v2: `discoveredLinks` stored as UUIDs (current)
+- v2: `discoveredLinks` stored as UUIDs, `discovered`/`tags` keyed by display name
+- v3: `discovered`/`tags` keyed by zone_key (current)
 
-Migration from v1→v2 happens automatically on load.
+Migration from v2→v3 happens automatically on load (requires zone data to map display names to zone keys).
 
 ## Graph Rendering
 
@@ -326,14 +326,14 @@ The client maintains an index for efficient link lookups (built in `web/js/state
 
 ```javascript
 {
-  byId: Map<linkId, link>,              // Direct lookup by UUID
-  byEndpoints: Map<"source|target", linkId[]>  // All link IDs between two nodes
+  byId: Map<linkId, link>,                    // Direct lookup by UUID
+  byEndpoints: Map<"source_id|target_id", linkId[]>  // All link IDs between two nodes
 }
 ```
 
-For bidirectional links (`is_one_way: false`), both directions are indexed in `byEndpoints` (e.g., both `"A|B"` and `"B|A"` point to the same link ID).
+For bidirectional links (`is_one_way: false`), both directions are indexed in `byEndpoints` (e.g., both `"limgrave|stormveil"` and `"stormveil|limgrave"` point to the same link ID).
 
 This enables:
 - Fast check if link is discovered (`byId.get(linkId)`)
-- Finding all links between two nodes (`byEndpoints.get("A|B")`)
+- Finding all links between two nodes (`byEndpoints.get("limgrave|stormveil")`)
 - Resolving link IDs to full link objects

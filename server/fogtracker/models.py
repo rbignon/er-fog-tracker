@@ -17,11 +17,9 @@ class ZoneLink(BaseModel):
 
     id: str | None = None  # Unique identifier for this link
     source: str = Field(..., max_length=255)  # Source zone name (for display)
-    source_id: str | None = None  # Source zone UUID
-    source_key: str | None = Field(default=None, max_length=255)  # Internal zone key
+    source_id: str | None = None  # Source zone_key (internal identifier from fog.txt)
     target: str = Field(..., max_length=255)  # Target zone name (for display)
-    target_id: str | None = None  # Target zone UUID
-    target_key: str | None = Field(default=None, max_length=255)  # Internal zone key
+    target_id: str | None = None  # Target zone_key (internal identifier from fog.txt)
     type: str = Field(pattern="^(random|preexisting)$")
     source_details: str | None = Field(default=None, max_length=500)
     target_details: str | None = Field(default=None, max_length=500)
@@ -37,10 +35,13 @@ ZonePair = ZoneLink
 class Zone(BaseModel):
     """Zone metadata (node info from spoiler log)."""
 
-    id: str  # UUID
+    id: str  # zone_key (internal identifier from fog.txt)
     name: str | None = None  # Zone display name (optional for backward compat during migration)
     is_boss: bool = False
     scaling: str | None = None
+
+
+ZonesById = dict[str, Zone]
 
 
 # =============================================================================
@@ -78,7 +79,7 @@ class GameCreate(BaseModel):
     seed: int
     label: str | None = Field(default=None, max_length=200)
     zone_links: list[ZoneLink]
-    zones: list[Zone] | None = None
+    zones: ZonesById
 
 
 class GameCreateResponse(BaseModel):
@@ -126,8 +127,9 @@ class GameFull(BaseModel):
     id: UUID
     seed: int
     label: str | None
+    starting_zone_id: str | None
     zone_links: list[ZoneLink]
-    zones: list[Zone] | None = None
+    zones: ZonesById
     discovered_zone_links: list[DiscoveredZoneLinkResponse]
     # discovered_nodes removed - client deduces from discovered_zone_links + zone_links
     node_positions: dict[str, NodePositionResponse]
@@ -158,16 +160,18 @@ class GameListResponse(BaseModel):
 class DiscoveryCreate(BaseModel):
     """Request body for creating a discovery."""
 
-    source: str
-    target: str
+    source_id: str  # Source zone_key
+    target_id: str  # Target zone_key
     link_id: str | None = None  # Optional: specific link UUID (for parallel links)
 
 
 class PropagatedLink(BaseModel):
     """A propagated link from discovery."""
 
-    source: str
-    target: str
+    source_name: str
+    source_id: str
+    target_name: str
+    target_id: str
 
 
 class DiscoveredZoneLink(BaseModel):
@@ -194,7 +198,7 @@ class DiscoveryResponse(BaseModel):
 class UndiscoveryRequest(BaseModel):
     """Request body for undiscovering a zone."""
 
-    zone: str
+    zone_id: str  # zone_key
 
 
 class UndiscoveryResponse(BaseModel):
@@ -212,7 +216,7 @@ class UndiscoveryResponse(BaseModel):
 class TagUpdate(BaseModel):
     """Request body for updating tags on a zone."""
 
-    zone: str
+    zone_id: str  # zone_key
     tags: list[str]
 
 
@@ -289,7 +293,7 @@ class WSTagUpdateMessage(BaseModel):
     """Tag update message."""
 
     type: str = "tag_update"
-    zone: str
+    zone_id: str  # zone_key
     tags: list[str]
 
 
@@ -297,5 +301,5 @@ class WSManualDiscoveryMessage(BaseModel):
     """Manual discovery from host (clicked placeholder)."""
 
     type: str = "manual_discovery"
-    source: str
-    target: str
+    source_id: str  # Source zone_key
+    target_id: str  # Target zone_key

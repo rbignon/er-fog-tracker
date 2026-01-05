@@ -9,8 +9,7 @@ The mod sends:
 {
   "source_map_id": "m10_01_00_00",
   "source_pos": {"x": 100.0, "y": 50.0, "z": 200.0},
-  "source_zone": "Limgrave - Stormhill",
-  "source_zone_key": "limgrave_stormhill",
+  "source_zone_id": "limgrave_stormhill",
   "target_map_id": "m11_05_00_00",
   "target_pos": {"x": 150.0, "y": 60.0, "z": 180.0},
   "destination_entity_id": 755890123
@@ -24,7 +23,7 @@ Limgrave - Stormhill (near the broken bridge) -> Liurnia - Lake (by the telescop
 
 We need to match the mod's map/position data to the spoiler log's zone names.
 
-**Note**: The `source_zone` and `source_zone_key` fields are the mod's cached zone info from previous server responses. These help disambiguate the source zone (see Source Zone Prioritization below).
+**Note**: The `source_zone_id` field is the mod's cached zone key from previous server responses. This helps disambiguate the source zone (see Source Zone Prioritization below).
 
 ## Data Files
 
@@ -139,9 +138,9 @@ If `destination_entity_id` is provided and game has `entity_mapping`:
 
 ### 4. Source Zone Prioritization (Mod Context)
 
-If the mod provides `source_zone` or `source_zone_key`:
+If the mod provides `source_zone_id`:
 1. Get source zone candidates from map/position resolution
-2. Check if any candidate matches the mod's cached zone
+2. Check if any candidate matches the mod's cached zone key
 3. If match found, move matching candidate(s) to front of list
 4. Continue with reordered candidate list
 
@@ -152,7 +151,7 @@ If the mod provides `source_zone` or `source_zone_key`:
 │ Before prioritization:                                       │
 │ candidates = [zone_a, zone_b, zone_c]                       │
 │                                                              │
-│ Mod sends: source_zone = "Zone B"                           │
+│ Mod sends: source_zone_id = "zone_b"                        │
 │                                                              │
 │ After prioritization:                                        │
 │ candidates = [zone_b, zone_a, zone_c]  (zone_b moved front) │
@@ -188,42 +187,36 @@ When a map has **no zones at all** (step 4 returns empty), the resolver extends 
 
 After resolving zone names, we need to match against the spoiler log's zone links.
 
-### Key-Based Matching (V3)
+### Key-Based Matching
 
-Zone links are enriched with internal keys at game creation:
+Zone links store zone keys in `source_id` and `target_id`:
 
 ```json
 {
   "source": "Limgrave - Stormhill",
+  "source_id": "m10_01_stormhill",
   "target": "Liurnia - Lake",
-  "source_key": "m10_01_stormhill",
-  "target_key": "m11_05_lake"
+  "target_id": "m11_05_lake"
 }
 ```
 
 Matching process:
-1. Get source candidates (internal names)
-2. Get target candidates (internal names)
+1. Get source candidates (zone keys)
+2. Get target candidates (zone keys)
 3. Find zone_link where:
-   - `source_key` matches a source candidate, AND
-   - `target_key` matches a target candidate
+   - `source_id` matches a source candidate, AND
+   - `target_id` matches a target candidate
 
 **Precision**: ~92% with entity mapping, ~82% without
 
-### Display Name Matching (Legacy)
+### Display Name Matching (Removed)
 
-If key-based matching fails, fall back to display name matching:
-1. Get source display names
-2. Get target display names
-3. Find zone_link where:
-   - `source` matches a source display name, AND
-   - `target` matches a target display name
-
-**Precision**: ~60% (display names can be ambiguous)
+Display name matching is no longer used after the zone_key migration.
+If key-based matching fails, the server logs a resolution failure and skips discovery.
 
 ## Zone Link Enrichment
 
-At game creation, zone links from the spoiler log are enriched with internal keys:
+At game creation, zone links from the spoiler log are enriched with zone keys:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -255,9 +248,9 @@ At game creation, zone links from the spoiler log are enriched with internal key
 │ Enriched Zone Link                                          │
 │ {                                                           │
 │   "source": "Limgrave - Stormhill",                         │
+│   "source_id": "m10_01_stormhill",                          │
 │   "target": "Liurnia - Lake",                               │
-│   "source_key": "m10_01_stormhill",                         │
-│   "target_key": "m11_05_lake"                               │
+│   "target_id": "m11_05_lake"                                │
 │ }                                                           │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -385,7 +378,7 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
 ┌─────────────────────────────────────────────────────────────┐
 │ Mod Discovery Event                                         │
 │ map_id, position, play_region_id, destination_entity_id,   │
-│ source_zone, source_zone_key                                │
+│ source_zone_id                                              │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -427,13 +420,13 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
                              ▼
             ┌────────────────────────────────────┐
             │   Try key-based matching           │
-            │   (source_key, target_key)         │
+            │   (source_id, target_id)           │
             └─────────────────┬──────────────────┘
                     Found ┌───┴───┐ Not found
                           ▼       ▼
               ┌───────────────┐ ┌───────────────────┐
-              │ Return match  │ │ Try display name  │
-              │               │ │ matching          │
+              │ Return match  │ │ Log failure and   │
+              │               │ │ skip discovery    │
               └───────────────┘ └───────────────────┘
 ```
 
@@ -442,7 +435,7 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
 ### Discovery Not Matching
 
 1. **Check zone_links**: Does the game have the expected connection?
-2. **Check enrichment**: Are `source_key`/`target_key` populated?
+2. **Check enrichment**: Are `source_id`/`target_id` populated?
 3. **Check entity_mapping**: If launcher was used, is the entity in the mapping?
 4. **Check logs**: Server logs show resolution attempts with candidates
 

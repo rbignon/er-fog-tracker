@@ -16,13 +16,15 @@ class TestDiscoveredLink:
     """Tests for DiscoveredLink dataclass."""
 
     def test_create_random_link(self):
-        link = DiscoveredLink(source="Zone A", target="Zone B", link_type="random")
-        assert link.source == "Zone A"
-        assert link.target == "Zone B"
+        link = DiscoveredLink(source_name="Zone A", target_name="Zone B", link_type="random")
+        assert link.source_name == "Zone A"
+        assert link.target_name == "Zone B"
+        assert link.source_id == "Zone A"
+        assert link.target_id == "Zone B"
         assert link.link_type == "random"
 
     def test_create_preexisting_link(self):
-        link = DiscoveredLink(source="Zone A", target="Zone B", link_type="preexisting")
+        link = DiscoveredLink(source_name="Zone A", target_name="Zone B", link_type="preexisting")
         assert link.link_type == "preexisting"
 
 
@@ -55,9 +57,24 @@ class TestDiscoveryResult:
 
         links = result.all_links()
         assert len(links) == 3
-        assert links[0] == {"source": "START", "target": "A"}
-        assert links[1] == {"source": "A", "target": "B"}
-        assert links[2] == {"source": "B", "target": "C"}
+        assert links[0] == {
+            "source_name": "START",
+            "source_id": "START",
+            "target_name": "A",
+            "target_id": "A",
+        }
+        assert links[1] == {
+            "source_name": "A",
+            "source_id": "A",
+            "target_name": "B",
+            "target_id": "B",
+        }
+        assert links[2] == {
+            "source_name": "B",
+            "source_id": "B",
+            "target_name": "C",
+            "target_id": "C",
+        }
 
 
 class TestFormatDiscoverySummary:

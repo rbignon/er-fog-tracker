@@ -154,7 +154,7 @@ DETAIL_PATTERNS = [
 class ZoneInfo:
     """Parsed zone/area info."""
 
-    id: str  # UUID
+    id: str  # zone_key (internal identifier from fog.txt)
     name: str  # Display name
     is_boss: bool = False
     scaling: str | None = None
@@ -170,13 +170,11 @@ class ConnectionInfo:
     target: str  # Target zone name
 
     # Optional fields with defaults
-    source_id: str | None = None  # Source zone UUID
-    target_id: str | None = None  # Target zone UUID
+    source_id: str | None = None  # Source zone_key (internal identifier from fog.txt)
+    target_id: str | None = None  # Target zone_key (internal identifier from fog.txt)
     conn_type: str = "random"  # 'random' or 'preexisting'
     source_details: str = ""
     target_details: str = ""
-    source_key: str | None = None  # Internal zone key (from fog.txt)
-    target_key: str | None = None  # Internal zone key (from fog.txt)
     required_item: str | None = None  # Name of required item (e.g., "Academy Glintstone Key")
     required_item_from: str | None = None  # Zones where the item can be found
     is_one_way: bool = False  # True for sending gates, coffins, drop-downs, etc.
@@ -187,9 +185,10 @@ class ParseResult:
     """Result of parsing a spoiler log."""
 
     seed: int
-    zones: list[ZoneInfo] = field(default_factory=list)
+    zones: dict[str, ZoneInfo] = field(default_factory=dict)
     connections: list[ConnectionInfo] = field(default_factory=list)
     options: str = ""
+    starting_zone_id: str | None = None  # zone_key of starting zone (first zone parsed)
 
 
 class SpoilerParseError(Exception):
@@ -207,7 +206,12 @@ def _should_skip_line(line: str) -> bool:
 
 
 def _parse_area_line(line: str) -> ZoneInfo | None:
-    """Parse an area definition line."""
+    """Parse an area definition line.
+
+    Note: The zone ID is initially set to the display name.
+    It will be replaced with the zone_key later in parse_spoiler_log()
+    when the resolver is available.
+    """
     # Area lines are not indented
     if line.startswith("  ") or line.startswith("\t"):
         return None
@@ -226,7 +230,8 @@ def _parse_area_line(line: str) -> ZoneInfo | None:
     if name_match:
         name = name_match.group(1).strip()
         if name:
-            return ZoneInfo(id=str(uuid4()), name=name, is_boss=is_boss, scaling=scaling)
+            # ID is temporarily set to name, will be replaced with zone_key later
+            return ZoneInfo(id=name, name=name, is_boss=is_boss, scaling=scaling)
     return None
 
 
@@ -344,9 +349,9 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
     return ConnectionInfo(
         id=str(uuid4()),
         source=clean_source,
-        source_id=None,  # Will be populated later with zone UUID
+        source_id=None,  # Will be populated later with zone ID
         target=clean_target,
-        target_id=None,  # Will be populated later with zone UUID
+        target_id=None,  # Will be populated later with zone ID
         conn_type=conn_type,
         source_details=source_details,
         target_details=target_details,
@@ -356,18 +361,20 @@ def _parse_connection_line(line: str) -> ConnectionInfo | None:
     )
 
 
-def parse_spoiler_log(text: str) -> ParseResult:
+def parse_spoiler_log(text: str, resolver: ZoneResolver | None = None) -> ParseResult:
     """
     Parse a Fog Gate Randomizer spoiler log.
 
     Args:
         text: The full spoiler log text content.
+        resolver: ZoneResolver for zone_key lookups. Required for zone_key-based IDs.
 
     Returns:
         ParseResult containing seed, zones, and connections.
 
     Raises:
-        SpoilerParseError: If the log format is invalid.
+        SpoilerParseError: If the log format is invalid, resolver is missing,
+            or a zone is not found in fog.txt.
     """
     lines = text.split("\n")
 
@@ -386,6 +393,7 @@ def parse_spoiler_log(text: str) -> ParseResult:
 
     zones: dict[str, ZoneInfo] = {}  # Keyed by zone name
     connections: list[ConnectionInfo] = []
+    first_zone_name: str | None = None  # Track first zone for starting_zone_id
 
     for line in lines:
         # Stop at optional areas section
@@ -397,6 +405,9 @@ def parse_spoiler_log(text: str) -> ParseResult:
         if zone_info:
             if zone_info.name not in zones:
                 zones[zone_info.name] = zone_info
+                # Track first zone encountered
+                if first_zone_name is None:
+                    first_zone_name = zone_info.name
             else:
                 # Update existing zone with boss/scaling info if we have it
                 existing = zones[zone_info.name]
@@ -410,11 +421,11 @@ def parse_spoiler_log(text: str) -> ParseResult:
         if line.startswith("  ") or line.startswith("\t"):
             conn = _parse_connection_line(line)
             if conn:
-                # Ensure zones exist (create with UUID if missing)
+                # Ensure zones exist (create with temporary ID if missing)
                 if conn.source not in zones:
-                    zones[conn.source] = ZoneInfo(id=str(uuid4()), name=conn.source)
+                    zones[conn.source] = ZoneInfo(id=conn.source, name=conn.source)
                 if conn.target not in zones:
-                    zones[conn.target] = ZoneInfo(id=str(uuid4()), name=conn.target)
+                    zones[conn.target] = ZoneInfo(id=conn.target, name=conn.target)
                 connections.append(conn)
 
     if not zones:
@@ -423,18 +434,44 @@ def parse_spoiler_log(text: str) -> ParseResult:
     if not connections:
         raise SpoilerParseError("No connections found in spoiler log")
 
-    # Populate source_id and target_id for each connection
+    # Resolve zone_keys for all zones
+    starting_zone_id = None
+    unknown_zones = []
+    if not resolver:
+        raise SpoilerParseError("ZoneResolver is required for zone_key-based IDs")
+
+    for zone_name, zone_info in zones.items():
+        zone_key = resolver.lookup_by_display_name(zone_name)
+        if zone_key:
+            zone_info.id = zone_key
+        else:
+            unknown_zones.append(zone_name)
+        # Set starting_zone_id from first zone
+        if zone_name == first_zone_name:
+            starting_zone_id = zone_key
+
+    # Fail if any zones are not found in fog.txt
+    if unknown_zones:
+        raise SpoilerParseError(
+            f"Zones not found in fog.txt: {unknown_zones}. "
+            "Please add them to data/fog.txt with their zone_key."
+        )
+
+    # Populate source_id and target_id for each connection (now zone_keys)
     for conn in connections:
         if conn.source in zones:
             conn.source_id = zones[conn.source].id
         if conn.target in zones:
             conn.target_id = zones[conn.target].id
 
+    zones_by_id = {zone_info.id: zone_info for zone_info in zones.values()}
+
     return ParseResult(
         seed=seed,
-        zones=list(zones.values()),
+        zones=zones_by_id,
         connections=connections,
         options=options,
+        starting_zone_id=starting_zone_id,
     )
 
 
@@ -469,63 +506,63 @@ def enrich_connections_with_zone_keys(
     1. source_details/target_details (ASide/BSide text in fog.txt)
     2. Fallback: display_name → zone_key reverse lookup
 
+    The zone_keys are stored in source_id and target_id fields.
+
     Args:
         connections: List of parsed connections
         resolver: ZoneResolver with fog.txt data loaded
 
     Returns:
-        List of enriched connections with source_key and target_key populated.
+        List of enriched connections with source_id and target_id populated with zone_keys.
     """
     enriched = []
     for conn in connections:
-        source_key = None
-        target_key = None
+        source_id = None
+        target_id = None
 
-        # Try to resolve source_key from source_details (ASide/BSide text)
+        # Try to resolve source zone_key from source_details (ASide/BSide text)
         if conn.source_details:
             zone_key, display_name = resolver.lookup_by_detail_text(conn.source_details)
             # Only use if the display_name matches the expected source
             if zone_key and display_name and display_name == conn.source:
-                source_key = zone_key
+                source_id = zone_key
 
         # Fallback: try display_name → zone_key
-        if not source_key:
-            source_key = resolver.lookup_by_display_name(conn.source)
+        if not source_id:
+            source_id = resolver.lookup_by_display_name(conn.source)
 
-        # Try to resolve target_key from target_details
+        # Try to resolve target zone_key from target_details
         if conn.target_details:
             zone_key, display_name = resolver.lookup_by_detail_text(conn.target_details)
             # Only use if the display_name matches the expected target
             if zone_key and display_name and display_name == conn.target:
-                target_key = zone_key
+                target_id = zone_key
 
         # Fallback: try display_name → zone_key
-        if not target_key:
-            target_key = resolver.lookup_by_display_name(conn.target)
+        if not target_id:
+            target_id = resolver.lookup_by_display_name(conn.target)
 
         # Determine is_one_way for preexisting connections using fog.txt To: structure
         is_one_way = conn.is_one_way
-        if conn.conn_type == "preexisting" and source_key and target_key and not is_one_way:
+        if conn.conn_type == "preexisting" and source_id and target_id and not is_one_way:
             # Check if link exists in fog.txt To: sections
-            forward_exists = resolver.has_preexisting_link(source_key, target_key)
-            reverse_exists = resolver.has_preexisting_link(target_key, source_key)
+            forward_exists = resolver.has_preexisting_link(source_id, target_id)
+            reverse_exists = resolver.has_preexisting_link(target_id, source_id)
             # If only one direction exists, mark as one-way
             if forward_exists and not reverse_exists:
                 is_one_way = True
 
-        # Create enriched connection (preserve all fields from original)
+        # Create enriched connection with zone_keys in source_id/target_id
         enriched.append(
             ConnectionInfo(
                 id=conn.id,
                 source=conn.source,
-                source_id=conn.source_id,
+                source_id=source_id,
                 target=conn.target,
-                target_id=conn.target_id,
+                target_id=target_id,
                 conn_type=conn.conn_type,
                 source_details=conn.source_details,
                 target_details=conn.target_details,
-                source_key=source_key,
-                target_key=target_key,
                 required_item=conn.required_item,
                 required_item_from=conn.required_item_from,
                 is_one_way=is_one_way,

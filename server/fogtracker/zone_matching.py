@@ -10,9 +10,6 @@ from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
-# Starting node (always discovered)
-START_NODE = "Chapel of Anticipation"
-
 
 def get_zone_link_id(link: dict) -> str | None:
     """Get the zone_link_id from a link dict, with legacy fallback.
@@ -40,8 +37,8 @@ def build_preexisting_adjacency(
     zone_pairs: list[dict],
 ) -> dict[str, list[tuple[str, bool]]]:
     """
-    Build adjacency list for preexisting links only.
-    Returns dict[source] -> list of (destination, is_bidirectional)
+    Build adjacency list for preexisting links only, keyed by zone_id.
+    Returns dict[source_id] -> list of (target_id, is_bidirectional)
 
     A link is bidirectional unless marked as one-way (is_one_way: true).
     Most preexisting links (e.g., elevators, doors) are bidirectional.
@@ -50,10 +47,12 @@ def build_preexisting_adjacency(
 
     for pair in zone_pairs:
         if pair["type"] == "preexisting":
+            source_id = pair["source_id"]
+            target_id = pair["target_id"]
             is_bidir = not pair.get("is_one_way", False)
-            adj[pair["source"]].append((pair["target"], is_bidir))
+            adj[source_id].append((target_id, is_bidir))
             if is_bidir:
-                adj[pair["target"]].append((pair["source"], True))
+                adj[target_id].append((source_id, True))
 
     return adj
 
@@ -62,8 +61,8 @@ def build_full_adjacency(
     zone_pairs: list[dict],
 ) -> dict[str, list[tuple[str, bool, dict]]]:
     """
-    Build adjacency list for ALL links (random and preexisting).
-    Returns dict[source] -> list of (destination, is_bidirectional, pair)
+    Build adjacency list for ALL links (random and preexisting), keyed by zone_id.
+    Returns dict[source_id] -> list of (target_id, is_bidirectional, pair)
 
     All links are bidirectional unless marked as one-way (is_one_way: true).
     One-way links include sending gates, coffins, drop-downs, etc.
@@ -71,13 +70,13 @@ def build_full_adjacency(
     adj: dict[str, list[tuple[str, bool, dict]]] = defaultdict(list)
 
     for pair in zone_pairs:
-        source = pair["source"]
-        dest = pair["target"]
+        source_id = pair["source_id"]
+        target_id = pair["target_id"]
         is_bidir = not pair.get("is_one_way", False)
 
-        adj[source].append((dest, is_bidir, pair))
+        adj[source_id].append((target_id, is_bidir, pair))
         if is_bidir:
-            adj[dest].append((source, True, pair))
+            adj[target_id].append((source_id, True, pair))
 
     return adj
 
@@ -117,35 +116,43 @@ def expand_discovered_links(discovered_links: list[dict], zone_pairs: list[dict]
     return valid_links
 
 
-def get_discovered_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -> set[str]:
+def get_discovered_nodes(
+    discovered_links: list[dict],
+    zone_pairs: list[dict],
+    starting_zone_id: str,
+) -> set[str]:
     """
-    Get all discovered nodes from discovered links.
+    Get all discovered zone_ids from discovered links.
     A node is discovered if it's the source or target of any discovered link,
-    or is START_NODE.
+    or is the starting_zone_id.
     """
-    discovered = {START_NODE}
+    discovered = {starting_zone_id}
     zp_index = build_zone_pairs_index(zone_pairs)
 
     for link in discovered_links:
         link_id = get_zone_link_id(link)
         zp = zp_index.get(link_id)
         if zp:
-            discovered.add(zp["source"])
-            discovered.add(zp["target"])
+            discovered.add(zp["source_id"])
+            discovered.add(zp["target_id"])
 
     return discovered
 
 
 def link_exists(
     discovered_links: list[dict],
-    source: str,
-    target: str,
+    source_id: str,
+    target_id: str,
     zone_pairs: list[dict],
 ) -> bool:
     """Check if a link already exists in discovered_links.
 
     For bidirectional random links, also checks the reverse direction since
     discovering A→B is equivalent to discovering B→A for the same fog gate.
+
+    Args:
+        source_id: Source zone_key
+        target_id: Target zone_key
     """
     zp_index = build_zone_pairs_index(zone_pairs)
 
@@ -155,63 +162,72 @@ def link_exists(
         if not zp:
             continue
 
+        zp_source_id = zp["source_id"]
+        zp_target_id = zp["target_id"]
+
         # Direct match
-        if zp["source"] == source and zp["target"] == target:
+        if zp_source_id == source_id and zp_target_id == target_id:
             return True
 
         # For bidirectional random links, also check reverse
         if (
             zp["type"] == "random"
             and not zp.get("is_one_way", False)
-            and zp["source"] == target
-            and zp["target"] == source
+            and zp_source_id == target_id
+            and zp_target_id == source_id
         ):
             return True
 
     return False
 
 
-def find_zone_pair(zone_pairs: list[dict], source: str, target: str) -> dict | None:
-    """Find a zone pair matching source and target (in either direction for random links).
+def find_zone_pair(zone_pairs: list[dict], source_id: str, target_id: str) -> dict | None:
+    """Find a zone pair matching source_id and target_id (in either direction for random links).
 
-    Compares both exact names and normalized names (without parenthetical text).
+    Args:
+        zone_pairs: List of zone pairs
+        source_id: Source zone_key
+        target_id: Target zone_key
+
+    Returns:
+        The matching zone pair, or None if not found.
     """
     for pair in zone_pairs:
-        pair_source = pair["source"]
-        pair_target = pair["target"]
+        pair_source_id = pair["source_id"]
+        pair_target_id = pair["target_id"]
 
-        # Check direct match (exact or normalized)
-        source_matches = names_match(pair_source, source)
-        target_matches = names_match(pair_target, target)
-        if source_matches and target_matches:
+        # Check direct match
+        if pair_source_id == source_id and pair_target_id == target_id:
             return pair
 
         # For random links, also check reverse (they're bidirectional)
-        if pair["type"] == "random":
-            source_matches_rev = names_match(pair_source, target)
-            target_matches_rev = names_match(pair_target, source)
-            if source_matches_rev and target_matches_rev:
-                return pair
+        if (
+            pair["type"] == "random"
+            and not pair.get("is_one_way", False)
+            and pair_source_id == target_id
+            and pair_target_id == source_id
+        ):
+            return pair
 
     return None
 
 
-def find_zone_pair_by_keys(
+def find_zone_pair_by_ids(
     zone_pairs: list[dict],
-    source_key: str,
-    target_key: str,
+    source_id: str,
+    target_id: str,
     source_details: str | None = None,
 ) -> dict | None:
     """
-    Find a zone pair by matching on zone_keys (internal names from fog.txt).
+    Find a zone pair by matching on zone_ids (zone_keys from fog.txt).
 
-    More precise than display name matching. Uses source_details to disambiguate
-    when multiple zone pairs have the same source_key and target_key.
+    Uses source_details to disambiguate when multiple zone pairs have
+    the same source_id and target_id.
 
     Args:
         zone_pairs: List of zone pairs from the spoiler log
-        source_key: Internal zone key for source
-        target_key: Internal zone key for target
+        source_id: Zone key for source
+        target_id: Zone key for target
         source_details: Optional ASide/BSide text for disambiguation
 
     Returns:
@@ -220,14 +236,11 @@ def find_zone_pair_by_keys(
     matches = []
 
     for pair in zone_pairs:
-        pair_source_key = pair.get("source_key")
-        pair_target_key = pair.get("target_key")
-
-        if not pair_source_key or not pair_target_key:
-            continue
+        pair_source_id = pair["source_id"]
+        pair_target_id = pair["target_id"]
 
         # Check direct match
-        if pair_source_key == source_key and pair_target_key == target_key:
+        if pair_source_id == source_id and pair_target_id == target_id:
             matches.append((pair, "direct"))
             continue
 
@@ -235,8 +248,8 @@ def find_zone_pair_by_keys(
         if (
             pair["type"] == "random"
             and not pair.get("is_one_way", False)
-            and pair_source_key == target_key
-            and pair_target_key == source_key
+            and pair_source_id == target_id
+            and pair_target_id == source_id
         ):
             matches.append((pair, "reverse"))
 
@@ -267,90 +280,90 @@ def find_zone_pair_by_keys(
     # Still multiple matches - log warning and return first
     logger.warning(
         "[MATCH] Multiple matches for %s -> %s, returning first (count=%d)",
-        source_key,
-        target_key,
+        source_id,
+        target_id,
         len(matches),
     )
     return matches[0][0]
 
 
-def find_matching_zone_pair_by_keys(
+def find_matching_zone_pair_by_ids(
     zone_pairs: list[dict],
     source_candidates: list[tuple[str, str]],
     target_candidates: list[tuple[str, str]],
     source_details: str | None = None,
 ) -> tuple[str, str, dict] | None:
     """
-    Find a matching zone pair using zone_keys from candidate lists.
+    Find a matching zone pair using zone_ids from candidate lists.
 
-    Tries all combinations of source and target candidates (using internal keys)
+    Tries all combinations of source and target candidates (using zone_ids)
     until finding a match in zone_pairs.
 
     Args:
         zone_pairs: List of zone pairs from the spoiler log
-        source_candidates: List of (internal_key, display_name) for source
-        target_candidates: List of (internal_key, display_name) for target
+        source_candidates: List of (zone_id, display_name) for source
+        target_candidates: List of (zone_id, display_name) for target
         source_details: Optional ASide/BSide text for disambiguation
 
     Returns:
-        Tuple of (source_display, target_display, zone_pair) if found, None otherwise.
+        Tuple of (source_id, target_id, zone_pair) if found, None otherwise.
     """
-    for source_key, _source_display in source_candidates:
-        for target_key, _target_display in target_candidates:
-            pair = find_zone_pair_by_keys(zone_pairs, source_key, target_key, source_details)
+    for source_id, _source_display in source_candidates:
+        for target_id, _target_display in target_candidates:
+            pair = find_zone_pair_by_ids(zone_pairs, source_id, target_id, source_details)
             if pair:
                 logger.debug(
-                    "[MATCH] Found pair by keys: '%s' -> '%s' (keys: %s -> %s)",
+                    "[MATCH] Found pair by ids: '%s' -> '%s' (display: %s -> %s)",
+                    source_id,
+                    target_id,
                     pair["source"],
                     pair["target"],
-                    source_key,
-                    target_key,
                 )
-                return pair["source"], pair["target"], pair
+                return source_id, target_id, pair
 
     return None
 
 
-def find_all_matching_zone_pairs_by_keys(
+def find_all_matching_zone_pairs_by_ids(
     zone_pairs: list[dict],
     source_candidates: list[tuple[str, str]],
     target_candidates: list[tuple[str, str]],
     source_details: str | None = None,
 ) -> list[tuple[str, str, dict]]:
     """
-    Find ALL matching zone pairs using zone_keys from candidate lists.
+    Find ALL matching zone pairs using zone_ids from candidate lists.
 
-    Unlike find_matching_zone_pair_by_keys which returns the first match,
+    Unlike find_matching_zone_pair_by_ids which returns the first match,
     this returns all valid combinations. Used when we want to find all possible
     matches and then pick the best one based on additional criteria.
 
     Args:
         zone_pairs: List of zone pairs from the spoiler log
-        source_candidates: List of (internal_key, display_name) for source
-        target_candidates: List of (internal_key, display_name) for target
+        source_candidates: List of (zone_id, display_name) for source
+        target_candidates: List of (zone_id, display_name) for target
         source_details: Optional ASide/BSide text for disambiguation
 
     Returns:
-        List of (source_display, target_display, zone_pair) tuples for all matches.
+        List of (source_id, target_id, zone_pair) tuples for all matches.
         Deduplicated by zone_pair ID.
     """
     matches = []
     seen_pair_ids = set()
 
-    for source_key, source_display in source_candidates:
-        for target_key, target_display in target_candidates:
-            pair = find_zone_pair_by_keys(zone_pairs, source_key, target_key, source_details)
+    for source_id, _source_display in source_candidates:
+        for target_id, _target_display in target_candidates:
+            pair = find_zone_pair_by_ids(zone_pairs, source_id, target_id, source_details)
             if pair:
                 pair_id = pair.get("id")
                 if pair_id and pair_id not in seen_pair_ids:
                     seen_pair_ids.add(pair_id)
                     # Return the caller's direction, not the stored direction.
                     # This ensures propagation logic respects the actual travel direction.
-                    matches.append((source_display, target_display, pair))
+                    matches.append((source_id, target_id, pair))
                     logger.debug(
-                        "[MATCH] Found pair by keys: '%s' -> '%s' (stored as %s -> %s)",
-                        source_display,
-                        target_display,
+                        "[MATCH] Found pair by ids: '%s' -> '%s' (stored as %s -> %s)",
+                        source_id,
+                        target_id,
                         pair["source"],
                         pair["target"],
                     )
@@ -371,24 +384,24 @@ def find_matching_zone_pair(
 
     Args:
         zone_pairs: List of zone pairs from the spoiler log
-        source_candidates: List of (internal_name, display_name) for source, best first
-        target_candidates: List of (internal_name, display_name) for target, best first
+        source_candidates: List of (zone_id, display_name) for source, best first
+        target_candidates: List of (zone_id, display_name) for target, best first
 
     Returns:
-        Tuple of (source_display, target_display, zone_pair) if found, None otherwise.
+        Tuple of (source_id, target_id, zone_pair) if found, None otherwise.
     """
-    for source_internal, source_display in source_candidates:
-        for target_internal, target_display in target_candidates:
-            pair = find_zone_pair(zone_pairs, source_display, target_display)
+    for source_id, _source_display in source_candidates:
+        for target_id, _target_display in target_candidates:
+            pair = find_zone_pair(zone_pairs, source_id, target_id)
             if pair:
                 logger.debug(
-                    "[MATCH] Found pair: '%s' → '%s' (tried %s → %s)",
-                    source_display,
-                    target_display,
-                    source_internal,
-                    target_internal,
+                    "[MATCH] Found pair: '%s' → '%s' (display: %s → %s)",
+                    source_id,
+                    target_id,
+                    pair["source"],
+                    pair["target"],
                 )
-                return source_display, target_display, pair
+                return source_id, target_id, pair
 
     return None
 
@@ -407,31 +420,31 @@ def find_all_matching_zone_pairs(
 
     Args:
         zone_pairs: List of zone pairs from the spoiler log
-        source_candidates: List of (internal_name, display_name) for source
-        target_candidates: List of (internal_name, display_name) for target
+        source_candidates: List of (zone_id, display_name) for source
+        target_candidates: List of (zone_id, display_name) for target
 
     Returns:
-        List of (source_display, target_display, zone_pair) tuples for all matches.
+        List of (source_id, target_id, zone_pair) tuples for all matches.
         Deduplicated by link (A↔B counted once regardless of direction).
     """
     matches = []
     seen_links = set()  # Track unique links to avoid duplicates
 
-    for _source_internal, source_display in source_candidates:
-        for _target_internal, target_display in target_candidates:
-            pair = find_zone_pair(zone_pairs, source_display, target_display)
+    for source_id, _source_display in source_candidates:
+        for target_id, _target_display in target_candidates:
+            pair = find_zone_pair(zone_pairs, source_id, target_id)
             if pair and pair["type"] == "random":
                 # Use frozenset to deduplicate bidirectional links
-                link_key = frozenset([pair["source"], pair["target"]])
+                link_key = frozenset([pair["source_id"], pair["target_id"]])
                 if link_key not in seen_links:
                     seen_links.add(link_key)
                     # Return the caller's direction, not the stored direction.
                     # This ensures propagation logic respects the actual travel direction.
-                    matches.append((source_display, target_display, pair))
+                    matches.append((source_id, target_id, pair))
                     logger.debug(
                         "[MATCH] Found pair: '%s' → '%s' (stored as %s → %s)",
-                        source_display,
-                        target_display,
+                        source_id,
+                        target_id,
                         pair["source"],
                         pair["target"],
                     )
@@ -439,43 +452,43 @@ def find_all_matching_zone_pairs(
     return matches
 
 
-def find_candidate_zones(zone_pairs: list[dict], zone_name: str) -> list[dict]:
-    """Find all zone pairs that contain a zone name (for debugging)."""
+def find_candidate_zones(zone_pairs: list[dict], zone_id: str) -> list[dict]:
+    """Find all zone pairs that contain a zone_id (for debugging)."""
     candidates = []
     for pair in zone_pairs:
-        if pair["source"] == zone_name or pair["target"] == zone_name:
+        if pair["source_id"] == zone_id or pair["target_id"] == zone_id:
             candidates.append(pair)
     return candidates
 
 
-def find_similar_zones(zone_pairs: list[dict], zone_name: str, limit: int = 5) -> list[str]:
-    """Find zones with similar names (for debugging mismatches)."""
-    all_zones = set()
+def find_similar_zones(zone_pairs: list[dict], zone_id: str, limit: int = 5) -> list[str]:
+    """Find zones with similar zone_ids (for debugging mismatches)."""
+    all_zone_ids = set()
     for pair in zone_pairs:
-        all_zones.add(pair["source"])
-        all_zones.add(pair["target"])
+        all_zone_ids.add(pair["source_id"])
+        all_zone_ids.add(pair["target_id"])
 
     # Simple substring matching
-    zone_lower = zone_name.lower()
+    zone_id_lower = zone_id.lower()
     similar = []
-    for zone in all_zones:
+    for zid in all_zone_ids:
         if (
-            zone_lower in zone.lower()
-            or zone.lower() in zone_lower
-            or set(zone_lower.split()) & set(zone.lower().split())
+            zone_id_lower in zid.lower()
+            or zid.lower() in zone_id_lower
+            or set(zone_id_lower.split("_")) & set(zid.lower().split("_"))
         ):
-            similar.append(zone)
+            similar.append(zid)
 
     return similar[:limit]
 
 
 def compute_total_zones(zone_pairs: list[dict]) -> int:
-    """Compute total unique zones from zone pairs."""
-    zones = set()
+    """Compute total unique zones from zone pairs (by zone_id)."""
+    zone_ids = set()
     for pair in zone_pairs:
-        zones.add(pair["source"])
-        zones.add(pair["target"])
-    return len(zones)
+        zone_ids.add(pair["source_id"])
+        zone_ids.add(pair["target_id"])
+    return len(zone_ids)
 
 
 def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]) -> dict:
@@ -488,26 +501,26 @@ def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]
         - total: total number of zones
         - percent: percentage discovered (0-100)
     """
-    # Collect all unique zones
-    all_zones = set()
+    # Collect all unique zone_ids
+    all_zone_ids = set()
     for pair in zone_pairs:
-        all_zones.add(pair["source"])
-        all_zones.add(pair["target"])
-    total = len(all_zones)
+        all_zone_ids.add(pair["source_id"])
+        all_zone_ids.add(pair["target_id"])
+    total = len(all_zone_ids)
 
     zp_index = build_zone_pairs_index(zone_pairs)
 
-    # Collect discovered zones (appear in any discovered link)
-    discovered_zones = set()
+    # Collect discovered zone_ids (appear in any discovered link)
+    discovered_zone_ids = set()
     for link in discovered_links:
         link_id = get_zone_link_id(link)
         zp = zp_index.get(link_id)
         if zp:
-            discovered_zones.add(zp["source"])
-            discovered_zones.add(zp["target"])
+            discovered_zone_ids.add(zp["source_id"])
+            discovered_zone_ids.add(zp["target_id"])
 
     # Only count zones that exist in the zone_pairs
-    discovered_count = len(discovered_zones & all_zones)
+    discovered_count = len(discovered_zone_ids & all_zone_ids)
 
     percent = (discovered_count / total * 100) if total > 0 else 0
 
@@ -518,17 +531,17 @@ def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]
     }
 
 
-def get_zones_via_preexisting(zone_pairs: list[dict], start_zone: str) -> set[str]:
+def get_zones_via_preexisting(zone_pairs: list[dict], start_zone_id: str) -> set[str]:
     """
-    Get all zones reachable from start_zone via preexisting paths.
+    Get all zone_ids reachable from start_zone_id via preexisting paths.
 
-    Traverses the preexisting link tree and returns all connected zones,
+    Traverses the preexisting link tree and returns all connected zone_ids,
     including the start zone itself.
     """
     preexisting_adj = build_preexisting_adjacency(zone_pairs)
 
-    visited = {start_zone}
-    queue = [start_zone]
+    visited = {start_zone_id}
+    queue = [start_zone_id]
 
     while queue:
         current = queue.pop(0)
@@ -542,22 +555,27 @@ def get_zones_via_preexisting(zone_pairs: list[dict], start_zone: str) -> set[st
 
 def is_link_discovered(
     discovered_links: list[dict],
-    source: str,
-    target: str,
+    source_id: str,
+    target_id: str,
     zone_pairs: list[dict],
 ) -> bool:
-    """Check if a link (in either direction) has been discovered."""
+    """Check if a link (in either direction) has been discovered.
+
+    Args:
+        source_id: Source zone_key
+        target_id: Target zone_key
+    """
     zp_index = build_zone_pairs_index(zone_pairs)
 
     for dl in discovered_links:
         link_id = get_zone_link_id(dl)
         zp = zp_index.get(link_id)
         if zp:
-            dl_src = zp["source"]
-            dl_tgt = zp["target"]
+            dl_src_id = zp["source_id"]
+            dl_tgt_id = zp["target_id"]
             # Check both directions (random links are bidirectional)
-            if (names_match(dl_src, source) and names_match(dl_tgt, target)) or (
-                names_match(dl_src, target) and names_match(dl_tgt, source)
+            if (dl_src_id == source_id and dl_tgt_id == target_id) or (
+                dl_src_id == target_id and dl_tgt_id == source_id
             ):
                 return True
     return False
@@ -565,40 +583,41 @@ def is_link_discovered(
 
 def is_accessible_from_start(
     discovered_links: list[dict],
-    target_node: str,
+    target_zone_id: str,
     zone_pairs: list[dict],
+    starting_zone_id: str,
 ) -> bool:
-    """Check if a node is accessible from START_NODE via discovered links."""
-    if target_node == START_NODE:
+    """Check if a zone_id is accessible from starting_zone_id via discovered links."""
+    if target_zone_id == starting_zone_id:
         return True
 
     zp_index = build_zone_pairs_index(zone_pairs)
 
-    # Expand links to (source, target) tuples
+    # Expand links to (source_id, target_id) tuples
     expanded_links = []
     for dl in discovered_links:
         link_id = get_zone_link_id(dl)
         zp = zp_index.get(link_id)
         if zp:
-            expanded_links.append((zp["source"], zp["target"]))
+            expanded_links.append((zp["source_id"], zp["target_id"]))
 
     # BFS through discovered links
-    visited = {START_NODE}
-    queue = [START_NODE]
+    visited = {starting_zone_id}
+    queue = [starting_zone_id]
 
     while queue:
         current = queue.pop(0)
-        for src, tgt in expanded_links:
+        for src_id, tgt_id in expanded_links:
             neighbor = None
 
             # Can traverse in either direction (discovered links are bidirectional)
-            if src == current and tgt not in visited:
-                neighbor = tgt
-            elif tgt == current and src not in visited:
-                neighbor = src
+            if src_id == current and tgt_id not in visited:
+                neighbor = tgt_id
+            elif tgt_id == current and src_id not in visited:
+                neighbor = src_id
 
             if neighbor:
-                if neighbor == target_node:
+                if neighbor == target_zone_id:
                     return True
                 visited.add(neighbor)
                 queue.append(neighbor)
@@ -609,29 +628,30 @@ def is_accessible_from_start(
 def find_path_prioritizing_discovered(
     zone_pairs: list[dict],
     discovered_links: list[dict],
-    target_node: str,
+    target_zone_id: str,
+    starting_zone_id: str,
 ) -> list[tuple[str, str]]:
     """
-    Find the shortest path from START_NODE to target_node, prioritizing discovered nodes.
+    Find the shortest path from starting_zone_id to target_zone_id, prioritizing discovered nodes.
 
     Uses a modified BFS that explores discovered nodes first at each level.
     This ensures the path passes through as many already-discovered nodes as possible.
 
     Returns:
-        List of (source, target) tuples representing the links on the path.
-        Empty list if no path exists or if target is START_NODE.
+        List of (source_id, target_id) tuples representing the links on the path.
+        Empty list if no path exists or if target is starting_zone_id.
     """
-    if target_node == START_NODE:
+    if target_zone_id == starting_zone_id:
         return []
 
     full_adj = build_full_adjacency(zone_pairs)
-    discovered_nodes = get_discovered_nodes(discovered_links, zone_pairs)
+    discovered_nodes = get_discovered_nodes(discovered_links, zone_pairs, starting_zone_id)
 
     # BFS with priority for discovered nodes
-    # Each entry: (current_node, path_so_far)
-    # path_so_far is a list of (source, target) tuples
-    visited = {START_NODE}
-    queue = [(START_NODE, [])]
+    # Each entry: (current_zone_id, path_so_far)
+    # path_so_far is a list of (source_id, target_id) tuples
+    visited = {starting_zone_id}
+    queue = [(starting_zone_id, [])]
 
     while queue:
         current, path = queue.pop(0)
@@ -645,11 +665,13 @@ def find_path_prioritizing_discovered(
             if dest in visited:
                 continue
 
-            # Determine the link direction for recording
-            if pair["source"] == current:
-                link = (current, pair["target"])
+            # Determine the link direction for recording (using zone_ids)
+            pair_source_id = pair["source_id"]
+            pair_target_id = pair["target_id"]
+            if pair_source_id == current:
+                link = (current, pair_target_id)
             else:
-                link = (current, pair["source"])
+                link = (current, pair_source_id)
 
             if dest in discovered_nodes:
                 discovered_neighbors.append((dest, link))
@@ -660,7 +682,7 @@ def find_path_prioritizing_discovered(
         for dest, link in discovered_neighbors + undiscovered_neighbors:
             new_path = path + [link]
 
-            if dest == target_node:
+            if dest == target_zone_id:
                 return new_path
 
             visited.add(dest)
@@ -676,13 +698,14 @@ def find_path_prioritizing_discovered(
 def compute_backprop_cost(
     zone_pairs: list[dict],
     discovered_links: list[dict],
-    source_node: str,
+    source_zone_id: str,
+    starting_zone_id: str,
 ) -> int:
     """
-    Compute the back-propagation cost to make source_node accessible from START.
+    Compute the back-propagation cost to make source_zone_id accessible from starting_zone_id.
 
     The cost is the number of RANDOM (not preexisting) links that would need to be
-    back-propagated to create a path from START to source_node.
+    back-propagated to create a path from starting_zone_id to source_zone_id.
 
     Preexisting links don't count because they represent vanilla connections that
     are automatically discovered when reaching a zone.
@@ -690,26 +713,31 @@ def compute_backprop_cost(
     Args:
         zone_pairs: List of zone pairs from the spoiler log
         discovered_links: Currently discovered links
-        source_node: The node we want to reach
+        source_zone_id: The zone_id we want to reach
+        starting_zone_id: The starting zone_id
 
     Returns:
         Number of random links needed. 0 if already accessible. -1 if unreachable.
     """
     # If already accessible, no back-propagation needed
-    if is_accessible_from_start(discovered_links, source_node, zone_pairs):
+    if is_accessible_from_start(discovered_links, source_zone_id, zone_pairs, starting_zone_id):
         return 0
 
-    # Find path from START to source
-    path = find_path_prioritizing_discovered(zone_pairs, discovered_links, source_node)
+    # Find path from starting_zone_id to source
+    path = find_path_prioritizing_discovered(
+        zone_pairs, discovered_links, source_zone_id, starting_zone_id
+    )
     if not path:
         return -1  # Unreachable
 
-    # Build index to look up link type
+    # Build index to look up link type (keyed by zone_ids)
     zp_by_endpoints: dict[tuple[str, str], str] = {}
     for zp in zone_pairs:
-        zp_by_endpoints[(zp["source"], zp["target"])] = zp["type"]
+        src_id = zp["source_id"]
+        tgt_id = zp["target_id"]
+        zp_by_endpoints[(src_id, tgt_id)] = zp["type"]
         # Also index reverse for bidirectional lookup
-        zp_by_endpoints[(zp["target"], zp["source"])] = zp["type"]
+        zp_by_endpoints[(tgt_id, src_id)] = zp["type"]
 
     # Count random links in path
     random_count = 0
@@ -721,34 +749,38 @@ def compute_backprop_cost(
     return random_count
 
 
-def find_reachable_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -> set[str]:
+def find_reachable_nodes(
+    discovered_links: list[dict],
+    zone_pairs: list[dict],
+    starting_zone_id: str,
+) -> set[str]:
     """
-    Find all nodes reachable from START_NODE via discovered links.
+    Find all zone_ids reachable from starting_zone_id via discovered links.
     Uses BFS through the discovered link graph.
     """
-    reachable = {START_NODE}
-    queue = [START_NODE]
+    reachable = {starting_zone_id}
+    queue = [starting_zone_id]
 
     zp_index = build_zone_pairs_index(zone_pairs)
 
-    # Expand links to (source, target) tuples
+    # Expand links to (source_id, target_id) tuples
     expanded_links = []
     for dl in discovered_links:
         link_id = get_zone_link_id(dl)
         zp = zp_index.get(link_id)
         if zp:
-            expanded_links.append((zp["source"], zp["target"]))
+            expanded_links.append((zp["source_id"], zp["target_id"]))
 
     while queue:
         current = queue.pop(0)
-        for src, tgt in expanded_links:
+        for src_id, tgt_id in expanded_links:
             neighbor = None
 
             # Can traverse in either direction (discovered links are bidirectional)
-            if src == current and tgt not in reachable:
-                neighbor = tgt
-            elif tgt == current and src not in reachable:
-                neighbor = src
+            if src_id == current and tgt_id not in reachable:
+                neighbor = tgt_id
+            elif tgt_id == current and src_id not in reachable:
+                neighbor = src_id
 
             if neighbor:
                 reachable.add(neighbor)
@@ -759,63 +791,65 @@ def find_reachable_nodes(discovered_links: list[dict], zone_pairs: list[dict]) -
 
 def undiscover_zone(
     discovered_links: list[dict],
-    zone_to_remove: str,
+    zone_id_to_remove: str,
     zone_pairs: list[dict],
+    starting_zone_id: str,
 ) -> tuple[list[dict], list[str]]:
     """
-    Undiscover a zone and all zones that become unreachable from START.
+    Undiscover a zone and all zones that become unreachable from starting_zone_id.
 
     Args:
         discovered_links: Current list of discovered links
-        zone_to_remove: The zone to undiscover
+        zone_id_to_remove: The zone_id to undiscover
         zone_pairs: Zone pairs for expanding link_ids
+        starting_zone_id: The starting zone_id
 
     Returns:
-        Tuple of (new_discovered_links, removed_zones)
+        Tuple of (new_discovered_links, removed_zone_ids)
     """
-    if zone_to_remove == START_NODE:
+    if zone_id_to_remove == starting_zone_id:
         return discovered_links, []
 
     zp_index = build_zone_pairs_index(zone_pairs)
 
-    def get_link_endpoints(dl: dict) -> tuple[str, str]:
-        """Get source and target from a discovered link."""
+    def get_link_endpoint_ids(dl: dict) -> tuple[str, str]:
+        """Get source_id and target_id from a discovered link."""
         link_id = get_zone_link_id(dl)
         zp = zp_index.get(link_id)
         if zp:
-            return zp["source"], zp["target"]
+            return zp.get("source_id", ""), zp.get("target_id", "")
         return "", ""
 
     # First, remove all links involving the zone to remove
     filtered_links = []
     for dl in discovered_links:
-        src, tgt = get_link_endpoints(dl)
-        if src != zone_to_remove and tgt != zone_to_remove:
+        src_id, tgt_id = get_link_endpoint_ids(dl)
+        if src_id != zone_id_to_remove and tgt_id != zone_id_to_remove:
             filtered_links.append(dl)
 
-    # Find all zones that are still reachable from START
-    reachable = find_reachable_nodes(filtered_links, zone_pairs)
+    # Find all zones that are still reachable from starting_zone_id
+    reachable = find_reachable_nodes(filtered_links, zone_pairs, starting_zone_id)
 
     # Get zones that were discovered before
-    previously_discovered = get_discovered_nodes(discovered_links, zone_pairs)
+    previously_discovered = get_discovered_nodes(discovered_links, zone_pairs, starting_zone_id)
 
     # Find zones that became unreachable (cascade undiscovery)
-    removed_zones = previously_discovered - reachable
+    removed_zone_ids = previously_discovered - reachable
 
     # Remove all links involving unreachable zones
     final_links = []
     for dl in filtered_links:
-        src, tgt = get_link_endpoints(dl)
-        if src in reachable and tgt in reachable:
+        src_id, tgt_id = get_link_endpoint_ids(dl)
+        if src_id in reachable and tgt_id in reachable:
             final_links.append(dl)
 
-    return final_links, list(removed_zones)
+    return final_links, list(removed_zone_ids)
 
 
 def compute_zone_exits(
     zone_pairs: list[dict],
     discovered_links: list[dict],
-    current_zone: str,
+    current_zone_id: str,
 ) -> list[dict]:
     """
     Compute all fog gate exits accessible from a zone.
@@ -826,16 +860,18 @@ def compute_zone_exits(
     Args:
         zone_pairs: The spoiler log zone pairs
         discovered_links: Currently discovered links
-        current_zone: The zone the player is currently in
+        current_zone_id: The zone_id the player is currently in
 
     Returns:
         List of exits, each with:
-        - target: zone name if discovered, "???" otherwise
+        - target: zone display name if discovered, "???" otherwise
+        - target_id: zone_id of target (for internal use)
         - description: how to get there (from source_details or target_details)
-        - from_zone: which zone (in the preexisting group) this exit is from
+        - from_zone: display name of which zone (in the preexisting group) this exit is from
+        - from_zone_id: zone_id of from_zone
     """
-    # Get all zones reachable via preexisting paths
-    merged_zones = get_zones_via_preexisting(zone_pairs, current_zone)
+    # Get all zone_ids reachable via preexisting paths
+    merged_zone_ids = get_zones_via_preexisting(zone_pairs, current_zone_id)
 
     exits = []
     seen_link_ids = set()  # Deduplicate by link ID
@@ -844,26 +880,34 @@ def compute_zone_exits(
         if pair["type"] != "random":
             continue
 
-        pair_source = pair["source"]
-        pair_target = pair["target"]
+        pair_source_id = pair["source_id"]
+        pair_target_id = pair["target_id"]
+        pair_source_name = pair["source"]
+        pair_target_name = pair["target"]
         pair_id = pair.get("id")
 
         # Check if this link exits from one of our merged zones
-        from_zone = None
-        to_zone = None
+        from_zone_id = None
+        from_zone_name = None
+        to_zone_id = None
+        to_zone_name = None
         description = None
 
         is_one_way_link = pair.get("is_one_way", False)
 
-        if pair_source in merged_zones:
-            from_zone = pair_source
-            to_zone = pair_target
+        if pair_source_id in merged_zone_ids:
+            from_zone_id = pair_source_id
+            from_zone_name = pair_source_name
+            to_zone_id = pair_target_id
+            to_zone_name = pair_target_name
             # When exiting from source, use source_details as description
             description = pair.get("source_details") or ""
-        elif pair_target in merged_zones and not is_one_way_link:
+        elif pair_target_id in merged_zone_ids and not is_one_way_link:
             # Bidirectional random links can be exited from target side too
-            from_zone = pair_target
-            to_zone = pair_source
+            from_zone_id = pair_target_id
+            from_zone_name = pair_target_name
+            to_zone_id = pair_source_id
+            to_zone_name = pair_source_name
             # When exiting from target side, use target_details as description
             description = pair.get("target_details") or ""
         else:
@@ -875,34 +919,38 @@ def compute_zone_exits(
                 continue
             seen_link_ids.add(pair_id)
 
-        # NOTE: We intentionally do NOT skip random links where to_zone is in merged_zones.
+        # NOTE: We intentionally do NOT skip random links where to_zone is in merged_zone_ids.
         # Random links represent randomized fog gate destinations and should always be shown.
         # Even if the target zone is reachable via preexisting (e.g., dropping down), the
         # fog gate may have been randomized to go there, and players need to know about it.
         # The "skip internal links" logic was removed to fix parallel link display issues.
 
         # Check if this link has been discovered
-        discovered = is_link_discovered(discovered_links, pair_source, pair_target, zone_pairs)
+        discovered = is_link_discovered(
+            discovered_links, pair_source_id, pair_target_id, zone_pairs
+        )
 
         exits.append(
             {
                 "id": pair_id,  # Include link ID in response
-                "target": to_zone if discovered else "???",
+                "target": to_zone_name if discovered else "???",
+                "target_id": to_zone_id,
                 "description": description,
-                "from_zone": from_zone if from_zone != current_zone else None,
+                "from_zone": from_zone_name if from_zone_id != current_zone_id else None,
+                "from_zone_id": from_zone_id if from_zone_id != current_zone_id else None,
             }
         )
 
     return exits
 
 
-def get_zone_scaling(zones: list[dict] | None, zone_name: str) -> str | None:
+def get_zone_scaling(zones: dict[str, dict] | None, zone_id: str) -> str | None:
     """
-    Get the scaling text for a zone by its display name.
+    Get the scaling text for a zone by its zone_key.
 
     Args:
-        zones: List of zone metadata dicts with 'name' and 'scaling' fields
-        zone_name: The display name of the zone to look up
+        zones: Zone metadata dict keyed by zone_id (zone_key)
+        zone_id: The zone_key of the zone to look up
 
     Returns:
         The scaling text (e.g., "Scaling: tier 1, previously 2") or None if not found.
@@ -910,8 +958,8 @@ def get_zone_scaling(zones: list[dict] | None, zone_name: str) -> str | None:
     if not zones:
         return None
 
-    for zone in zones:
-        if zone.get("name") == zone_name:
-            return zone.get("scaling")
+    zone = zones.get(zone_id)
+    if zone:
+        return zone.get("scaling")
 
     return None

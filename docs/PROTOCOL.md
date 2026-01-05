@@ -169,19 +169,21 @@ Parse a spoiler log and return structured data.
 ```json
 {
   "seed": 12345,
-  "zones": [
-    {
-      "id": "uuid",
+  "zones": {
+    "limgrave": {
+      "id": "limgrave",
       "name": "Limgrave",
       "is_boss": false,
       "scaling": "1-20"
     }
-  ],
+  },
   "zone_links": [
     {
       "id": "uuid",
       "source": "Limgrave",
+      "source_id": "limgrave",
       "target": "Stormveil Castle",
+      "target_id": "stormveil",
       "type": "random",
       "source_details": "at the main gate",
       "target_details": "arriving at entrance",
@@ -191,10 +193,14 @@ Parse a spoiler log and return structured data.
     }
   ]
 }
+
 ```
 
 | Field | Description |
 |-------|-------------|
+| `zones` | Zone metadata keyed by zone_id (zone key) |
+| `zone_links[].source_id` | Source zone key |
+| `zone_links[].target_id` | Target zone key |
 | `required_item` | Name of required item (null if none) |
 | `required_item_from` | Zones where item can be found (null if none) |
 
@@ -215,19 +221,35 @@ Get full game state (public, for viewers).
   "seed": 12345,
   "run_id": "12345_abc123",
   "label": "My Run",
+  "starting_zone_id": "chapel_start",
   "zone_links": [...],
-  "zones": [...],
+  "zones": {
+    "limgrave": {
+      "id": "limgrave",
+      "name": "Limgrave",
+      "is_boss": false,
+      "scaling": "1-20"
+    }
+  },
   "discovered_zone_links": [
     {"zone_link_id": "uuid", "discovered_at": "...", "discovered_by": "mod"}
   ],
-  "node_positions": {"zone_name": {"x": 100, "y": 200}},
-  "tags": {"zone_name": ["tag1", "tag2"]},
+  "node_positions": {"limgrave": {"x": 100, "y": 200}},
+  "tags": {"limgrave": ["tag1", "tag2"]},
   "discovery_count": 15,
   "total_zones": 100,
   "created_at": "...",
   "updated_at": "..."
 }
+
 ```
+
+| Field | Description |
+|-------|-------------|
+| `starting_zone_id` | Zone key of starting zone (e.g., "chapel_start") |
+| `zones` | Zone metadata keyed by zone_id (zone key) |
+| `node_positions` | Node positions keyed by zone_id (zone key) |
+| `tags` | Zone tags keyed by zone_id (zone key) |
 
 #### `GET /api/me/games`
 List current user's games.
@@ -259,11 +281,16 @@ Create a discovery (REST fallback, prefer WebSocket).
 **Request Body**:
 ```json
 {
-  "source": "Zone A",
-  "target": "Zone B",
+  "source_id": "limgrave",
+  "target_id": "stormveil",
   "link_id": "optional-uuid"
 }
 ```
+
+| Field | Description |
+|-------|-------------|
+| `source_id` | Source zone key |
+| `target_id` | Target zone key |
 
 **Side effect**: Broadcasts a `discovery` message to all connected viewers via WebSocket.
 
@@ -275,9 +302,13 @@ Undiscover a zone and cascade.
 **Request Body**:
 ```json
 {
-  "zone": "Zone Name"
+  "zone_id": "limgrave"
 }
 ```
+
+| Field | Description |
+|-------|-------------|
+| `zone_id` | Zone key of zone to undiscover |
 
 **Side effect**: Broadcasts a `discovery` message (with updated state) to all connected viewers via WebSocket.
 
@@ -352,8 +383,7 @@ Sent when player traverses a fog gate.
   "source_map_id": "m10_01_00_00",
   "source_pos": {"x": 100.0, "y": 50.0, "z": 200.0},
   "source_play_region_id": 1048576,
-  "source_zone": "Limgrave",
-  "source_zone_key": "limgrave",
+  "source_zone_id": "limgrave",
   "target_map_id": "m11_05_00_00",
   "target_pos": {"x": 150.0, "y": 60.0, "z": 180.0},
   "target_play_region_id": 2097152,
@@ -367,8 +397,7 @@ Sent when player traverses a fog gate.
 | `source_map_id` | Map ID before warp (format: `mWW_XX_YY_DD`) |
 | `source_pos` | Player position before warp |
 | `source_play_region_id` | Play region ID (Col) before warp |
-| `source_zone` | Source zone display name from cached session state (optional, for disambiguation) |
-| `source_zone_key` | Source zone internal key from cached session state (optional, for disambiguation) |
+| `source_zone_id` | Source zone key from cached session state (optional, for disambiguation) |
 | `target_map_id` | Map ID after warp |
 | `target_pos` | Player position after warp |
 | `target_play_region_id` | Play region ID after warp |
@@ -389,19 +418,23 @@ Acknowledgment with resolved zone info.
     {"source": "Zone A", "target": "Zone B"}
   ],
   "current_zone": "Zone B",
-  "current_zone_key": "zone_b",
+  "current_zone_id": "zone_b",
   "exits": [
     {
       "id": "link-uuid",
       "target": "Zone C",
+      "target_id": "zone_c",
       "description": "after the boss",
-      "from_zone": null
+      "from_zone": null,
+      "from_zone_id": null
     },
     {
       "id": "link-uuid-2",
       "target": "???",
+      "target_id": "zone_d",
       "description": "near the elevator",
-      "from_zone": "Zone B - Interior"
+      "from_zone": "Zone B - Interior",
+      "from_zone_id": "zone_b_interior"
     }
   ],
   "stats": {
@@ -418,8 +451,10 @@ Acknowledgment with resolved zone info.
 | `propagated` | Links discovered (including preexisting propagation) |
 | `resolved` | The specific link that was matched |
 | `current_zone` | Zone display name player arrived in |
-| `current_zone_key` | Zone internal key (e.g., "limgrave_stormhill") for disambiguation (optional) |
+| `current_zone_id` | Zone key (e.g., "limgrave_stormhill") for disambiguation |
 | `exits` | Available fog gates from current zone |
+| `exits[].target_id` | Zone key of the target (even if `target` is `???`) |
+| `exits[].from_zone_id` | Zone key of `from_zone` (null when `from_zone` is null) |
 | `stats` | Discovery progress |
 | `scaling` | Zone scaling tier text (optional, from spoiler log) |
 
@@ -452,13 +487,15 @@ Response with resolved zone and exits.
 {
   "type": "zone_query_ack",
   "zone": "Limgrave - Church of Elleh",
-  "zone_key": "limgrave_church_of_elleh",
+  "zone_id": "limgrave_church_of_elleh",
   "exits": [
     {
       "id": "link-uuid",
       "target": "Zone C",
+      "target_id": "zone_c",
       "description": "after the boss",
-      "from_zone": null
+      "from_zone": null,
+      "from_zone_id": null
     }
   ],
   "scaling": "Scaling: tier 1, previously 2"
@@ -468,8 +505,10 @@ Response with resolved zone and exits.
 | Field | Description |
 |-------|-------------|
 | `zone` | Resolved zone display name (null if not found) |
-| `zone_key` | Zone internal key (e.g., "limgrave_stormhill") for disambiguation (optional) |
+| `zone_id` | Zone key (e.g., "limgrave_stormhill") for disambiguation |
 | `exits` | Available fog gates from current zone |
+| `exits[].target_id` | Zone key of the target (even if `target` is `???`) |
+| `exits[].from_zone_id` | Zone key of `from_zone` (null when `from_zone` is null) |
 | `scaling` | Zone scaling tier text (optional, from spoiler log) |
 
 #### Mod → Server: `debug_log`
@@ -490,10 +529,15 @@ Update tags on a zone.
 ```json
 {
   "type": "tag_update",
-  "zone": "Zone Name",
+  "zone_id": "limgrave",
   "tags": ["cleared", "important"]
 }
 ```
+
+| Field | Description |
+|-------|-------------|
+| `zone_id` | Zone key of the zone to tag |
+| `tags` | List of tag strings (empty list to clear tags) |
 
 #### Mod → Server: `upload_logs`
 
@@ -543,14 +587,15 @@ Broadcast current visual state to viewers.
 {
   "type": "visual_state",
   "nodes": {
-    "Zone A": {
+    "limgrave": {
       "classes": ["highlighted", "frontier-highlight"],
       "x": 100,
-      "y": 200
+      "y": 200,
+      "name": "Limgrave"
     }
   },
   "links": {
-    "Zone A|Zone B": {
+    "limgrave|stormveil": {
       "classes": ["dimmed"]
     }
   },
@@ -561,11 +606,18 @@ Broadcast current visual state to viewers.
   },
   "explorationMode": true,
   "frontierMode": true,
-  "selectedNode": "Zone A",
+  "selectedNode": "limgrave",
   "discoveredCount": 15,
   "totalAreas": 100
 }
 ```
+
+| Field | Description |
+|-------|-------------|
+| `nodes` | Node visual state keyed by zone_id (zone key) |
+| `nodes[].name` | Zone display name (for viewer rendering) |
+| `links` | Link visual state keyed by `"source_id\|target_id"` |
+| `selectedNode` | Currently selected zone_id (zone key) |
 
 #### Host → Server: `positions_update`
 
@@ -575,11 +627,15 @@ Save node positions to database.
 {
   "type": "positions_update",
   "positions": {
-    "Zone A": {"x": 100, "y": 200},
-    "Zone B": {"x": 150, "y": 250}
+    "limgrave": {"x": 100, "y": 200},
+    "stormveil": {"x": 150, "y": 250}
   }
 }
 ```
+
+| Field | Description |
+|-------|-------------|
+| `positions` | Node positions keyed by zone_id (zone key) |
 
 #### Host → Server: `manual_discovery`
 
@@ -588,10 +644,15 @@ Discover a link manually (from web UI).
 ```json
 {
   "type": "manual_discovery",
-  "source": "Zone A",
-  "target": "Zone B"
+  "source_id": "limgrave",
+  "target_id": "stormveil"
 }
 ```
+
+| Field | Description |
+|-------|-------------|
+| `source_id` | Source zone key |
+| `target_id` | Target zone key |
 
 #### Host → Server: `tag_update`
 
@@ -609,20 +670,29 @@ Broadcast when a discovery is made (from mod or manual).
 {
   "type": "discovery",
   "propagated": [
-    {"source": "Zone A", "target": "Zone B"}
+    {
+      "source_name": "Zone A",
+      "source_id": "zone_a",
+      "target_name": "Zone B",
+      "target_id": "zone_b"
+    }
   ],
   "discovered_zone_links": [
     {"zone_link_id": "uuid"}
   ],
-  "stats": {"discovered": 15, "total": 100}
+  "stats": {"discovered": 15, "total": 100},
+  "focus_target": "Zone B",
+  "focus_target_id": "zone_b"
 }
 ```
 
 | Field | Description |
 |-------|-------------|
-| `propagated` | Links discovered in this event (with source/target for display) |
+| `propagated` | Links discovered in this event (with `*_name` display names and `*_id` zone keys) |
 | `discovered_zone_links` | All discovered links (zone_link_id only, client resolves source/target from its linkIndex) |
 | `stats` | Discovery progress |
+| `focus_target` | Zone display name to focus on (optional) |
+| `focus_target_id` | Zone key to focus on (optional) |
 
 #### `mod_connected` / `mod_disconnected`
 

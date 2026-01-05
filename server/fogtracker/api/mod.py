@@ -119,8 +119,10 @@ async def create_game(
         )
 
     # Parse spoiler log
+    resolver = get_resolver()
+
     try:
-        parsed = parse_spoiler_log(data.spoiler_log)
+        parsed = parse_spoiler_log(data.spoiler_log, resolver)
     except SpoilerParseError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -128,7 +130,6 @@ async def create_game(
         ) from None
 
     # Enrich connections with zone_keys from fog.txt
-    resolver = get_resolver()
     enriched_connections = enrich_connections_with_zone_keys(parsed.connections, resolver)
 
     # Convert parsed data to zone_links format
@@ -137,10 +138,8 @@ async def create_game(
             id=conn.id,
             source=conn.source,
             source_id=conn.source_id,
-            source_key=conn.source_key,
             target=conn.target,
             target_id=conn.target_id,
-            target_key=conn.target_key,
             type=conn.conn_type,
             source_details=conn.source_details or None,
             target_details=conn.target_details or None,
@@ -152,15 +151,15 @@ async def create_game(
     ]
 
     # Convert zones
-    zones = [
-        Zone(
+    zones = {
+        zone.id: Zone(
             id=zone.id,
             name=zone.name,
             is_boss=zone.is_boss,
             scaling=zone.scaling,
         ).model_dump()
-        for zone in parsed.zones
-    ]
+        for zone in parsed.zones.values()
+    }
 
     # Create new game
     game = Game(
@@ -170,6 +169,7 @@ async def create_game(
         zone_links=zone_links,
         zones=zones,
         entity_mapping=data.entity_mapping,
+        starting_zone_id=parsed.starting_zone_id,
         discovered_zone_links=[],
         node_positions={},
         tags={},

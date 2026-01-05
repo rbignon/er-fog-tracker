@@ -53,8 +53,11 @@ class Game(Base):
     seed: Mapped[int] = mapped_column(BigInteger, nullable=False)
     label: Mapped[str | None] = mapped_column(String(200))
     zone_links: Mapped[list] = mapped_column(JSONB, nullable=False)
-    zones: Mapped[list | None] = mapped_column(JSONB)  # Zone metadata (id, name, isBoss, scaling)
+    zones: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )  # Zone metadata keyed by zone_id
     entity_mapping: Mapped[dict | None] = mapped_column(JSONB)  # EMEVD entity -> zone mapping
+    starting_zone_id: Mapped[str | None] = mapped_column(String(100))  # Starting zone_key
 
     # JSONB state columns
     discovered_zone_links: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)

@@ -67,6 +67,8 @@ class ZoneResolver:
     """Resolves map_id + position to zone names."""
 
     def __init__(self, data_dir: Path | None = None):
+        if data_dir is None:
+            data_dir = Path(__file__).resolve().parents[1] / "data"
         self.data_dir = data_dir
         # map_id -> MapRules
         self.map_rules: dict[str, MapRules] = {}
@@ -95,7 +97,7 @@ class ZoneResolver:
         # source_zone -> {target_zones}
         self.preexisting_links: dict[str, set[str]] = {}
 
-        if data_dir:
+        if self.data_dir:
             self._load_data()
 
     def _load_data(self):
@@ -773,13 +775,28 @@ class ZoneResolver:
         """
         Look up zone key by display name.
 
+        Tries exact match first, then suffix match for hierarchical names.
+        E.g., "Frenzied Flame Proscription" matches
+        "Subterranean Shunning-Grounds - Frenzied Flame Proscription".
+
         Args:
             display_name: The display name (e.g., "Leyndell - Erdtree Sanctuary")
 
         Returns:
             Internal zone key, or None if not found.
         """
-        return self.display_name_to_zone.get(display_name)
+        # Try exact match first
+        zone_key = self.display_name_to_zone.get(display_name)
+        if zone_key:
+            return zone_key
+
+        # Try suffix match for hierarchical names (e.g., spoiler logs use short names)
+        suffix = f" - {display_name}"
+        for full_name, zid in self.display_name_to_zone.items():
+            if full_name.endswith(suffix):
+                return zid
+
+        return None
 
     def has_preexisting_link(self, source_key: str, target_key: str) -> bool:
         """

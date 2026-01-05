@@ -67,6 +67,16 @@ def zone_pairs_large() -> list[dict]:
     return load_zone_pairs("1567343926.json")
 
 
+# Starting zone ID used in tests (mirrors Game.starting_zone_id)
+TEST_STARTING_ZONE_ID = "chapel_start"
+
+
+@pytest.fixture
+def starting_zone_id() -> str:
+    """The starting zone ID for tests."""
+    return TEST_STARTING_ZONE_ID
+
+
 @pytest.fixture
 def simple_zone_pairs() -> list[dict]:
     """Minimal hand-crafted zone pairs for predictable tests."""
@@ -74,7 +84,9 @@ def simple_zone_pairs() -> list[dict]:
         {
             "id": "link-1",
             "source": "Chapel of Anticipation",
+            "source_id": "chapel_start",
             "target": "Limgrave",
+            "target_id": "limgrave",
             "type": "random",
             "source_details": "before Grafted Scion's arena",
             "target_details": "at the start",
@@ -83,7 +95,9 @@ def simple_zone_pairs() -> list[dict]:
         {
             "id": "link-2",
             "source": "Limgrave",
+            "source_id": "limgrave",
             "target": "Stormveil Castle",
+            "target_id": "stormveil_castle",
             "type": "preexisting",
             "source_details": None,
             "target_details": "at the main gate",
@@ -92,7 +106,9 @@ def simple_zone_pairs() -> list[dict]:
         {
             "id": "link-3",
             "source": "Stormveil Castle",
+            "source_id": "stormveil_castle",
             "target": "Limgrave",
+            "target_id": "limgrave",
             "type": "preexisting",
             "source_details": None,
             "target_details": "back to Limgrave",
@@ -101,7 +117,9 @@ def simple_zone_pairs() -> list[dict]:
         {
             "id": "link-4",
             "source": "Limgrave",
+            "source_id": "limgrave",
             "target": "Caelid",
+            "target_id": "caelid",
             "type": "random",
             "source_details": "near the beach",
             "target_details": "arriving from the west",
@@ -110,7 +128,9 @@ def simple_zone_pairs() -> list[dict]:
         {
             "id": "link-5",
             "source": "Caelid",
+            "source_id": "caelid",
             "target": "Dragonbarrow",
+            "target_id": "dragonbarrow",
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
@@ -119,7 +139,9 @@ def simple_zone_pairs() -> list[dict]:
         {
             "id": "link-6",
             "source": "Dragonbarrow",
+            "source_id": "dragonbarrow",
             "target": "Caelid",
+            "target_id": "caelid",
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
@@ -128,7 +150,9 @@ def simple_zone_pairs() -> list[dict]:
         {
             "id": "link-7",
             "source": "Isolated Zone",
+            "source_id": "isolated_zone",
             "target": "Another Isolated",
+            "target_id": "another_isolated",
             "type": "random",
             "source_details": None,
             "target_details": None,
@@ -137,7 +161,9 @@ def simple_zone_pairs() -> list[dict]:
         {
             "id": "link-8",
             "source": "Sending Gate Origin",
+            "source_id": "sending_gate_origin",
             "target": "Divine Tower",
+            "target_id": "divine_tower",
             "type": "random",
             "source_details": "using the sending gate",
             "target_details": "warp destination",
@@ -200,7 +226,9 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
         {
             "id": "link-start-a",
             "source": "Chapel of Anticipation",
+            "source_id": "chapel_start",
             "target": "Zone A",
+            "target_id": "zone_a",
             "type": "random",
             "source_details": None,
             "target_details": None,
@@ -209,7 +237,9 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
         {
             "id": "link-a-b",
             "source": "Zone A",
+            "source_id": "zone_a",
             "target": "Zone B",
+            "target_id": "zone_b",
             "type": "random",
             "source_details": None,
             "target_details": None,
@@ -218,7 +248,9 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
         {
             "id": "link-b-c",
             "source": "Zone B",
+            "source_id": "zone_b",
             "target": "Zone C",
+            "target_id": "zone_c",
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
@@ -227,7 +259,9 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
         {
             "id": "link-c-b",
             "source": "Zone C",
+            "source_id": "zone_c",
             "target": "Zone B",
+            "target_id": "zone_b",
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
@@ -237,7 +271,9 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
         {
             "id": "link-c-boss",
             "source": "Zone C",
+            "source_id": "zone_c",
             "target": "Boss Arena",
+            "target_id": "boss_arena",
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
@@ -246,7 +282,9 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
         {
             "id": "link-boss-c",
             "source": "Boss Arena",
+            "source_id": "boss_arena",
             "target": "Zone C",
+            "target_id": "zone_c",
             "type": "preexisting",
             "source_details": None,
             "target_details": None,
@@ -256,7 +294,9 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
         {
             "id": "link-c-dest",
             "source": "Zone C",
+            "source_id": "zone_c",
             "target": "Destination",
+            "target_id": "destination",
             "type": "random",
             "source_details": None,
             "target_details": None,

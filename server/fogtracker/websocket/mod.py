@@ -16,7 +16,6 @@ from fogtracker.config import get_settings
 from fogtracker.database import Game, async_session
 from fogtracker.game_logic import (
     DiscoveryResult,
-    find_all_matching_zone_pairs,
     format_discovery_summary,
     format_ingame_display,
     format_resolution_failure,
@@ -31,7 +30,7 @@ from fogtracker.zone_matching import (
     compute_discovery_stats,
     compute_zone_exits,
     expand_discovered_links,
-    find_all_matching_zone_pairs_by_keys,
+    find_all_matching_zone_pairs_by_ids,
     get_discovered_nodes,
     get_zone_scaling,
 )
@@ -191,6 +190,10 @@ class ModClient(Client):
         """
         merged_result, primary_result = self._merge_discovery_results(all_discovery_results)
         all_propagated = merged_result.all_links()
+        propagated_for_mod = [
+            {"source": link["source_name"], "target": link["target_name"]}
+            for link in all_propagated
+        ]
 
         # Expire and refetch game
         db.expire_all()
@@ -200,11 +203,12 @@ class ModClient(Client):
         # Compute destination zone and exits
         exits = []
         destination_zone = None
+        destination_zone_id = None
         if resolved_links and game:
             # Find the link that corresponds to the primary discovery result
             link = None
             if primary_result and primary_result.main_links:
-                main_target = primary_result.main_links[0].target
+                main_target = primary_result.main_links[0].target_name
                 for rl in resolved_links:
                     if rl["target"] == main_target or rl["source"] == main_target:
                         link = rl
@@ -213,6 +217,7 @@ class ModClient(Client):
                 link = resolved_links[0]
 
             target_display_names = {c[1] for c in target_candidates}
+            target_zone_ids = {c[0] for c in target_candidates}
 
             if link["target"] in target_display_names:
                 destination_zone = link["target"]
@@ -221,11 +226,24 @@ class ModClient(Client):
             else:
                 destination_zone = link["target"]
 
-            exits = compute_zone_exits(
-                game.zone_links or [],
-                game.discovered_zone_links or [],
-                destination_zone,
-            )
+            # Resolve zone_id for compute_zone_exits (expects zone_id, not display name)
+            resolver = get_resolver()
+            destination_zone_id = resolver.lookup_by_display_name(destination_zone)
+
+            # Prefer zone_id from target_candidates if available (more precise)
+            if destination_zone_id not in target_zone_ids and target_zone_ids:
+                # Fallback: use the first matching zone_id from candidates
+                for zid, zname in target_candidates:
+                    if zname == destination_zone:
+                        destination_zone_id = zid
+                        break
+
+            if destination_zone_id:
+                exits = compute_zone_exits(
+                    game.zone_links or [],
+                    game.discovered_zone_links or [],
+                    destination_zone_id,
+                )
 
         # Compute stats
         stats = {"discovered": 0, "total": 0, "percent": 0}
@@ -251,21 +269,18 @@ class ModClient(Client):
             for line in ingame.split("\n"):
                 logger.info(line)
 
-        # Get zone scaling and zone_key
+        # Get zone scaling (destination_zone_id already computed above if resolved_links)
         scaling = None
-        destination_zone_key = None
-        if destination_zone and game:
-            scaling = get_zone_scaling(game.zones, destination_zone)
-            resolver = get_resolver()
-            destination_zone_key = resolver.lookup_by_display_name(destination_zone)
+        if destination_zone_id and game:
+            scaling = get_zone_scaling(game.zones, destination_zone_id)
 
         # Send ack to mod
         ack_msg = {
             "type": "discovery_v2_ack",
-            "propagated": all_propagated,
+            "propagated": propagated_for_mod,
             "resolved": resolved_links,
             "current_zone": destination_zone,
-            "current_zone_key": destination_zone_key,
+            "current_zone_id": destination_zone_id,
             "exits": exits,
             "stats": stats,
             "scaling": scaling,
@@ -306,6 +321,7 @@ class ModClient(Client):
                         "discovered_zone_links": expanded_links,
                         "stats": stats,
                         "focus_target": destination_zone,
+                        "focus_target_id": destination_zone_id,
                     },
                     exclude=self.ws,
                 )
@@ -320,10 +336,14 @@ class ModClient(Client):
 
     async def _handle_tag_update(self, data: dict):
         """Handle tag update from mod."""
-        zone = data.get("zone")
+        zone_id = data.get("zone_id")
         tags = data.get("tags", [])
 
-        logger.info("[MOD] Tag update for zone %s: %s", zone, tags)
+        if not zone_id:
+            logger.warning("[MOD] Tag update missing zone_id")
+            return
+
+        logger.info("[MOD] Tag update for zone %s: %s", zone_id, tags)
 
         async with async_session() as db:
             result = await db.execute(select(Game).where(Game.id == self.game_id))
@@ -331,9 +351,9 @@ class ModClient(Client):
             if game:
                 current_tags = dict(game.tags or {})
                 if tags:
-                    current_tags[zone] = tags
+                    current_tags[zone_id] = tags
                 else:
-                    current_tags.pop(zone, None)
+                    current_tags.pop(zone_id, None)
                 game.tags = current_tags
                 flag_modified(game, "tags")
                 await db.commit()
@@ -363,7 +383,7 @@ class ModClient(Client):
         )
 
         if not map_id:
-            await self.send({"type": "zone_query_ack", "zone": None, "zone_key": None, "exits": []})
+            await self.send({"type": "zone_query_ack", "zone": None, "zone_id": None, "exits": []})
             return
 
         # Get game data first to know which zones are discovered
@@ -373,12 +393,13 @@ class ModClient(Client):
 
             if not game:
                 await self.send(
-                    {"type": "zone_query_ack", "zone": None, "zone_key": None, "exits": []}
+                    {"type": "zone_query_ack", "zone": None, "zone_id": None, "exits": []}
                 )
                 return
 
+            starting_zone_id = game.starting_zone_id or "chapel_start"
             discovered_zones = get_discovered_nodes(
-                game.discovered_zone_links or [], game.zone_links or []
+                game.discovered_zone_links or [], game.zone_links or [], starting_zone_id
             )
 
             zone_internal = None
@@ -392,7 +413,9 @@ class ModClient(Client):
                 grace_zone = resolver.resolve_zone_by_grace_entity_id(grace_entity_id)
                 if grace_zone:
                     # Verify the grace zone is discovered (it should be if player can fast travel)
-                    if grace_zone in discovered_zones:
+                    grace_zone_id = resolver.lookup_by_display_name(grace_zone)
+                    if grace_zone_id and grace_zone_id in discovered_zones:
+                        zone_internal = grace_zone_id
                         zone_display = grace_zone
                         resolution_method = "Grace entity ID"
                     else:
@@ -406,8 +429,8 @@ class ModClient(Client):
                 col = f"h{play_region_id:06x}"
                 zone_internal, zone_display = resolver.resolve_by_col(map_id, col)
                 if zone_display:
-                    # Check if Col-resolved zone is discovered
-                    if zone_display in discovered_zones:
+                    # Check if Col-resolved zone is discovered (zone_internal is the zone_id)
+                    if zone_internal in discovered_zones:
                         resolution_method = "Col/play_region_id"
                     else:
                         logger.debug(
@@ -425,7 +448,8 @@ class ModClient(Client):
                 )
                 all_candidates = [c[1] for c in candidates] if candidates else []
                 if candidates:
-                    discovered_candidates = [c for c in candidates if c[1] in discovered_zones]
+                    # Check zone_id (c[0]) against discovered_zones (set of zone_ids)
+                    discovered_candidates = [c for c in candidates if c[0] in discovered_zones]
                     if len(discovered_candidates) == 1:
                         # Exactly one discovered candidate - safe to return
                         zone_internal, zone_display = discovered_candidates[0]
@@ -452,15 +476,15 @@ class ModClient(Client):
                 for line in failure.split("\n"):
                     logger.warning(line)
                 await self.send(
-                    {"type": "zone_query_ack", "zone": None, "zone_key": None, "exits": []}
+                    {"type": "zone_query_ack", "zone": None, "zone_id": None, "exits": []}
                 )
                 return
 
-            # Get exits for the resolved zone
+            # Get exits for the resolved zone (use zone_id, not display name)
             exits = compute_zone_exits(
                 game.zone_links or [],
                 game.discovered_zone_links or [],
-                zone_display,
+                zone_internal,
             )
 
             # Compute discovery stats
@@ -477,15 +501,15 @@ class ModClient(Client):
         for line in resolution.split("\n"):
             logger.info(line)
 
-        # Get zone scaling and zone_key
-        scaling = get_zone_scaling(game.zones, zone_display)
-        zone_key = resolver.lookup_by_display_name(zone_display) if zone_display else None
+        # Get zone_id and scaling
+        zone_id = resolver.lookup_by_display_name(zone_display) if zone_display else None
+        scaling = get_zone_scaling(game.zones, zone_id) if zone_id else None
 
         await self.send(
             {
                 "type": "zone_query_ack",
                 "zone": zone_display,
-                "zone_key": zone_key,
+                "zone_id": zone_id,
                 "exits": exits,
                 "scaling": scaling,
             }
@@ -559,39 +583,40 @@ class ModClient(Client):
 
                 # Check if any target candidate matches the medal link's target
                 target_display_names = {c[1] for c in target_candidates[:MAX_ZONE_CANDIDATES]}
-                target_keys = {c[0] for c in target_candidates[:MAX_ZONE_CANDIDATES]}
+                target_ids = {c[0] for c in target_candidates[:MAX_ZONE_CANDIDATES]}
 
                 medal_target = medal_link.get("target")
-                medal_target_key = medal_link.get("target_key")
+                medal_target_id = medal_link["target_id"]
 
                 match_found = False
                 resolution_method = None
-                if medal_target_key and medal_target_key in target_keys:
+                if medal_target_id and medal_target_id in target_ids:
                     match_found = True
-                    resolution_method = "zone_keys"
-                    logger.info("[MOD] Medal target matched by key: %s", medal_target)
+                    resolution_method = "zone_ids"
+                    logger.info("[MOD] Medal target matched by zone_id: %s", medal_target)
                 elif medal_target in target_display_names:
                     match_found = True
                     resolution_method = "display_name"
                     logger.info("[MOD] Medal target matched by display name: %s", medal_target)
 
                 if match_found:
-                    source_display = medal_link.get("source")
+                    source_display = medal_link["source"]
+                    source_id = medal_link["source_id"]
                     resolved_links.append({"source": source_display, "target": medal_target})
 
                     discovery_result = await propagate_discovery(
                         db,
                         self.game_id,
-                        source_display,
-                        medal_target,
+                        source_id,
+                        medal_target_id,
                         discovered_by="mod",
                     )
                     all_discovery_results.append(discovery_result)
                 else:
                     logger.warning(
-                        "[MOD] Medal target '%s' (key=%s) not in candidates: %s",
+                        "[MOD] Medal target '%s' (id=%s) not in candidates: %s",
                         medal_target,
-                        medal_target_key,
+                        medal_target_id,
                         [c[1] for c in target_candidates[:5]],
                     )
 
@@ -621,7 +646,7 @@ class ModClient(Client):
         destination_entity_id = data.get("destination_entity_id", 0)
         # Source zone from mod's cached state (optional, for disambiguation)
         source_zone = data.get("source_zone")
-        source_zone_key = data.get("source_zone_key")
+        source_zone_id = data.get("source_zone_id")
 
         # Convert play_region_id to Col format (hXXYYZZ)
         source_col = f"h{source_play_region_id:06x}" if source_play_region_id else None
@@ -667,12 +692,12 @@ class ModClient(Client):
         )
 
         # If source_zone provided by mod, prioritize matching candidate
-        if source_zone or source_zone_key:
+        if source_zone or source_zone_id:
             prioritized = []
             others = []
             for candidate in source_candidates:
                 zone_key, zone_display = candidate
-                if (source_zone_key and zone_key == source_zone_key) or (
+                if (source_zone_id and zone_key == source_zone_id) or (
                     source_zone and zone_display == source_zone
                 ):
                     prioritized.append(candidate)
@@ -681,7 +706,7 @@ class ModClient(Client):
             if prioritized:
                 source_candidates = prioritized + others
                 logger.info(
-                    "[MOD] Prioritized source zone from mod: %s (key=%s)",
+                    "[MOD] Prioritized source zone from mod: %s (id=%s)",
                     prioritized[0][1],
                     prioritized[0][0],
                 )
@@ -715,6 +740,9 @@ class ModClient(Client):
             resolution_method = None
 
             if game and game.zone_links:
+                # Get starting_zone_id for graph traversal functions
+                starting_zone_id = game.starting_zone_id or "chapel_start"
+
                 # If entity_mapping is available, use it to improve zone candidate ordering
                 if destination_entity_id and game.entity_mapping:
                     resolver = get_resolver()
@@ -792,171 +820,103 @@ class ModClient(Client):
                                         [c[1] for c in prioritized_existing[:3]],
                                     )
 
-                # Check if zone_links have zone_keys (V3 enrichment)
-                has_zone_keys = any(
-                    zl.get("source_key") or zl.get("target_key")
-                    for zl in game.zone_links[:5]  # Check first few
+                # Find ALL matches using zone_id-based matching, then pick lowest backprop cost
+                all_matches = find_all_matching_zone_pairs_by_ids(
+                    game.zone_links,
+                    source_candidates[:MAX_ZONE_CANDIDATES],
+                    target_candidates[:MAX_ZONE_CANDIDATES],
                 )
+                if all_matches:
+                    logger.info("[MOD] Found %d candidate match(es)", len(all_matches))
 
-                if has_zone_keys:
-                    # Use key-based matching (more precise)
-                    # Find ALL matches, then pick those with lowest back-propagation cost
-                    all_matches = find_all_matching_zone_pairs_by_keys(
-                        game.zone_links,
-                        source_candidates[:MAX_ZONE_CANDIDATES],
-                        target_candidates[:MAX_ZONE_CANDIDATES],
-                    )
-                    if all_matches:
-                        logger.info("[MOD] Found %d candidate match(es) by keys", len(all_matches))
+                    # Build lookup tables to convert zone_ids back to display names
+                    # find_all_matching_zone_pairs_by_ids returns (source_id, target_id, pair)
+                    source_id_to_name = {
+                        zid: name for zid, name in source_candidates[:MAX_ZONE_CANDIDATES]
+                    }
+                    target_id_to_name = {
+                        zid: name for zid, name in target_candidates[:MAX_ZONE_CANDIDATES]
+                    }
 
-                        # Calculate back-propagation cost for each match
-                        # Cost = number of random links needed to reach source from START
-                        matches_with_cost = []
-                        for source_display, target_display, pair in all_matches:
-                            cost = compute_backprop_cost(
-                                game.zone_links,
-                                game.discovered_zone_links or [],
-                                source_display,
-                            )
-                            matches_with_cost.append((source_display, target_display, pair, cost))
-                            logger.debug(
-                                "[MOD] Match '%s' -> '%s': backprop cost = %d",
-                                source_display,
-                                target_display,
-                                cost,
-                            )
-
-                        # Sort by cost (ascending), -1 (unreachable) goes last
-                        matches_with_cost.sort(key=lambda x: (x[3] == -1, x[3]))
-
-                        # Get minimum cost (excluding unreachable)
-                        reachable = [m for m in matches_with_cost if m[3] >= 0]
-                        if reachable:
-                            min_cost = reachable[0][3]
-                            # Select all matches with minimum cost
-                            best_matches = [m for m in reachable if m[3] == min_cost]
-
-                            if len(best_matches) > 1:
-                                logger.info(
-                                    "[MOD] %d matches tied with cost %d, discovering all",
-                                    len(best_matches),
-                                    min_cost,
-                                )
-
-                            resolution_method = "zone_keys"
-                            for source_display, target_display, _, cost in best_matches:
-                                logger.debug(
-                                    "[MOD] Discovered (by keys, cost=%d): '%s' -> '%s'",
-                                    cost,
-                                    source_display,
-                                    target_display,
-                                )
-                                resolved_links.append(
-                                    {"source": source_display, "target": target_display}
-                                )
-                                discovery_result = await propagate_discovery(
-                                    db,
-                                    self.game_id,
-                                    source_display,
-                                    target_display,
-                                    discovered_by="mod",
-                                )
-                                all_discovery_results.append(discovery_result)
-                        else:
-                            logger.warning(
-                                "[MOD] All %d matches are unreachable from START",
-                                len(all_matches),
-                            )
-                    else:
+                    # Calculate back-propagation cost for each match
+                    # Cost = number of random links needed to reach source from START
+                    matches_with_cost = []
+                    for source_id, target_id, pair in all_matches:
+                        # Look up display names from candidates
+                        source_display = source_id_to_name.get(
+                            source_id, pair.get("source", source_id)
+                        )
+                        target_display = target_id_to_name.get(
+                            target_id, pair.get("target", target_id)
+                        )
+                        cost = compute_backprop_cost(
+                            game.zone_links,
+                            game.discovered_zone_links or [],
+                            pair["source_id"],
+                            starting_zone_id,
+                        )
+                        matches_with_cost.append((source_display, target_display, pair, cost))
                         logger.debug(
-                            "[MOD] No key-based match, falling back to display name matching",
-                        )
-                        # Fall through to display name matching below
-                        has_zone_keys = False
-
-                if not has_zone_keys:
-                    # Fallback: use display name matching (legacy behavior)
-                    # Also apply backprop cost tie-breaking
-                    all_matches = find_all_matching_zone_pairs(
-                        game.zone_links,
-                        source_candidates[:MAX_ZONE_CANDIDATES],
-                        target_candidates[:MAX_ZONE_CANDIDATES],
-                    )
-
-                    if all_matches:
-                        logger.info(
-                            "[MOD] Found %d candidate match(es) by display name", len(all_matches)
+                            "[MOD] Match '%s' -> '%s': backprop cost = %d",
+                            source_display,
+                            target_display,
+                            cost,
                         )
 
-                        # Calculate back-propagation cost for each match
-                        matches_with_cost = []
-                        for source_display, target_display, pair in all_matches:
-                            cost = compute_backprop_cost(
-                                game.zone_links,
-                                game.discovered_zone_links or [],
-                                source_display,
+                    # Sort by cost (ascending), -1 (unreachable) goes last
+                    matches_with_cost.sort(key=lambda x: (x[3] == -1, x[3]))
+
+                    # Get minimum cost (excluding unreachable)
+                    reachable = [m for m in matches_with_cost if m[3] >= 0]
+                    if reachable:
+                        min_cost = reachable[0][3]
+                        # Select all matches with minimum cost
+                        best_matches = [m for m in reachable if m[3] == min_cost]
+
+                        if len(best_matches) > 1:
+                            logger.info(
+                                "[MOD] %d matches tied with cost %d, discovering all",
+                                len(best_matches),
+                                min_cost,
                             )
-                            matches_with_cost.append((source_display, target_display, pair, cost))
+
+                        resolution_method = "zone_keys"
+                        for source_display, target_display, pair, cost in best_matches:
                             logger.debug(
-                                "[MOD] Match '%s' -> '%s': backprop cost = %d",
+                                "[MOD] Discovered (cost=%d): '%s' -> '%s'",
+                                cost,
                                 source_display,
                                 target_display,
-                                cost,
                             )
-
-                        # Sort by cost (ascending), -1 (unreachable) goes last
-                        matches_with_cost.sort(key=lambda x: (x[3] == -1, x[3]))
-
-                        # Get minimum cost (excluding unreachable)
-                        reachable = [m for m in matches_with_cost if m[3] >= 0]
-                        if reachable:
-                            min_cost = reachable[0][3]
-                            best_matches = [m for m in reachable if m[3] == min_cost]
-
-                            if len(best_matches) > 1:
-                                logger.info(
-                                    "[MOD] %d matches tied with cost %d, discovering all",
-                                    len(best_matches),
-                                    min_cost,
-                                )
-
-                            resolution_method = "display_name"
-                            for source_display, target_display, _, cost in best_matches:
-                                logger.debug(
-                                    "[MOD] Discovered (by display name, cost=%d): '%s' -> '%s'",
-                                    cost,
-                                    source_display,
-                                    target_display,
-                                )
-                                resolved_links.append(
-                                    {"source": source_display, "target": target_display}
-                                )
-
-                                discovery_result = await propagate_discovery(
-                                    db,
-                                    self.game_id,
-                                    source_display,
-                                    target_display,
-                                    discovered_by="mod",
-                                )
-                                all_discovery_results.append(discovery_result)
-                        else:
-                            logger.warning(
-                                "[MOD] All %d matches are unreachable from START",
-                                len(all_matches),
+                            resolved_links.append(
+                                {"source": source_display, "target": target_display}
                             )
+                            # Use zone_ids from the pair for propagate_discovery
+                            discovery_result = await propagate_discovery(
+                                db,
+                                self.game_id,
+                                pair["source_id"],
+                                pair["target_id"],
+                                discovered_by="mod",
+                            )
+                            all_discovery_results.append(discovery_result)
                     else:
-                        # Log failure with visual format
-                        failure = format_resolution_failure(
-                            context="discovery_v2",
-                            map_id=f"{source_map_id} -> {target_map_id}",
-                            reason=f"No spoiler log match ({len(source_candidates[:MAX_ZONE_CANDIDATES])} x {len(target_candidates[:MAX_ZONE_CANDIDATES])} combinations)",
-                            candidates=[c[1] for c in source_candidates[:3]]
-                            + ["->"]
-                            + [c[1] for c in target_candidates[:3]],
+                        logger.warning(
+                            "[MOD] All %d matches are unreachable from START",
+                            len(all_matches),
                         )
-                        for line in failure.split("\n"):
-                            logger.warning(line)
+                else:
+                    # Log failure with visual format
+                    failure = format_resolution_failure(
+                        context="discovery_v2",
+                        map_id=f"{source_map_id} -> {target_map_id}",
+                        reason=f"No spoiler log match ({len(source_candidates[:MAX_ZONE_CANDIDATES])} x {len(target_candidates[:MAX_ZONE_CANDIDATES])} combinations)",
+                        candidates=[c[1] for c in source_candidates[:3]]
+                        + ["->"]
+                        + [c[1] for c in target_candidates[:3]],
+                    )
+                    for line in failure.split("\n"):
+                        logger.warning(line)
             else:
                 logger.warning("[MOD] Game has no zone_links, cannot resolve")
 

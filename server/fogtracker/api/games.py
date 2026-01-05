@@ -85,7 +85,7 @@ async def create_game(
         seed=data.seed,
         label=data.label,
         zone_links=[zl.model_dump() for zl in data.zone_links],
-        zones=[z.model_dump() for z in data.zones] if data.zones else None,
+        zones={zone_id: z.model_dump() for zone_id, z in data.zones.items()},
         discovered_zone_links=[],
         node_positions={},
         tags={},
@@ -130,7 +130,7 @@ async def get_game(
     }
 
     # Parse zones metadata
-    zones = [Zone(**z) for z in game.zones] if game.zones else None
+    zones = {zone_id: Zone(**zone) for zone_id, zone in (game.zones or {}).items()}
 
     # Build discovered_zone_links response (just zone_link_id + metadata)
     response_links = []
@@ -149,6 +149,7 @@ async def get_game(
         id=game.id,
         seed=game.seed,
         label=game.label,
+        starting_zone_id=game.starting_zone_id,
         zone_links=[ZoneLink(**zl) for zl in zone_links],
         zones=zones,
         discovered_zone_links=response_links,
@@ -297,7 +298,7 @@ async def create_discovery(
 
     # Propagate discovery
     discovery_result = await propagate_discovery(
-        db, game_id, data.source, data.target, discovered_by="web", link_id=data.link_id
+        db, game_id, data.source_id, data.target_id, discovered_by="web", link_id=data.link_id
     )
     propagated = discovery_result.all_links()
 
@@ -349,7 +350,7 @@ async def create_discovery(
         )
 
     return DiscoveryResponse(
-        propagated=[PropagatedLink(source=p["source"], target=p["target"]) for p in propagated],
+        propagated=[PropagatedLink(**p) for p in propagated],
         discovered_zone_links=response_links,
         discovery_count=stats["discovered"],
         total_zones=stats["total"],
@@ -386,7 +387,10 @@ async def create_undiscovery(
     # Undiscover the zone and cascade
     discovered_zone_links = game.discovered_zone_links or []
     zone_links = game.zone_links or []
-    new_links, removed_zones = undiscover_zone(discovered_zone_links, data.zone, zone_links)
+    starting_zone_id = game.starting_zone_id or "chapel_start"
+    new_links, removed_zones = undiscover_zone(
+        discovered_zone_links, data.zone_id, zone_links, starting_zone_id
+    )
 
     # Update game
     game.discovered_zone_links = new_links
@@ -411,7 +415,7 @@ async def create_undiscovery(
     stats = compute_discovery_stats(zone_links, new_links)
     if removed_zones:
         summary = format_undiscovery_summary(
-            data.zone,
+            data.zone_id,
             removed_zones,
             total_discovered=stats["discovered"],
             total_links=stats["total"],

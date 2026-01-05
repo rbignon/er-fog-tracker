@@ -60,8 +60,12 @@ class HostClient(Client):
 
     async def _handle_tag_update(self, data: dict):
         """Handle tag update for a zone."""
-        zone = data.get("zone")
+        zone_id = data.get("zone_id")
         tags = data.get("tags", [])
+
+        if not zone_id:
+            logger.warning("[HOST] Tag update missing zone_id")
+            return
 
         async with async_session() as db:
             result = await db.execute(select(Game).where(Game.id == self.game_id))
@@ -69,9 +73,9 @@ class HostClient(Client):
             if game:
                 current_tags = dict(game.tags or {})
                 if tags:
-                    current_tags[zone] = tags
+                    current_tags[zone_id] = tags
                 else:
-                    current_tags.pop(zone, None)
+                    current_tags.pop(zone_id, None)
                 game.tags = current_tags
                 flag_modified(game, "tags")
                 await db.commit()
@@ -80,15 +84,15 @@ class HostClient(Client):
 
     async def _handle_manual_discovery(self, data: dict):
         """Handle manual discovery from host."""
-        source = data.get("source")
-        target = data.get("target")
+        source_id = data.get("source_id")
+        target_id = data.get("target_id")
 
-        if not source or not target:
+        if not source_id or not target_id:
             return
 
         async with async_session() as db:
             discovery_result = await propagate_discovery(
-                db, self.game_id, source, target, discovered_by="manual"
+                db, self.game_id, source_id, target_id, discovered_by="manual"
             )
             await db.commit()
 
@@ -114,6 +118,16 @@ class HostClient(Client):
                     logger.info(line)
 
             propagated = discovery_result.all_links()
+            # Get display name for focus_target (for backward compatibility)
+            focus_target = None
+            for zl in game.zone_links or []:
+                if zl.get("target_id") == target_id:
+                    focus_target = zl.get("target")
+                    break
+                if zl.get("source_id") == target_id:
+                    focus_target = zl.get("source")
+                    break
+
             await manager.broadcast_to_all(
                 self.game_id,
                 {
@@ -121,7 +135,8 @@ class HostClient(Client):
                     "propagated": propagated,
                     "discovered_zone_links": expanded_links,
                     "stats": stats,
-                    "focus_target": target,
+                    "focus_target": focus_target,
+                    "focus_target_id": target_id,
                 },
                 exclude=self.ws,
             )
