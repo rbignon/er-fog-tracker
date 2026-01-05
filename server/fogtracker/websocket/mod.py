@@ -248,7 +248,9 @@ class ModClient(Client):
         # Compute stats
         stats = {"discovered": 0, "total": 0, "percent": 0}
         if game:
-            stats = compute_discovery_stats(game.zone_links or [], game.discovered_zone_links or [])
+            stats = compute_discovery_stats(
+                game.zone_links or [], game.discovered_zone_links or [], game.zones
+            )
 
         # Log discovery summary
         if merged_result.total_count() > 0:
@@ -488,7 +490,9 @@ class ModClient(Client):
             )
 
             # Compute discovery stats
-            stats = compute_discovery_stats(game.zone_links or [], game.discovered_zone_links or [])
+            stats = compute_discovery_stats(
+                game.zone_links or [], game.discovered_zone_links or [], game.zones
+            )
 
         # Log zone resolution summary
         resolution = format_zone_resolution(
@@ -959,7 +963,9 @@ class ModClient(Client):
             logger.info("[MOD] Game access verified: %s (seed=%s)", game.label, game.seed)
 
             # Compute stats and send auth_ok with stats
-            stats = compute_discovery_stats(game.zone_links or [], game.discovered_zone_links or [])
+            stats = compute_discovery_stats(
+                game.zone_links or [], game.discovered_zone_links or [], game.zones
+            )
             await websocket.send_json(
                 {
                     "type": "auth_ok",

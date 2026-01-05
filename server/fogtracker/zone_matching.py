@@ -491,9 +491,19 @@ def compute_total_zones(zone_pairs: list[dict]) -> int:
     return len(zone_ids)
 
 
-def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]) -> dict:
+def compute_discovery_stats(
+    zone_pairs: list[dict],
+    discovered_links: list[dict],
+    zones: dict | None = None,
+) -> dict:
     """
     Compute discovery statistics based on zones (not links).
+
+    Args:
+        zone_pairs: List of zone links
+        discovered_links: List of discovered zone links
+        zones: Optional zones dict (keyed by zone_key). If provided, its count
+               is used for total. Otherwise, total is computed from zone_pairs.
 
     Returns:
         dict with:
@@ -501,12 +511,14 @@ def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]
         - total: total number of zones
         - percent: percentage discovered (0-100)
     """
-    # Collect all unique zone_ids
-    all_zone_ids = set()
+    # Collect all unique zone_ids from zone_pairs (for discovered calculation)
+    zone_ids_in_links = set()
     for pair in zone_pairs:
-        all_zone_ids.add(pair["source_id"])
-        all_zone_ids.add(pair["target_id"])
-    total = len(all_zone_ids)
+        zone_ids_in_links.add(pair["source_id"])
+        zone_ids_in_links.add(pair["target_id"])
+
+    # Total: use zones dict if provided, otherwise count from zone_pairs
+    total = len(zones) if zones else len(zone_ids_in_links)
 
     zp_index = build_zone_pairs_index(zone_pairs)
 
@@ -519,8 +531,8 @@ def compute_discovery_stats(zone_pairs: list[dict], discovered_links: list[dict]
             discovered_zone_ids.add(zp["source_id"])
             discovered_zone_ids.add(zp["target_id"])
 
-    # Only count zones that exist in the zone_pairs
-    discovered_count = len(discovered_zone_ids & all_zone_ids)
+    # Only count zones that exist in zone_pairs
+    discovered_count = len(discovered_zone_ids & zone_ids_in_links)
 
     percent = (discovered_count / total * 100) if total > 0 else 0
 

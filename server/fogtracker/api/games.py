@@ -121,7 +121,7 @@ async def get_game(
     zp_index = build_zone_pairs_index(zone_links)
 
     # Compute discovery stats
-    stats = compute_discovery_stats(zone_links, discovered_zone_links)
+    stats = compute_discovery_stats(zone_links, discovered_zone_links, game.zones)
 
     # Parse node positions
     node_positions = {
@@ -178,7 +178,7 @@ async def get_my_games(
     games = []
     for game in result.scalars().all():
         discovered_zone_links = game.discovered_zone_links or []
-        stats = compute_discovery_stats(game.zone_links, discovered_zone_links)
+        stats = compute_discovery_stats(game.zone_links, discovered_zone_links, game.zones)
 
         games.append(
             GameSummary(
@@ -251,7 +251,7 @@ async def update_game(
     await db.flush()
 
     discovered_zone_links = game.discovered_zone_links or []
-    stats = compute_discovery_stats(game.zone_links, discovered_zone_links)
+    stats = compute_discovery_stats(game.zone_links, discovered_zone_links, game.zones)
 
     return GameSummary(
         id=game.id,
@@ -322,7 +322,7 @@ async def create_discovery(
             )
 
     # Compute discovery stats
-    stats = compute_discovery_stats(zone_links, all_links)
+    stats = compute_discovery_stats(zone_links, all_links, game.zones)
 
     # Log discovery summary
     if discovery_result.total_count() > 0:
@@ -412,7 +412,7 @@ async def create_undiscovery(
             )
 
     # Compute stats and log summary
-    stats = compute_discovery_stats(zone_links, new_links)
+    stats = compute_discovery_stats(zone_links, new_links, game.zones)
     if removed_zones:
         summary = format_undiscovery_summary(
             data.zone_id,

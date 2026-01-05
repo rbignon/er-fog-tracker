@@ -104,7 +104,9 @@ class HostClient(Client):
             expanded_links = expand_discovered_links(
                 game.discovered_zone_links or [], game.zone_links or []
             )
-            stats = compute_discovery_stats(game.zone_links or [], game.discovered_zone_links or [])
+            stats = compute_discovery_stats(
+                game.zone_links or [], game.discovered_zone_links or [], game.zones
+            )
 
             # Log discovery summary
             if discovery_result.total_count() > 0:
