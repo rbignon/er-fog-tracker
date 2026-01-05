@@ -176,6 +176,9 @@ class ModClient(Client):
         error_msg_if_empty: str,
         warp_type: str | None = None,
         resolution_method: str | None = None,
+        source_candidates: list[tuple[str, str]] | None = None,
+        source_map_id: str | None = None,
+        target_map_id: str | None = None,
     ):
         """Finalize discovery: compute stats, log, send ack, and broadcast.
 
@@ -265,11 +268,36 @@ class ModClient(Client):
             for line in summary.split("\n"):
                 logger.info(line)
 
-        # Log in-game display preview
+        # Log in-game display preview or resolution failure
         if destination_zone:
             ingame = format_ingame_display(destination_zone, exits, stats)
             for line in ingame.split("\n"):
                 logger.info(line)
+        elif not resolved_links:
+            # Build map_id string for failure log
+            if source_map_id and target_map_id:
+                map_id_str = f"{source_map_id} -> {target_map_id}"
+            elif target_map_id:
+                map_id_str = f"-> {target_map_id}"
+            else:
+                map_id_str = "unknown"
+
+            # Build candidates list for failure log
+            candidates = []
+            if source_candidates:
+                candidates.extend([c[1] for c in source_candidates[:3]])
+                candidates.append("->")
+            if target_candidates:
+                candidates.extend([c[1] for c in target_candidates[:3]])
+
+            failure = format_resolution_failure(
+                context="discovery_v2",
+                map_id=map_id_str,
+                reason=error_msg_if_empty,
+                candidates=candidates if candidates else None,
+            )
+            for line in failure.split("\n"):
+                logger.warning(line)
 
         # Get zone scaling (destination_zone_id already computed above if resolved_links)
         scaling = None
@@ -505,6 +533,11 @@ class ModClient(Client):
         for line in resolution.split("\n"):
             logger.info(line)
 
+        # Log in-game display preview
+        ingame = format_ingame_display(zone_display, exits, stats)
+        for line in ingame.split("\n"):
+            logger.info(line)
+
         # Get zone_id and scaling
         zone_id = resolver.lookup_by_display_name(zone_display) if zone_display else None
         scaling = get_zone_scaling(game.zones, zone_id) if zone_id else None
@@ -634,6 +667,7 @@ class ModClient(Client):
                 error_msg_if_empty="Medal target not found in candidates",
                 warp_type="Medal",
                 resolution_method=resolution_method,
+                target_map_id=target_map_id,
             )
 
     async def _handle_discovery_v2(self, data: dict):
@@ -909,18 +943,6 @@ class ModClient(Client):
                             "[MOD] All %d matches are unreachable from START",
                             len(all_matches),
                         )
-                else:
-                    # Log failure with visual format
-                    failure = format_resolution_failure(
-                        context="discovery_v2",
-                        map_id=f"{source_map_id} -> {target_map_id}",
-                        reason=f"No spoiler log match ({len(source_candidates[:MAX_ZONE_CANDIDATES])} x {len(target_candidates[:MAX_ZONE_CANDIDATES])} combinations)",
-                        candidates=[c[1] for c in source_candidates[:3]]
-                        + ["->"]
-                        + [c[1] for c in target_candidates[:3]],
-                    )
-                    for line in failure.split("\n"):
-                        logger.warning(line)
             else:
                 logger.warning("[MOD] Game has no zone_links, cannot resolve")
 
@@ -934,6 +956,9 @@ class ModClient(Client):
                 error_msg_if_empty="No matching link found in spoiler log",
                 warp_type=warp_type,
                 resolution_method=resolution_method,
+                source_candidates=source_candidates,
+                source_map_id=source_map_id,
+                target_map_id=target_map_id,
             )
 
     @classmethod
