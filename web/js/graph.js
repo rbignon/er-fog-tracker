@@ -942,7 +942,11 @@ function buildTooltipContent(
             const toDetails = isReversed ? relevantLink.sourceDetails || '' : relevantLink.targetDetails || '';
 
             html += `<div class="conn-item ${relevantLink.type}${relevantLink.requiredItem ? ' has-requirement' : ''}">`;
-            html += `← ${fromNodeId}`;
+            // Get display name from link metadata (more reliable than nodeMap lookup)
+            const fromDisplayName = isReversed
+                ? relevantLink.targetName || fromNodeId
+                : relevantLink.sourceName || fromNodeId;
+            html += `← ${fromDisplayName}`;
             // Show where we depart FROM (not where we arrive - that would be a spoiler)
             if (fromDetails) {
                 html += `<div class="conn-details expanded">From: ${fromDetails}</div>`;
