@@ -605,6 +605,17 @@ export async function connectAsHost(gameId) {
                 handleTagUpdateFromServer(data.zone_id, data.tags);
                 return;
             }
+
+            // Game stats update from mod
+            if (data.type === 'game_stats_update') {
+                State.setGameStats({
+                    great_runes: data.great_runes,
+                    kindling_count: data.kindling_count,
+                    death_count: data.death_count,
+                    play_time_ms: data.play_time_ms,
+                });
+                return;
+            }
         };
 
         gameWs.onerror = () => {

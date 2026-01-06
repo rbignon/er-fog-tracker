@@ -318,6 +318,11 @@ async function initPlayMode(gameId) {
         // Load exploration state from server
         loadExplorationFromServer(game);
 
+        // Load game stats if available
+        if (game.game_stats) {
+            State.setGameStats(game.game_stats);
+        }
+
         // Initialize WebSocket connection as host
         await Sync.connectAsHost(gameId);
 
@@ -365,6 +370,11 @@ async function initViewerMode(gameId) {
 
         // Load exploration state from server
         loadExplorationFromServer(game);
+
+        // Load game stats if available
+        if (game.game_stats) {
+            State.setGameStats(game.game_stats);
+        }
 
         // Connect as viewer
         await Sync.connectAsViewer(gameId);

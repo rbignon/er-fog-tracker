@@ -217,6 +217,7 @@ body::before {
     top: 0;
     left: 0;
     right: 0;
+    height: 95px;
     padding: 16px 24px;
     background: linear-gradient(to bottom, rgba(10, 10, 12, 0.95), rgba(10, 10, 12, 0.7));
     z-index: 100;
@@ -489,6 +490,63 @@ body::before {
     color: #93c5fd;
 }
 
+/* Game Stats - under header-right buttons */
+.game-stats {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.game-stats.hidden {
+    display: none;
+}
+
+.game-stats-runes {
+    display: flex;
+    gap: 2px;
+}
+
+.rune-icon {
+    width: 24px;
+    height: 24px;
+    transition: filter 0.3s, transform 0.2s;
+}
+
+.rune-icon.possessed {
+    filter: drop-shadow(0 0 4px rgba(255, 200, 100, 0.6));
+}
+
+.rune-icon:hover {
+    transform: scale(1.15);
+}
+
+.game-stats-counters {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    color: #9a9080;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.stat-time {
+    font-family: monospace;
+    color: #7a7060;
+}
+
 /* Stream modal */
 #stream-modal {
     display: none;
@@ -738,8 +796,7 @@ body.overlay-mode .discovery-progress-bar {
 }
 
 body.overlay-mode #legend,
-body.overlay-mode #stats,
-body.overlay-mode #help {
+body.overlay-mode #stats {
     display: none !important;
 }
 
@@ -2045,27 +2102,24 @@ p#last-discovery {
     color: #e8d5a3;
 }
 
-/* Help text */
-#help {
-    position: fixed;
-    top: 120px;
-    right: 20px;
-    font-size: 0.8rem;
-    color: #5a5040;
-    text-align: right;
-    line-height: 1.6;
+@media (max-width: 1300px) {
+    h1 {
+        font-size: 1.0rem !important;
+    }
 }
 
 /* Mobile responsive styles */
-@media (max-width: 768px) {
+@media (max-width: 1000px) {
     /* Hide legend, stats, help hints, path option and load button on mobile */
     #legend,
     #stats,
-    #help,
-    .header-right .control-group,
+    .header-right,
+    .header-center,
     #new-file-btn,
     #reset-exploration-btn,
     #stream-btn,
+    #game-stats,
+    #discovery-progress-bar,
     #mod-status {
         display: none !important;
     }
@@ -2087,18 +2141,8 @@ p#last-discovery {
         gap: 10px;
     }
 
-    .header-left,
-    .header-center,
-    .header-right {
+    .header-left {
         justify-self: stretch;
-    }
-
-    .header-center {
-        padding-top: 0;
-    }
-
-    .header-right {
-        justify-content: center;
     }
 
     /* Smaller title to fit on one line */

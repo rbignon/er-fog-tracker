@@ -352,6 +352,30 @@
                         <span class="connection-status-text">Host</span>
                     </div>
                 </div>
+                <div id="game-stats" class="game-stats hidden">
+                    <div class="game-stats-runes">
+                        <img src="/assets/icons/runes/godrick_gray.png" data-rune="Godrick" class="rune-icon" alt="Godrick" title="Godrick">
+                        <img src="/assets/icons/runes/unborn_gray.png" data-rune="Unborn" class="rune-icon" alt="Unborn" title="Rennala (Unborn)">
+                        <img src="/assets/icons/runes/rykard_gray.png" data-rune="Rykard" class="rune-icon" alt="Rykard" title="Rykard">
+                        <img src="/assets/icons/runes/radahn_gray.png" data-rune="Radahn" class="rune-icon" alt="Radahn" title="Radahn">
+                        <img src="/assets/icons/runes/morgott_gray.png" data-rune="Morgott" class="rune-icon" alt="Morgott" title="Morgott">
+                        <img src="/assets/icons/runes/mohg_gray.png" data-rune="Mohg" class="rune-icon" alt="Mohg" title="Mohg">
+                        <img src="/assets/icons/runes/malenia_gray.png" data-rune="Malenia" class="rune-icon" alt="Malenia" title="Malenia">
+                    </div>
+                    <div class="game-stats-counters">
+                        <span class="stat-item" title="Messmer's Kindling">
+                            <img src="/assets/icons/kindling.png" class="stat-icon" alt="Kindling">
+                            <span id="kindling-count">0</span>
+                        </span>
+                        <span class="stat-item" title="Deaths">
+                            <img src="/assets/icons/death.png" class="stat-icon" alt="Deaths">
+                            <span id="death-count">0</span>
+                        </span>
+                        <span class="stat-item stat-time" title="Play time">
+                            <span id="play-time">0:00:00</span>
+                        </span>
+                    </div>
+                </div>
             </div>
 
             <div id="discovery-progress-bar" class="discovery-progress-bar hidden">
@@ -443,14 +467,6 @@
                     <p>Fog Gates: <span id="random-count">0</span></p>
                     <p>Pre-existing: <span id="preexisting-count">0</span></p>
                 </div>
-            </div>
-
-            <div id="help">
-                Scroll to zoom • Drag to pan<br />
-                Click node for details panel<br />
-                Hover connections for travel info<br />
-                <strong>D</strong> discover • <strong>U</strong> undiscover • <strong>F</strong> frontier •
-                <strong>P</strong> path • <strong>Esc</strong> close
             </div>
 
             <!-- Viewer mode discovery counter (OBS overlay) -->

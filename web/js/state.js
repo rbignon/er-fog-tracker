@@ -41,6 +41,14 @@ const state = {
 
     // Pending undiscover (to select placeholder after re-render)
     pendingUndiscoveredNodeId: null,
+
+    // Game stats (runes, kindling, deaths, play time)
+    gameStats: {
+        great_runes: [],
+        kindling_count: 0,
+        death_count: 0,
+        play_time_ms: 0,
+    },
 };
 
 // Event bus for inter-module communication
@@ -145,6 +153,10 @@ export function isViewerMode() {
 
 export function isOverlayMode() {
     return state.isOverlayMode;
+}
+
+export function getGameStats() {
+    return state.gameStats;
 }
 
 // ============================================================
@@ -285,6 +297,11 @@ export function setIsViewer(isViewer) {
 
 export function setIsOverlayMode(isOverlay) {
     state.isOverlayMode = isOverlay;
+}
+
+export function setGameStats(stats) {
+    state.gameStats = { ...state.gameStats, ...stats };
+    emit('gameStatsChanged', state.gameStats);
 }
 
 export function setNodePositions(positions) {

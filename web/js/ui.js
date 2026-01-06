@@ -660,6 +660,62 @@ export function initUI() {
 }
 
 // ============================================================
+// GAME STATS UI
+// ============================================================
+
+const RUNE_ORDER = ['Godrick', 'Unborn', 'Rykard', 'Radahn', 'Morgott', 'Mohg', 'Malenia'];
+
+/**
+ * Update the game stats display in the header.
+ * @param {Object} stats - Game stats object
+ * @param {string[]} stats.great_runes - List of possessed rune names
+ * @param {number} stats.kindling_count - Number of kindling
+ * @param {number} stats.death_count - Number of deaths
+ * @param {number} stats.play_time_ms - Play time in milliseconds
+ */
+export function updateGameStatsUI(stats) {
+    const container = document.getElementById('game-stats');
+    if (!container) return;
+
+    // Show the container
+    container.classList.remove('hidden');
+
+    // Update rune icons
+    RUNE_ORDER.forEach(rune => {
+        const img = container.querySelector(`[data-rune="${rune}"]`);
+        if (img) {
+            const possessed = stats.great_runes && stats.great_runes.includes(rune);
+            const variant = possessed ? '' : '_gray';
+            img.src = `/assets/icons/runes/${rune.toLowerCase()}${variant}.png`;
+            img.classList.toggle('possessed', possessed);
+        }
+    });
+
+    // Update counters
+    const kindlingEl = document.getElementById('kindling-count');
+    const deathEl = document.getElementById('death-count');
+    const playTimeEl = document.getElementById('play-time');
+
+    if (kindlingEl) kindlingEl.textContent = stats.kindling_count || 0;
+    if (deathEl) deathEl.textContent = stats.death_count || 0;
+    if (playTimeEl) playTimeEl.textContent = formatPlayTime(stats.play_time_ms || 0);
+}
+
+/**
+ * Format milliseconds as H:MM:SS
+ */
+function formatPlayTime(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+// Subscribe to game stats changes
+State.subscribe('gameStatsChanged', updateGameStatsUI);
+
+// ============================================================
 // EXPORTS
 // ============================================================
 
