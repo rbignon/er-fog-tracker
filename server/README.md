@@ -143,25 +143,32 @@ Once running, visit:
 ```
 server/
 ├── fogtracker/
-│   ├── __init__.py
-│   ├── main.py            # FastAPI app entry point
-│   ├── config.py          # Settings (pydantic-settings)
-│   ├── database.py        # SQLAlchemy models
-│   ├── models.py          # Pydantic schemas
-│   ├── auth.py            # Twitch OAuth
-│   ├── game_logic.py      # Discovery propagation
-│   ├── websocket.py       # WebSocket handlers
-│   ├── zone_matching.py   # Match mod coordinates to zone names
-│   ├── zone_resolver.py   # Resolve zones to graph node IDs
-│   └── api/
-│       ├── __init__.py
-│       ├── auth.py        # /auth/* routes
-│       ├── users.py       # /api/users/* routes
-│       └── games.py       # /api/games/* routes
-├── alembic/               # Database migrations
-├── data/                  # Static data files (zone coordinates)
+│   ├── main.py              # FastAPI app entry point
+│   ├── config.py            # Settings (pydantic-settings)
+│   ├── database.py          # SQLAlchemy async engine & models
+│   ├── models.py            # Pydantic schemas
+│   ├── auth.py              # Twitch OAuth
+│   ├── game_logic.py        # Discovery propagation
+│   ├── spoiler_parser.py    # Fog Rando spoiler log parsing
+│   ├── zone_matching.py     # Graph building & zone matching
+│   ├── zone_resolver.py     # Position/entity to zone resolution
+│   ├── logging_config.py    # Logging configuration
+│   ├── api/
+│   │   ├── auth.py          # /auth/* routes
+│   │   ├── users.py         # /api/users/* routes
+│   │   ├── games.py         # /api/games/* routes
+│   │   ├── spoiler.py       # /api/spoiler/* routes
+│   │   └── mod.py           # /api/mod/* routes
+│   └── websocket/
+│       ├── manager.py       # Connection manager
+│       ├── mod.py           # Mod WebSocket handler
+│       ├── host.py          # Host WebSocket handler
+│       └── viewer.py        # Viewer WebSocket handler
+├── tests/                   # Unit and integration tests
+├── alembic/                 # Database migrations
+├── data/                    # Static data files (zone coordinates)
 ├── pyproject.toml
 ├── .env.example
-├── fog-tracker.service       # Systemd unit
-└── fog-tracker.nginx.conf    # Nginx config
+├── fog-tracker.service      # Systemd unit
+└── fog-tracker.nginx.conf   # Nginx config
 ```
