@@ -85,7 +85,7 @@ KNOWN_ACTIONS = [
     "acquiring enough Great Runes",
 ]
 
-# Patterns to skip (metadata lines)
+# Patterns to skip (metadata lines and randomizer log messages)
 SKIP_PATTERNS = [
     re.compile(r"^Options and seed:"),
     re.compile(r"^Key item hash:"),
@@ -110,7 +110,9 @@ SKIP_PATTERNS = [
     re.compile(r"^\$ "),
     re.compile(r"^\d+ entrances"),
     re.compile(r"^Done$"),
-    re.compile(r"^C:\\"),
+    re.compile(r"^Done "),  # "Done with core pass", etc.
+    re.compile(r"^[A-Z]:\\"),  # Windows paths (C:\, D:\, I:\, etc.)
+    re.compile(r"^Clique fixup"),  # Randomizer log message
 ]
 
 # Patterns that indicate details in connection descriptions

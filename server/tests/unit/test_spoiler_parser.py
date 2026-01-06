@@ -48,6 +48,23 @@ class TestShouldSkipLine:
     def test_connection_line(self):
         assert not _should_skip_line("  Random: Chapel --> Limgrave")
 
+    def test_windows_paths(self):
+        """Windows paths from randomizer output should be skipped."""
+        assert _should_skip_line("C:\\Program Files\\EldenRing\\randomizer")
+        assert _should_skip_line("I:\\Elden Ring Random\\randomizer")
+        assert _should_skip_line("D:\\Games\\mod")
+
+    def test_randomizer_log_messages(self):
+        """Randomizer log messages should be skipped."""
+        assert _should_skip_line("Done with core pass")
+        assert _should_skip_line("Clique fixup done in 1")
+        assert _should_skip_line("Done")
+
+    def test_done_zone_name_not_skipped(self):
+        """A hypothetical zone starting with 'Done' should not be skipped."""
+        # "Done" alone is skipped, but "DoneTown" or similar should not be
+        assert not _should_skip_line("DoneTown")
+
 
 class TestExtractAreaAndDetails:
     """Tests for _extract_area_and_details function."""
