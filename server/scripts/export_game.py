@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Export game data (zone_links, zones, entity_mapping, discovered_zone_links) to JSON files.
+Export game data to JSON files.
 
 Usage:
     cd server
     python scripts/export_game.py <game_uuid> [--output-dir <path>]
 
 Outputs:
+    <output_dir>/game_info.json           (seed, label, starting_zone_id, tags, node_positions)
     <output_dir>/zone_links.json
     <output_dir>/zones.json
     <output_dir>/entity_mapping.json
@@ -70,6 +71,19 @@ async def export_game(game_id: str, output_dir: Path | None = None) -> Path:
 
         output_dir.mkdir(parents=True, exist_ok=True)
         print(f"Output directory: {output_dir}")
+
+        # Export game_info (metadata for import)
+        game_info = {
+            "seed": game.seed,
+            "label": game.label,
+            "starting_zone_id": game.starting_zone_id,
+            "tags": game.tags or {},
+            "node_positions": game.node_positions or {},
+        }
+        game_info_file = output_dir / "game_info.json"
+        with open(game_info_file, "w") as f:
+            json.dump(game_info, f, indent=2)
+        print(f"Exported: {game_info_file}")
 
         # Export zone_links
         zone_links_file = output_dir / "zone_links.json"

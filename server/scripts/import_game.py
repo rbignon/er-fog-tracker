@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Import game data (zone_links, zones, entity_mapping, discovered_zone_links) from JSON files.
+Import game data from JSON files.
 
 Usage:
     cd server
@@ -9,15 +9,16 @@ Usage:
 
 Modes:
     --user-id: Create a new game for the specified user
-    --game-id: Update an existing game (replaces zone_links, zones, entity_mapping, discovered_zone_links)
+    --game-id: Update an existing game
 
 Expected input files:
+    <input_dir>/game_info.json       (optional: seed, label, starting_zone_id, tags, node_positions)
     <input_dir>/zone_links.json      (required)
     <input_dir>/zones.json           (optional)
     <input_dir>/entity_mapping.json  (optional)
     <input_dir>/discovered_zone_links.json (optional, defaults to [])
 
-Note: The seed is extracted from zone_links.json metadata or defaults to 0.
+CLI options --seed and --label override values from game_info.json.
 """
 
 import argparse
@@ -77,6 +78,9 @@ async def import_game_new(
 
     Returns the new game UUID.
     """
+    # Load game_info (metadata) if present
+    game_info = load_json_file(input_dir / "game_info.json", required=False) or {}
+
     # Load required files
     zone_links = load_json_file(input_dir / "zone_links.json", required=True)
 
@@ -85,13 +89,19 @@ async def import_game_new(
     entity_mapping = load_json_file(input_dir / "entity_mapping.json", required=False)
     discovered_zone_links = load_json_file(input_dir / "discovered_zone_links.json", required=False)
 
-    # Determine seed
+    # Determine seed (CLI > game_info > heuristics)
+    if seed is None:
+        seed = game_info.get("seed")
     if seed is None:
         seed = extract_seed_from_zone_links(zone_links)
         if seed == 0:
             # Try to get seed from directory name (analysis/seeds/<seed>/ pattern)
             with contextlib.suppress(ValueError):
                 seed = int(input_dir.name)
+
+    # Determine label (CLI > game_info)
+    if label is None:
+        label = game_info.get("label")
 
     print(f"Using seed: {seed}")
 
@@ -111,12 +121,13 @@ async def import_game_new(
             user_id=user_id,
             seed=seed,
             label=label,
+            starting_zone_id=game_info.get("starting_zone_id"),
             zone_links=zone_links,
             zones=zones,
             entity_mapping=entity_mapping,
             discovered_zone_links=discovered_zone_links or [],
-            node_positions={},
-            tags={},
+            node_positions=game_info.get("node_positions") or {},
+            tags=game_info.get("tags") or {},
         )
 
         if dry_run:
@@ -145,6 +156,9 @@ async def import_game_update(input_dir: Path, game_id: str, dry_run: bool = Fals
         print(f"Error: Invalid UUID format: {game_id}")
         sys.exit(1)
 
+    # Load game_info (metadata) if present
+    game_info = load_json_file(input_dir / "game_info.json", required=False) or {}
+
     # Load required files
     zone_links = load_json_file(input_dir / "zone_links.json", required=True)
 
@@ -168,7 +182,7 @@ async def import_game_update(input_dir: Path, game_id: str, dry_run: bool = Fals
 
         print(f"Updating game {game_id} (seed: {game.seed})")
 
-        # Update fields
+        # Update data fields
         game.zone_links = zone_links
         if zones is not None:
             game.zones = zones
@@ -176,6 +190,16 @@ async def import_game_update(input_dir: Path, game_id: str, dry_run: bool = Fals
             game.entity_mapping = entity_mapping
         if discovered_zone_links is not None:
             game.discovered_zone_links = discovered_zone_links
+
+        # Update metadata from game_info if present
+        if "label" in game_info:
+            game.label = game_info["label"]
+        if "starting_zone_id" in game_info:
+            game.starting_zone_id = game_info["starting_zone_id"]
+        if "tags" in game_info:
+            game.tags = game_info["tags"]
+        if "node_positions" in game_info:
+            game.node_positions = game_info["node_positions"]
 
         if dry_run:
             print(f"Dry run - would update game {game_uuid}")
