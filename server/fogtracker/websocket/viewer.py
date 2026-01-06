@@ -2,6 +2,7 @@
 Viewer WebSocket client handler.
 """
 
+import contextlib
 import logging
 from uuid import UUID
 
@@ -65,16 +66,27 @@ class ViewerClient(Client):
 
         client = cls(websocket, game_id)
         room.viewers.append(client)
+        viewer_count = len(room.viewers)
         logger.info(
             "[VIEWER#%d@%s] Connected to game %s (total viewers: %d)",
             client._conn_id,
             client._remote,
             game_id,
-            len(room.viewers),
+            viewer_count,
         )
+
+        # Notify host of viewer count change
+        if room.host:
+            await room.host.send({"type": "viewer_count", "count": viewer_count})
 
         # Send game state from DB (discoveries are source of truth)
         await client.send({"type": "game_state", "state": game_state})
+
+        # Send host connection status
+        if room.host:
+            await client.send({"type": "host_connected"})
+        else:
+            await client.send({"type": "host_disconnected"})
 
         # Send visual state from host (viewport, highlights, etc.)
         if room.last_visual_state:
@@ -90,4 +102,8 @@ class ViewerClient(Client):
             )
             if client in room.viewers:
                 room.viewers.remove(client)
+                # Notify host of viewer count change
+                if room.host:
+                    with contextlib.suppress(Exception):
+                        await room.host.send({"type": "viewer_count", "count": len(room.viewers)})
             manager.cleanup_room(game_id)

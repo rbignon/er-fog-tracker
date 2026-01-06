@@ -4,8 +4,8 @@
 
 // Re-export public API
 export { disconnect } from './common.js';
-export { connectAsHost, initStreamUI, updateModConnectionIndicator } from './host.js';
-export { connectAsViewer, restoreLastVisualState } from './viewer.js';
+export { connectAsHost, initStreamUI, updateModConnectionIndicator, updateViewerCount } from './host.js';
+export { connectAsViewer, restoreLastVisualState, updateHostConnectionIndicator } from './viewer.js';
 
 // Register reconnection callbacks
 import { registerReconnectFunctions } from './common.js';

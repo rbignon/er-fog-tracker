@@ -419,6 +419,21 @@ export function restoreLastVisualState() {
     }
 }
 
+/**
+ * Update the host connection status indicator.
+ * @param {boolean} connected - Whether the host is connected
+ */
+export function updateHostConnectionIndicator(connected) {
+    const hostStatus = document.getElementById('host-status');
+    if (hostStatus) {
+        if (connected) {
+            hostStatus.classList.add('connected');
+        } else {
+            hostStatus.classList.remove('connected');
+        }
+    }
+}
+
 // =============================================================================
 // Discovery Counter (OBS overlay only)
 // =============================================================================
@@ -581,6 +596,17 @@ export async function connectAsViewer(gameId) {
             // Tag update from host/mod
             if (data.type === 'tag_update') {
                 handleTagUpdateFromServer(data.zone_id, data.tags);
+                return;
+            }
+
+            // Host connection status
+            if (data.type === 'host_connected') {
+                updateHostConnectionIndicator(true);
+                return;
+            }
+
+            if (data.type === 'host_disconnected') {
+                updateHostConnectionIndicator(false);
                 return;
             }
         };

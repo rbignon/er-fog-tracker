@@ -374,6 +374,25 @@ export function updateModConnectionIndicator(connected) {
     }
 }
 
+/**
+ * Update the viewer count indicator.
+ * @param {number} count - Number of connected viewers
+ */
+export function updateViewerCount(count) {
+    const viewerCount = document.getElementById('viewer-count');
+    if (viewerCount) {
+        const textEl = viewerCount.querySelector('.connection-status-text');
+        if (textEl) {
+            textEl.textContent = count === 1 ? '1 viewer' : `${count} viewers`;
+        }
+        if (count > 0) {
+            viewerCount.classList.add('has-viewers');
+        } else {
+            viewerCount.classList.remove('has-viewers');
+        }
+    }
+}
+
 // Register mod indicator callback with common module
 setUpdateModConnectionIndicator(updateModConnectionIndicator);
 
@@ -572,6 +591,12 @@ export async function connectAsHost(gameId) {
 
             if (data.type === 'mod_disconnected') {
                 updateModConnectionIndicator(false);
+                return;
+            }
+
+            // Viewer count update
+            if (data.type === 'viewer_count') {
+                updateViewerCount(data.count || 0);
                 return;
             }
 

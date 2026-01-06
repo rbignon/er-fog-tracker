@@ -209,6 +209,12 @@ class HostClient(Client):
         if room.mod:
             await client.send({"type": "mod_connected"})
 
+        # Send current viewer count to host
+        await client.send({"type": "viewer_count", "count": len(room.viewers)})
+
+        # Notify viewers that host has connected
+        await manager.broadcast_to_viewers(game_id, {"type": "host_connected"})
+
         try:
             await client.run()
         except Exception as e:
@@ -220,4 +226,6 @@ class HostClient(Client):
             # Only clear room.host if we're still the current host (not replaced by a reconnection)
             if room.host is client:
                 room.host = None
+                # Notify viewers that host has disconnected
+                await manager.broadcast_to_viewers(game_id, {"type": "host_disconnected"})
             manager.cleanup_room(game_id)

@@ -355,13 +355,12 @@ body::before {
     color: #a0e8b0;
 }
 
-/* Mod status indicator (non-clickable) */
+/* Mod status indicator (minimalist label style) */
 .mod-status {
-    background: rgba(90, 80, 64, 0.2);
-    border: 1px solid #5a5040;
-    color: #9a8d75;
-    padding: 8px 14px;
-    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: #6b6155;
+    padding: 8px 4px;
     font-size: 0.85rem;
     display: flex;
     align-items: center;
@@ -378,11 +377,6 @@ body::before {
     transition: all 0.3s;
 }
 
-.mod-status.mod-connected {
-    background: rgba(74, 222, 128, 0.1);
-    border-color: #4ade80;
-}
-
 .mod-status.mod-connected .mod-status-indicator {
     background: #4ade80;
     box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
@@ -391,6 +385,49 @@ body::before {
 
 .mod-status.mod-connected .mod-status-text {
     color: #a0e8b0;
+}
+
+/* Connection status indicator (minimalist label style) */
+.connection-status {
+    background: transparent;
+    border: none;
+    color: #6b6155;
+    padding: 8px 4px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: default;
+}
+
+.connection-status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4a4030;
+    transition: all 0.3s;
+}
+
+.connection-status.connected .connection-status-indicator {
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+    animation: pulse 2s infinite;
+}
+
+.connection-status.connected .connection-status-text {
+    color: #a0e8b0;
+}
+
+/* Viewer count specific - blue tint when has viewers */
+#viewer-count.has-viewers .connection-status-indicator {
+    background: #60a5fa;
+    box-shadow: 0 0 6px rgba(96, 165, 250, 0.5);
+    animation: pulse 2s infinite;
+}
+
+#viewer-count.has-viewers .connection-status-text {
+    color: #93c5fd;
 }
 
 /* Stream modal */

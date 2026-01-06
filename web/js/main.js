@@ -102,9 +102,12 @@ async function handlePlayRoute({ params, query }) {
     // Hide "Load New File" button (game already loaded from server)
     document.getElementById('new-file-btn').classList.add('hidden');
 
-    // Show Stream button and Mod status indicator (host can share OBS URL)
+    // Show Stream button, Mod status, and Viewer count indicators (host-only features)
     document.getElementById('stream-btn').classList.remove('hidden');
     document.getElementById('mod-status').classList.remove('hidden');
+    document.getElementById('viewer-count').classList.remove('hidden');
+    // Hide host status (only for viewers)
+    document.getElementById('host-status').classList.add('hidden');
 
     // Configure for online mode
     State.setBackendMode('online');
@@ -162,6 +165,10 @@ async function handleViewerRoute({ params, query }) {
         document.getElementById('new-file-btn').classList.add('hidden');
         document.getElementById('stream-btn').classList.add('hidden');
         document.getElementById('mod-status').classList.add('hidden');
+        document.getElementById('viewer-count').classList.add('hidden');
+
+        // Show host status indicator for viewers
+        document.getElementById('host-status').classList.remove('hidden');
 
         // Hide viewer counter (only for overlay)
         document.getElementById('viewer-discovery-counter')?.classList.add('hidden');
@@ -201,9 +208,11 @@ function handleOfflineGraphLoaded() {
     // Show "Load New File" button
     document.getElementById('new-file-btn').classList.remove('hidden');
 
-    // Hide stream and mod status (no streaming/mod in offline mode)
+    // Hide stream, mod status, viewer count, and host status (no streaming/mod in offline mode)
     document.getElementById('stream-btn').classList.add('hidden');
     document.getElementById('mod-status').classList.add('hidden');
+    document.getElementById('viewer-count').classList.add('hidden');
+    document.getElementById('host-status').classList.add('hidden');
 
     // Configure for offline mode
     State.setBackendMode('offline');
