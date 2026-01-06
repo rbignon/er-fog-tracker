@@ -64,17 +64,22 @@ Server settings are managed by the Launcher and stored in `%APPDATA%/FogRandoTra
 ```
 src/
 ├── core/           # Platform-independent logic (testable on Linux)
-│   ├── types.rs        # PlayerPosition, WarpInfo, etc.
-│   ├── traits.rs       # GameStateReader, WarpDetector, SpEffectChecker
-│   ├── constants.rs    # Animation IDs, entity ranges, offsets
-│   ├── entity_utils.rs # is_fog_rando_entity, get_teleport_type
-│   ├── map_utils.rs    # format_map_id, parse_map_id
-│   ├── color.rs        # Color parsing utilities
-│   └── warp_tracker.rs # Warp detection state machine
+│   ├── animations.rs     # Animation IDs and teleport detection
+│   ├── types.rs          # PlayerPosition, WarpInfo, etc.
+│   ├── traits.rs         # GameStateReader, WarpDetector, SpEffectChecker
+│   ├── constants.rs      # Entity ranges, memory offsets
+│   ├── entity_utils.rs   # is_fog_rando_entity, get_teleport_type
+│   ├── map_utils.rs      # format_map_id, parse_map_id
+│   ├── warp_tracker.rs   # Warp detection state machine
+│   ├── session.rs        # Server session management
+│   ├── protocol.rs       # WebSocket protocol messages
+│   ├── status_template.rs# Overlay text templates
+│   └── color.rs          # Color parsing utilities
 │
 ├── eldenring/      # Elden Ring memory reading (Windows-only)
 │   ├── game_state.rs   # Player position, animation
 │   ├── game_man.rs     # Warp detection via GameMan
+│   ├── warp_hook.rs    # Memory hook for warp capture
 │   ├── sp_effect.rs    # SpEffect reading
 │   └── memory.rs       # Low-level memory access
 │
@@ -83,7 +88,9 @@ src/
 │   ├── ui.rs           # ImGui overlay
 │   ├── config.rs       # TOML configuration
 │   ├── websocket.rs    # Server communication
+│   ├── frame_state.rs  # Per-frame state management
 │   ├── hotkey.rs       # Keyboard handling
+│   ├── log_reader.rs   # Game log parsing
 │   └── logging.rs      # Logging setup
 │
 ├── launcher/       # GUI launcher (Windows-only, feature-gated)
