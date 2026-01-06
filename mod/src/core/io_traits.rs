@@ -44,10 +44,28 @@ impl GameStats {
     ///
     /// Returns true if great_runes, kindling_count, or death_count differ.
     /// play_time_ms alone changing does not trigger an update (it changes every frame).
+    /// For great_runes, comparison is order-independent (sorted before comparing).
     pub fn has_meaningful_change(&self, other: &GameStats) -> bool {
-        self.great_runes != other.great_runes
+        // Compare runes in sorted order (game may return them in variable order)
+        let mut self_runes = self.great_runes.clone();
+        let mut other_runes = other.great_runes.clone();
+        self_runes.sort();
+        other_runes.sort();
+
+        self_runes != other_runes
             || self.kindling_count != other.kindling_count
             || self.death_count != other.death_count
+    }
+
+    /// Check if stats represent an empty/inactive game state
+    ///
+    /// Returns true if all values are at their initial state (no runes, no kindling,
+    /// no deaths, no play time). This happens when the player is not in an active game.
+    pub fn is_empty(&self) -> bool {
+        self.great_runes.is_empty()
+            && self.kindling_count == 0
+            && self.death_count == 0
+            && self.play_time_ms == 0
     }
 }
 
@@ -523,6 +541,52 @@ mod tests {
         let stats1 = GameStats::new(vec!["Godrick".to_string()], 5, 10, 1000);
         let stats2 = GameStats::new(vec!["Godrick".to_string()], 5, 10, 1000);
         assert!(!stats1.has_meaningful_change(&stats2));
+    }
+
+    #[test]
+    fn test_game_stats_no_meaningful_change_rune_order() {
+        // Same runes but in different order should NOT be considered a change
+        let stats1 = GameStats::new(
+            vec![
+                "Godrick".to_string(),
+                "Morgott".to_string(),
+                "Malenia".to_string(),
+                "Mohg".to_string(),
+            ],
+            6,
+            74,
+            57891968,
+        );
+        let stats2 = GameStats::new(
+            vec![
+                "Malenia".to_string(),
+                "Morgott".to_string(),
+                "Mohg".to_string(),
+                "Godrick".to_string(),
+            ],
+            6,
+            74,
+            57891968,
+        );
+        assert!(!stats1.has_meaningful_change(&stats2));
+    }
+
+    #[test]
+    fn test_game_stats_is_empty() {
+        let empty = GameStats::default();
+        assert!(empty.is_empty());
+
+        let with_runes = GameStats::new(vec!["Godrick".to_string()], 0, 0, 0);
+        assert!(!with_runes.is_empty());
+
+        let with_kindling = GameStats::new(vec![], 1, 0, 0);
+        assert!(!with_kindling.is_empty());
+
+        let with_deaths = GameStats::new(vec![], 0, 1, 0);
+        assert!(!with_deaths.is_empty());
+
+        let with_time = GameStats::new(vec![], 0, 0, 1000);
+        assert!(!with_time.is_empty());
     }
 
     #[test]

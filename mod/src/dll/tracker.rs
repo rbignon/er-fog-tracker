@@ -452,6 +452,7 @@ impl FogRandoTracker {
     /// Only sends updates when:
     /// - WebSocket is connected
     /// - Stats can be read (player is in-game)
+    /// - Stats are not empty (player is in an active game session)
     /// - Stats have meaningfully changed (ignoring play_time_ms alone)
     fn check_and_send_game_stats(&mut self) {
         // Don't check if not connected
@@ -461,6 +462,11 @@ impl FogRandoTracker {
 
         // Try to read current stats
         if let Some(current_stats) = self.read_current_game_stats() {
+            // Skip empty stats (player not in active game session)
+            if current_stats.is_empty() {
+                return;
+            }
+
             // Check if stats have meaningfully changed
             let should_send = match &self.previous_game_stats {
                 None => true, // First time, send initial stats
