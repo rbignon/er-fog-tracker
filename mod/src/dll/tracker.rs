@@ -412,6 +412,13 @@ impl FogRandoTracker {
                         self.set_status(format!("Log upload failed: {}", msg));
                     }
                 }
+                SessionEvent::StatsUpdated(stats) => {
+                    debug!(
+                        discovered = stats.discovered,
+                        total = stats.total,
+                        "[STATS] Stats updated (zone/exits preserved)"
+                    );
+                }
             }
         }
     }
