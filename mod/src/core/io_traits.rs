@@ -8,6 +8,50 @@ use crate::core::types::PlayerPosition;
 use crate::core::warp_tracker::DiscoveryEvent;
 
 // =============================================================================
+// GAME STATS
+// =============================================================================
+
+/// Game statistics for tracking progression
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct GameStats {
+    /// List of great rune names collected (e.g., ["Godrick", "Radahn"])
+    pub great_runes: Vec<String>,
+    /// Number of kindling items collected
+    pub kindling_count: u32,
+    /// Number of deaths
+    pub death_count: u32,
+    /// In-game time in milliseconds
+    pub play_time_ms: u32,
+}
+
+impl GameStats {
+    /// Create a new GameStats instance
+    pub fn new(
+        great_runes: Vec<String>,
+        kindling_count: u32,
+        death_count: u32,
+        play_time_ms: u32,
+    ) -> Self {
+        Self {
+            great_runes,
+            kindling_count,
+            death_count,
+            play_time_ms,
+        }
+    }
+
+    /// Check if stats have meaningfully changed (ignoring play_time_ms changes alone)
+    ///
+    /// Returns true if great_runes, kindling_count, or death_count differ.
+    /// play_time_ms alone changing does not trigger an update (it changes every frame).
+    pub fn has_meaningful_change(&self, other: &GameStats) -> bool {
+        self.great_runes != other.great_runes
+            || self.kindling_count != other.kindling_count
+            || self.death_count != other.death_count
+    }
+}
+
+// =============================================================================
 // CONNECTION STATUS
 // =============================================================================
 
@@ -78,6 +122,8 @@ pub enum ServerEvent {
     Error(String),
     /// Stats-only update (used on reconnection, doesn't reset zone/exits)
     StatsUpdated(DiscoveryStats),
+    /// Server acknowledged game stats update
+    GameStatsUpdateAck,
 }
 
 // =============================================================================
@@ -108,6 +154,9 @@ pub trait DiscoverySender {
     /// The `grace_entity_id` parameter is the entity ID of the grace being fast traveled to.
     /// Pass `None` for non-fast-travel zone queries (fog gate traversals, deaths, etc.)
     fn send_zone_query(&self, position: &PlayerPosition, grace_entity_id: Option<u32>);
+
+    /// Send game stats update to the server
+    fn send_game_stats_update(&self, stats: &GameStats);
 }
 
 /// Trait for receiving events from the server
@@ -154,6 +203,8 @@ pub mod mocks {
         pub discoveries_sent: RefCell<Vec<DiscoveryEvent>>,
         /// Zone queries that were sent (with grace entity ID)
         pub zone_queries_sent: RefCell<Vec<ZoneQueryRecord>>,
+        /// Game stats updates that were sent
+        pub game_stats_sent: RefCell<Vec<GameStats>>,
         /// Events to return from poll_event()
         pub pending_events: RefCell<Vec<ServerEvent>>,
     }
@@ -165,6 +216,7 @@ pub mod mocks {
                 connected: RefCell::new(true),
                 discoveries_sent: RefCell::new(Vec::new()),
                 zone_queries_sent: RefCell::new(Vec::new()),
+                game_stats_sent: RefCell::new(Vec::new()),
                 pending_events: RefCell::new(Vec::new()),
             }
         }
@@ -284,6 +336,10 @@ pub mod mocks {
                 grace_entity_id,
             });
         }
+
+        fn send_game_stats_update(&self, stats: &GameStats) {
+            self.game_stats_sent.borrow_mut().push(stats.clone());
+        }
     }
 
     impl ServerEventReceiver for MockServerConnection {
@@ -399,5 +455,84 @@ mod tests {
         assert_ne!(ConnectionStatus::Connected, ConnectionStatus::Disconnected);
         assert_ne!(ConnectionStatus::Connecting, ConnectionStatus::Reconnecting);
         assert_ne!(ConnectionStatus::Error, ConnectionStatus::Connected);
+    }
+
+    // -------------------------------------------------------------------------
+    // GameStats tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_game_stats_default() {
+        let stats = GameStats::default();
+        assert!(stats.great_runes.is_empty());
+        assert_eq!(stats.kindling_count, 0);
+        assert_eq!(stats.death_count, 0);
+        assert_eq!(stats.play_time_ms, 0);
+    }
+
+    #[test]
+    fn test_game_stats_new() {
+        let stats = GameStats::new(
+            vec!["Godrick".to_string(), "Radahn".to_string()],
+            5,
+            42,
+            3600000,
+        );
+        assert_eq!(stats.great_runes, vec!["Godrick", "Radahn"]);
+        assert_eq!(stats.kindling_count, 5);
+        assert_eq!(stats.death_count, 42);
+        assert_eq!(stats.play_time_ms, 3600000);
+    }
+
+    #[test]
+    fn test_game_stats_meaningful_change_death_count() {
+        let stats1 = GameStats::new(vec!["Godrick".to_string()], 0, 5, 1000);
+        let stats2 = GameStats::new(vec!["Godrick".to_string()], 0, 6, 1000);
+        assert!(stats1.has_meaningful_change(&stats2));
+    }
+
+    #[test]
+    fn test_game_stats_meaningful_change_kindling() {
+        let stats1 = GameStats::new(vec!["Godrick".to_string()], 0, 5, 1000);
+        let stats2 = GameStats::new(vec!["Godrick".to_string()], 1, 5, 1000);
+        assert!(stats1.has_meaningful_change(&stats2));
+    }
+
+    #[test]
+    fn test_game_stats_meaningful_change_runes() {
+        let stats1 = GameStats::new(vec!["Godrick".to_string()], 0, 5, 1000);
+        let stats2 = GameStats::new(
+            vec!["Godrick".to_string(), "Radahn".to_string()],
+            0,
+            5,
+            1000,
+        );
+        assert!(stats1.has_meaningful_change(&stats2));
+    }
+
+    #[test]
+    fn test_game_stats_no_meaningful_change_play_time_only() {
+        let stats1 = GameStats::new(vec!["Godrick".to_string()], 5, 10, 1000);
+        let stats2 = GameStats::new(vec!["Godrick".to_string()], 5, 10, 2000);
+        // play_time_ms changed, but no meaningful change
+        assert!(!stats1.has_meaningful_change(&stats2));
+    }
+
+    #[test]
+    fn test_game_stats_no_change() {
+        let stats1 = GameStats::new(vec!["Godrick".to_string()], 5, 10, 1000);
+        let stats2 = GameStats::new(vec!["Godrick".to_string()], 5, 10, 1000);
+        assert!(!stats1.has_meaningful_change(&stats2));
+    }
+
+    #[test]
+    fn test_mock_server_tracks_game_stats() {
+        let server = MockServerConnection::new();
+        let stats = GameStats::new(vec!["Godrick".to_string()], 5, 42, 3600000);
+
+        assert!(server.game_stats_sent.borrow().is_empty());
+        server.send_game_stats_update(&stats);
+        assert_eq!(server.game_stats_sent.borrow().len(), 1);
+        assert_eq!(server.game_stats_sent.borrow()[0], stats);
     }
 }

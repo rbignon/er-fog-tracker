@@ -29,6 +29,7 @@ from fogtracker.models import (
     GameCreateResponse,
     GameFull,
     GameListResponse,
+    GameStats,
     GameSummary,
     GameUpdate,
     NodePositionResponse,
@@ -145,6 +146,15 @@ async def get_game(
                 )
             )
 
+    # Parse game stats (with defaults for missing fields)
+    raw_stats = game.game_stats or {}
+    game_stats = GameStats(
+        great_runes=raw_stats.get("great_runes", []),
+        kindling_count=raw_stats.get("kindling_count", 0),
+        death_count=raw_stats.get("death_count", 0),
+        play_time_ms=raw_stats.get("play_time_ms", 0),
+    )
+
     return GameFull(
         id=game.id,
         seed=game.seed,
@@ -155,6 +165,7 @@ async def get_game(
         discovered_zone_links=response_links,
         node_positions=node_positions,
         tags=game.tags or {},
+        game_stats=game_stats,
         discovery_count=stats["discovered"],
         total_zones=stats["total"],
         created_at=game.created_at,

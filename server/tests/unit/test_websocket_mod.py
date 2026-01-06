@@ -2868,3 +2868,222 @@ class TestTagUpdateHandler:
 
         mock_session.assert_not_called()
         mock_broadcast.assert_not_called()
+
+
+# =============================================================================
+# TestGameStatsUpdateHandler
+# =============================================================================
+
+
+class TestGameStatsUpdateHandler:
+    """Tests for _handle_game_stats_update method."""
+
+    @pytest.mark.asyncio
+    async def test_game_stats_update_valid(self, mock_client):
+        """Should update stats, send ack, and broadcast."""
+        mock_game = MagicMock()
+        mock_game.game_stats = {}
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch(
+                "fogtracker.websocket.mod.manager.broadcast_to_all",
+                new_callable=AsyncMock,
+            ) as mock_broadcast,
+        ):
+            mock_db = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_game
+            mock_db.execute.return_value = mock_result
+            mock_session.return_value.__aenter__.return_value = mock_db
+
+            await mock_client._handle_game_stats_update(
+                {
+                    "great_runes": ["Godrick", "Radahn"],
+                    "kindling_count": 5,
+                    "death_count": 10,
+                    "play_time_ms": 3600000,
+                }
+            )
+
+            # Check ack was sent
+            mock_client.send.assert_called_once()
+            ack = mock_client.send.call_args[0][0]
+            assert ack["type"] == "game_stats_update_ack"
+
+            # Check database was updated
+            assert mock_game.game_stats == {
+                "great_runes": ["Godrick", "Radahn"],
+                "kindling_count": 5,
+                "death_count": 10,
+                "play_time_ms": 3600000,
+            }
+            mock_db.commit.assert_called_once()
+
+            # Check broadcast was called
+            mock_broadcast.assert_called_once()
+            broadcast_args = mock_broadcast.call_args[0]
+            assert broadcast_args[0] == mock_client.game_id
+            assert broadcast_args[1]["type"] == "game_stats_update"
+            assert broadcast_args[1]["great_runes"] == ["Godrick", "Radahn"]
+            assert broadcast_args[1]["death_count"] == 10
+
+    @pytest.mark.asyncio
+    async def test_game_stats_update_invalid_rune(self, mock_client):
+        """Should reject unknown rune names."""
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch(
+                "fogtracker.websocket.mod.manager.broadcast_to_all",
+                new_callable=AsyncMock,
+            ) as mock_broadcast,
+        ):
+            await mock_client._handle_game_stats_update(
+                {
+                    "great_runes": ["UnknownRune"],
+                    "kindling_count": 0,
+                    "death_count": 0,
+                    "play_time_ms": 0,
+                }
+            )
+
+            # No ack should be sent
+            mock_client.send.assert_not_called()
+            mock_session.assert_not_called()
+            mock_broadcast.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_game_stats_update_too_many_runes(self, mock_client):
+        """Should reject more than 7 runes."""
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch(
+                "fogtracker.websocket.mod.manager.broadcast_to_all",
+                new_callable=AsyncMock,
+            ) as mock_broadcast,
+        ):
+            await mock_client._handle_game_stats_update(
+                {
+                    "great_runes": ["Godrick"] * 8,  # 8 runes, max is 7
+                    "kindling_count": 0,
+                    "death_count": 0,
+                    "play_time_ms": 0,
+                }
+            )
+
+            mock_client.send.assert_not_called()
+            mock_session.assert_not_called()
+            mock_broadcast.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_game_stats_update_invalid_great_runes_type(self, mock_client):
+        """Should reject if great_runes is not a list."""
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch(
+                "fogtracker.websocket.mod.manager.broadcast_to_all",
+                new_callable=AsyncMock,
+            ) as mock_broadcast,
+        ):
+            await mock_client._handle_game_stats_update(
+                {
+                    "great_runes": "Godrick",  # String instead of list
+                    "kindling_count": 0,
+                    "death_count": 0,
+                    "play_time_ms": 0,
+                }
+            )
+
+            mock_client.send.assert_not_called()
+            mock_session.assert_not_called()
+            mock_broadcast.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_game_stats_update_negative_values(self, mock_client):
+        """Should reject negative numeric values."""
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch(
+                "fogtracker.websocket.mod.manager.broadcast_to_all",
+                new_callable=AsyncMock,
+            ) as mock_broadcast,
+        ):
+            await mock_client._handle_game_stats_update(
+                {
+                    "great_runes": [],
+                    "kindling_count": -1,
+                    "death_count": 0,
+                    "play_time_ms": 0,
+                }
+            )
+
+            mock_client.send.assert_not_called()
+            mock_session.assert_not_called()
+            mock_broadcast.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_game_stats_update_empty_runes(self, mock_client):
+        """Should accept empty great_runes list."""
+        mock_game = MagicMock()
+        mock_game.game_stats = {}
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch(
+                "fogtracker.websocket.mod.manager.broadcast_to_all",
+                new_callable=AsyncMock,
+            ) as mock_broadcast,
+        ):
+            mock_db = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_game
+            mock_db.execute.return_value = mock_result
+            mock_session.return_value.__aenter__.return_value = mock_db
+
+            await mock_client._handle_game_stats_update(
+                {
+                    "great_runes": [],
+                    "kindling_count": 0,
+                    "death_count": 42,
+                    "play_time_ms": 1000,
+                }
+            )
+
+            # Should succeed
+            mock_client.send.assert_called_once()
+            assert mock_game.game_stats["death_count"] == 42
+            mock_broadcast.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_game_stats_update_all_runes(self, mock_client):
+        """Should accept all 7 valid great runes."""
+        mock_game = MagicMock()
+        mock_game.game_stats = {}
+
+        all_runes = ["Godrick", "Radahn", "Morgott", "Rykard", "Mohg", "Malenia", "Unborn"]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch(
+                "fogtracker.websocket.mod.manager.broadcast_to_all",
+                new_callable=AsyncMock,
+            ) as mock_broadcast,
+        ):
+            mock_db = AsyncMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_game
+            mock_db.execute.return_value = mock_result
+            mock_session.return_value.__aenter__.return_value = mock_db
+
+            await mock_client._handle_game_stats_update(
+                {
+                    "great_runes": all_runes,
+                    "kindling_count": 10,
+                    "death_count": 100,
+                    "play_time_ms": 7200000,
+                }
+            )
+
+            mock_client.send.assert_called_once()
+            assert mock_game.game_stats["great_runes"] == all_runes
+            mock_broadcast.assert_called_once()

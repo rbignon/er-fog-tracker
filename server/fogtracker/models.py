@@ -121,6 +121,15 @@ class NodePositionResponse(BaseModel):
     y: float
 
 
+class GameStats(BaseModel):
+    """Game statistics from the mod (runes, kindling, deaths, play time)."""
+
+    great_runes: list[str] = Field(default_factory=list)  # ["Godrick", "Radahn", ...]
+    kindling_count: int = 0
+    death_count: int = 0
+    play_time_ms: int = 0  # In-game time in milliseconds
+
+
 class GameFull(BaseModel):
     """Full game state (for viewers)."""
 
@@ -134,6 +143,7 @@ class GameFull(BaseModel):
     # discovered_nodes removed - client deduces from discovered_zone_links + zone_links
     node_positions: dict[str, NodePositionResponse]
     tags: dict[str, list[str]]
+    game_stats: GameStats = Field(default_factory=GameStats)
     discovery_count: int
     total_zones: int
     created_at: datetime

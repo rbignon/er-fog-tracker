@@ -236,6 +236,12 @@ Get full game state (public, for viewers).
   ],
   "node_positions": {"limgrave": {"x": 100, "y": 200}},
   "tags": {"limgrave": ["tag1", "tag2"]},
+  "game_stats": {
+    "great_runes": ["Godrick"],
+    "kindling_count": 5,
+    "death_count": 42,
+    "play_time_ms": 3600000
+  },
   "discovery_count": 15,
   "total_zones": 100,
   "created_at": "...",
@@ -250,6 +256,7 @@ Get full game state (public, for viewers).
 | `zones` | Zone metadata keyed by zone_id (zone key) |
 | `node_positions` | Node positions keyed by zone_id (zone key) |
 | `tags` | Zone tags keyed by zone_id (zone key) |
+| `game_stats` | Game progression stats (runes, kindling, deaths, play time) |
 
 #### `GET /api/me/games`
 List current user's games.
@@ -580,6 +587,39 @@ Update tags on a zone.
 | `zone_id` | Zone key of the zone to tag |
 | `tags` | List of tag strings (empty list to clear tags) |
 
+#### Mod → Server: `game_stats_update`
+
+Sent when game statistics change (major runes, kindling, deaths). Only sent when meaningful values change (play time alone doesn't trigger an update).
+
+```json
+{
+  "type": "game_stats_update",
+  "great_runes": ["Godrick", "Radahn"],
+  "kindling_count": 5,
+  "death_count": 42,
+  "play_time_ms": 3600000
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `great_runes` | List of acquired major rune names (max 7) |
+| `kindling_count` | Number of kindling collected |
+| `death_count` | Number of player deaths |
+| `play_time_ms` | In-game time in milliseconds |
+
+**Valid rune names**: `Godrick`, `Radahn`, `Morgott`, `Rykard`, `Mohg`, `Malenia`, `Unborn`
+
+#### Server → Mod: `game_stats_update_ack`
+
+Acknowledgment of game stats update.
+
+```json
+{
+  "type": "game_stats_update_ack"
+}
+```
+
 #### Mod → Server: `upload_logs`
 
 Upload recent mod logs to server for debugging.
@@ -762,6 +802,27 @@ Sent to host/viewer on initial connection.
 ```
 
 **Note**: `discovered_zone_links` contains only `zone_link_id`. Client resolves `source`/`target` from its `linkIndex` (built from `zone_links` loaded via REST API).
+
+#### `game_stats_update`
+
+Broadcast when game statistics are updated (from mod).
+
+```json
+{
+  "type": "game_stats_update",
+  "great_runes": ["Godrick", "Radahn"],
+  "kindling_count": 5,
+  "death_count": 42,
+  "play_time_ms": 3600000
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `great_runes` | List of acquired major rune names |
+| `kindling_count` | Number of kindling collected |
+| `death_count` | Number of player deaths |
+| `play_time_ms` | In-game time in milliseconds |
 
 #### `error`
 

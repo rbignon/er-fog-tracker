@@ -19,8 +19,8 @@ use crate::core::animations::{get_animation_label, get_teleport_type};
 use crate::core::constants::GreatRune;
 use crate::core::entity_utils::is_fog_rando_entity;
 use crate::core::io_traits::{
-    ConnectionStatus as CoreConnectionStatus, DiscoveryResult, DiscoverySender, ServerEvent,
-    ServerEventReceiver, ZoneQueryResult,
+    ConnectionStatus as CoreConnectionStatus, DiscoveryResult, DiscoverySender, GameStats,
+    ServerEvent, ServerEventReceiver, ZoneQueryResult,
 };
 use crate::core::protocol::{DiscoveryStats, FogExit};
 use crate::core::session::{SessionEvent, TrackerSession};
@@ -118,6 +118,22 @@ impl DiscoverySender for WebSocketAdapter<'_> {
             grace_entity_id,
         );
     }
+
+    fn send_game_stats_update(&self, stats: &GameStats) {
+        info!(
+            runes = stats.great_runes.len(),
+            kindling = stats.kindling_count,
+            deaths = stats.death_count,
+            igt_ms = stats.play_time_ms,
+            "[STATS] >>> GAME STATS UPDATE <<<"
+        );
+        self.client.send_game_stats_update(
+            stats.great_runes.clone(),
+            stats.kindling_count,
+            stats.death_count,
+            stats.play_time_ms,
+        );
+    }
 }
 
 impl ServerEventReceiver for WebSocketAdapter<'_> {
@@ -162,6 +178,7 @@ impl ServerEventReceiver for WebSocketAdapter<'_> {
                 ServerEvent::UploadLogsAck { success, message }
             }
             IncomingMessage::StatsUpdated(stats) => ServerEvent::StatsUpdated(stats),
+            IncomingMessage::GameStatsUpdateAck => ServerEvent::GameStatsUpdateAck,
         })
     }
 }
@@ -207,6 +224,9 @@ pub struct FogRandoTracker {
 
     // Debug: dump key items once to find Kindling param_id
     debug_items_dumped: bool,
+
+    // Previous game stats for change detection (send updates only when changed)
+    previous_game_stats: Option<GameStats>,
 
     // Icon atlas texture (loaded in initialize())
     pub(crate) icon_atlas: Option<IconAtlas>,
@@ -310,6 +330,7 @@ impl FogRandoTracker {
             last_anim_log_time: Instant::now(),
             last_logged_warp_requested: false,
             debug_items_dumped: false,
+            previous_game_stats: None,
             icon_atlas: None,
             log_file_path,
         })
@@ -421,6 +442,78 @@ impl FogRandoTracker {
                 }
             }
         }
+
+        // 6. Check for game stats changes and send updates if connected
+        self.check_and_send_game_stats();
+    }
+
+    /// Check for game stats changes and send update if connected
+    ///
+    /// Only sends updates when:
+    /// - WebSocket is connected
+    /// - Stats can be read (player is in-game)
+    /// - Stats have meaningfully changed (ignoring play_time_ms alone)
+    fn check_and_send_game_stats(&mut self) {
+        // Don't check if not connected
+        if !self.ws_client.is_connected() {
+            return;
+        }
+
+        // Try to read current stats
+        if let Some(current_stats) = self.read_current_game_stats() {
+            // Check if stats have meaningfully changed
+            let should_send = match &self.previous_game_stats {
+                None => true, // First time, send initial stats
+                Some(prev) => prev.has_meaningful_change(&current_stats),
+            };
+
+            if should_send {
+                info!(
+                    runes = ?current_stats.great_runes,
+                    kindling = current_stats.kindling_count,
+                    deaths = current_stats.death_count,
+                    igt_ms = current_stats.play_time_ms,
+                    "[STATS] Game stats changed, sending update"
+                );
+
+                // Send update to server
+                self.ws_client.send_game_stats_update(
+                    current_stats.great_runes.clone(),
+                    current_stats.kindling_count,
+                    current_stats.death_count,
+                    current_stats.play_time_ms,
+                );
+
+                // Update previous stats
+                self.previous_game_stats = Some(current_stats);
+            }
+        }
+        // If stats can't be read (player quit), don't update previous_stats
+        // This prevents sending a "reset" when the player quits
+    }
+
+    /// Read current game stats from memory
+    ///
+    /// Returns None if any of the stats can't be read (player not in-game)
+    fn read_current_game_stats(&self) -> Option<GameStats> {
+        // Read all stats - all must succeed for a valid reading
+        let great_runes = self.game_state.read_great_runes()?;
+        let kindling_count = self.game_state.read_kindling_count()?;
+        let death_count = self.game_state.read_deaths()?;
+        let play_time_ms = self.game_state.read_igt()?;
+
+        // Convert HashSet<GreatRune> to Vec<String>
+        let rune_names: Vec<String> = great_runes
+            .into_iter()
+            .map(|r| format!("{:?}", r)) // Uses Debug impl: "Godrick", "Radahn", etc.
+            .collect();
+
+        Some(GameStats::new(
+            rune_names,
+            kindling_count,
+            death_count,
+            play_time_ms,
+        ))
     }
 
     /// Set a status message that will be displayed temporarily

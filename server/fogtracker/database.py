@@ -63,6 +63,9 @@ class Game(Base):
     discovered_zone_links: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     node_positions: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     tags: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    game_stats: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )  # {great_runes: [], kindling_count: 0, death_count: 0, play_time_ms: 0}
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

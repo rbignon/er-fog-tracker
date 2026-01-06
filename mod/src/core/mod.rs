@@ -20,6 +20,7 @@ pub mod warp_tracker;
 pub use animations::{get_animation_label, get_teleport_type, is_teleport_animation, Animation};
 pub use constants::*;
 pub use entity_utils::is_fog_rando_entity;
+pub use io_traits::GameStats;
 pub use map_utils::format_map_id;
 pub use status_template::{render_template, RenderedLine, RenderedStatus, TemplateContext};
 pub use traits::{GameStateReader, SpEffectChecker, WarpDetector};

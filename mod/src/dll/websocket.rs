@@ -67,6 +67,13 @@ pub enum OutgoingMessage {
     Pong,
     /// Upload logs to server
     UploadLogs { content: String },
+    /// Game stats update (runes, kindling, deaths, play time)
+    GameStatsUpdate {
+        great_runes: Vec<String>,
+        kindling_count: u32,
+        death_count: u32,
+        play_time_ms: u32,
+    },
     /// Shutdown the connection
     Shutdown,
 }
@@ -107,6 +114,8 @@ pub enum IncomingMessage {
     },
     /// Stats-only update (used on reconnection, doesn't reset zone/exits)
     StatsUpdated(DiscoveryStats),
+    /// Game stats update acknowledged
+    GameStatsUpdateAck,
 }
 
 // =============================================================================
@@ -289,6 +298,24 @@ impl WebSocketClient {
     pub fn send_upload_logs(&self, content: String) {
         if let Some(tx) = &self.tx {
             let _ = tx.try_send(OutgoingMessage::UploadLogs { content });
+        }
+    }
+
+    /// Send game stats update to server
+    pub fn send_game_stats_update(
+        &self,
+        great_runes: Vec<String>,
+        kindling_count: u32,
+        death_count: u32,
+        play_time_ms: u32,
+    ) {
+        if let Some(tx) = &self.tx {
+            let _ = tx.try_send(OutgoingMessage::GameStatsUpdate {
+                great_runes,
+                kindling_count,
+                death_count,
+                play_time_ms,
+            });
         }
     }
 
@@ -608,6 +635,30 @@ fn message_loop(
                     .send(Message::Text(json))
                     .map_err(|e| e.to_string())?;
             }
+            Ok(OutgoingMessage::GameStatsUpdate {
+                ref great_runes,
+                kindling_count,
+                death_count,
+                play_time_ms,
+            }) => {
+                debug!(
+                    runes = great_runes.len(),
+                    kindling = kindling_count,
+                    deaths = death_count,
+                    igt_ms = play_time_ms,
+                    "[WS TX] GameStatsUpdate"
+                );
+                let msg = ServerMessage::GameStatsUpdate {
+                    great_runes: great_runes.clone(),
+                    kindling_count,
+                    death_count,
+                    play_time_ms,
+                };
+                let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
+                socket
+                    .send(Message::Text(json))
+                    .map_err(|e| e.to_string())?;
+            }
             Ok(OutgoingMessage::Shutdown) => {
                 debug!("[WS TX] Shutdown");
                 return Ok(());
@@ -712,6 +763,10 @@ fn message_loop(
                                 success,
                                 message: message.clone(),
                             });
+                        }
+                        ServerResponse::GameStatsUpdateAck => {
+                            debug!("[WS RX] GameStatsUpdateAck");
+                            let _ = incoming_tx.send(IncomingMessage::GameStatsUpdateAck);
                         }
                         _ => {
                             debug!(response = ?resp, "[WS RX] Other");

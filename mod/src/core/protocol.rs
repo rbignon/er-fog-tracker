@@ -95,6 +95,13 @@ pub enum ServerMessage {
     Pong,
     /// Upload recent logs to server
     UploadLogs { content: String },
+    /// Game stats update (runes, kindling, deaths, play time)
+    GameStatsUpdate {
+        great_runes: Vec<String>,
+        kindling_count: u32,
+        death_count: u32,
+        play_time_ms: u32,
+    },
 }
 
 // =============================================================================
@@ -156,6 +163,8 @@ pub enum ServerResponse {
         #[serde(default)]
         message: Option<String>,
     },
+    /// Game stats update acknowledged
+    GameStatsUpdateAck,
 }
 
 // =============================================================================
@@ -333,6 +342,35 @@ mod tests {
         let msg = ServerMessage::Pong;
         let json = serde_json::to_string(&msg).unwrap();
         assert_eq!(json, r#"{"type":"pong"}"#);
+    }
+
+    #[test]
+    fn test_game_stats_update_serialize() {
+        let msg = ServerMessage::GameStatsUpdate {
+            great_runes: vec!["Godrick".to_string(), "Radahn".to_string()],
+            kindling_count: 5,
+            death_count: 42,
+            play_time_ms: 3600000,
+        };
+        let json = serde_json::to_string(&msg).unwrap();
+        assert!(json.contains(r#""type":"game_stats_update""#));
+        assert!(json.contains(r#""great_runes":["Godrick","Radahn"]"#));
+        assert!(json.contains(r#""kindling_count":5"#));
+        assert!(json.contains(r#""death_count":42"#));
+        assert!(json.contains(r#""play_time_ms":3600000"#));
+    }
+
+    #[test]
+    fn test_game_stats_update_empty_runes() {
+        let msg = ServerMessage::GameStatsUpdate {
+            great_runes: vec![],
+            kindling_count: 0,
+            death_count: 10,
+            play_time_ms: 1000,
+        };
+        let json = serde_json::to_string(&msg).unwrap();
+        assert!(json.contains(r#""great_runes":[]"#));
+        assert!(json.contains(r#""death_count":10"#));
     }
 
     // -------------------------------------------------------------------------
@@ -522,6 +560,13 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_game_stats_update_ack_deserialize() {
+        let json = r#"{"type": "game_stats_update_ack"}"#;
+        let resp: ServerResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(resp, ServerResponse::GameStatsUpdateAck);
+    }
+
     // -------------------------------------------------------------------------
     // Round-trip tests
     // -------------------------------------------------------------------------
@@ -544,6 +589,12 @@ mod tests {
                 pos: Position::new(1.0, 2.0, 3.0),
                 play_region_id: Some(1234),
                 grace_entity_id: Some(1042362951),
+            },
+            ServerMessage::GameStatsUpdate {
+                great_runes: vec!["Godrick".to_string(), "Radahn".to_string()],
+                kindling_count: 5,
+                death_count: 42,
+                play_time_ms: 3600000,
             },
         ];
 
@@ -571,6 +622,7 @@ mod tests {
             ServerResponse::Error {
                 message: "oops".to_string(),
             },
+            ServerResponse::GameStatsUpdateAck,
         ];
 
         for resp in responses {

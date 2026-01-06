@@ -55,6 +55,7 @@ class ModClient(Client):
             "debug_log": self._handle_debug_log,
             "tag_update": self._handle_tag_update,
             "upload_logs": self._handle_upload_logs,
+            "game_stats_update": self._handle_game_stats_update,
         }
 
     async def _handle_pong(self, data: dict):
@@ -403,6 +404,84 @@ class ModClient(Client):
                 await db.commit()
 
         await manager.broadcast_to_all(self.game_id, data, exclude=self.ws)
+
+    async def _handle_game_stats_update(self, data: dict):
+        """Handle game stats update from mod.
+
+        Updates the game_stats JSONB column and broadcasts to host/viewers.
+        Stats include: great_runes (list), kindling_count, death_count, play_time_ms.
+        """
+        great_runes = data.get("great_runes", [])
+        kindling_count = data.get("kindling_count", 0)
+        death_count = data.get("death_count", 0)
+        play_time_ms = data.get("play_time_ms", 0)
+
+        # Validate great_runes
+        if not isinstance(great_runes, list):
+            logger.warning("[MOD] game_stats_update: great_runes must be a list")
+            return
+        if len(great_runes) > 7:  # Max 7 great runes in the game
+            logger.warning(
+                "[MOD] game_stats_update rejected: too many great_runes (%d > 7)", len(great_runes)
+            )
+            return
+
+        # Validate rune names (must be known runes)
+        valid_runes = {"Godrick", "Radahn", "Morgott", "Rykard", "Mohg", "Malenia", "Unborn"}
+        for rune in great_runes:
+            if not isinstance(rune, str) or rune not in valid_runes:
+                logger.warning("[MOD] game_stats_update rejected: unknown rune '%s'", rune)
+                return
+
+        # Validate numeric fields
+        if not isinstance(kindling_count, int) or kindling_count < 0:
+            logger.warning("[MOD] game_stats_update: invalid kindling_count")
+            return
+        if not isinstance(death_count, int) or death_count < 0:
+            logger.warning("[MOD] game_stats_update: invalid death_count")
+            return
+        if not isinstance(play_time_ms, int) or play_time_ms < 0:
+            logger.warning("[MOD] game_stats_update: invalid play_time_ms")
+            return
+
+        logger.info(
+            "[MOD] Game stats update: runes=%s, kindling=%d, deaths=%d, igt=%dms",
+            great_runes,
+            kindling_count,
+            death_count,
+            play_time_ms,
+        )
+
+        # Update database
+        async with async_session() as db:
+            result = await db.execute(select(Game).where(Game.id == self.game_id))
+            game = result.scalar_one_or_none()
+
+            if game:
+                game.game_stats = {
+                    "great_runes": great_runes,
+                    "kindling_count": kindling_count,
+                    "death_count": death_count,
+                    "play_time_ms": play_time_ms,
+                }
+                flag_modified(game, "game_stats")
+                await db.commit()
+
+        # Send acknowledgment to mod
+        await self.send({"type": "game_stats_update_ack"})
+
+        # Broadcast to host and viewers
+        await manager.broadcast_to_all(
+            self.game_id,
+            {
+                "type": "game_stats_update",
+                "great_runes": great_runes,
+                "kindling_count": kindling_count,
+                "death_count": death_count,
+                "play_time_ms": play_time_ms,
+            },
+            exclude=self.ws,
+        )
 
     async def _handle_zone_query(self, data: dict):
         """Handle zone query (after fast travel) - returns current zone and exits.

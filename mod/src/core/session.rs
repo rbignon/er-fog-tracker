@@ -286,6 +286,10 @@ impl TrackerSession {
                     self.state.stats = Some(stats.clone());
                     events.push(SessionEvent::StatsUpdated(stats));
                 }
+                ServerEvent::GameStatsUpdateAck => {
+                    // Game stats update acknowledged - no action needed
+                    debug!("[SESSION] Game stats update acknowledged");
+                }
             }
         }
 
