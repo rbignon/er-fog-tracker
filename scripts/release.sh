@@ -61,7 +61,8 @@ git -C "$ROOT_DIR" add \
     server/fogtracker/__init__.py \
     mod/Cargo.toml \
     mod/Cargo.lock \
-    web/js/version.js
+    web/js/version.js \
+    CHANGELOG.md
 
 git -C "$ROOT_DIR" commit -m "release: v$VERSION"
 git -C "$ROOT_DIR" tag "v$VERSION"
