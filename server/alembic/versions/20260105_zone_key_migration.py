@@ -55,12 +55,13 @@ def upgrade() -> None:
 
     logger.info("Migrating %d games to zone_key identifiers...", len(games))
 
-    migration_errors = []
+    removed_zones_count = 0
 
     for game_id, zones_json, zone_links_json in games:
         # Migrate zones[].id from UUID to zone_key
         if zones_json:
             zones = zones_json if isinstance(zones_json, list) else json.loads(zones_json)
+            valid_zones = []
             for zone in zones:
                 zone_name = zone.get("name")
                 if not zone_name:
@@ -68,17 +69,23 @@ def upgrade() -> None:
 
                 zone_key = resolver.lookup_by_display_name(zone_name)
                 if not zone_key:
-                    migration_errors.append(
-                        f"Game {game_id}: Zone '{zone_name}' not found in fog.txt"
+                    # Zone not found in fog.txt - this is corrupted data (e.g., file paths,
+                    # log messages from randomizer). Remove it from the game.
+                    logger.warning(
+                        "Game %s: Removing invalid zone '%s' (not found in fog.txt)",
+                        game_id,
+                        zone_name,
                     )
+                    removed_zones_count += 1
                     continue
 
                 zone["id"] = zone_key
+                valid_zones.append(zone)
 
-            # Update zones in database
+            # Update zones in database (only valid zones)
             conn.execute(
                 text("UPDATE games SET zones = :zones WHERE id = :id"),
-                {"zones": json.dumps(zones), "id": game_id},
+                {"zones": json.dumps(valid_zones), "id": game_id},
             )
 
         # Migrate zone_links: source_key → source_id, target_key → target_id
@@ -145,16 +152,18 @@ def upgrade() -> None:
           AND zones IS NOT NULL
     """)
 
+    if removed_zones_count > 0:
+        logger.info("Removed %d invalid zones (corrupted data)", removed_zones_count)
+
     # 6. Post-migration validation
     validation_errors = _validate_migration(conn)
-    migration_errors.extend(validation_errors)
 
-    if migration_errors:
-        for error in migration_errors:
+    if validation_errors:
+        for error in validation_errors:
             logger.error(error)
         raise RuntimeError(
-            f"Migration validation failed with {len(migration_errors)} errors. "
-            "Check logs for details. Fix fog.txt or data before retrying."
+            f"Migration validation failed with {len(validation_errors)} errors. "
+            "Check logs for details."
         )
 
     logger.info("Migration completed successfully")
