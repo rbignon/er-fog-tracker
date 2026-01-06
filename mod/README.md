@@ -118,7 +118,13 @@ Tests cover:
 
 ## Fog Detection
 
-The mod detects teleportation via animation IDs:
+The mod uses a **three-trigger detection strategy**:
+
+1. **Animation trigger**: Detects known teleport animations (fog walls, waygates, etc.)
+2. **FogRando trigger**: Detects warps via Fog Rando entity IDs (755890xxx), even with unknown animations
+3. **Vanilla trigger**: Detects vanilla warps (coffins, scripted teleports) without distinctive animations
+
+Common animations detected:
 
 | Animation | Type |
 |-----------|------|
@@ -128,11 +134,9 @@ The mod detects teleportation via animation IDs:
 | 60470/60472 | Sending gate |
 | 50340 | Pureblood Knight's Medal |
 
-When a teleport animation starts:
-1. Record entry position and map_id
-2. Capture destination entity ID from GameMan
-3. When animation ends, record exit position
-4. Send discovery to server
+All discoveries are validated by checking that `warp_requested` was true during the warp, filtering false positives from cutscene animations.
+
+For detailed documentation on memory structures, detection flow, and warp validation, see [docs/MOD_INTERNALS.md](../docs/MOD_INTERNALS.md).
 
 ## Server Integration
 
