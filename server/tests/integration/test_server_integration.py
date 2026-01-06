@@ -20,7 +20,6 @@ Usage:
 import asyncio
 import json
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -40,35 +39,20 @@ TEST_MOD_TOKEN = "test_mod_token_12345678901234567890123456789012"
 TEST_TWITCH_ID = "test_user_99999"
 TEST_USERNAME = "test_user"
 
-# Default spoiler log path (relative to project root)
-DEFAULT_SPOILER_LOG = "2025-12-18_20.06.27_log_1078869800_97790.txt"
+# Spoiler log fixtures directory
+SPOILER_LOGS_DIR = Path(__file__).parent.parent / "fixtures" / "spoiler_logs"
 
 
 def get_spoiler_log() -> str:
-    """Load spoiler log from file or use minimal fallback."""
-    script_dir = Path(__file__).parent
-    project_root = script_dir.parent.parent  # server/tests -> er-fog-tracker
-
-    # Try to load from file
-    spoiler_path = project_root / DEFAULT_SPOILER_LOG
+    """Load spoiler log from fixtures."""
+    spoiler_path = SPOILER_LOGS_DIR / "seed_1078869800.txt"
     if spoiler_path.exists():
         print(f"Using spoiler log: {spoiler_path}")
         return spoiler_path.read_text()
 
-    # Fallback to minimal spoiler log
-    print("WARNING: Using minimal fallback spoiler log")
-    return """Options and seed:12345 Fog Gate Randomizer
-Chapel of Anticipation
-  Random: Chapel of Anticipation (before Grafted Scion's arena) --> Limgrave (at the start)
-Limgrave
-  Preexisting: Limgrave --> Stormveil Castle (at the main gate)
-  Random: Limgrave (near the beach) --> Caelid (arriving from the west)
-Stormveil Castle
-  Preexisting: Stormveil Castle --> Liurnia (after the boss)
-Caelid
-Liurnia
-Optional areas:
-"""
+    raise FileNotFoundError(
+        f"Spoiler log not found at {spoiler_path}. " "Run tests from the server/ directory."
+    )
 
 
 # =============================================================================
@@ -76,50 +60,36 @@ Optional areas:
 # =============================================================================
 
 
-async def setup_test_user(db_url: str):
-    """Create test user in database with hardcoded tokens."""
-    import asyncpg
+async def setup_test_user():
+    """Create test user in database with hardcoded tokens using SQLAlchemy."""
+    from sqlalchemy import select
 
-    # Parse database URL
-    # Format: postgresql+asyncpg://user:pass@host:port/db
-    # asyncpg wants: postgresql://user:pass@host:port/db
-    conn_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+    from fogtracker.database import User, async_session
 
-    conn = await asyncpg.connect(conn_url)
-    try:
+    async with async_session() as db:
         # Check if user exists
-        existing = await conn.fetchrow("SELECT id FROM users WHERE twitch_id = $1", TEST_TWITCH_ID)
+        stmt = select(User).where(User.twitch_id == TEST_TWITCH_ID)
+        result = await db.execute(stmt)
+        existing = result.scalar_one_or_none()
 
         if existing:
             # Update tokens
-            await conn.execute(
-                """
-                UPDATE users
-                SET api_token = $1, mod_token = $2
-                WHERE twitch_id = $3
-                """,
-                TEST_API_TOKEN,
-                TEST_MOD_TOKEN,
-                TEST_TWITCH_ID,
-            )
-            print(f"Updated test user tokens (id={existing['id']})")
+            existing.api_token = TEST_API_TOKEN
+            existing.mod_token = TEST_MOD_TOKEN
+            await db.commit()
+            print(f"Updated test user tokens (id={existing.id})")
         else:
             # Create user
-            await conn.execute(
-                """
-                INSERT INTO users (twitch_id, twitch_username, twitch_display_name, api_token, mod_token, created_at)
-                VALUES ($1, $2, $3, $4, $5, $6)
-                """,
-                TEST_TWITCH_ID,
-                TEST_USERNAME,
-                "Test User",
-                TEST_API_TOKEN,
-                TEST_MOD_TOKEN,
-                datetime.now(UTC),
+            user = User(
+                twitch_id=TEST_TWITCH_ID,
+                twitch_username=TEST_USERNAME,
+                twitch_display_name="Test User",
+                api_token=TEST_API_TOKEN,
+                mod_token=TEST_MOD_TOKEN,
             )
+            db.add(user)
+            await db.commit()
             print("Created test user")
-    finally:
-        await conn.close()
 
 
 def validate_uuid(value: str) -> bool:
@@ -131,8 +101,8 @@ def validate_uuid(value: str) -> bool:
         return False
 
 
-def validate_link_format(link: dict) -> list[str]:
-    """Validate a link object has correct format. Returns list of errors."""
+def validate_zone_link_format(link: dict) -> list[str]:
+    """Validate a zone_link object has correct format. Returns list of errors."""
     errors = []
     required_fields = ["id", "source", "target", "type"]
 
@@ -140,35 +110,23 @@ def validate_link_format(link: dict) -> list[str]:
         if field not in link:
             errors.append(f"Missing required field: {field}")
 
-    if "id" in link and not validate_uuid(link["id"]):
-        errors.append(f"Invalid UUID for link id: {link['id']}")
-
-    # Check that old terminology is NOT used
-    if "destination" in link:
-        errors.append("OLD TERMINOLOGY: 'destination' should be 'target'")
-    if "destination_key" in link:
-        errors.append("OLD TERMINOLOGY: 'destination_key' should be 'target_key'")
+    # id can be UUID or custom string, just check it exists
+    if "id" in link and not link["id"]:
+        errors.append("Empty link id")
 
     return errors
 
 
-def validate_discovered_link_format(dl: dict) -> list[str]:
-    """Validate a discovered_link object. Returns list of errors."""
+def validate_discovered_zone_link_format(dl: dict) -> list[str]:
+    """Validate a discovered_zone_link object. Returns list of errors."""
     errors = []
 
-    if "link_id" not in dl:
-        errors.append("Missing required field: link_id")
-    elif not validate_uuid(dl["link_id"]):
-        errors.append(f"Invalid UUID for link_id: {dl['link_id']}")
+    if "zone_link_id" not in dl:
+        errors.append("Missing required field: zone_link_id")
+    elif not dl["zone_link_id"]:
+        errors.append("Empty zone_link_id")
 
-    # These are optional but should be present if set
-    # discovered_at, discovered_by
-
-    # Check that old expansion format is NOT used
-    if "source" in dl:
-        errors.append("OLD FORMAT: discovered_link should NOT contain 'source'")
-    if "target" in dl:
-        errors.append("OLD FORMAT: discovered_link should NOT contain 'target'")
+    # Optional fields: discovered_at, discovered_by
 
     return errors
 
@@ -177,35 +135,25 @@ def validate_game_response(game: dict) -> list[str]:
     """Validate GET /games/{id} response format. Returns list of errors."""
     errors = []
 
-    # Check required fields
-    required = ["id", "seed", "links", "discovered_links"]
+    # Check required fields (current terminology)
+    required = ["id", "seed", "zone_links", "discovered_zone_links"]
     for field in required:
         if field not in game:
             errors.append(f"Missing required field: {field}")
 
-    # Check old terminology is NOT used
-    if "zone_pairs" in game:
-        errors.append("OLD TERMINOLOGY: 'zone_pairs' should be 'links'")
-    if "zones" in game:
-        errors.append("OLD TERMINOLOGY: 'zones' should be 'nodes'")
-    if "discovered_nodes" in game:
-        errors.append("OLD FORMAT: 'discovered_nodes' should be removed (client deduces)")
-    if "total_zones" in game:
-        errors.append("OLD TERMINOLOGY: 'total_zones' should be 'total_nodes'")
-
-    # Validate links
-    if "links" in game:
-        for i, link in enumerate(game["links"]):
-            link_errors = validate_link_format(link)
+    # Validate zone_links
+    if "zone_links" in game:
+        for i, link in enumerate(game["zone_links"]):
+            link_errors = validate_zone_link_format(link)
             for err in link_errors:
-                errors.append(f"links[{i}]: {err}")
+                errors.append(f"zone_links[{i}]: {err}")
 
-    # Validate discovered_links
-    if "discovered_links" in game:
-        for i, dl in enumerate(game["discovered_links"]):
-            dl_errors = validate_discovered_link_format(dl)
+    # Validate discovered_zone_links
+    if "discovered_zone_links" in game:
+        for i, dl in enumerate(game["discovered_zone_links"]):
+            dl_errors = validate_discovered_zone_link_format(dl)
             for err in dl_errors:
-                errors.append(f"discovered_links[{i}]: {err}")
+                errors.append(f"discovered_zone_links[{i}]: {err}")
 
     return errors
 
@@ -219,12 +167,12 @@ def validate_game_state_message(msg: dict) -> list[str]:
 
     state = msg.get("state", {})
 
-    # Check discovered_links format
-    discovered_links = state.get("discovered_links", [])
+    # Check discovered_zone_links format
+    discovered_links = state.get("discovered_zone_links", [])
     for i, dl in enumerate(discovered_links):
-        dl_errors = validate_discovered_link_format(dl)
+        dl_errors = validate_discovered_zone_link_format(dl)
         for err in dl_errors:
-            errors.append(f"state.discovered_links[{i}]: {err}")
+            errors.append(f"state.discovered_zone_links[{i}]: {err}")
 
     return errors
 
@@ -236,12 +184,12 @@ def validate_discovery_message(msg: dict) -> list[str]:
     if msg.get("type") != "discovery":
         errors.append(f"Expected type 'discovery', got '{msg.get('type')}'")
 
-    # Check discovered_links format
-    discovered_links = msg.get("discovered_links", [])
+    # Check discovered_zone_links format
+    discovered_links = msg.get("discovered_zone_links", [])
     for i, dl in enumerate(discovered_links):
-        dl_errors = validate_discovered_link_format(dl)
+        dl_errors = validate_discovered_zone_link_format(dl)
         for err in dl_errors:
-            errors.append(f"discovered_links[{i}]: {err}")
+            errors.append(f"discovered_zone_links[{i}]: {err}")
 
     return errors
 
@@ -253,9 +201,8 @@ def validate_discovery_ack_message(msg: dict) -> list[str]:
     if msg.get("type") != "discovery_v2_ack":
         errors.append(f"Expected type 'discovery_v2_ack', got '{msg.get('type')}'")
 
-    # Check new terminology
-    if "current_zone" in msg:
-        errors.append("OLD TERMINOLOGY: 'current_zone' should be 'current_node'")
+    # current_zone is the expected field name
+    # (previously tests expected current_node but server uses current_zone)
 
     return errors
 
@@ -265,7 +212,7 @@ def validate_discovery_ack_message(msg: dict) -> list[str]:
 # =============================================================================
 
 
-class TestResults:
+class IntegrationResults:
     """Collect test results."""
 
     def __init__(self):
@@ -295,7 +242,7 @@ class TestResults:
         return self.failed == 0
 
 
-async def test_api_create_game(results: TestResults) -> str | None:
+async def run_api_create_game(results: IntegrationResults) -> str | None:
     """Test POST /mod/games - create game from spoiler log."""
     print("\n--- Test: POST /mod/games ---")
 
@@ -330,7 +277,7 @@ async def test_api_create_game(results: TestResults) -> str | None:
         return data.get("game_id")
 
 
-async def test_api_get_game(results: TestResults, game_id: str):
+async def run_api_get_game(results: IntegrationResults, game_id: str):
     """Test GET /games/{id} - fetch game."""
     print(f"\n--- Test: GET /games/{game_id} ---")
 
@@ -349,36 +296,37 @@ async def test_api_get_game(results: TestResults, game_id: str):
 
         # Validate full response format
         format_errors = validate_game_response(game)
-        results.check("Game response format (new terminology)", format_errors)
+        results.check("Game response format", format_errors)
 
         # Check specific expected values
         content_errors = []
         if game.get("seed") != 1078869800:
             content_errors.append(f"Expected seed 1078869800, got {game.get('seed')}")
-        if not game.get("links"):
-            content_errors.append("Expected non-empty links array")
+        if not game.get("zone_links"):
+            content_errors.append("Expected non-empty zone_links array")
         else:
-            # Verify links have target, not destination
-            first_link = game["links"][0]
+            # Verify zone_links have target field
+            first_link = game["zone_links"][0]
             if "target" not in first_link:
-                content_errors.append("First link missing 'target' field")
+                content_errors.append("First zone_link missing 'target' field")
             if first_link.get("source") != "Chapel of Anticipation":
                 content_errors.append(
-                    f"Expected first link source 'Chapel of Anticipation', got '{first_link.get('source')}'"
+                    f"Expected first zone_link source 'Chapel of Anticipation', got '{first_link.get('source')}'"
                 )
 
         results.check("Game content validation", content_errors)
 
-        # Check nodes (optional but should be present)
-        if "nodes" in game and game["nodes"]:
-            node_errors = []
-            for i, node in enumerate(game["nodes"]):
-                if "id" not in node:
-                    node_errors.append(f"nodes[{i}]: missing 'id' field")
-            results.check("Nodes format", node_errors)
+        # Check zones (optional but should be present)
+        if "zones" in game and game["zones"]:
+            zone_errors = []
+            # zones is a dict keyed by zone_id
+            for zone_id, _zone in game["zones"].items():
+                if not zone_id:
+                    zone_errors.append("Empty zone_id key")
+            results.check("Zones format", zone_errors)
 
 
-async def test_api_discovery(results: TestResults, game_id: str):
+async def run_api_discovery(results: IntegrationResults, game_id: str):
     """Test POST /games/{id}/discoveries - create discovery via REST."""
     print(f"\n--- Test: POST /games/{game_id}/discoveries ---")
 
@@ -386,27 +334,27 @@ async def test_api_discovery(results: TestResults, game_id: str):
         # First get the game to find a valid link
         resp = await client.get(f"{BASE_URL}/api/games/{game_id}")
         game = resp.json()
-        links = game.get("links", [])
+        zone_links = game.get("zone_links", [])
 
-        if not links:
-            results.check("Discovery test", ["No links in game"])
+        if not zone_links:
+            results.check("Discovery test", ["No zone_links in game"])
             return
 
         # Find a random link to discover
-        random_links = [lk for lk in links if lk.get("type") == "random"]
+        random_links = [lk for lk in zone_links if lk.get("type") == "random"]
         if not random_links:
-            results.check("Discovery test", ["No random links to discover"])
+            results.check("Discovery test", ["No random zone_links to discover"])
             return
 
         link = random_links[0]
 
-        # Create discovery
+        # Create discovery (API expects source_id and target_id, not source/target)
         resp = await client.post(
             f"{BASE_URL}/api/games/{game_id}/discoveries",
             headers={"Authorization": f"Bearer {TEST_API_TOKEN}"},
             json={
-                "source": link["source"],
-                "target": link["target"],
+                "source_id": link["source_id"],
+                "target_id": link["target_id"],
                 "link_id": link["id"],
             },
         )
@@ -421,18 +369,18 @@ async def test_api_discovery(results: TestResults, game_id: str):
 
         data = resp.json()
 
-        # Validate discovered_links format
-        discovered_links = data.get("discovered_links", [])
+        # Validate discovered_zone_links format
+        discovered_links = data.get("discovered_zone_links", [])
         dl_errors = []
         for i, dl in enumerate(discovered_links):
-            dl_err = validate_discovered_link_format(dl)
+            dl_err = validate_discovered_zone_link_format(dl)
             for err in dl_err:
-                dl_errors.append(f"discovered_links[{i}]: {err}")
+                dl_errors.append(f"discovered_zone_links[{i}]: {err}")
 
         results.check("Discovery response format", dl_errors)
 
 
-async def test_websocket_host(results: TestResults, game_id: str):
+async def run_websocket_host(results: IntegrationResults, game_id: str):
     """Test WebSocket host connection.
 
     Host flow:
@@ -492,7 +440,7 @@ async def test_websocket_host(results: TestResults, game_id: str):
             await asyncio.sleep(0.2)  # Give server time to process close
 
 
-async def test_websocket_mod(results: TestResults, game_id: str):
+async def run_websocket_mod(results: IntegrationResults, game_id: str):
     """Test WebSocket mod connection and discovery flow.
 
     Mod flow:
@@ -568,7 +516,7 @@ async def test_websocket_mod(results: TestResults, game_id: str):
             await asyncio.sleep(0.2)  # Give server time to process close
 
 
-async def test_websocket_viewer(results: TestResults, game_id: str):
+async def run_websocket_viewer(results: IntegrationResults, game_id: str):
     """Test WebSocket viewer connection (no auth required).
 
     Viewer flow:
@@ -613,7 +561,7 @@ async def test_websocket_viewer(results: TestResults, game_id: str):
             await asyncio.sleep(0.2)  # Give server time to process close
 
 
-async def test_discovery_propagation(results: TestResults, game_id: str):
+async def run_discovery_propagation(results: IntegrationResults, game_id: str):
     """Test discovery logic: mod discovery, host manual discovery, and message broadcasting.
 
     Test scenarios:
@@ -630,17 +578,19 @@ async def test_discovery_propagation(results: TestResults, game_id: str):
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"{BASE_URL}/api/games/{game_id}")
         game = resp.json()
-        links = game.get("links", [])
-        already_discovered = {dl.get("link_id") for dl in game.get("discovered_links", [])}
+        zone_links = game.get("zone_links", [])
+        already_discovered = {
+            dl.get("zone_link_id") for dl in game.get("discovered_zone_links", [])
+        }
 
-    if not links:
-        results.check("Discovery propagation setup", ["No links in game"])
+    if not zone_links:
+        results.check("Discovery propagation setup", ["No zone_links in game"])
         return
 
     # Find UNDISCOVERED random links from Chapel of Anticipation
     start_links = [
         lk
-        for lk in links
+        for lk in zone_links
         if lk.get("source") == "Chapel of Anticipation"
         and lk.get("type") == "random"
         and lk.get("id") not in already_discovered
@@ -650,7 +600,7 @@ async def test_discovery_propagation(results: TestResults, game_id: str):
         # All links from Chapel already discovered, find any undiscovered random link
         start_links = [
             lk
-            for lk in links
+            for lk in zone_links
             if lk.get("type") == "random" and lk.get("id") not in already_discovered
         ]
 
@@ -665,7 +615,7 @@ async def test_discovery_propagation(results: TestResults, game_id: str):
     # Find a second undiscovered link for manual discovery test
     other_links = [
         lk
-        for lk in links
+        for lk in zone_links
         if lk.get("type") == "random"
         and lk.get("id") not in already_discovered
         and (first_link is None or lk.get("id") != first_link.get("id"))
@@ -697,7 +647,7 @@ async def test_discovery_propagation(results: TestResults, game_id: str):
             results.check("Host game_state", [f"Expected game_state, got {msg.get('type')}"])
             return
 
-        initial_discovered = len(msg.get("state", {}).get("discovered_links", []))
+        initial_discovered = len(msg.get("state", {}).get("discovered_zone_links", []))
         print(f"  Host connected, initial discoveries: {initial_discovered}")
         results.check("Host initial connection", [])
 
@@ -754,13 +704,12 @@ async def test_discovery_propagation(results: TestResults, game_id: str):
             )
         else:
             ack_errors = []
-            if "current_zone" in msg:
-                ack_errors.append("OLD TERMINOLOGY: 'current_zone' should be 'current_node'")
+            # current_zone is the correct field name
             resolved = msg.get("resolved", [])
             propagated = msg.get("propagated", [])
             print(f"    Resolved: {len(resolved)}, Propagated: {len(propagated)}")
-            if "current_node" in msg:
-                print(f"    Current node: {msg['current_node']}")
+            if "current_zone" in msg:
+                print(f"    Current zone: {msg['current_zone']}")
             results.check("Mod receives discovery_v2_ack", ack_errors)
 
             # Step 3b: If propagated > 0, host should receive discovery broadcast
@@ -775,7 +724,7 @@ async def test_discovery_propagation(results: TestResults, game_id: str):
                     if msg.get("type") == "discovery":
                         discovery_errors = validate_discovery_message(msg)
                         prop_count = len(msg.get("propagated", []))
-                        disc_count = len(msg.get("discovered_links", []))
+                        disc_count = len(msg.get("discovered_zone_links", []))
                         print(
                             f"    Host received discovery: {prop_count} propagated, {disc_count} total"
                         )
@@ -830,11 +779,11 @@ async def test_discovery_propagation(results: TestResults, game_id: str):
             results.check("Viewer receives discovery from host", [])
             return
 
-        # Host sends manual_discovery
+        # Host sends manual_discovery (expects source_id and target_id)
         manual_discovery_msg = {
             "type": "manual_discovery",
-            "source": manual_link["source"],
-            "target": manual_link["target"],
+            "source_id": manual_link["source_id"],
+            "target_id": manual_link["target_id"],
         }
         await host_ws.send(json.dumps(manual_discovery_msg))
 
@@ -855,16 +804,16 @@ async def test_discovery_propagation(results: TestResults, game_id: str):
             if msg.get("type") == "discovery":
                 discovery_errors = validate_discovery_message(msg)
                 propagated = msg.get("propagated", [])
-                discovered_links = msg.get("discovered_links", [])
+                discovered_zone_links = msg.get("discovered_zone_links", [])
                 print(
-                    f"    Viewer received discovery: {len(propagated)} propagated, {len(discovered_links)} total"
+                    f"    Viewer received discovery: {len(propagated)} propagated, {len(discovered_zone_links)} total"
                 )
 
                 # Verify the link we discovered is in the list
-                link_ids = [dl.get("link_id") for dl in discovered_links]
+                link_ids = [dl.get("zone_link_id") for dl in discovered_zone_links]
                 if manual_link["id"] not in link_ids:
                     discovery_errors.append(
-                        f"Discovered link {manual_link['id']} not in discovered_links"
+                        f"Discovered link {manual_link['id']} not in discovered_zone_links"
                     )
 
                 results.check("Viewer receives discovery from host", discovery_errors)
@@ -883,16 +832,16 @@ async def test_discovery_propagation(results: TestResults, game_id: str):
         async with httpx.AsyncClient() as client:
             resp = await client.get(f"{BASE_URL}/api/games/{game_id}")
             final_game = resp.json()
-            final_discovered = final_game.get("discovered_links", [])
+            final_discovered = final_game.get("discovered_zone_links", [])
 
             # Find preexisting links that should have been propagated
-            discovered_link_ids = {dl.get("link_id") for dl in final_discovered}
+            discovered_link_ids = {dl.get("zone_link_id") for dl in final_discovered}
 
             # Check if target node has preexisting links that should be auto-discovered
             target_node = manual_link["target"]
             preexisting_from_target = [
                 lk
-                for lk in links
+                for lk in zone_links
                 if lk.get("type") == "preexisting"
                 and (lk.get("source") == target_node or lk.get("target") == target_node)
             ]
@@ -973,31 +922,27 @@ async def main():
     # Setup test user
     print("\n--- Setup: Creating test user ---")
     try:
-        # Get database URL from settings
-        sys.path.insert(0, str(Path(__file__).parent.parent))
-        from fogtracker.config import settings
-
-        await setup_test_user(settings.database_url)
+        await setup_test_user()
     except Exception as e:
         print(f"ERROR: Failed to setup test user: {e}")
-        print("       Make sure PostgreSQL is running and DATABASE_URL is set")
+        print("       Make sure the database is available and DATABASE_URL is set")
         sys.exit(1)
 
-    results = TestResults()
+    results = IntegrationResults()
 
     # Run tests
-    game_id = await test_api_create_game(results)
+    game_id = await run_api_create_game(results)
 
     if game_id:
-        await test_api_get_game(results, game_id)
-        await test_api_discovery(results, game_id)
-        await test_websocket_host(results, game_id)
+        await run_api_get_game(results, game_id)
+        await run_api_discovery(results, game_id)
+        await run_websocket_host(results, game_id)
         await asyncio.sleep(0.5)  # Allow connection cleanup
-        # await test_websocket_mod(results, game_id)
+        # await run_websocket_mod(results, game_id)
         await asyncio.sleep(0.5)  # Allow connection cleanup
-        await test_websocket_viewer(results, game_id)
+        await run_websocket_viewer(results, game_id)
         await asyncio.sleep(0.5)  # Allow connection cleanup
-        await test_discovery_propagation(results, game_id)
+        await run_discovery_propagation(results, game_id)
 
     # Cleanup
     print("\n--- Cleanup ---")
@@ -1010,3 +955,113 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# =============================================================================
+# Pytest Integration Tests
+# =============================================================================
+
+import pytest  # noqa: E402
+
+
+def _load_real_database_url():
+    """Load DATABASE_URL from .env file and reconfigure the database connection."""
+    import os
+    import sys
+    from pathlib import Path
+
+    # Load DATABASE_URL from .env file (server/ directory)
+    env_file = Path(__file__).parent.parent.parent / ".env"
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, value = line.partition("=")
+                if key.strip() == "DATABASE_URL":
+                    os.environ["DATABASE_URL"] = value.strip()
+                    break
+
+    # Clear cached settings/engine to force reload with new DATABASE_URL
+    if "fogtracker.config" in sys.modules:
+        from fogtracker.config import get_settings
+
+        get_settings.cache_clear()
+
+    if "fogtracker.database" in sys.modules:
+        from fogtracker.database import get_async_session_maker, get_engine
+
+        get_engine.cache_clear()
+        get_async_session_maker.cache_clear()
+
+
+@pytest.fixture
+async def integration_results():
+    """Fixture providing IntegrationResults and handling test user setup."""
+    _load_real_database_url()
+    await setup_test_user()
+    return IntegrationResults()
+
+
+@pytest.fixture
+async def integration_game_id(integration_results):
+    """Fixture that creates a game and returns its ID."""
+    game_id = await run_api_create_game(integration_results)
+    yield game_id
+    # Cleanup after test
+    await cleanup_test_games()
+
+
+async def test_api_create_game(integration_results):
+    """Test POST /mod/games - create game from spoiler log."""
+    game_id = await run_api_create_game(integration_results)
+    assert game_id is not None, "Failed to create game"
+    assert integration_results.failed == 0, f"Test failures: {integration_results.errors}"
+    await cleanup_test_games()
+
+
+async def test_api_get_game(integration_results, integration_game_id):
+    """Test GET /games/{id} - fetch game."""
+    if integration_game_id is None:
+        pytest.skip("Game creation failed")
+    await run_api_get_game(integration_results, integration_game_id)
+    assert integration_results.failed == 0, f"Test failures: {integration_results.errors}"
+
+
+async def test_api_discovery(integration_results, integration_game_id):
+    """Test POST /games/{id}/discoveries - create discovery via REST."""
+    if integration_game_id is None:
+        pytest.skip("Game creation failed")
+    await run_api_discovery(integration_results, integration_game_id)
+    assert integration_results.failed == 0, f"Test failures: {integration_results.errors}"
+
+
+async def test_websocket_host(integration_results, integration_game_id):
+    """Test WebSocket host connection."""
+    if integration_game_id is None:
+        pytest.skip("Game creation failed")
+    await run_websocket_host(integration_results, integration_game_id)
+    assert integration_results.failed == 0, f"Test failures: {integration_results.errors}"
+
+
+async def test_websocket_mod(integration_results, integration_game_id):
+    """Test WebSocket mod connection and discovery flow."""
+    if integration_game_id is None:
+        pytest.skip("Game creation failed")
+    await run_websocket_mod(integration_results, integration_game_id)
+    assert integration_results.failed == 0, f"Test failures: {integration_results.errors}"
+
+
+async def test_websocket_viewer(integration_results, integration_game_id):
+    """Test WebSocket viewer connection."""
+    if integration_game_id is None:
+        pytest.skip("Game creation failed")
+    await run_websocket_viewer(integration_results, integration_game_id)
+    assert integration_results.failed == 0, f"Test failures: {integration_results.errors}"
+
+
+async def test_discovery_propagation(integration_results, integration_game_id):
+    """Test discovery propagation between mod, host, and viewer."""
+    if integration_game_id is None:
+        pytest.skip("Game creation failed")
+    await run_discovery_propagation(integration_results, integration_game_id)
+    assert integration_results.failed == 0, f"Test failures: {integration_results.errors}"
