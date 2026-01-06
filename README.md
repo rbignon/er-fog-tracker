@@ -81,8 +81,7 @@ er-fog-tracker/
 ├── web/                    # Frontend (vanilla JS + D3.js)
 ├── server/                 # Backend (Python FastAPI + PostgreSQL)
 ├── mod/                    # In-game mod (Rust DLL)
-├── docs/                   # Design specifications
-└── tests/                  # Integration tests
+└── docs/                   # Technical documentation
 ```
 
 ## Technical Details
