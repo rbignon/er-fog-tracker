@@ -56,9 +56,13 @@ function syncState() {
                 type: 'visual_state',
                 state,
             });
-            ws.send(message);
+            try {
+                ws.send(message);
+            } catch (sendErr) {
+                console.error('[HOST] Failed to send visual state:', sendErr);
+            }
         } catch (err) {
-            console.error('[HOST SYNC] Failed to sync state:', err);
+            console.error('[HOST] Failed to sync state:', err);
         } finally {
             isSyncing = false;
         }
@@ -88,12 +92,16 @@ function sendPositionsUpdate() {
         positions[nodeId] = { x: pos.x, y: pos.y };
     }
 
-    gameWs.send(
-        JSON.stringify({
-            type: 'positions_update',
-            positions,
-        })
-    );
+    try {
+        gameWs.send(
+            JSON.stringify({
+                type: 'positions_update',
+                positions,
+            })
+        );
+    } catch (err) {
+        console.error('[HOST] Failed to send positions update:', err);
+    }
 }
 
 // =============================================================================
@@ -406,13 +414,17 @@ State.subscribe('nodeTagsChanged', ({ nodeId, tags }) => {
         // Send tag_update to persist on server and broadcast to mod/viewers
         const gameWs = getGameWs();
         if (gameWs && gameWs.readyState === WebSocket.OPEN) {
-            gameWs.send(
-                JSON.stringify({
-                    type: 'tag_update',
-                    zone_id: nodeId,
-                    tags: tags || [],
-                })
-            );
+            try {
+                gameWs.send(
+                    JSON.stringify({
+                        type: 'tag_update',
+                        zone_id: nodeId,
+                        tags: tags || [],
+                    })
+                );
+            } catch (err) {
+                console.error('[HOST] Failed to send tag update:', err);
+            }
         }
         // Also sync visual state
         syncState();
@@ -486,7 +498,11 @@ export async function connectAsHost(gameId) {
 
         gameWs.onopen = () => {
             // Send auth message
-            gameWs.send(JSON.stringify({ type: 'auth', token }));
+            try {
+                gameWs.send(JSON.stringify({ type: 'auth', token }));
+            } catch (err) {
+                console.error('[HOST] Failed to send auth message:', err);
+            }
         };
 
         gameWs.onmessage = event => {
@@ -495,7 +511,11 @@ export async function connectAsHost(gameId) {
             // Handle ping/pong
             if (data.type === 'ping') {
                 onGameWsPingReceived();
-                gameWs.send(JSON.stringify({ type: 'pong' }));
+                try {
+                    gameWs.send(JSON.stringify({ type: 'pong' }));
+                } catch (err) {
+                    console.error('[HOST] Failed to send pong:', err);
+                }
                 return;
             }
 

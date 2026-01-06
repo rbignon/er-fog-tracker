@@ -518,7 +518,11 @@ export async function connectAsViewer(gameId) {
             // Handle ping/pong
             if (data.type === 'ping') {
                 onGameWsPingReceived();
-                gameWs.send(JSON.stringify({ type: 'pong' }));
+                try {
+                    gameWs.send(JSON.stringify({ type: 'pong' }));
+                } catch (err) {
+                    console.error('[VIEWER] Failed to send pong:', err);
+                }
                 return;
             }
 

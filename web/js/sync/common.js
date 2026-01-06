@@ -117,19 +117,21 @@ export function setUpdateModConnectionIndicator(fn) {
     updateModConnectionIndicatorFn = fn;
 }
 
-export async function handleGameWsDisconnect() {
+export async function handleGameWsDisconnect(isInternalRetry = false) {
     // Reset mod connection indicator (we don't know the status while disconnected)
     if (updateModConnectionIndicatorFn) {
         updateModConnectionIndicatorFn(false);
     }
 
     // Prevent multiple concurrent reconnection attempts
-    if (gameWsIsReconnecting) {
+    // Allow internal retries (from catch block) to proceed
+    if (gameWsIsReconnecting && !isInternalRetry) {
         return;
     }
 
     const gameId = currentGameId;
     if (!gameId) {
+        gameWsIsReconnecting = false;
         State.setSyncState(false, false, null);
         return;
     }
@@ -145,6 +147,7 @@ export async function handleGameWsDisconnect() {
         console.log('Max reconnect duration reached (5 minutes)');
         gameWsReconnectStartTime = null;
         gameWsReconnectAttempts = 0;
+        gameWsIsReconnecting = false;
         State.setSyncState(false, false, null);
         Toast.error('Connection lost. Please refresh the page.');
         return;
@@ -185,9 +188,10 @@ export async function handleGameWsDisconnect() {
             Toast.show('Reconnected to server');
         } catch (e) {
             console.log('Reconnection attempt failed:', e.message);
-            // Schedule next attempt
-            gameWsIsReconnecting = false;
-            handleGameWsDisconnect();
+            // Don't reset gameWsIsReconnecting here - keep the flag set to block
+            // external callers while we retry. Pass isInternalRetry=true to bypass
+            // the guard and schedule the next attempt.
+            handleGameWsDisconnect(true);
         }
     }, delay);
 }

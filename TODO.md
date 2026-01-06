@@ -10,9 +10,9 @@
 
 ### Stability
 
-- [ ] **Unsafe unwrap in launcher** - `mod/src/launcher/app.rs:375` uses `clone().unwrap()` after `has_token()` check. Replace with `if let Some(token) = ...` pattern.
-- [ ] **WebSocket send error handling** - Multiple files in `web/js/sync/` call `ws.send()` without try-catch. Wrap all `send()` calls.
-- [ ] **WebSocket reconnection race condition** - `web/js/sync/common.js:127-193` resets `gameWsIsReconnecting` flag before calling `handleGameWsDisconnect()`, allowing duplicate reconnection attempts.
+- [x] **Unsafe unwrap in launcher** - `mod/src/launcher/app.rs:375` uses `clone().unwrap()` after `has_token()` check. Replace with `if let Some(token) = ...` pattern.
+- [x] **WebSocket send error handling** - Multiple files in `web/js/sync/` call `ws.send()` without try-catch. Wrap all `send()` calls.
+- [x] **WebSocket reconnection race condition** - `web/js/sync/common.js:127-193` resets `gameWsIsReconnecting` flag before calling `handleGameWsDisconnect()`, allowing duplicate reconnection attempts.
 
 ### Documentation
 

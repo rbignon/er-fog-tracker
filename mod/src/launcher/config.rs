@@ -104,14 +104,6 @@ impl LauncherConfig {
         println!("[launcher] Saved config to {}", config_path.display());
         Ok(())
     }
-
-    /// Check if we have a mod token configured
-    pub fn has_token(&self) -> bool {
-        self.mod_token
-            .as_ref()
-            .map(|t| !t.is_empty())
-            .unwrap_or(false)
-    }
 }
 
 #[cfg(test)]
@@ -121,7 +113,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = LauncherConfig::default();
-        assert!(!config.has_token());
+        assert!(config.mod_token.is_none());
         assert!(config.last_game_id.is_none());
     }
 

@@ -370,13 +370,13 @@ impl LauncherApp {
         }
 
         // Auto-validate if we have a token
-        let initial_screen = if data.config.has_token() {
-            let url = data.config.server_url.clone();
-            let token = data.config.mod_token.clone().unwrap();
-            data.validate_token(url, token);
-            AppScreen::Connecting
-        } else {
-            AppScreen::TokenInput
+        let initial_screen = match data.config.mod_token.as_ref().filter(|t| !t.is_empty()) {
+            Some(token) => {
+                let url = data.config.server_url.clone();
+                data.validate_token(url, token.clone());
+                AppScreen::Connecting
+            }
+            None => AppScreen::TokenInput,
         };
 
         self.timer.start();
