@@ -307,7 +307,8 @@ export function handleDiscoveryFromServer(
             if (focusTarget) {
                 newlyDiscoveredTarget = focusTarget;
             } else if (propagated && propagated.length > 0) {
-                newlyDiscoveredTarget = propagated[0].target;
+                // Server sends target_id, not target
+                newlyDiscoveredTarget = propagated[0].target_id || propagated[0].target;
             }
             explorationState.discovered = newDiscovered;
             explorationState.discoveredLinks = newDiscoveredLinks;
@@ -379,7 +380,26 @@ export function handleDiscoveryFromServer(
                 const displayName = node?.name || zone;
                 Toast.show(`Discovered: ${displayName}`, { type: 'info' });
             }
+            // Update last discovery indicator with the focus target (destination of traversal)
+            if (newlyDiscoveredTarget) {
+                const targetNode = nodeMap.get(newlyDiscoveredTarget);
+                const targetDisplayName = targetNode?.name || newlyDiscoveredTarget;
+                updateLastDiscovery(targetDisplayName);
+            }
         }
+    }
+}
+
+/**
+ * Update the last discovery indicator in the stats panel.
+ * @param {string} zoneName - Display name of the last discovered zone
+ */
+function updateLastDiscovery(zoneName) {
+    const container = document.getElementById('last-discovery');
+    const nameEl = document.getElementById('last-discovery-name');
+    if (container && nameEl) {
+        nameEl.textContent = zoneName;
+        container.classList.remove('hidden');
     }
 }
 

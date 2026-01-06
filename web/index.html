@@ -305,8 +305,17 @@
                 <div class="header-left">
                     <a id="header-title-link" href="/" class="title-link"><h1>Fog Gate Randomizer Tracker</h1></a>
                     <div class="subtitle">
-                        <span id="seed-info">Loading...</span>
                         <a id="header-back-link" href="/dashboard" class="back-link hidden">← Dashboard</a>
+                        <div id="streamer-info" class="streamer-info hidden">
+                            <img id="streamer-avatar" class="streamer-avatar" src="" alt="" />
+                            <a id="streamer-name" class="streamer-name" href="#"></a>
+                            <a id="streamer-twitch-link" class="streamer-twitch-link" href="#" target="_blank" title="Watch on Twitch">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+                                </svg>
+                            </a>
+                        </div>
+                        <span id="seed-info">Loading...</span>
                     </div>
                 </div>
                 <div class="header-center">
@@ -343,6 +352,10 @@
                         <span class="connection-status-text">Host</span>
                     </div>
                 </div>
+            </div>
+
+            <div id="discovery-progress-bar" class="discovery-progress-bar hidden">
+                <div id="discovery-progress-fill" class="discovery-progress-fill"></div>
             </div>
 
             <div id="graph-container">
@@ -420,6 +433,10 @@
                             id="discovered-percent"
                             >0</span
                         >%)
+                    </p>
+                    <p id="last-discovery" class="last-discovery hidden">
+                        <span class="last-discovery-label">Last:</span>
+                        <span id="last-discovery-name" class="last-discovery-name"></span>
                     </p>
                     <p>Areas: <span id="area-count">0</span></p>
                     <p>Interchanges: <span id="hub-count">0</span></p>

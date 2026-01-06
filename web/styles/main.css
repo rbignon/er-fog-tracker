@@ -218,11 +218,11 @@ body::before {
     left: 0;
     right: 0;
     padding: 16px 24px;
-    background: linear-gradient(to bottom, rgba(10, 10, 12, 0.95), rgba(10, 10, 12, 0.8), transparent);
+    background: linear-gradient(to bottom, rgba(10, 10, 12, 0.95), rgba(10, 10, 12, 0.7));
     z-index: 100;
     display: grid;
     grid-template-columns: auto 1fr auto;
-    align-items: start;
+    align-items: center;
     gap: 24px;
 }
 
@@ -236,11 +236,70 @@ body::before {
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
+/* Discovery progress bar below header */
+.discovery-progress-bar {
+    position: fixed;
+    top: 95px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(40, 36, 30, 0.6);
+    z-index: 99;
+}
+
+.discovery-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #4ade80, #60a5fa);
+    transition: width 0.5s ease-out;
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+}
+
 .subtitle {
-    font-size: 0.85rem;
-    color: #8a7d65;
-    margin-top: 4px;
-    font-style: italic;
+    font-size: 1rem;
+    color: #b8a990;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Streamer info in subtitle (for viewers) */
+.streamer-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 12px;
+    margin-right: 12px;
+    border-right: 1px solid #5a5040;
+}
+
+.streamer-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #5a5040;
+}
+
+.streamer-name {
+    color: #d4c4a8;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.streamer-name:hover {
+    text-decoration: underline;
+}
+
+.streamer-twitch-link {
+    color: #6b6155;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.streamer-twitch-link:hover {
+    color: #9146ff;
 }
 
 .header-left {
@@ -673,7 +732,8 @@ body.overlay-mode::before {
     display: none;
 }
 
-body.overlay-mode #header {
+body.overlay-mode #header,
+body.overlay-mode .discovery-progress-bar {
     display: none !important;
 }
 
@@ -1861,6 +1921,9 @@ marker path {
     padding: 14px 18px;
     z-index: 100;
     text-align: right;
+    max-width: 200px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 #stats-options {
@@ -1951,12 +2014,31 @@ marker path {
     font-weight: 600;
 }
 
+/* Last discovery indicator */
+p#last-discovery {
+    font-size: 0.85rem;
+    border-bottom: 1px solid #3a3530;
+    padding-left: 5px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+#last-discovery .last-discovery-label {
+    color: #7a6d55;
+    text-align: left;
+}
+
+#last-discovery .last-discovery-name {
+    color: #c9a227;
+    font-weight: 500;
+}
+
 #discovered-stat {
     color: #c9a227;
     font-weight: 500;
-    padding-bottom: 6px;
-    margin-bottom: 6px;
-    border-bottom: 1px solid #3a3530;
 }
 
 #discovered-stat span {
@@ -1966,7 +2048,7 @@ marker path {
 /* Help text */
 #help {
     position: fixed;
-    top: 80px;
+    top: 120px;
     right: 20px;
     font-size: 0.8rem;
     color: #5a5040;
@@ -2026,8 +2108,13 @@ marker path {
     }
 
     .subtitle {
-        font-size: 0.75rem;
-        margin-top: 2px;
+        font-size: 0.85rem;
+        margin-top: 4px;
+    }
+
+    .streamer-avatar {
+        width: 20px;
+        height: 20px;
     }
 
     #search-container {
@@ -3138,14 +3225,14 @@ marker path {
 
 /* Back link */
 .back-link {
-    color: #7a6d55;
+    color: #b8a990;
     text-decoration: none;
-    font-size: 0.9rem;
     transition: color 0.2s;
 }
 
 .back-link:hover {
     color: #c9a227;
+    text-decoration: none;
 }
 
 .back-btn {
@@ -3186,13 +3273,9 @@ marker path {
 }
 
 #header-back-link {
-    margin-left: 12px;
-    padding-left: 12px;
-    border-left: 1px solid #5a5040;
-}
-
-#header-back-link:hover {
-    text-decoration: underline;
+    margin-right: 12px;
+    padding-right: 12px;
+    border-right: 1px solid #5a5040;
 }
 
 /* ============================================================

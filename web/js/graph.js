@@ -452,8 +452,21 @@ function updateStatsDisplay(nodes, links, graphData, explorationMode, exploratio
         document.getElementById('total-areas').textContent = totalAreas;
         document.getElementById('discovered-percent').textContent = percent;
         discoveredStat.classList.remove('hidden');
+
+        // Update progress bar
+        const progressBar = document.getElementById('discovery-progress-bar');
+        const progressFill = document.getElementById('discovery-progress-fill');
+        if (progressBar && progressFill) {
+            progressFill.style.width = `${percent}%`;
+            progressBar.classList.remove('hidden');
+        }
     } else {
         discoveredStat.classList.add('hidden');
+        // Hide progress bar in spoiler mode
+        const progressBar = document.getElementById('discovery-progress-bar');
+        if (progressBar) {
+            progressBar.classList.add('hidden');
+        }
     }
 
     // Requires Key Item legend
@@ -464,7 +477,7 @@ function updateStatsDisplay(nodes, links, graphData, explorationMode, exploratio
     if (graphData.metadata?.seed) {
         const label = graphData.metadata.label;
         document.getElementById('seed-info').textContent = label
-            ? `${label} — Seed: ${graphData.metadata.seed}`
+            ? `${label} • Seed: ${graphData.metadata.seed}`
             : `Seed: ${graphData.metadata.seed}`;
     } else {
         document.getElementById('seed-info').textContent = 'Spoiler Log Visualizer';

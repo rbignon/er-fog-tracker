@@ -6,6 +6,23 @@ import * as State from './state.js';
 import * as Api from './api.js';
 
 // ============================================================
+// UI HELPERS
+// ============================================================
+
+/**
+ * Update the last discovery indicator in the stats panel.
+ * @param {string} zoneName - Display name of the last discovered zone
+ */
+function updateLastDiscoveryIndicator(zoneName) {
+    const container = document.getElementById('last-discovery');
+    const nameEl = document.getElementById('last-discovery-name');
+    if (container && nameEl) {
+        nameEl.textContent = zoneName;
+        container.classList.remove('hidden');
+    }
+}
+
+// ============================================================
 // DISCOVERY LOGIC
 // ============================================================
 
@@ -80,6 +97,13 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
         }
         // Select the newly discovered node
         State.setSelectedNodeId(areaId);
+
+        // Update last discovery indicator (host doesn't receive server broadcast)
+        const graphData = State.getGraphData();
+        const node = graphData?.nodes?.find(n => n.id === areaId);
+        const displayName = node?.name || areaId;
+        updateLastDiscoveryIndicator(displayName);
+
         State.emit('graphNeedsRender', { preservePositions: true, centerOnNodeId: areaId });
 
         // Send to server - response will contain full state with back-propagation
@@ -117,6 +141,13 @@ export function discoverArea(areaId, fromNodeId = null, viaLink = null) {
     }
 
     discoverWithPreexisting(areaId, fromNodeId, viaLink);
+
+    // Update last discovery indicator (offline mode only - online mode updates via server response)
+    const graphData = State.getGraphData();
+    const node = graphData?.nodes?.find(n => n.id === areaId);
+    const displayName = node?.name || areaId;
+    updateLastDiscoveryIndicator(displayName);
+
     // Select the newly discovered node
     State.setSelectedNodeId(areaId);
     State.saveExplorationToStorage();

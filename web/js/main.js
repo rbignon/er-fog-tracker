@@ -47,6 +47,19 @@ function checkAndNotifyVersion() {
 // ============================================================
 
 /**
+ * Update the last discovery indicator in the stats panel.
+ * @param {string} zoneName - Display name of the last discovered zone
+ */
+function updateLastDiscoveryIndicator(zoneName) {
+    const container = document.getElementById('last-discovery');
+    const nameEl = document.getElementById('last-discovery-name');
+    if (container && nameEl) {
+        nameEl.textContent = zoneName;
+        container.classList.remove('hidden');
+    }
+}
+
+/**
  * Show or hide the graph loading overlay.
  * @param {boolean} show - Whether to show the loading overlay
  */
@@ -54,6 +67,53 @@ function setGraphLoading(show) {
     const loadingEl = document.getElementById('graph-loading');
     if (loadingEl) {
         loadingEl.classList.toggle('hidden', !show);
+    }
+}
+
+/**
+ * Fetch and display streamer info (avatar + name) for viewers.
+ * @param {string} username - Streamer's username
+ */
+async function displayStreamerInfo(username) {
+    const streamerInfo = document.getElementById('streamer-info');
+    const streamerAvatar = document.getElementById('streamer-avatar');
+    const streamerName = document.getElementById('streamer-name');
+    const streamerTwitchLink = document.getElementById('streamer-twitch-link');
+
+    if (!streamerInfo || !streamerAvatar || !streamerName) return;
+
+    try {
+        const { getUser } = await import('./api.js');
+        const user = await getUser(username);
+
+        // Set avatar (use placeholder if not available)
+        if (user.avatarUrl) {
+            streamerAvatar.src = user.avatarUrl;
+            streamerAvatar.alt = user.displayName;
+        } else {
+            streamerAvatar.style.display = 'none';
+        }
+
+        // Set name with link to games list
+        streamerName.textContent = user.displayName;
+        streamerName.href = `/watch/${username}`;
+
+        // Set Twitch link
+        if (streamerTwitchLink) {
+            streamerTwitchLink.href = `https://twitch.tv/${username}`;
+        }
+
+        // Show the streamer info
+        streamerInfo.classList.remove('hidden');
+    } catch (e) {
+        // If we can't fetch user info, just show the username without avatar
+        streamerAvatar.style.display = 'none';
+        streamerName.textContent = username;
+        streamerName.href = `/watch/${username}`;
+        if (streamerTwitchLink) {
+            streamerTwitchLink.href = `https://twitch.tv/${username}`;
+        }
+        streamerInfo.classList.remove('hidden');
     }
 }
 
@@ -159,7 +219,8 @@ async function handleViewerRoute({ params, query }) {
         // Interactive viewer mode: show UI but read-only
         document.body.classList.remove('overlay-mode');
         document.body.classList.add('viewer-interactive');
-        setNavigationLinks(`/watch/${username}`, username);
+        // Don't show back link - streamer info already has clickable name
+        setNavigationLinks(`/watch/${username}`, null);
 
         // Hide host-only controls
         document.getElementById('new-file-btn').classList.add('hidden');
@@ -172,6 +233,9 @@ async function handleViewerRoute({ params, query }) {
 
         // Hide viewer counter (only for overlay)
         document.getElementById('viewer-discovery-counter')?.classList.add('hidden');
+
+        // Fetch and display streamer info
+        displayStreamerInfo(username);
     }
 
     // Load game and connect as viewer
@@ -186,6 +250,8 @@ async function handleViewerRoute({ params, query }) {
         document.body.classList.remove('graph-mode');
         document.body.classList.remove('overlay-mode');
         document.body.classList.remove('viewer-interactive');
+        // Hide streamer info
+        document.getElementById('streamer-info')?.classList.add('hidden');
     };
 }
 
@@ -384,6 +450,10 @@ function loadExplorationFromServer(game) {
     // Use linkIndex (already built by setGraphData) to resolve zone_link_id → source/target
     const linkIndex = State.getLinkIndex();
 
+    // Find the most recently discovered link to show in "Last discovery"
+    let mostRecentLink = null;
+    let mostRecentTime = null;
+
     for (const link of game.discovered_zone_links || []) {
         const linkId = link.zone_link_id || link.link_id;
         if (linkId) {
@@ -396,7 +466,25 @@ function loadExplorationFromServer(game) {
                 discovered.add(sourceId);
                 discovered.add(targetId);
             }
+
+            // Track most recent discovery
+            if (link.discovered_at) {
+                const discoveredTime = new Date(link.discovered_at).getTime();
+                if (!mostRecentTime || discoveredTime > mostRecentTime) {
+                    mostRecentTime = discoveredTime;
+                    mostRecentLink = { linkData, linkId };
+                }
+            }
         }
+    }
+
+    // Update last discovery indicator with most recent zone
+    if (mostRecentLink?.linkData) {
+        const { targetId } = State.getLinkEndpoints(mostRecentLink.linkData);
+        const graphData = State.getGraphData();
+        const node = graphData?.nodes?.find(n => n.id === targetId);
+        const displayName = node?.name || targetId;
+        updateLastDiscoveryIndicator(displayName);
     }
 
     // Build tags map (keys are now zone_keys)

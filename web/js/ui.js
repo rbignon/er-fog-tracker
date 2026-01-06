@@ -312,10 +312,14 @@ function switchToExplorerMode() {
     State.setExplorationMode(true);
     updateModeButtons();
 
-    // Load existing save or initialize
-    const seed = State.getSeed();
-    if (seed && !Exploration.loadExplorationState(seed)) {
-        Exploration.initExplorationState();
+    // Load existing save or initialize (only if no exploration state exists yet)
+    // In online mode, exploration state is already loaded from server
+    const existingState = State.getExplorationState();
+    if (!existingState || existingState.discovered.size === 0) {
+        const seed = State.getSeed();
+        if (seed && !Exploration.loadExplorationState(seed)) {
+            Exploration.initExplorationState();
+        }
     }
 
     State.emit('graphNeedsRender', { preservePositions: true });
