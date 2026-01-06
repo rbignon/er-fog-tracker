@@ -2,4 +2,4 @@
  * Application version constant.
  * Updated by scripts/release.sh during release process.
  */
-export const VERSION = '0.3.2';
+export const VERSION = '1.0.0';
