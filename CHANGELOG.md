@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-01-06
+
+### New Features
+
+* Add game statistics tracking (runes, kindling, deaths, play time)
+
+#### Server
+* Add game_info.json export script for complete game data backup
+
+#### Web
+* Display game stats (runes, kindling, deaths, play time) in header
+* Add streamer info panel with progress bar and last discovery display
+* Add viewer count for host and host status indicator for viewers
+* Improve tag display styling
+
+### Bug Fixes
+
+#### Server
+* Skip Windows paths and randomizer log messages in spoiler parser
+* Remove invalid zones during migration instead of failing
+
 ## [1.0.0] - 2026-01-06
 
 ### New Features
