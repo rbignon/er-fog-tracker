@@ -16,8 +16,8 @@
 
 ### Documentation
 
-- [ ] **Create CHANGELOG.md** - Document v1.0 features and known limitations.
-- [ ] **Exclude docs/specs/ from release** - Internal design documents (IMPLEMENTATION_PLAN, REFACTORING_PLAN, etc.) should not be in the public release.
+- [x] **Create CHANGELOG.md** - Document v1.0 features and known limitations.
+- [x] **Exclude docs/specs/ from release** - Internal design documents (IMPLEMENTATION_PLAN, REFACTORING_PLAN, etc.) should not be in the public release.
 
 ---
 

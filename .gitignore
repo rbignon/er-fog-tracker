@@ -42,3 +42,6 @@ coverage.xml
 htmlcov/
 analysis/seeds/
 analysis/reports/
+
+# Internal design documents (not for public release)
+docs/specs/
