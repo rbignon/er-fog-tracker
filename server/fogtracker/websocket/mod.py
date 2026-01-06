@@ -373,6 +373,20 @@ class ModClient(Client):
             logger.warning("[MOD] Tag update missing zone_id")
             return
 
+        # Validate tags to prevent JSON bloat attacks
+        if not isinstance(tags, list):
+            logger.warning("[MOD] Tag update rejected: tags must be a list")
+            return
+        if len(tags) > 50:
+            logger.warning("[MOD] Tag update rejected: too many tags (%d > 50)", len(tags))
+            return
+        for tag in tags:
+            if not isinstance(tag, str) or len(tag) > 100:
+                logger.warning(
+                    "[MOD] Tag update rejected: invalid tag (must be string <= 100 chars)"
+                )
+                return
+
         logger.info("[MOD] Tag update for zone %s: %s", zone_id, tags)
 
         async with async_session() as db:

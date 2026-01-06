@@ -67,6 +67,20 @@ class HostClient(Client):
             logger.warning("[HOST] Tag update missing zone_id")
             return
 
+        # Validate tags to prevent JSON bloat attacks
+        if not isinstance(tags, list):
+            logger.warning("[HOST] Tag update rejected: tags must be a list")
+            return
+        if len(tags) > 50:
+            logger.warning("[HOST] Tag update rejected: too many tags (%d > 50)", len(tags))
+            return
+        for tag in tags:
+            if not isinstance(tag, str) or len(tag) > 100:
+                logger.warning(
+                    "[HOST] Tag update rejected: invalid tag (must be string <= 100 chars)"
+                )
+                return
+
         async with async_session() as db:
             result = await db.execute(select(Game).where(Game.id == self.game_id))
             game = result.scalar_one_or_none()

@@ -22,7 +22,10 @@ router = APIRouter(prefix="/spoiler", tags=["spoiler"])
 class SpoilerParseRequest(BaseModel):
     """Request body for parsing a spoiler log."""
 
-    spoiler_log: str = Field(description="Full spoiler log content")
+    spoiler_log: str = Field(
+        description="Full spoiler log content",
+        max_length=1_000_000,  # 1MB limit to prevent DoS via memory exhaustion
+    )
 
 
 class SpoilerParseResponse(BaseModel):
