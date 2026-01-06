@@ -4,8 +4,6 @@ Tests pure functions for zone name matching, graph traversal,
 and discovery logic.
 """
 
-import pytest
-
 from fogtracker.zone_matching import (
     build_full_adjacency,
     build_preexisting_adjacency,
@@ -436,14 +434,8 @@ class TestComputeDiscoveryStats:
 
 
 class TestWithRealData:
-    """Tests using real game data fixtures.
+    """Tests using real game data fixtures."""
 
-    NOTE: These tests require regenerating JSON fixtures with source_id/target_id fields.
-    After running the spoiler parser with Zone Key Migration, regenerate the fixtures:
-        python -c "from fogtracker.spoiler_parser import ...; ..."
-    """
-
-    @pytest.mark.skip(reason="JSON fixtures need regeneration with source_id/target_id")
     def test_start_node_in_real_data(self, zone_pairs_small, starting_zone_id):
         # starting_zone_id should be referenced in real data as source_id or target_id
         all_zone_ids = set()
@@ -454,7 +446,6 @@ class TestWithRealData:
                 all_zone_ids.add(pair["target_id"])
         assert starting_zone_id in all_zone_ids
 
-    @pytest.mark.skip(reason="JSON fixtures need regeneration with source_id/target_id")
     def test_preexisting_adjacency_not_empty(self, zone_pairs_small):
         adj = build_preexisting_adjacency(zone_pairs_small)
         assert len(adj) > 0
@@ -464,7 +455,6 @@ class TestWithRealData:
         full_adj = build_full_adjacency(zone_pairs_small)
         assert len(full_adj) >= len(preexisting_adj)
 
-    @pytest.mark.skip(reason="JSON fixtures need regeneration with source_id/target_id")
     def test_discovery_stats_consistent(self, zone_pairs_small):
         stats = compute_discovery_stats(zone_pairs_small, [])
         assert stats["total"] > 50  # Real data has many zones
