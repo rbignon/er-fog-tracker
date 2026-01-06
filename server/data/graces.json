@@ -552,12 +552,12 @@
     },
     "21012955": {
       "grace_name": "Storehouse, Back Section",
-      "zone": "Specimen Storehouse",
+      "zone": "Specimen Storehouse - Back Section",
       "map_id": null
     },
-    "21012956": {
+    "21012957": {
       "grace_name": "Storehouse, Loft",
-      "zone": "Specimen Storehouse",
+      "zone": "Specimen Storehouse - Back Section",
       "map_id": null
     },
     "21022951": {
@@ -1904,6 +1904,11 @@
       "grace_name": "Jagged Peak Summit",
       "zone": "Jagged Peak",
       "map_id": "m60_54_39_00"
+    },
+    "2055392950": {
+      "grace_name": "Rest of the Dread Dragon",
+      "zone": "Jagged Peak - Bayle",
+      "map_id": "m61_55_39_00"
     },
     "1055392950": {
       "grace_name": "Rest of the Dread Dragon",
