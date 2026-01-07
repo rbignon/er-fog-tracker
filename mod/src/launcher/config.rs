@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 const APP_NAME: &str = "FogRandoTracker";
 const CONFIG_FILENAME: &str = "launcher.toml";
-const DEFAULT_SERVER_URL: &str = "http://localhost:8001";
+const DEFAULT_SERVER_URL: &str = "https://fogtracker.malenia.win";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LauncherConfig {
