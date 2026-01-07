@@ -113,6 +113,7 @@ SKIP_PATTERNS = [
     re.compile(r"^Done "),  # "Done with core pass", etc.
     re.compile(r"^[A-Z]:\\"),  # Windows paths (C:\, D:\, I:\, etc.)
     re.compile(r"^Clique fixup"),  # Randomizer log message
+    re.compile(r"^Found key item"),  # Randomizer routing info
 ]
 
 # Patterns that indicate details in connection descriptions
@@ -149,6 +150,7 @@ DETAIL_PATTERNS = [
     re.compile(r"\s*\(up\s", re.IGNORECASE),
     re.compile(r"\s*\(down\s", re.IGNORECASE),
     re.compile(r"\s*\(backwards\s", re.IGNORECASE),
+    re.compile(r"\s*\(to\s", re.IGNORECASE),  # "to Capital Rampart after..."
 ]
 
 
