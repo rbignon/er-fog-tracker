@@ -86,9 +86,11 @@ async function handleFileSelect(file) {
         document.getElementById('new-game-modal').classList.remove('hidden');
         document.getElementById('new-game-label').focus();
     } catch (e) {
-        errorEl.textContent = e.message || 'Failed to parse spoiler log';
-        errorEl.classList.remove('hidden');
-        document.getElementById('new-game-modal').classList.remove('hidden');
+        // Show user-friendly error as toast instead of opening modal
+        const message = e.detail || e.message || 'Failed to parse spoiler log';
+        Toast.error(message);
+        // Reset file input so user can try again
+        document.getElementById('new-game-file-input').value = '';
     }
 }
 
