@@ -373,21 +373,22 @@ Stormhill
         assert len(boss_zones) == 1
         assert boss_zones[0].name == "Stormveil Castle before Gate"
 
-    def test_stops_at_optional_areas(self):
+    def test_includes_optional_areas(self):
+        """Optional areas should be parsed (they contain valid zone links)."""
         text = """Options and seed:99999
 Chapel of Anticipation
   Random: Chapel of Anticipation --> Stormhill
 Stormhill
 Optional areas:
-C
-  Random: C --> D
-D
+Limgrave
+  Random: Limgrave --> Liurnia
+Liurnia
 """
         result = parse_spoiler_log(text, RESOLVER)
         zone_names = {z.name for z in result.zones.values()}
-        # C and D should not be parsed (after Optional areas:)
-        assert "C" not in zone_names
-        assert "D" not in zone_names
+        # Zones after Optional areas: should now be included
+        assert "Limgrave" in zone_names
+        assert "Liurnia" in zone_names
 
     def test_empty_log_raises(self):
         # Empty string goes through seed parsing first, which fails
@@ -644,59 +645,75 @@ class TestDataclasses:
 
 
 class TestWithRealSpoilerLogs:
-    """Tests using real spoiler log files."""
+    """Tests using real spoiler log files.
 
-    def test_parse_seed_1078869800(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
-        assert result.seed == 1078869800
+    Tests using `any_spoiler_log` run on ALL fixture spoiler logs (parametrized).
+    """
+
+    def test_parse_extracts_seed(self, any_spoiler_log):
+        """Parser correctly extracts the seed from each spoiler log."""
+        expected_seed, content = any_spoiler_log
+        result = parse_spoiler_log(content, RESOLVER)
+        assert result.seed == expected_seed
+
+    def test_parse_finds_zones_and_connections(self, any_spoiler_log):
+        """Parser finds a reasonable number of zones and connections."""
+        _, content = any_spoiler_log
+        result = parse_spoiler_log(content, RESOLVER)
         assert len(result.zones) > 50
         assert len(result.connections) > 100
 
-    def test_parse_seed_1851144969(self, spoiler_log_1851144969):
-        result = parse_spoiler_log(spoiler_log_1851144969, RESOLVER)
-        assert result.seed == 1851144969
-        assert len(result.zones) > 50
-        assert len(result.connections) > 100
-
-    def test_all_connections_have_valid_zones(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+    def test_all_connections_have_valid_zones(self, any_spoiler_log):
+        """Every connection references zones that exist in the parsed zones."""
+        _, content = any_spoiler_log
+        result = parse_spoiler_log(content, RESOLVER)
         zone_names = {z.name for z in result.zones.values()}
         for conn in result.connections:
             assert conn.source in zone_names, f"Source '{conn.source}' not in zones"
             assert conn.target in zone_names, f"Target '{conn.target}' not in zones"
 
-    def test_connections_have_valid_zone_ids(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+    def test_connections_have_valid_zone_ids(self, any_spoiler_log):
+        """Every connection has valid source_id and target_id."""
+        _, content = any_spoiler_log
+        result = parse_spoiler_log(content, RESOLVER)
         zone_ids = {z.id for z in result.zones.values()}
         for conn in result.connections:
             assert conn.source_id in zone_ids, f"source_id '{conn.source_id}' not found"
             assert conn.target_id in zone_ids, f"target_id '{conn.target_id}' not found"
 
-    def test_has_both_connection_types(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+    def test_has_both_connection_types(self, any_spoiler_log):
+        """Spoiler logs have both random and preexisting connections."""
+        _, content = any_spoiler_log
+        result = parse_spoiler_log(content, RESOLVER)
         types = {c.conn_type for c in result.connections}
         assert "random" in types
         assert "preexisting" in types
 
-    def test_has_boss_zones(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+    def test_has_boss_zones(self, any_spoiler_log):
+        """Spoiler logs contain boss zones (marked with <<<<<)."""
+        _, content = any_spoiler_log
+        result = parse_spoiler_log(content, RESOLVER)
         boss_zones = [z for z in result.zones.values() if z.is_boss]
         assert len(boss_zones) > 0
 
-    def test_has_scaling_info(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+    def test_has_scaling_info(self, any_spoiler_log):
+        """Zones have scaling information."""
+        _, content = any_spoiler_log
+        result = parse_spoiler_log(content, RESOLVER)
         zones_with_scaling = [z for z in result.zones.values() if z.scaling]
         assert len(zones_with_scaling) > 0
 
-    def test_has_one_way_connections(self, spoiler_log_1078869800):
-        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+    def test_has_one_way_connections(self, any_spoiler_log):
+        """Spoiler logs have one-way connections (sending gates, etc.)."""
+        _, content = any_spoiler_log
+        result = parse_spoiler_log(content, RESOLVER)
         one_way = [c for c in result.connections if c.is_one_way]
-        # Real spoiler logs typically have some one-way connections (sending gates, etc.)
         assert len(one_way) > 0
 
-    def test_chapel_of_anticipation_exists(self, spoiler_log_1078869800):
+    def test_chapel_of_anticipation_exists(self, any_spoiler_log):
         """Chapel of Anticipation is always the starting zone."""
-        result = parse_spoiler_log(spoiler_log_1078869800, RESOLVER)
+        _, content = any_spoiler_log
+        result = parse_spoiler_log(content, RESOLVER)
         zone_names = {z.name for z in result.zones.values()}
         assert "Chapel of Anticipation" in zone_names
 

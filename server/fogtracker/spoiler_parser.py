@@ -400,9 +400,9 @@ def parse_spoiler_log(text: str, resolver: ZoneResolver | None = None) -> ParseR
     first_zone_name: str | None = None  # Track first zone for starting_zone_id
 
     for line in lines:
-        # Stop at optional areas section
+        # Skip the "Optional areas:" header line (but continue parsing optional areas)
         if line.strip() == "Optional areas:":
-            break
+            continue
 
         # Try to parse as area
         zone_info = _parse_area_line(line)
