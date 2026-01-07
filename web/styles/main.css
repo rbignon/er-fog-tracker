@@ -565,7 +565,8 @@ body::before {
     display: flex;
 }
 
-.stream-modal-content {
+.stream-modal-content,
+.modal-content {
     position: relative;
     background: linear-gradient(145deg, #1a1815 0%, #12100d 100%);
     border: 1px solid #3a3530;
@@ -598,11 +599,19 @@ body::before {
     color: #c9a227;
 }
 
-.stream-modal-content h3 {
+.stream-modal-content h3,
+.modal-content h3 {
     font-family: 'Cinzel', serif;
     color: #c9a227;
     margin-bottom: 20px;
     font-size: 1.3rem;
+}
+
+.modal-hint {
+    color: #6a5a4a;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+    font-style: italic;
 }
 
 .stream-section {
@@ -3135,6 +3144,7 @@ p#last-discovery {
     padding: 10px 12px;
     background: #0a0908;
     border: 1px solid #3a3530;
+    border-radius: 6px;
     color: #c4b998;
     font-family: inherit;
     font-size: 0.95rem;
