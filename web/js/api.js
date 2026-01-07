@@ -200,15 +200,20 @@ export function transformLinksFromApi(links) {
 /**
  * Transform zones from frontend format to API format.
  * @param {Array} nodes - Nodes in frontend format (camelCase)
- * @returns {Array} Zones in API format (snake_case)
+ * @returns {Object} Zones dict keyed by zone_id in API format (snake_case)
  */
 export function transformZonesToApi(nodes) {
-    return nodes.map(node => ({
-        id: node.id, // zone_key
-        name: node.name || node.id, // display name (fallback to id)
-        is_boss: node.isBoss || false,
-        scaling: node.scaling || null,
-    }));
+    return Object.fromEntries(
+        nodes.map(node => [
+            node.id,
+            {
+                id: node.id, // zone_key
+                name: node.name || node.id, // display name (fallback to id)
+                is_boss: node.isBoss || false,
+                scaling: node.scaling || null,
+            },
+        ])
+    );
 }
 
 /**
