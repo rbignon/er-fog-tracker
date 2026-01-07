@@ -627,8 +627,8 @@ function getNodeClass(d, explorationMode) {
         if (d.explorationStatus.accessible) cls += ' accessible';
     } else {
         if (d.id === State.getStartNodeId()) cls += ' start';
-        else if (d.id === 'stone_platform')
-            cls += ' end'; // zone_key for Stone Platform
+        else if (d.id === 'erdtree')
+            cls += ' end'; // zone_key for Stone Platform (Erdtree)
         else if (d.isBoss) cls += ' boss';
         else cls += ' normal';
         if (d.isHub) cls += ' hub';
