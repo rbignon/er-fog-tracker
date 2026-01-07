@@ -30,6 +30,7 @@
 
 ### Features
 
+- [ ] Detect grace with the name in entity is not found
 - [ ] **Mod information to server** - Send from mod information about Great Runes/Kindlings/deaths to server to display them on the website
 - [ ] **Display issues related to tags or search results** - the popup is still visible, but the graph consider no selected nodes
 - [ ] **Auto discover update** - on website, after an auto-discover, the text is in black on the overlay mode, and the host must center on the target node, and be careful to not open the popup over the node
