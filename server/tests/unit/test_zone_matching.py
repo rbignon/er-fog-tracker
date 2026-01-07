@@ -224,6 +224,71 @@ class TestGetDiscoveredNodes:
         assert "chapel_start" in nodes
         assert "limgrave" in nodes
 
+    def test_includes_preexisting_from_discovered(
+        self, simple_zone_pairs, discovered_chapel_to_limgrave, starting_zone_id
+    ):
+        """Zones reachable via preexisting from discovered zones should be included.
+
+        When limgrave is discovered (via random link), stormveil_castle should
+        also be considered discovered because there's a preexisting link from
+        limgrave to stormveil_castle.
+        """
+        nodes = get_discovered_nodes(
+            discovered_chapel_to_limgrave, simple_zone_pairs, starting_zone_id
+        )
+        # stormveil_castle has preexisting link from limgrave
+        assert "stormveil_castle" in nodes
+
+    def test_includes_preexisting_from_start(self):
+        """Zones reachable via preexisting from starting zone should be included.
+
+        This is the Roundtable Hold case: when starting at Chapel of Anticipation,
+        Roundtable Hold should be discovered because there's a preexisting link
+        from Chapel to Roundtable Hold.
+        """
+        # Create zone pairs that mirror the real game structure
+        zone_pairs = [
+            {
+                "id": "link-chapel-roundtable",
+                "source": "Chapel of Anticipation",
+                "source_id": "chapel_start",
+                "target": "Roundtable Hold",
+                "target_id": "roundtable_hold",
+                "type": "preexisting",
+                "source_details": None,
+                "target_details": "accessing an overworld grace",
+                "is_one_way": False,
+            },
+            {
+                "id": "link-roundtable-chapel",
+                "source": "Roundtable Hold",
+                "source_id": "roundtable_hold",
+                "target": "Chapel of Anticipation",
+                "target_id": "chapel_start",
+                "type": "preexisting",
+                "source_details": None,
+                "target_details": None,
+                "is_one_way": False,
+            },
+            {
+                "id": "link-chapel-limgrave",
+                "source": "Chapel of Anticipation",
+                "source_id": "chapel_start",
+                "target": "Limgrave",
+                "target_id": "limgrave",
+                "type": "random",
+                "source_details": None,
+                "target_details": None,
+                "is_one_way": False,
+            },
+        ]
+
+        # With no discovered links, roundtable_hold should be discovered
+        # because it's reachable via preexisting from starting zone
+        nodes = get_discovered_nodes([], zone_pairs, "chapel_start")
+        assert "chapel_start" in nodes
+        assert "roundtable_hold" in nodes
+
 
 class TestFindReachableNodes:
     """Tests for find_reachable_nodes function."""

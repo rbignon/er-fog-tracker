@@ -123,20 +123,33 @@ def get_discovered_nodes(
 ) -> set[str]:
     """
     Get all discovered zone_ids from discovered links.
-    A node is discovered if it's the source or target of any discovered link,
-    or is the starting_zone_id.
+
+    A node is discovered if it's:
+    - The starting zone
+    - Reachable via preexisting links from the starting zone or any discovered zone
+    - The source or target of any discovered link
+
+    This ensures that zones connected via preexisting links (vanilla connections
+    like elevators, doors, graces) are automatically considered discovered when
+    their "parent" zone is discovered.
     """
-    discovered = {starting_zone_id}
+    # Collect directly discovered zones (starting zone + link endpoints)
+    direct_discovered = {starting_zone_id}
     zp_index = build_zone_pairs_index(zone_pairs)
 
     for link in discovered_links:
         link_id = get_zone_link_id(link)
         zp = zp_index.get(link_id)
         if zp:
-            discovered.add(zp["source_id"])
-            discovered.add(zp["target_id"])
+            direct_discovered.add(zp["source_id"])
+            direct_discovered.add(zp["target_id"])
 
-    return discovered
+    # Expand via preexisting from each directly discovered zone
+    all_discovered = set()
+    for zone_id in direct_discovered:
+        all_discovered.update(get_zones_via_preexisting(zone_pairs, zone_id))
+
+    return all_discovered
 
 
 def link_exists(
