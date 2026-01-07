@@ -550,7 +550,7 @@
       "zone": "Specimen Storehouse",
       "map_id": null
     },
-    "21012955": {
+    "21012956": {
       "grace_name": "Storehouse, Back Section",
       "zone": "Specimen Storehouse - Back Section",
       "map_id": null
@@ -1007,7 +1007,7 @@
     },
     "43012951": {
       "grace_name": "Dragon's Pit Terminus",
-      "zone": "Gravesite Plain",
+      "zone": "Gravesite Plain - Dragon's Pit - After Boss",
       "map_id": null
     },
     "1041322950": {
