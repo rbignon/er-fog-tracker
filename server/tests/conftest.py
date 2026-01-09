@@ -189,9 +189,6 @@ def discovered_to_caelid(simple_zone_pairs: list[dict]) -> list[dict]:
 
 # Spoiler log fixtures
 
-# All available spoiler log seeds
-SPOILER_LOG_SEEDS = [1078869800, 1851144969, 399723671]
-
 
 @pytest.fixture
 def spoiler_log_1078869800() -> str:
@@ -203,20 +200,6 @@ def spoiler_log_1078869800() -> str:
 def spoiler_log_1851144969() -> str:
     """Real spoiler log for seed 1851144969."""
     return (SPOILER_LOGS_DIR / "seed_1851144969.txt").read_text()
-
-
-@pytest.fixture
-def spoiler_log_399723671() -> str:
-    """Real spoiler log for seed 399723671 (includes optional areas)."""
-    return (SPOILER_LOGS_DIR / "seed_399723671.txt").read_text()
-
-
-@pytest.fixture(params=SPOILER_LOG_SEEDS)
-def any_spoiler_log(request) -> tuple[int, str]:
-    """Parametrized fixture that yields (seed, content) for each spoiler log."""
-    seed = request.param
-    content = (SPOILER_LOGS_DIR / f"seed_{seed}.txt").read_text()
-    return seed, content
 
 
 @pytest.fixture
