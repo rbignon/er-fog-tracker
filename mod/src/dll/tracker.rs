@@ -228,6 +228,9 @@ pub struct FogRandoTracker {
     // Previous game stats for change detection (send updates only when changed)
     previous_game_stats: Option<GameStats>,
 
+    // Throttle for game stats checking (avoid scanning inventory every frame)
+    last_game_stats_check: Instant,
+
     // Icon atlas texture (loaded in initialize())
     pub(crate) icon_atlas: Option<IconAtlas>,
 
@@ -331,6 +334,7 @@ impl FogRandoTracker {
             last_logged_warp_requested: false,
             debug_items_dumped: false,
             previous_game_stats: None,
+            last_game_stats_check: Instant::now(),
             icon_atlas: None,
             log_file_path,
         })
@@ -459,6 +463,12 @@ impl FogRandoTracker {
         if !self.ws_client.is_connected() {
             return;
         }
+
+        // Throttle: only scan inventory once per second (stats change infrequently)
+        if self.last_game_stats_check.elapsed() < Duration::from_secs(1) {
+            return;
+        }
+        self.last_game_stats_check = Instant::now();
 
         // Try to read current stats
         if let Some(current_stats) = self.read_current_game_stats() {
