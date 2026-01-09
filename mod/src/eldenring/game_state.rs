@@ -10,10 +10,10 @@ use libeldenring::memedit::PointerChain;
 use libeldenring::pointers::Pointers;
 
 use crate::core::constants::{
-    GreatRune, FIELD_AREA_PLAY_REGION_ID_OFFSET, GAMEDATAMAN_DEATH_COUNT_OFFSET,
-    GREAT_RUNE_UNRESTORED_RANGE, INVALID_MAP_ID, INVENTORY_ENTRY_ITEM_ID_OFFSET,
-    INVENTORY_ENTRY_QUANTITY_OFFSET, INVENTORY_ENTRY_SIZE, INVENTORY_SCAN_BUFFER,
-    ITEM_CATEGORY_GOODS, KEY_ITEMS_COUNT_OFFSET, KEY_ITEMS_HEAD_OFFSET, MESSMERS_KINDLING,
+    GreatRune, FIELD_AREA_PLAY_REGION_ID_OFFSET, GAMEDATAMAN_DEATH_COUNT_OFFSET, INVALID_MAP_ID,
+    INVENTORY_ENTRY_ITEM_ID_OFFSET, INVENTORY_ENTRY_QUANTITY_OFFSET, INVENTORY_ENTRY_SIZE,
+    INVENTORY_SCAN_BUFFER, ITEM_CATEGORY_GOODS, KEY_ITEMS_COUNT_OFFSET, KEY_ITEMS_HEAD_OFFSET,
+    MESSMERS_KINDLING,
 };
 use crate::core::map_utils::format_map_id;
 use crate::core::traits::GameStateReader;
@@ -157,143 +157,6 @@ impl GameState {
         }
 
         Some(total)
-    }
-
-    /// Debug: dump all key items to find the correct Kindling param_id
-    ///
-    /// Logs all items in key_items inventory with their param_id and quantity.
-    /// Also specifically identifies Great Runes (restored and unrestored).
-    pub fn debug_dump_key_items(&self) {
-        use tracing::info;
-
-        let Some((key_items_head, key_items_count)) = self.read_key_items_info() else {
-            info!("[DEBUG] Failed to read key_items_info");
-            return;
-        };
-
-        // Scan beyond the reported count - the count field can be inaccurate
-        let scan_count = key_items_count + INVENTORY_SCAN_BUFFER;
-
-        info!(
-            "[DEBUG] key_items: head=0x{:X}, count={} (scanning {} slots)",
-            key_items_head, key_items_count, scan_count
-        );
-
-        // Track found Great Runes for summary
-        let mut found_runes: Vec<(u32, bool, GreatRune)> = Vec::new(); // (param_id, is_restored, rune)
-
-        for i in 0..scan_count {
-            let entry_addr = key_items_head + (i as usize) * INVENTORY_ENTRY_SIZE;
-
-            let item_id: i32 = PointerChain::new(&[entry_addr + INVENTORY_ENTRY_ITEM_ID_OFFSET])
-                .read()
-                .unwrap_or(0);
-
-            // Skip empty/invalid slots
-            if item_id == 0 || item_id == -1 {
-                continue;
-            }
-
-            let quantity: u32 = PointerChain::new(&[entry_addr + INVENTORY_ENTRY_QUANTITY_OFFSET])
-                .read()
-                .unwrap_or(0);
-
-            let category = ((item_id >> 28) & 0xF) as u8;
-            let param_id = (item_id & 0x0FFFFFFF) as u32;
-
-            // Check for Great Rune
-            let mut marker = String::new();
-
-            // Mark items beyond the reported count
-            let beyond_count = i >= key_items_count;
-            if beyond_count {
-                marker = " [BEYOND COUNT]".to_string();
-            }
-
-            if category == ITEM_CATEGORY_GOODS {
-                // Check if it's a Great Rune
-                if let Some(rune) = GreatRune::from_param_id(param_id) {
-                    let is_restored = !GREAT_RUNE_UNRESTORED_RANGE.contains(&param_id);
-                    let status = if is_restored {
-                        "RESTORED"
-                    } else {
-                        "UNRESTORED"
-                    };
-                    let prefix = if beyond_count { " [BEYOND COUNT]" } else { "" };
-                    marker = format!("{} <-- GREAT RUNE: {:?} ({})", prefix, rune, status);
-                    found_runes.push((param_id, is_restored, rune));
-                }
-
-                // Check for Kindling
-                if param_id == MESSMERS_KINDLING {
-                    let prefix = if beyond_count { " [BEYOND COUNT]" } else { "" };
-                    marker = format!("{} <-- KINDLING (qty={})", prefix, quantity);
-                }
-            }
-
-            // Highlight items with quantity 4 (potential Kindling)
-            if quantity == 4 && marker.is_empty() {
-                marker = " <-- QTY 4!".to_string();
-            }
-
-            info!(
-                "[DEBUG] [{:3}] cat={} param_id={:8} (0x{:08X}) qty={}{}",
-                i, category, param_id, param_id, quantity, marker
-            );
-        }
-
-        // Summary of Great Runes
-        info!("[DEBUG] ========== GREAT RUNES SUMMARY ==========");
-        if found_runes.is_empty() {
-            info!("[DEBUG] No Great Runes found in inventory");
-        } else {
-            for (param_id, is_restored, rune) in &found_runes {
-                let status = if *is_restored {
-                    "RESTORED"
-                } else {
-                    "UNRESTORED"
-                };
-                info!(
-                    "[DEBUG] {:?}: param_id={} (0x{:08X}) - {}",
-                    rune, param_id, param_id, status
-                );
-            }
-            // Deduplicated count
-            let unique_runes: std::collections::HashSet<_> =
-                found_runes.iter().map(|(_, _, r)| r).collect();
-            info!("[DEBUG] Total unique runes: {} / 7", unique_runes.len());
-        }
-        info!("[DEBUG] ============================================");
-
-        // Additional debug: show ALL items with small param_ids that might be unknown Great Runes
-        info!("[DEBUG] ========== POTENTIAL GREAT RUNES (param_id < 500) ==========");
-        for i in 0..key_items_count {
-            let entry_addr = key_items_head + (i as usize) * INVENTORY_ENTRY_SIZE;
-            let item_id: i32 = PointerChain::new(&[entry_addr + INVENTORY_ENTRY_ITEM_ID_OFFSET])
-                .read()
-                .unwrap_or(0);
-            let category = ((item_id >> 28) & 0xF) as u8;
-            let param_id = (item_id & 0x0FFFFFFF) as u32;
-
-            if category == ITEM_CATEGORY_GOODS && param_id < 500 {
-                let known = GreatRune::from_param_id(param_id)
-                    .map(|r| format!("{:?}", r))
-                    .unwrap_or_else(|| "UNKNOWN".to_string());
-                info!(
-                    "[DEBUG] [{:3}] param_id={:3} (0x{:04X}) -> {}",
-                    i, param_id, param_id, known
-                );
-            }
-        }
-        info!("[DEBUG] ============================================================");
-
-        // Also show the param_id ranges for reference
-        info!(
-            "[DEBUG] Reference - Restored param_ids: Godrick=191, Radahn=192, Morgott=193, Rykard=194, Mohg=195, Malenia=196, Unborn=10080"
-        );
-        info!(
-            "[DEBUG] Reference - Unrestored param_ids: 8148=Godrick, 8149=Radahn, 8150=Morgott, 8151=Rykard, 8152=Mohg, 8153=Malenia"
-        );
     }
 
     /// Read key items inventory info (head pointer and count)

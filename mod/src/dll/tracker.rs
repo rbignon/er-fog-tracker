@@ -222,9 +222,6 @@ pub struct FogRandoTracker {
     last_anim_log_time: Instant,
     last_logged_warp_requested: bool,
 
-    // Debug: dump key items once to find Kindling param_id
-    debug_items_dumped: bool,
-
     // Previous game stats for change detection (send updates only when changed)
     previous_game_stats: Option<GameStats>,
 
@@ -332,7 +329,6 @@ impl FogRandoTracker {
             last_logged_anim: None,
             last_anim_log_time: Instant::now(),
             last_logged_warp_requested: false,
-            debug_items_dumped: false,
             previous_game_stats: None,
             last_game_stats_check: Instant::now(),
             icon_atlas: None,
@@ -356,15 +352,6 @@ impl FogRandoTracker {
         self.log_speffect_debug(&snapshot);
         self.log_animation_debug(&snapshot);
         self.log_warp_debug(&snapshot);
-
-        // Debug: dump key items once to find Kindling param_id
-        if !self.debug_items_dumped {
-            if snapshot.read_position().is_some() {
-                info!("[DEBUG] Dumping key items inventory...");
-                self.debug_dump_key_items();
-                self.debug_items_dumped = true;
-            }
-        }
 
         // 3. Create adapter for WebSocket communication
         let mut adapter = WebSocketAdapter::new(&mut self.ws_client);
@@ -651,11 +638,6 @@ impl FogRandoTracker {
     /// Get the Messmer's Kindling count from game memory
     pub fn read_kindling_count(&self) -> Option<u32> {
         self.game_state.read_kindling_count()
-    }
-
-    /// Debug: dump all key items to find the correct Kindling param_id
-    pub fn debug_dump_key_items(&self) {
-        self.game_state.debug_dump_key_items()
     }
 
     /// Log GameMan warp state changes (with deduplication)
