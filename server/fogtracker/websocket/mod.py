@@ -1103,10 +1103,11 @@ class ModClient(Client):
         room.mod = client
         logger.info("[MOD#%d@%s] Connected to game %s", client._conn_id, client._remote, game_id)
 
-        # Notify host
+        # Notify host and viewers
         if room.host:
             with contextlib.suppress(Exception):
                 await room.host.send({"type": "mod_connected"})
+        await manager.broadcast_to_viewers(game_id, {"type": "mod_connected"})
 
         try:
             await client.run()
@@ -1120,4 +1121,5 @@ class ModClient(Client):
                 if room.host:
                     with contextlib.suppress(Exception):
                         await room.host.send({"type": "mod_disconnected"})
+                await manager.broadcast_to_viewers(game_id, {"type": "mod_disconnected"})
             manager.cleanup_room(game_id)

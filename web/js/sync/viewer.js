@@ -434,6 +434,21 @@ export function updateHostConnectionIndicator(connected) {
     }
 }
 
+/**
+ * Update the mod/game connection status indicator.
+ * @param {boolean} connected - Whether the mod/game is connected
+ */
+function updateModConnectionIndicator(connected) {
+    const modStatus = document.getElementById('mod-status');
+    if (modStatus) {
+        if (connected) {
+            modStatus.classList.add('mod-connected');
+        } else {
+            modStatus.classList.remove('mod-connected');
+        }
+    }
+}
+
 // =============================================================================
 // Discovery Counter (OBS overlay only)
 // =============================================================================
@@ -607,6 +622,17 @@ export async function connectAsViewer(gameId) {
                     death_count: data.death_count,
                     play_time_ms: data.play_time_ms,
                 });
+                return;
+            }
+
+            // Game/mod connection status
+            if (data.type === 'mod_connected') {
+                updateModConnectionIndicator(true);
+                return;
+            }
+
+            if (data.type === 'mod_disconnected') {
+                updateModConnectionIndicator(false);
                 return;
             }
 

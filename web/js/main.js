@@ -225,7 +225,7 @@ async function handleViewerRoute({ params, query }) {
         // Hide host-only controls
         document.getElementById('new-file-btn').classList.add('hidden');
         document.getElementById('stream-btn').classList.add('hidden');
-        document.getElementById('mod-status').classList.add('hidden');
+        document.getElementById('mod-status').classList.remove('hidden'); // Show game status to viewers
         document.getElementById('viewer-count').classList.add('hidden');
 
         // Show host status indicator for viewers

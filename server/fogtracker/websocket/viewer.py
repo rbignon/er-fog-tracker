@@ -88,6 +88,10 @@ class ViewerClient(Client):
         else:
             await client.send({"type": "host_disconnected"})
 
+        # Send mod/game connection status
+        if room.mod:
+            await client.send({"type": "mod_connected"})
+
         # Send visual state from host (viewport, highlights, etc.)
         if room.last_visual_state:
             await client.send(room.last_visual_state)
