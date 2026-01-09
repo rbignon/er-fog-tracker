@@ -336,14 +336,15 @@ impl FogRandoTracker {
         })
     }
 
-    /// Check for fog gate randomizer warps each frame
+    /// Per-frame update: process game state and handle events
     ///
-    /// This method:
+    /// Called every frame by the render loop. This method:
     /// 1. Captures a FrameSnapshot with all game state readings upfront
     /// 2. Performs debug logging using the snapshot
-    /// 3. Delegates warp detection to TrackerSession using the snapshot
-    /// 4. Handles the resulting events (logging, status messages, etc.)
-    pub fn check_fog_traversal(&mut self) {
+    /// 3. Delegates warp detection to TrackerSession
+    /// 4. Handles session events (discoveries, zone updates, etc.)
+    /// 5. Sends game stats updates when they change
+    pub fn update(&mut self) {
         // 1. Capture all game state in a single pass
         let snapshot = FrameSnapshot::capture(&self.game_state, &self.game_man);
 

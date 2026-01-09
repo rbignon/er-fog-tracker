@@ -70,8 +70,8 @@ impl ImguiRenderLoop for FogRandoTracker {
         // Handle keyboard shortcuts
         self.handle_hotkeys();
 
-        // Check for fog traversals each frame (includes WebSocket polling)
-        self.check_fog_traversal();
+        // Per-frame update: warp detection, WebSocket polling, stats sync
+        self.update();
 
         // NOTE: Hudhook crashes if render() doesn't draw anything.
         // We must always call window().build() even when hidden.
