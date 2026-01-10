@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-01-10
+
+### New Features
+
+#### Web
+* Add feedback system with Discord integration (floating button, welcome modal, community section in help)
+* Rename "Mod" indicator to "Game" and show it to viewers
+
+### Bug Fixes
+
+#### Mod
+* Set the correct default server URL
+
+#### Server
+* Update graces mapping
+* Include preexisting zones in get_discovered_nodes
+
+#### Parser
+* Skip randomizer routing lines and handle "(to ..." details
+
+#### Web
+* Style create game modal and add launcher hint
+* Return zones as dict instead of list in transformZonesToApi
+* Show toast instead of modal for spoiler parse errors
+* Correct End Area zone ID from stone_platform to erdtree
+
+### Improvements
+
+#### Mod
+* Throttle game stats inventory scan to once per second for performance
+
 ## [1.1.0] - 2026-01-06
 
 ### New Features
