@@ -1930,10 +1930,20 @@
       "zone": "Ancient Ruins of Rauh - Romina, Saint of the Bud",
       "map_id": "m61_44_45_10"
     },
+    "2044462950": {
+      "grace_name": "Church of the Bud, Main Entrance",
+      "zone": "Ancient Ruins of Rauh - West",
+      "map_id": "m60_44_46_00"
+    },
     "1044462950": {
       "grace_name": "Church of the Bud, Main Entrance",
       "zone": "Ancient Ruins of Rauh - West",
       "map_id": "m60_44_46_00"
+    },
+    "2045452951": {
+      "grace_name": "Rauh Ancient Ruins, West",
+      "zone": "Ancient Ruins of Rauh - West",
+      "map_id": "m60_45_45_00"
     },
     "1045452951": {
       "grace_name": "Rauh Ancient Ruins, West",
