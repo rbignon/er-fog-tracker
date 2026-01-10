@@ -94,6 +94,30 @@ Col (play region) to zone mappings.
 | `Cols` | Col identifiers (map_id + play_region) |
 | `AArea` | Zones accessible from this fog gate |
 
+### graces.json
+
+Maps grace entity IDs to zone information. Used for `zone_query` resolution.
+
+```json
+{
+  "1042362951": {
+    "grace_name": "The First Step",
+    "zone": "Limgrave",
+    "zone_id": "limgrave",
+    "map_id": "m60_42_36_00"
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `grace_name` | Human-readable grace name |
+| `zone` | Display name (shown to user) |
+| `zone_id` | Internal zone key (unambiguous) |
+| `map_id` | Map containing this grace |
+
+**Important**: The `zone_id` field provides unambiguous zone resolution. Some display names may be shared by multiple zones (e.g., virtual zones for flame doors), but `zone_id` is always unique. This prevents bugs where `lookup_by_display_name` might return the wrong zone.
+
 ## Resolution Strategies
 
 When the mod sends a discovery, the server tries multiple strategies in order:
@@ -171,7 +195,35 @@ If no exact match:
    - Boss zones last
 3. Try matching each candidate against spoiler log
 
-### 6. Sibling Map Fallback
+### 6. Grace-Based Resolution (zone_query)
+
+For `zone_query` messages (when player rests at a grace), resolution uses the `zone_id` directly from graces.json:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Mod sends: zone_query with grace_entity_id = 35002950       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Lookup in graces.json:                                       │
+│ 35002950 → zone_id = "sewer_mohg", zone = "Mohg, the Omen"  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Check if zone_id is discovered:                              │
+│ "sewer_mohg" in discovered_zones? → Yes → Return zone info  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Why zone_id matters**: The display name "Mohg, the Omen" is shared by two zones:
+- `sewer_mohg` - the main boss arena
+- `sewer_mohg_flame` - a virtual zone for the flame door
+
+Using `zone_id` directly avoids ambiguity from `lookup_by_display_name`.
+
+### 7. Sibling Map Fallback
 
 When a map has **no zones at all** (step 4 returns empty), the resolver extends the search to sibling maps. This handles cases where the mod reports a map variant not explicitly listed in fog.txt.
 
@@ -474,3 +526,29 @@ If the target zone exists but isn't found in candidates:
 ```
 
 **Note**: The sibling fallback only helps when the map has NO zones. If the map has other zones but not the target, you must add the map to the zone's definition.
+
+### Duplicate Display Names
+
+If two zones share the same display name, `lookup_by_display_name` will return the **first** zone found in fog.txt. This can cause incorrect resolution.
+
+**Prevention**: Each real zone in fog.txt should have a unique display name. A unit test (`test_no_duplicate_display_names_for_real_zones`) validates this.
+
+**If you find duplicates**:
+1. Rename one of the zones in fog.txt to have a distinct name
+2. Update graces.json if any graces reference the renamed zone
+3. Run `scripts/fix_duplicate_zone_ids.py` to fix existing games
+
+**Example fix** (from a past bug):
+```yaml
+# Before: Two zones with same name
+- Name: sewer_mohg
+  Text: Mohg, the Omen
+- Name: sewer_mohg_flame
+  Text: Mohg, the Omen
+
+# After: Unique names
+- Name: sewer_mohg
+  Text: Mohg, the Omen
+- Name: sewer_mohg_flame
+  Text: Mohg, the Omen - Flame Door
+```

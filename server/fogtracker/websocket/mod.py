@@ -533,18 +533,20 @@ class ModClient(Client):
             # 1. Try grace entity ID resolution (most precise for fast travel)
             resolver = get_resolver()
             if grace_entity_id:
-                grace_zone = resolver.resolve_zone_by_grace_entity_id(grace_entity_id)
-                if grace_zone:
-                    # Verify the grace zone is discovered (it should be if player can fast travel)
-                    grace_zone_id = resolver.lookup_by_display_name(grace_zone)
+                grace_info = resolver.get_grace_info(grace_entity_id)
+                if grace_info:
+                    # Use zone_id directly from graces.json (avoids display name ambiguity)
+                    grace_zone_id = grace_info.get("zone_id")
+                    grace_zone = grace_info.get("zone")
                     if grace_zone_id and grace_zone_id in discovered_zones:
                         zone_internal = grace_zone_id
                         zone_display = grace_zone
                         resolution_method = "Grace entity ID"
                     else:
                         logger.debug(
-                            "[MOD] Grace zone '%s' not discovered, falling back",
+                            "[MOD] Grace zone '%s' (id=%s) not discovered, falling back",
                             grace_zone,
+                            grace_zone_id,
                         )
 
             # 2. Try Col resolution if grace didn't work

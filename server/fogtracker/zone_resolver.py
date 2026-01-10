@@ -117,8 +117,11 @@ class ZoneResolver:
         if fog_path.exists():
             self._load_fog(fog_path)
             # Build reverse lookup (display_name -> zone_key)
+            # Keep first match for duplicate display names (e.g., "Mohg, the Omen"
+            # exists as both sewer_mohg and sewer_mohg_flame - we want sewer_mohg)
             for zone_key, display_name in self.zone_display_names.items():
-                self.display_name_to_zone[display_name] = zone_key
+                if display_name not in self.display_name_to_zone:
+                    self.display_name_to_zone[display_name] = zone_key
             logger.info(
                 "Loaded %d zone display names, %d detail texts, %d known positions from fog.txt",
                 len(self.zone_display_names),
@@ -245,11 +248,22 @@ class ZoneResolver:
         foggate_map = None
         # For parsing ToArea + Location entries (known zone positions)
         current_to_area = None
+        # Track which section we're in - only "Areas:" contains zone definitions
+        in_areas_section = False
 
         for line in content.split("\n"):
             line_stripped = line.strip()
             # Track indentation to know if we're in a zone-level or nested section
             indent = len(line) - len(line.lstrip())
+
+            # Track top-level section headers
+            if indent == 0 and line_stripped.endswith(":") and not line_stripped.startswith("-"):
+                in_areas_section = line_stripped == "Areas:"
+                current_name = None
+                in_to_section = False
+                in_aside = False
+                in_bside = False
+                continue
 
             if line_stripped.startswith("- Name:"):
                 # Before moving to a new entry, add ASide/BSide areas to map_zones
@@ -311,6 +325,7 @@ class ZoneResolver:
                     self.detail_text_to_zone[text] = bside_area
                 elif (
                     current_name
+                    and in_areas_section  # Only zones in Areas: section
                     and not in_to_section
                     and not in_aside
                     and not in_bside

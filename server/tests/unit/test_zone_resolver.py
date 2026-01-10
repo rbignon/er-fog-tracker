@@ -409,6 +409,19 @@ class TestLookupByDisplayName:
         zone_key = resolver.lookup_by_display_name("Nonexistent Zone Name")
         assert zone_key is None
 
+    def test_duplicate_display_name_returns_first_zone(self, resolver):
+        """For duplicate display names, should return the first zone_id (not the last).
+
+        fog.txt has multiple zones with the same display name:
+        - "Mohg, the Omen" exists as both sewer_mohg (line ~1059) and sewer_mohg_flame (line ~16517)
+        - We want the main zone (sewer_mohg), not the virtual Entrance/Exit zone
+
+        This is a regression test for a bug where the last zone_id won, causing
+        inconsistent zone_ids between random links and preexisting links.
+        """
+        zone_key = resolver.lookup_by_display_name("Mohg, the Omen")
+        assert zone_key == "sewer_mohg"  # First match, not sewer_mohg_flame
+
 
 class TestLookupSpoilerName:
     """Tests for ZoneResolver.lookup_spoiler_name method."""
@@ -488,20 +501,26 @@ class TestFindMapIdsForDisplayName:
         assert map_ids == []
         assert internal is None
 
-    def test_disambiguates_with_details(self, resolver):
-        """Should disambiguate zones using details."""
-        # Find a display name with multiple zones to test disambiguation
-        multi_zone_display = None
-        for display_name, zones in resolver.display_name_to_zones.items():
-            if len(zones) > 1 and display_name and not display_name.startswith("Return"):
-                multi_zone_display = display_name
-                break
+    def test_no_duplicate_display_names_for_real_zones(self, resolver):
+        """Real zones should have unique display names.
 
-        if multi_zone_display:
-            # Test that we get results for a multi-zone display name
-            map_ids, internal, pos = resolver.find_map_ids_for_display_name(multi_zone_display)
-            # Should return map_ids even if can't disambiguate
-            assert len(map_ids) >= 1 or internal is not None
+        fog.txt was cleaned up to ensure all zones have unique display names.
+        This prevents bugs where lookup_by_display_name returns the wrong zone_id.
+        If this test fails, rename the duplicate zone in fog.txt to be unique.
+        """
+        duplicates = []
+        for display_name, zones in resolver.display_name_to_zones.items():
+            if not display_name or display_name.startswith("Return"):
+                continue
+            # Filter to real zones (not AEG fog gates or numeric IDs)
+            real_zones = [z for z in zones if not z.startswith("AEG") and not z[0].isdigit()]
+            if len(real_zones) > 1:
+                duplicates.append((display_name, real_zones))
+
+        assert not duplicates, (
+            f"Found duplicate display names for real zones: {duplicates}. "
+            "Rename the zones in fog.txt to have unique display names."
+        )
 
     def test_extracts_parenthetical_as_details(self, resolver):
         """Should extract parenthetical from display name as details."""

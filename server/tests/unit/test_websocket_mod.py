@@ -2156,8 +2156,8 @@ class TestZoneQueryGraceEntityId:
             ("limgrave", "Limgrave"),
             ("stormveil", "Stormveil Castle"),
         ]
-        # Grace resolver on the mock
-        mock_resolver.resolve_zone_by_grace_entity_id.return_value = "Limgrave"
+        # Grace resolver on the mock - now uses get_grace_info which returns dict
+        mock_resolver.get_grace_info.return_value = {"zone_id": "limgrave", "zone": "Limgrave"}
 
         with (
             patch("fogtracker.websocket.mod.async_session") as mock_session,
@@ -2175,8 +2175,8 @@ class TestZoneQueryGraceEntityId:
                 }
             )
 
-        # Should call grace resolver
-        mock_resolver.resolve_zone_by_grace_entity_id.assert_called_once_with(1042362951)
+        # Should call grace info resolver
+        mock_resolver.get_grace_info.assert_called_once_with(1042362951)
 
         # Should return Limgrave (from grace resolution, not position)
         call_args = mock_client.send.call_args[0][0]
@@ -2193,7 +2193,7 @@ class TestZoneQueryGraceEntityId:
         mock_resolver.resolve_by_col.return_value = (None, None)
         mock_resolver.resolve_all_candidates.return_value = []
         # Grace resolves to Limgrave (but Limgrave is not discovered)
-        mock_resolver.resolve_zone_by_grace_entity_id.return_value = "Limgrave"
+        mock_resolver.get_grace_info.return_value = {"zone_id": "limgrave", "zone": "Limgrave"}
 
         with (
             patch("fogtracker.websocket.mod.async_session") as mock_session,
@@ -2225,7 +2225,7 @@ class TestZoneQueryGraceEntityId:
         # Col resolution finds the zone
         mock_resolver.resolve_by_col.return_value = ("limgrave", "Limgrave")
         # Grace not found in mapping
-        mock_resolver.resolve_zone_by_grace_entity_id.return_value = None
+        mock_resolver.get_grace_info.return_value = None
         # Provide candidates
         mock_resolver.resolve_all_candidates.return_value = [("limgrave", "Limgrave")]
 
@@ -2279,7 +2279,7 @@ class TestZoneQueryGraceEntityId:
             )
 
         # Should NOT call grace resolver
-        mock_resolver.resolve_zone_by_grace_entity_id.assert_not_called()
+        mock_resolver.get_grace_info.assert_not_called()
 
         # Should use Col resolution
         call_args = mock_client.send.call_args[0][0]
@@ -2296,7 +2296,7 @@ class TestZoneQueryGraceEntityId:
         # Col would resolve to different zone
         mock_resolver.resolve_by_col.return_value = ("stormveil", "Stormveil Castle")
         # Grace resolves to Limgrave
-        mock_resolver.resolve_zone_by_grace_entity_id.return_value = "Limgrave"
+        mock_resolver.get_grace_info.return_value = {"zone_id": "limgrave", "zone": "Limgrave"}
         # Provide candidates for zone_query (both limgrave and stormveil)
         mock_resolver.resolve_all_candidates.return_value = [
             ("limgrave", "Limgrave"),

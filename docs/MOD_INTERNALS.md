@@ -654,13 +654,26 @@ Grace entity IDs follow patterns based on location type:
 | Mini-dungeon | `1XX295x` | `1002950` → m31_00 (Murkwater Cave) |
 | Roundtable Hold | `11102950` | `11102950` → Table of Lost Grace |
 
-The server maintains a mapping of 254 grace entity IDs to zone names in `server/data/graces.json`.
+The server maintains a mapping of grace entity IDs to zones in `server/data/graces.json`. Each entry contains:
+
+```json
+{
+  "35002950": {
+    "grace_name": "Cathedral of the Forsaken",
+    "zone": "Mohg, the Omen",
+    "zone_id": "sewer_mohg",
+    "map_id": "m35_00_00_00"
+  }
+}
+```
+
+The `zone_id` field is the authoritative zone identifier, used instead of looking up by display name. This is necessary because some zones share the same display name (e.g., "Mohg, the Omen" exists as both `sewer_mohg` and `sewer_mohg_flame` in fog.txt).
 
 ### Zone Resolution Priority
 
 When handling `zone_query`, the server resolves the zone in this order:
 
-1. **Grace entity ID** (most precise for fast travel)
+1. **Grace entity ID** → `zone_id` from graces.json (most precise for fast travel)
 2. **Col/play_region_id** (precise for dungeons)
 3. **Position-based** (fallback, may have duplicates)
 

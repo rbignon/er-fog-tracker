@@ -137,3 +137,35 @@ class TestGraceEntityIdFormats:
         if dlc_graces:
             zone = resolver.resolve_zone_by_grace_entity_id(dlc_graces[0])
             assert zone is not None
+
+
+class TestGraceZoneIdResolution:
+    """Tests for zone_id field in graces.json.
+
+    The zone_id field was added to avoid ambiguity when multiple zones
+    share the same display name (e.g., 'Mohg, the Omen' exists as both
+    sewer_mohg and sewer_mohg_flame in fog.txt).
+    """
+
+    def test_mohg_grace_has_correct_zone_id(self):
+        """Cathedral of the Forsaken grace should resolve to sewer_mohg.
+
+        This is a regression test for the bug where lookup_by_display_name
+        returned sewer_mohg_flame (the last zone with that name) instead of
+        sewer_mohg (the main boss arena zone).
+        """
+        resolver = get_resolver()
+        # Grace 35002950 = Cathedral of the Forsaken (inside Mohg, the Omen arena)
+        grace_info = resolver.get_grace_info(35002950)
+        assert grace_info is not None
+        assert grace_info["zone"] == "Mohg, the Omen"
+        assert grace_info["zone_id"] == "sewer_mohg"  # Not sewer_mohg_flame!
+
+    def test_all_graces_have_zone_id(self):
+        """All graces should have a zone_id field for unambiguous resolution."""
+        resolver = get_resolver()
+        for entity_id, entry in resolver.grace_mapping.items():
+            assert (
+                "zone_id" in entry
+            ), f"Grace {entity_id} ({entry.get('grace_name')}) missing zone_id"
+            assert entry["zone_id"] is not None, f"Grace {entity_id} has null zone_id"
