@@ -14,6 +14,7 @@ import { checkVersionCompatibility } from './api.js';
 // Pages
 import * as LandingPage from './pages/landing.js';
 import * as DashboardPage from './pages/dashboard.js';
+import * as UsersListPage from './pages/users-list.js';
 import * as ViewerListPage from './pages/viewer-list.js';
 import * as HelpPage from './pages/help.js';
 
@@ -552,6 +553,7 @@ async function init() {
     // Initialize page modules
     LandingPage.init();
     DashboardPage.init();
+    UsersListPage.init();
     ViewerListPage.init();
     HelpPage.init();
 
@@ -592,9 +594,11 @@ async function init() {
     });
 
     // Register routes
+    // Note: /watch must be before /watch/:username to avoid conflict
     Router.addRoute('/', LandingPage.handleRoute);
     Router.addRoute('/dashboard', DashboardPage.handleRoute, { auth: true });
     Router.addRoute('/play/:gameId', handlePlayRoute, { auth: true });
+    Router.addRoute('/watch', UsersListPage.handleRoute);
     Router.addRoute('/watch/:username', ViewerListPage.handleRoute);
     Router.addRoute('/watch/:username/:gameId', handleViewerRoute);
     Router.addRoute('/help', HelpPage.handleRoute);

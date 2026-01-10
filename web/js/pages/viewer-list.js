@@ -103,19 +103,42 @@ function getGameLabel(game) {
 }
 
 /**
+ * Build status badges HTML for a game.
+ */
+function buildStatusBadges(game) {
+    let html = '';
+    if (game.mod_connected) {
+        html += '<span class="status-badge status-playing" title="Playing now">Playing</span>';
+    } else if (game.host_connected) {
+        html += '<span class="status-badge status-online" title="Online">Online</span>';
+    }
+    if (game.viewer_count > 0) {
+        html += `<span class="viewer-count" title="${game.viewer_count} viewer${game.viewer_count > 1 ? 's' : ''}">👁 ${game.viewer_count}</span>`;
+    }
+    return html;
+}
+
+/**
  * Create a game card element for viewer list.
  */
 function createGameCard(game, username) {
     const card = document.createElement('div');
     card.className = 'game-card game-card-viewer';
 
+    // Add playing class if mod is connected
+    if (game.mod_connected) {
+        card.classList.add('game-card-playing');
+    }
+
     const percent = game.total_zones > 0 ? Math.round((game.discovery_count / game.total_zones) * 100) : 0;
 
     const updatedDate = formatDate(game.updated_at);
+    const statusBadges = buildStatusBadges(game);
 
     card.innerHTML = `
     <div class="game-card-header">
       <span class="game-label">${escapeHtml(getGameLabel(game))}</span>
+      ${statusBadges ? `<div class="game-status">${statusBadges}</div>` : ''}
     </div>
     <div class="game-card-body">
       <div class="game-seed">Seed: ${game.seed}</div>

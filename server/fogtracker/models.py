@@ -57,6 +57,24 @@ class UserPublic(BaseModel):
     avatar_url: str | None
 
 
+class UserWithStatus(BaseModel):
+    """User info with connection status."""
+
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+    mod_connected: bool = False  # True if mod connected to one of their games
+    host_connected: bool = False  # True if host web connected to one of their games
+    viewer_count: int = 0  # Total viewers across all their games
+    active_game_id: UUID | None = None  # ID of game with mod connected (for direct link)
+
+
+class UsersListResponse(BaseModel):
+    """Response for users listing."""
+
+    users: list[UserWithStatus]
+
+
 class UserMe(BaseModel):
     """Current user info including API token."""
 
@@ -98,6 +116,8 @@ class GameSummary(BaseModel):
     discovery_count: int
     total_zones: int
     mod_connected: bool = False
+    host_connected: bool = False
+    viewer_count: int = 0
     created_at: datetime
     updated_at: datetime
 

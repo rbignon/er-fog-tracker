@@ -246,6 +246,25 @@ export function transformLinksToApi(links, getLinkEndpoints) {
 // =============================================================================
 
 /**
+ * Get all users with connection status.
+ * @returns {Promise<{ users: Array<{ username: string, displayName: string, avatarUrl: string | null, modConnected: boolean, hostConnected: boolean, viewerCount: number, activeGameId: string | null }> }>}
+ */
+export async function getUsers() {
+    const data = await apiFetch('/api/users');
+    return {
+        users: data.users.map(user => ({
+            username: user.username,
+            displayName: user.display_name || user.username,
+            avatarUrl: user.avatar_url || null,
+            modConnected: user.mod_connected || false,
+            hostConnected: user.host_connected || false,
+            viewerCount: user.viewer_count || 0,
+            activeGameId: user.active_game_id || null,
+        })),
+    };
+}
+
+/**
  * Get public user info.
  * @param {string} username - Twitch username
  * @returns {Promise<{ username: string, displayName: string, avatarUrl: string | null }>}
@@ -368,6 +387,7 @@ export default {
     getMyGames,
     deleteGame,
     updateGame,
+    getUsers,
     getUser,
     getUserGames,
     regenerateModToken,

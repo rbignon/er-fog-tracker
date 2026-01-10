@@ -276,6 +276,29 @@
         </div>
 
         <!-- =========================================================================
+         Users List Page (/watch)
+         ========================================================================= -->
+        <div id="users-list-page" class="page hidden">
+            <header class="page-header users-list-header">
+                <a href="/" class="back-btn">← Back</a>
+                <h1>Players</h1>
+            </header>
+
+            <main class="users-list-main">
+                <div id="users-list" class="users-list">
+                    <!-- Populated dynamically -->
+                </div>
+                <div id="users-empty" class="users-empty hidden">
+                    <p>No players found.</p>
+                </div>
+                <div id="users-loading" class="users-loading">
+                    <p>Loading players...</p>
+                </div>
+                <div id="users-error" class="error-message hidden"></div>
+            </main>
+        </div>
+
+        <!-- =========================================================================
          Offline Upload Screen (/?offline=true)
          ========================================================================= -->
         <div id="upload-screen" class="page hidden">

@@ -4000,3 +4000,172 @@ p#last-discovery {
     border: none;
     color: #fff;
 }
+
+/* =============================================================================
+   Users List Page (/watch)
+   ============================================================================= */
+
+.users-list-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.users-list-main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.user-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #1a1814;
+    border: 1px solid #3a3530;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s ease;
+}
+
+.user-row:hover {
+    background: #242018;
+    border-color: #4a4540;
+}
+
+.user-row.user-playing {
+    border-color: #4a7a4a;
+    background: linear-gradient(135deg, #1a2418 0%, #1a1814 100%);
+}
+
+.user-row.user-playing:hover {
+    border-color: #5a9a5a;
+    background: linear-gradient(135deg, #1a2a18 0%, #242018 100%);
+}
+
+.user-row .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #3a3530;
+    flex-shrink: 0;
+}
+
+.user-row.user-playing .user-avatar {
+    border-color: #4a7a4a;
+}
+
+.user-row .user-name {
+    flex: 1;
+    font-weight: 500;
+    color: #e8e0d5;
+    font-size: 1rem;
+}
+
+.user-row .user-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-row .status-badge {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.user-row .status-playing {
+    background: rgba(76, 175, 80, 0.2);
+    color: #81c784;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.user-row .status-online {
+    background: rgba(100, 149, 237, 0.2);
+    color: #90caf9;
+    border: 1px solid rgba(100, 149, 237, 0.3);
+}
+
+.user-row .viewer-count {
+    font-size: 0.85rem;
+    color: #9a8d75;
+}
+
+.user-row .user-arrow {
+    color: #6a5d45;
+    font-size: 1.2rem;
+    transition: transform 0.15s ease;
+}
+
+.user-row:hover .user-arrow {
+    transform: translateX(4px);
+    color: #9a8d75;
+}
+
+.users-loading,
+.users-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #9a8d75;
+}
+
+.users-empty p {
+    margin: 0;
+}
+
+/* =============================================================================
+   Game Card Status (for /watch/:username)
+   ============================================================================= */
+
+.game-card-playing {
+    border-color: #4a7a4a;
+    background: linear-gradient(135deg, #1a2418 0%, #1a1814 100%);
+}
+
+.game-card-playing:hover {
+    border-color: #5a9a5a;
+}
+
+.game-card-header .game-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.game-card .status-badge {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.game-card .status-playing {
+    background: rgba(76, 175, 80, 0.2);
+    color: #81c784;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.game-card .status-online {
+    background: rgba(100, 149, 237, 0.2);
+    color: #90caf9;
+    border: 1px solid rgba(100, 149, 237, 0.3);
+}
+
+.game-card .viewer-count {
+    font-size: 0.8rem;
+    color: #9a8d75;
+}
