@@ -30,6 +30,7 @@
 
 ### Features
 
+- [ ] See how to manage optional areas
 - [ ] Detect grace with the name in entity is not found
 - [ ] **Mod information to server** - Send from mod information about Great Runes/Kindlings/deaths to server to display them on the website
 - [ ] **Display issues related to tags or search results** - the popup is still visible, but the graph consider no selected nodes
