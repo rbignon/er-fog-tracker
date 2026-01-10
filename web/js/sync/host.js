@@ -586,6 +586,8 @@ export async function connectAsHost(gameId) {
             // Mod connection status
             if (data.type === 'mod_connected') {
                 updateModConnectionIndicator(true);
+                // Show feedback modal on first mod connection
+                import('../ui.js').then(UI => UI.showFeedbackModal());
                 return;
             }
 

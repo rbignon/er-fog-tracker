@@ -118,15 +118,12 @@ async function displayStreamerInfo(username) {
 }
 
 /**
- * Set the navigation links (title and back link) to the same destination.
+ * Set the navigation back link to the same destination.
  * @param {string} href - The URL to navigate to
  * @param {string|null} backText - Text for back link, or null to hide it
  */
 function setNavigationLinks(href, backText = null) {
-    const titleLink = document.getElementById('header-title-link');
     const backLink = document.getElementById('header-back-link');
-
-    titleLink.href = href;
 
     if (backText) {
         backLink.href = href;
@@ -560,6 +557,9 @@ async function init() {
 
     // Initialize UI event listeners (for graph UI)
     UI.initUI();
+
+    // Initialize feedback button and modal
+    UI.initFeedbackUI();
 
     // Initialize stream modal (OBS URL generator)
     Sync.initStreamUI();

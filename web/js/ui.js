@@ -716,6 +716,91 @@ function formatPlayTime(ms) {
 State.subscribe('gameStatsChanged', updateGameStatsUI);
 
 // ============================================================
+// FEEDBACK SYSTEM
+// ============================================================
+
+const FEEDBACK_MODAL_SHOWN_KEY = 'feedback_modal_shown';
+
+/**
+ * Initialize feedback button and modal.
+ */
+export function initFeedbackUI() {
+    const feedbackBtn = document.getElementById('feedback-btn');
+    const feedbackDropdown = document.getElementById('feedback-dropdown');
+    const feedbackModal = document.getElementById('feedback-modal');
+    const closeFeedbackModal = document.getElementById('close-feedback-modal');
+    const feedbackModalLater = document.getElementById('feedback-modal-later');
+
+    if (!feedbackBtn || !feedbackDropdown) return;
+
+    // Toggle dropdown on button click
+    feedbackBtn.addEventListener('click', e => {
+        // Don't toggle if clicking on a link inside the dropdown
+        if (e.target.closest('.feedback-option')) return;
+
+        feedbackDropdown.classList.toggle('hidden');
+        e.stopPropagation();
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.feedback-btn')) {
+            feedbackDropdown.classList.add('hidden');
+        }
+    });
+
+    // Close dropdown when pressing Escape
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !feedbackDropdown.classList.contains('hidden')) {
+            feedbackDropdown.classList.add('hidden');
+        }
+    });
+
+    // Modal close handlers
+    if (closeFeedbackModal) {
+        closeFeedbackModal.addEventListener('click', closeFeedbackModalFn);
+    }
+    if (feedbackModalLater) {
+        feedbackModalLater.addEventListener('click', closeFeedbackModalFn);
+    }
+    if (feedbackModal) {
+        feedbackModal.addEventListener('click', e => {
+            if (e.target === feedbackModal) {
+                closeFeedbackModalFn();
+            }
+        });
+    }
+}
+
+/**
+ * Show the feedback modal (called on first mod connection).
+ * Only shows if it hasn't been shown before.
+ */
+export function showFeedbackModal() {
+    // Check if already shown
+    if (localStorage.getItem(FEEDBACK_MODAL_SHOWN_KEY)) {
+        return;
+    }
+
+    const feedbackModal = document.getElementById('feedback-modal');
+    if (feedbackModal) {
+        feedbackModal.classList.remove('hidden');
+        // Mark as shown
+        localStorage.setItem(FEEDBACK_MODAL_SHOWN_KEY, 'true');
+    }
+}
+
+/**
+ * Close the feedback modal.
+ */
+function closeFeedbackModalFn() {
+    const feedbackModal = document.getElementById('feedback-modal');
+    if (feedbackModal) {
+        feedbackModal.classList.add('hidden');
+    }
+}
+
+// ============================================================
 // EXPORTS
 // ============================================================
 

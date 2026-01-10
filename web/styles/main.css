@@ -2548,6 +2548,41 @@ p#last-discovery {
     color: #3a3020;
 }
 
+/* Landing community section */
+.landing-community {
+    margin-top: 48px;
+    text-align: center;
+}
+
+.btn-discord-landing {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+    border: none;
+    color: #fff;
+    padding: 12px 28px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    letter-spacing: 0.03em;
+}
+
+.btn-discord-landing:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(88, 101, 242, 0.4);
+}
+
+.btn-discord-landing .discord-icon {
+    width: 20px;
+    height: 20px;
+}
+
 .landing-screenshots {
     display: flex;
     width: 100%;
@@ -2582,8 +2617,7 @@ p#last-discovery {
 .landing-screenshots img {
     width: 100%;
     height: 100%;
-    /*object-fit: cover;*/
-    object-fit: contain;
+    object-fit: cover;
 }
 
 .landing-about {
@@ -3775,4 +3809,194 @@ p#last-discovery {
     .help-table td:first-child {
         width: auto;
     }
+}
+
+/* ============================================================
+   Feedback Button & Modal
+   ============================================================ */
+
+/* Floating feedback button */
+.feedback-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #2a2520 0%, #1a1814 100%);
+    border: 1px solid #4a4030;
+    color: #c4b998;
+    padding: 10px 16px;
+    border-radius: 24px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.feedback-btn:hover {
+    border-color: #6a5d45;
+    background: linear-gradient(135deg, #3a3530 0%, #2a2824 100%);
+    color: #d4c4a8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+.feedback-btn-icon {
+    font-size: 1.1rem;
+}
+
+.feedback-btn-text {
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.03em;
+}
+
+/* Feedback dropdown */
+.feedback-dropdown {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    background: linear-gradient(145deg, #1a1815 0%, #12100d 100%);
+    border: 1px solid #3a3020;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    min-width: 260px;
+    overflow: hidden;
+}
+
+.feedback-dropdown.hidden {
+    display: none;
+}
+
+.feedback-option {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: #c4b998;
+    border-bottom: 1px solid #2a2520;
+    transition: background 0.2s;
+}
+
+.feedback-option:last-child {
+    border-bottom: none;
+}
+
+.feedback-option:hover {
+    background: rgba(201, 162, 39, 0.1);
+}
+
+.feedback-option-discord:hover {
+    background: rgba(88, 101, 242, 0.15);
+}
+
+.feedback-option-icon {
+    display: inline;
+    margin-right: 8px;
+}
+
+.feedback-option-text {
+    font-family: 'Cinzel', serif;
+    font-size: 0.95rem;
+    color: #d4c4a8;
+}
+
+.feedback-option-desc {
+    font-size: 0.8rem;
+    color: #7a6d55;
+    margin-top: 4px;
+    padding-left: 26px;
+}
+
+/* Hide feedback button in overlay mode, on graph page, and on landing/upload pages */
+.overlay-mode .feedback-btn,
+#main-ui.visible ~ .feedback-btn,
+#landing-page:not(.hidden) ~ .feedback-btn,
+#upload-screen:not(.hidden) ~ .feedback-btn {
+    display: none;
+}
+
+/* Stats panel feedback links */
+.stats-feedback {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #2a2520;
+    font-size: 0.8rem;
+}
+
+.stats-feedback a {
+    color: #6a5d45;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.stats-feedback a:hover {
+    color: #c9a227;
+}
+
+.stats-feedback-sep {
+    color: #3a3020;
+    margin: 0 6px;
+}
+
+/* Feedback modal */
+.feedback-modal-content {
+    max-width: 420px;
+    text-align: center;
+}
+
+.feedback-modal-header {
+    margin-bottom: 16px;
+}
+
+.feedback-modal-emoji {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.feedback-modal-content h3 {
+    margin-top: 0;
+}
+
+.feedback-modal-message {
+    color: #9a8d75;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.feedback-modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+}
+
+.feedback-modal-actions .btn-primary {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+}
+
+.feedback-modal-actions .btn-secondary {
+    background: transparent;
+    border: none;
+    color: #6a5d45;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.feedback-modal-actions .btn-secondary:hover {
+    color: #9a8d75;
+}
+
+.btn-discord {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+    border: none;
+    color: #fff;
 }
