@@ -67,16 +67,16 @@ class TestOverworldFogGateZones:
             "siofra" in zones or "limgrave" in zones
         ), "Siofra River Well area should have underground zone candidates"
 
-    def test_volcano_manor_no_extra_zones(self, resolver):
-        """Volcano Manor (m16_00_00_00) should NOT have ASide/BSide zones added.
+    def test_volcano_manor_includes_aside_bside_zones(self, resolver):
+        """Volcano Manor (m16_00_00_00) should include ASide/BSide zones from fog gates.
 
-        Non-overworld maps should not have ASide/BSide areas added to map_zones
-        to avoid creating ambiguity in zone matching.
+        All maps should have ASide/BSide areas added to map_zones to support
+        cross-map fog gate resolution (e.g., academy_cavetower for m31_06_00_00).
         """
         zones = resolver.map_zones.get("m16_00_00_00", set())
 
-        # These are the legitimate zones from Maps: entries
-        legitimate_zones = {
+        # Base zones from Maps: entries
+        base_zones = {
             "volcano",
             "volcano_predoor",
             "volcano_drawingroom",
@@ -93,12 +93,40 @@ class TestOverworldFogGateZones:
             "volcano_posttemple_elevator",
         }
 
-        # All zones should be from the legitimate set (no extra from ASide/BSide)
-        for zone in zones:
-            assert zone in legitimate_zones, (
-                f"Unexpected zone '{zone}' in m16_00_00_00 - "
-                "ASide/BSide zones should not be added to non-overworld maps"
-            )
+        # All base zones should be present
+        for zone in base_zones:
+            assert zone in zones, f"Expected zone '{zone}' in m16_00_00_00"
+
+        # gelmir is added from fog gate ASide/BSide (entry from Mt Gelmir to Volcano Manor)
+        assert "gelmir" in zones, "gelmir should be added from fog gate ASide/BSide"
+
+        # Empty zones (YAML '') should NOT be added
+        assert "''" not in zones, "Empty zone ('') should not be added"
+
+    def test_dungeon_exit_fog_gate_includes_destination_zone(self, resolver):
+        """Dungeon exit fog gates should include their ASide destination zone.
+
+        Academy Crystal Cave (m31_06_00_00) has a fog gate (31061801) with:
+        - ASide: academy_cavetower (the Academy side, mapped to m14_00_00_00)
+        - BSide: liurnia_academycave_boss (the cave boss room)
+
+        Even though academy_cavetower is physically in m14_00_00_00, it should
+        be a candidate for m31_06_00_00 because the fog gate exit leads there.
+        This enables matching when the spoiler log says a randomized fog gate
+        leads to "Academy of Raya Lucaria - After Academy Crystal Cave".
+        """
+        zones = resolver.map_zones.get("m31_06_00_00", set())
+
+        # Base zones from Maps: entries
+        assert "liurnia_academycave" in zones
+        assert "liurnia_academycave_boss" in zones
+
+        # academy_cavetower added from fog gate 31061801 ASide
+        # (even though its Maps: field only has m14_00_00_00)
+        assert "academy_cavetower" in zones, (
+            "academy_cavetower should be a candidate for m31_06_00_00 "
+            "(from fog gate 31061801 ASide)"
+        )
 
     def test_resolve_all_candidates_includes_siofra(self, resolver):
         """resolve_all_candidates for Deep Siofra Well should include Siofra River."""

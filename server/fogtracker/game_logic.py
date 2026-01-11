@@ -219,10 +219,8 @@ def format_resolution_failure(
 
     if candidates:
         lines.append("├─ Candidates tried:")
-        for c in candidates[:5]:
+        for c in candidates:
             lines.append(f"│   • {c}")
-        if len(candidates) > 5:
-            lines.append(f"│   ... and {len(candidates) - 5} more")
 
     lines.append("╰──────────────────────────────────────────────────────────────")
 

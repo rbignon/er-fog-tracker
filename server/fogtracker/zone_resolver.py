@@ -322,13 +322,15 @@ class ZoneResolver:
 
             if line_stripped.startswith("- Name:"):
                 # Before moving to a new entry, add ASide/BSide areas to map_zones
-                # Only for overworld fog gates (m60_/m61_) to underground zones
-                if foggate_map and foggate_map.startswith(("m60_", "m61_")):
-                    if aside_area and not aside_area.startswith("m"):
+                # This ensures zones referenced by fog gates are candidates for that map
+                # (e.g., academy_cavetower is accessible via fog gate in m31_06_00_00)
+                # Skip empty areas (YAML '' becomes literal "''" string)
+                if foggate_map:
+                    if aside_area and aside_area != "''" and not aside_area.startswith("m"):
                         if foggate_map not in self.map_zones:
                             self.map_zones[foggate_map] = set()
                         self.map_zones[foggate_map].add(aside_area)
-                    if bside_area and not bside_area.startswith("m"):
+                    if bside_area and bside_area != "''" and not bside_area.startswith("m"):
                         if foggate_map not in self.map_zones:
                             self.map_zones[foggate_map] = set()
                         self.map_zones[foggate_map].add(bside_area)
@@ -462,12 +464,12 @@ class ZoneResolver:
                 in_bside = False
 
         # Handle the last fog gate entry (same logic as above)
-        if foggate_map and foggate_map.startswith(("m60_", "m61_")):
-            if aside_area and not aside_area.startswith("m"):
+        if foggate_map:
+            if aside_area and aside_area != "''" and not aside_area.startswith("m"):
                 if foggate_map not in self.map_zones:
                     self.map_zones[foggate_map] = set()
                 self.map_zones[foggate_map].add(aside_area)
-            if bside_area and not bside_area.startswith("m"):
+            if bside_area and bside_area != "''" and not bside_area.startswith("m"):
                 if foggate_map not in self.map_zones:
                     self.map_zones[foggate_map] = set()
                 self.map_zones[foggate_map].add(bside_area)

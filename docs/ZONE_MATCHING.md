@@ -531,9 +531,32 @@ If enrichment fails:
 If the target zone exists but isn't found in candidates:
 1. Check the map_id reported by the mod (in server logs)
 2. Compare with the `Maps:` field in fog.txt for that zone
-3. If the mod reports a different map, add it to the zone's `Maps:` list
+3. If the mod reports a different map, the zone may still be found via ASide/BSide resolution (see below)
 
-**Example**: The mod reports `m21_01_00_00` but the zone is defined with `Maps: m21_00_00_00`:
+#### ASide/BSide Zone Resolution
+
+Zones referenced in fog gate `ASide:` or `BSide:` entries are automatically added as candidates for the fog gate's map. This handles cases where:
+
+- **Dungeon exits**: A fog gate in dungeon A leads to a zone physically in area B
+- **Cross-map connections**: The spoiler log names a zone by its logical destination, not the fog gate's physical map
+
+**Example**: Academy Crystal Cave (m31_06_00_00) has fog gate 31061801:
+```yaml
+- Name: AEG099_001_9001
+  ID: 31061801
+  Area: m31_06_00_00
+  ASide:
+    Area: academy_cavetower  # Physically in m14_00_00_00
+  BSide:
+    Area: liurnia_academycave_boss
+```
+
+Even though `academy_cavetower` has `Maps: m14_00_00_00`, it becomes a candidate for `m31_06_00_00` because the fog gate's ASide references it. This enables matching when the spoiler log says a randomized fog gate leads to "Academy of Raya Lucaria - After Academy Crystal Cave".
+
+#### Manual Map Addition (Fallback)
+
+If ASide/BSide resolution doesn't apply (no fog gate references the zone), add the map manually:
+
 ```yaml
 # Before
 - Name: shadowkeep
@@ -546,7 +569,9 @@ If the target zone exists but isn't found in candidates:
   Maps: m21_00_00_00 m21_01_00_00
 ```
 
-**Note**: The sibling fallback only helps when the map has NO zones. If the map has other zones but not the target, you must add the map to the zone's definition.
+**Note**: The `Maps:` field represents the zone's **physical location**. Only add maps where the zone actually exists. For cross-map fog gate connections, rely on ASide/BSide resolution instead.
+
+**Note**: The sibling fallback only helps when the map has NO zones. If the map has other zones but not the target, check ASide/BSide resolution first.
 
 ### Duplicate Display Names
 
