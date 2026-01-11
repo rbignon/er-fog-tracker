@@ -1034,9 +1034,9 @@
     },
     "34102950": {
       "grace_name": "Limgrave Tower Bridge",
-      "zone": "Limgrave",
+      "zone": "Divine Tower of Limgrave",
       "map_id": null,
-      "zone_id": "limgrave"
+      "zone_id": "limgrave_tower"
     },
     "34102952": {
       "grace_name": "Divine Tower of Limgrave",
@@ -2423,6 +2423,12 @@
       "zone": "West Scadu Altus",
       "map_id": "m60_49_47_00",
       "zone_id": "scadualtus"
+    },
+    "2049482950": {
+      "grace_name": "Scaduview",
+      "zone": "Scaduview - Commander Gaius",
+      "map_id": "m61_49_48_00",
+      "zone_id": "scaduview_gaius"
     },
     "1049482950": {
       "grace_name": "Scaduview",
