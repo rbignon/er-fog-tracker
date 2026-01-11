@@ -556,6 +556,18 @@ def enrich_connections_with_zone_keys(
             if forward_exists and not reverse_exists:
                 is_one_way = True
 
+        # Determine is_one_way for random connections using fog.txt Cond: fields
+        # If the source fog gate side (identified by source_details) has a Cond:,
+        # the link is one-way because the player cannot return through that fog gate
+        # without meeting the condition (shortcut ladder, one-way door, drop, etc.)
+        if (
+            conn.conn_type == "random"
+            and conn.source_details
+            and not is_one_way
+            and resolver.has_conditional_fog_gate_by_detail(conn.source_details)
+        ):
+            is_one_way = True
+
         # Create enriched connection with zone_keys in source_id/target_id
         enriched.append(
             ConnectionInfo(

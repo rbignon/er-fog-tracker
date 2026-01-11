@@ -1047,3 +1047,134 @@ class TestSiblingMapFallback:
 
         # Verify sibling zones are from same tile prefix
         # (The sibling logic uses tile prefix m60_42_36_ for overworld)
+
+
+class TestIsZoneBasedCond:
+    """Tests for _is_zone_based_cond() method.
+
+    This method determines if a Cond: value from fog.txt represents a zone-based
+    condition (indicating a one-way fog gate) vs an item/progression condition
+    (bidirectional once unlocked).
+    """
+
+    def test_simple_zone_name_is_zone_based(self, resolver):
+        """Simple zone names like 'leyndell_bedchamber' are zone-based."""
+        assert resolver._is_zone_based_cond("leyndell_bedchamber") is True
+        assert resolver._is_zone_based_cond("volcano_town") is True
+        assert resolver._is_zone_based_cond("graveyard_cave") is True
+        assert resolver._is_zone_based_cond("siofra") is True
+
+    def test_item_conditions_are_not_zone_based(self, resolver):
+        """Item conditions like keys and medals are not zone-based."""
+        assert resolver._is_zone_based_cond("academyglintstonekey") is False
+        assert resolver._is_zone_based_cond("purebloodknightsmedal") is False
+        assert resolver._is_zone_based_cond("darkmoonring") is False
+        assert resolver._is_zone_based_cond("holeladennecklace") is False
+
+    def test_medallion_conditions_are_not_zone_based(self, resolver):
+        """Medallion conditions are not zone-based (bidirectional once used)."""
+        assert resolver._is_zone_based_cond("dectusmedallionleft") is False
+        assert resolver._is_zone_based_cond("haligtreesecretmedallionright") is False
+
+    def test_rune_conditions_are_not_zone_based(self, resolver):
+        """Rune/progression conditions are not zone-based."""
+        assert resolver._is_zone_based_cond("runes_leyndell") is False
+        assert resolver._is_zone_based_cond("runes_rold") is False
+        assert resolver._is_zone_based_cond("runeradahn") is False
+
+    def test_and_conditions_are_not_zone_based(self, resolver):
+        """Complex AND conditions are not zone-based."""
+        assert resolver._is_zone_based_cond("AND storehouse_back omother") is False
+        assert resolver._is_zone_based_cond("AND dectusmedallionleft dectusmedallionright") is False
+
+    def test_or_conditions_are_not_zone_based(self, resolver):
+        """Complex OR conditions are not zone-based."""
+        assert resolver._is_zone_based_cond("OR altus outskirts gelmir") is False
+        assert resolver._is_zone_based_cond("OR farumazula_maliketh leyndell") is False
+
+    def test_kindling_condition_not_zone_based(self, resolver):
+        """Tree kindling condition is not zone-based."""
+        assert resolver._is_zone_based_cond("treekindling") is False
+
+    def test_omother_condition_not_zone_based(self, resolver):
+        """O Mother gesture condition is not zone-based."""
+        assert resolver._is_zone_based_cond("omother") is False
+
+
+class TestConditionalFogGates:
+    """Tests for conditional fog gate detection (one-way indicators).
+
+    Fog gates with Cond: on one side indicate that side requires a condition
+    to USE the fog gate. When the Cond is zone-based (not an item), this
+    typically means a physical barrier (shortcut ladder, one-way door, drop).
+    """
+
+    def test_shortcut_ladder_detected(self, resolver):
+        """Shortcut ladders (bedchamber fog gates) should be detected."""
+        # Godfrey/Gideon fog gates have Cond: on the bedchamber side
+        godfrey_text = "outside of Godfrey's arena at the base of a shortcut ladder, accessed from an open window on a second-floor rooftop"
+        gideon_text = "outside of Gideon's arena at the base of a shortcut ladder, accessed from an open window on a second-floor rooftop"
+
+        assert resolver.has_conditional_fog_gate_by_detail(godfrey_text) is True
+        assert resolver.has_conditional_fog_gate_by_detail(gideon_text) is True
+
+    def test_boss_fog_gate_detected(self, resolver):
+        """Boss fog gates with zone Cond: should be detected."""
+        # Soldier of Godrick fog gate
+        soldier_text = "before Soldier of Godrick's arena"
+        assert resolver.has_conditional_fog_gate_by_detail(soldier_text) is True
+
+        # Godskin Apostle in Divine Tower of Caelid
+        godskin_text = "before Godskin Apostle's arena"
+        assert resolver.has_conditional_fog_gate_by_detail(godskin_text) is True
+
+    def test_one_way_door_detected(self, resolver):
+        """One-way doors should be detected."""
+        # Volcano Manor hallway to Prison Town
+        volcano_text = "at the end of the dark hallway leading to Prison Town"
+        assert resolver.has_conditional_fog_gate_by_detail(volcano_text) is True
+
+    def test_sewer_entrance_detected(self, resolver):
+        """Sewer entrance (one-way door) should be detected."""
+        sewer_text = "at the entrance to Subterranean Shunning-Grounds"
+        assert resolver.has_conditional_fog_gate_by_detail(sewer_text) is True
+
+    def test_deep_well_detected(self, resolver):
+        """Deep Siofra Well (elevator with key) should be detected."""
+        well_text = "at the top of the Deep Siofra Well"
+        assert resolver.has_conditional_fog_gate_by_detail(well_text) is True
+
+    def test_item_based_fog_gate_not_detected(self, resolver):
+        """Fog gates with item Cond: should NOT be detected as one-way."""
+        # Academy entrance requires key but is bidirectional once opened
+        academy_text = "using South-facing gate at Raya Lucaria Main Entrance"
+        assert resolver.has_conditional_fog_gate_by_detail(academy_text) is False
+
+    def test_normal_fog_gate_not_detected(self, resolver):
+        """Normal fog gates without Cond: should not be detected."""
+        # A typical fog gate without conditions
+        normal_text = "at the front of Morgott's arena"
+        assert resolver.has_conditional_fog_gate_by_detail(normal_text) is False
+
+    def test_none_detail_returns_false(self, resolver):
+        """None detail_text should return False."""
+        assert resolver.has_conditional_fog_gate_by_detail(None) is False
+
+    def test_empty_detail_returns_false(self, resolver):
+        """Empty detail_text should return False."""
+        assert resolver.has_conditional_fog_gate_by_detail("") is False
+
+    def test_fog_gate_conditions_loaded(self, resolver):
+        """Verify that fog gate conditions are loaded from fog.txt."""
+        # Should have loaded some conditions
+        assert len(resolver.fog_gate_detail_has_cond) > 0
+
+        # Check some expected entries exist
+        expected_texts = [
+            "before Soldier of Godrick's arena",
+            "outside of Godfrey's arena at the base of a shortcut ladder",
+        ]
+        for text in expected_texts:
+            # Use partial match since the full text might be slightly different
+            found = any(text in key for key in resolver.fog_gate_detail_has_cond)
+            assert found, f"Expected to find '{text}' in fog_gate_detail_has_cond"

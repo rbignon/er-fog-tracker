@@ -96,6 +96,10 @@ class ZoneResolver:
         # Preexisting links from fog.txt To: sections
         # source_zone -> {target_zones}
         self.preexisting_links: dict[str, set[str]] = {}
+        # Fog gate conditional access from fog.txt ASide/BSide Cond: fields
+        # Maps detail_text -> True if that fog gate side has a Cond:
+        # This allows matching specific fog gates by their source_details
+        self.fog_gate_detail_has_cond: dict[str, bool] = {}
 
         if self.data_dir:
             self._load_data()
@@ -123,10 +127,12 @@ class ZoneResolver:
                 if display_name not in self.display_name_to_zone:
                     self.display_name_to_zone[display_name] = zone_key
             logger.info(
-                "Loaded %d zone display names, %d detail texts, %d known positions from fog.txt",
+                "Loaded %d zone display names, %d detail texts, %d known positions, "
+                "%d fog gate details with conditions from fog.txt",
                 len(self.zone_display_names),
                 len(self.detail_text_to_zone),
                 len(self.zone_known_positions),
+                len(self.fog_gate_detail_has_cond),
             )
 
         # Load foglocations2.txt
@@ -235,6 +241,51 @@ class ZoneResolver:
 
         self.map_rules[map_id] = rules
 
+    def _is_zone_based_cond(self, cond: str) -> bool:
+        """
+        Check if a Cond: value represents a zone-based condition (one-way indicator).
+
+        Zone-based conditions (return True):
+        - Simple zone names like "leyndell_bedchamber", "volcano_town"
+        - These indicate physical barriers (shortcut ladders, one-way doors, drops)
+
+        Item/complex conditions (return False):
+        - Items: "academyglintstonekey", "purebloodknightsmedal", "darkmoonring"
+        - Logical operators: "AND storehouse_back omother", "OR altus outskirts"
+        - Progression markers: "runes_leyndell", "treekindling"
+
+        Args:
+            cond: The Cond: value from fog.txt
+
+        Returns:
+            True if this condition indicates a one-way fog gate (zone-based barrier).
+        """
+        # Skip complex conditions with logical operators
+        if cond.startswith("AND ") or cond.startswith("OR ") or " AND " in cond or " OR " in cond:
+            return False
+
+        # Skip item-based conditions (these fog gates are bidirectional once unlocked)
+        item_patterns = [
+            "key",  # academyglintstonekey, stoneswordkey
+            "medal",  # purebloodknightsmedal, dectusmedallion
+            "medallion",  # dectusmedallionleft, haligtreesecretmedallion
+            "ring",  # darkmoonring
+            "necklace",  # holeladennecklace
+            "rune",  # runes_leyndell, runes_rold, runeradahn
+            "imbued",  # imbued_base, imbued_dlc
+            "pass",  # scalepass, logicpass
+            "kindling",  # treekindling
+            "death",  # cursemarkofdeath
+            "omother",  # O Mother gesture
+            "tier",  # Upgrade tiers
+        ]
+        cond_lower = cond.lower()
+
+        # At this point, it's likely a zone name (e.g., "leyndell_bedchamber")
+        # Zone names follow snake_case pattern with region prefixes
+        # We trust the exclusion patterns above to filter out non-zone conditions
+        return all(pattern not in cond_lower for pattern in item_patterns)
+
     def _load_fog(self, path: Path):
         """Parse fog.txt for internal name -> display name mapping, Maps, and ASide/BSide texts."""
         content = path.read_text()
@@ -244,6 +295,10 @@ class ZoneResolver:
         in_bside = False
         aside_area = None
         bside_area = None
+        aside_cond = None
+        bside_cond = None
+        aside_text = None
+        bside_text = None
         # Track fog gate's map (for ASide/BSide zone candidates)
         foggate_map = None
         # For parsing ToArea + Location entries (known zone positions)
@@ -278,6 +333,14 @@ class ZoneResolver:
                             self.map_zones[foggate_map] = set()
                         self.map_zones[foggate_map].add(bside_area)
 
+                # Store fog gate conditions from the previous entry
+                # Map detail_text -> True for fog gate sides with Cond:
+                # Only store if Cond is a simple zone name (not an item or complex condition)
+                if aside_text and aside_cond and self._is_zone_based_cond(aside_cond):
+                    self.fog_gate_detail_has_cond[aside_text] = True
+                if bside_text and bside_cond and self._is_zone_based_cond(bside_cond):
+                    self.fog_gate_detail_has_cond[bside_text] = True
+
                 current_name = line_stripped.replace("- Name:", "").strip()
                 # Initialize zone_metadata entry
                 if current_name not in self.zone_metadata:
@@ -287,6 +350,10 @@ class ZoneResolver:
                 in_bside = False
                 aside_area = None
                 bside_area = None
+                aside_cond = None
+                bside_cond = None
+                aside_text = None
+                bside_text = None
                 foggate_map = None
             elif line_stripped.startswith("To:"):
                 in_to_section = True
@@ -302,10 +369,20 @@ class ZoneResolver:
                 in_aside = True
                 in_bside = False
                 aside_area = None
+                aside_cond = None
+                aside_text = None
             elif line_stripped.startswith("BSide:"):
                 in_bside = True
                 in_aside = False
                 bside_area = None
+                bside_cond = None
+                bside_text = None
+            elif line_stripped.startswith("Cond:"):
+                cond_value = line_stripped.replace("Cond:", "").strip()
+                if in_aside:
+                    aside_cond = cond_value
+                elif in_bside:
+                    bside_cond = cond_value
             elif line_stripped.startswith("Area:"):
                 area = line_stripped.replace("Area:", "").strip()
                 if in_aside:
@@ -320,9 +397,11 @@ class ZoneResolver:
                 if in_aside and aside_area:
                     # Map this detail text to the zone
                     self.detail_text_to_zone[text] = aside_area
+                    aside_text = text
                 elif in_bside and bside_area:
                     # Map this detail text to the zone
                     self.detail_text_to_zone[text] = bside_area
+                    bside_text = text
                 elif (
                     current_name
                     and in_areas_section  # Only zones in Areas: section
@@ -392,6 +471,12 @@ class ZoneResolver:
                 if foggate_map not in self.map_zones:
                     self.map_zones[foggate_map] = set()
                 self.map_zones[foggate_map].add(bside_area)
+
+        # Store fog gate conditions for the last entry
+        if aside_text and aside_cond and self._is_zone_based_cond(aside_cond):
+            self.fog_gate_detail_has_cond[aside_text] = True
+        if bside_text and bside_cond and self._is_zone_based_cond(bside_cond):
+            self.fog_gate_detail_has_cond[bside_text] = True
 
         # Build display_name_to_zones reverse index
         for internal_name, display_name in self.zone_display_names.items():
@@ -828,6 +913,33 @@ class ZoneResolver:
             True if the link exists in the To: section of source_key.
         """
         return target_key in self.preexisting_links.get(source_key, set())
+
+    def has_conditional_fog_gate_by_detail(self, detail_text: str | None) -> bool:
+        """
+        Check if a fog gate side (identified by its detail text) has conditional access.
+
+        When a fog gate has Cond: on one side, it means that side requires
+        meeting a condition to USE the fog gate. This typically indicates:
+        - A shortcut ladder that must be deployed from the other side
+        - A one-way door that only opens from the other side
+        - A drop/elevation change that prevents return
+        - A boss fog gate requiring dungeon exploration first
+
+        If a random link originates from such a fog gate side, it should be
+        marked as one-way because the player cannot return through that fog
+        gate without first meeting the condition (which they haven't if they
+        arrived via a different randomized fog gate).
+
+        Args:
+            detail_text: The source_details text from the spoiler log
+                        (corresponds to ASide/BSide Text: in fog.txt)
+
+        Returns:
+            True if this specific fog gate side has a Cond: field.
+        """
+        if not detail_text:
+            return False
+        return detail_text in self.fog_gate_detail_has_cond
 
     def lookup_spoiler_name(self, spoiler_name: str) -> tuple[str | None, str | None]:
         """
