@@ -2938,6 +2938,7 @@ Areas:
   Tags: dlc remembrance
 - Name: scaduview_chalice
   Text: Scaduview - Scadutree Chalice
+  Aliases: Scaduview
   Maps: m61_48_49_00 m61_49_48_00 m61_49_49_00
   Tags: dlc
 - Name: abyssal

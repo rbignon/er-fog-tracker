@@ -114,6 +114,7 @@ SKIP_PATTERNS = [
     re.compile(r"^[A-Z]:\\"),  # Windows paths (C:\, D:\, I:\, etc.)
     re.compile(r"^Clique fixup"),  # Randomizer log message
     re.compile(r"^Found key item"),  # Randomizer routing info
+    re.compile(r"^No key items"),  # Key items not randomized info
 ]
 
 # Patterns that indicate details in connection descriptions

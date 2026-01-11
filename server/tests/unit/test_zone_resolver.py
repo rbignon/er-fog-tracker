@@ -450,6 +450,16 @@ class TestLookupByDisplayName:
         zone_key = resolver.lookup_by_display_name("Mohg, the Omen")
         assert zone_key == "sewer_mohg"  # First match, not sewer_mohg_flame
 
+    def test_alias_resolves_to_zone(self, resolver):
+        """Aliases defined in fog.txt should resolve to the zone.
+
+        fog.txt supports Aliases: field for alternative display names.
+        E.g., scaduview_chalice has Aliases: Scaduview, so looking up
+        "Scaduview" should return "scaduview_chalice".
+        """
+        zone_key = resolver.lookup_by_display_name("Scaduview")
+        assert zone_key == "scaduview_chalice"
+
 
 class TestLookupSpoilerName:
     """Tests for ZoneResolver.lookup_spoiler_name method."""

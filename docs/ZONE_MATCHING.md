@@ -55,6 +55,7 @@ Maps internal zone names to display names, plus ASide/BSide detail texts.
 ```yaml
 - Name: m10_01_stormhill
   Text: Limgrave - Stormhill
+  Aliases: Stormhill
   Maps: m10_01_00_00 m10_01_00_01
   ASide:
     Area: m10_01_stormhill
@@ -68,8 +69,11 @@ Maps internal zone names to display names, plus ASide/BSide detail texts.
 |-------|-------------|
 | `Name` | Internal zone key |
 | `Text` | Display name (shown in spoiler log) |
+| `Aliases` | Alternative display names (semicolon-separated), for reverse lookup |
 | `Maps` | List of map_ids that contain this zone |
 | `ASide/BSide` | Detail texts with their associated zones |
+
+**Aliases**: Some spoiler logs use shortened zone names (e.g., "Scaduview" instead of "Scaduview - Scadutree Chalice"). The `Aliases` field allows defining alternative names that resolve to the same zone key. Multiple aliases are separated by semicolons.
 
 ### submaps.txt
 

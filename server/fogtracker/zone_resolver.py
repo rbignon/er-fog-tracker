@@ -417,6 +417,20 @@ class ZoneResolver:
                     # Also update zone_metadata
                     if current_name in self.zone_metadata:
                         self.zone_metadata[current_name].display_name = text
+            elif (
+                line_stripped.startswith("Aliases:")
+                and current_name
+                and in_areas_section
+                and not in_to_section
+                and indent <= 2
+            ):
+                # Aliases: space-separated alternative display names for this zone
+                # These are added to display_name_to_zone for reverse lookup
+                aliases = line_stripped.replace("Aliases:", "").strip().split(";")
+                for alias in aliases:
+                    alias = alias.strip()
+                    if alias and alias not in self.display_name_to_zone:
+                        self.display_name_to_zone[alias] = current_name
             elif line_stripped.startswith("Maps:") and current_name and indent <= 2:
                 # Also build zone-to-map mappings from fog.txt
                 map_ids = line_stripped.replace("Maps:", "").strip().split()
