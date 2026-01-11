@@ -25,6 +25,27 @@ We need to match the mod's map/position data to the spoiler log's zone names.
 
 **Note**: The `source_zone_id` field is the mod's cached zone key from previous server responses. This helps disambiguate the source zone (see Source Zone Prioritization below).
 
+## Game Modes
+
+The Fog Gate Randomizer supports two main game modes that affect which zones are included:
+
+| Mode | Option | Description |
+|------|--------|-------------|
+| **Dungeon Crawler** | `crawl` | Only dungeons, caves, catacombs, and boss arenas. No overworld traversal. |
+| **World Shuffle** | (no `crawl`) | Full world including overworld areas connected via fog gates. |
+
+The mode is detected from the spoiler log's first line (e.g., `Options and seed: crawl dlc ...`).
+
+### Optional Areas Section
+
+Spoiler logs end with an `Optional areas:` section containing zones not required to complete the run:
+
+- **Dungeon Crawler**: Optional areas are **overworld zones** (Limgrave, Caelid, etc.) that players don't traverse since they teleport directly between dungeons. These are **excluded** from parsing.
+
+- **World Shuffle**: Optional areas are **accessible but non-critical zones** (side dungeons, optional bosses) connected via randomized fog gates. These are **included** in parsing so players can discover them.
+
+The parser sets `is_dungeon_crawler=True` when the `crawl` option is present, and only skips the Optional areas section in that mode.
+
 ## Data Files
 
 ### fog.txt

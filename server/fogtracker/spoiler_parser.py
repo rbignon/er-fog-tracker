@@ -193,6 +193,7 @@ class ParseResult:
     connections: list[ConnectionInfo] = field(default_factory=list)
     options: str = ""
     starting_zone_id: str | None = None  # zone_key of starting zone (first zone parsed)
+    is_dungeon_crawler: bool = False  # True if "crawl" mode (dungeons only)
 
 
 class SpoilerParseError(Exception):
@@ -395,13 +396,19 @@ def parse_spoiler_log(text: str, resolver: ZoneResolver | None = None) -> ParseR
     seed = int(seed_match.group(1))
     options = first_line
 
+    # Detect game mode: "crawl" = Dungeon Crawler (dungeons only)
+    # In Dungeon Crawler mode, Optional areas contain overworld zones we don't want to show
+    # In World Shuffle mode (no "crawl"), Optional areas contain accessible zones we want to include
+    is_dungeon_crawler = " crawl " in f" {options} " or options.endswith(" crawl")
+
     zones: dict[str, ZoneInfo] = {}  # Keyed by zone name
     connections: list[ConnectionInfo] = []
     first_zone_name: str | None = None  # Track first zone for starting_zone_id
 
     for line in lines:
-        # Stop at optional areas section
-        if line.strip() == "Optional areas:":
+        # Stop at optional areas section only for Dungeon Crawler mode
+        # In World Shuffle, we want to include optional areas as they're accessible via fog gates
+        if line.strip() == "Optional areas:" and is_dungeon_crawler:
             break
 
         # Try to parse as area
@@ -476,6 +483,7 @@ def parse_spoiler_log(text: str, resolver: ZoneResolver | None = None) -> ParseR
         connections=connections,
         options=options,
         starting_zone_id=starting_zone_id,
+        is_dungeon_crawler=is_dungeon_crawler,
     )
 
 

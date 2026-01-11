@@ -373,21 +373,45 @@ Stormhill
         assert len(boss_zones) == 1
         assert boss_zones[0].name == "Stormveil Castle before Gate"
 
-    def test_stops_at_optional_areas(self):
-        text = """Options and seed:99999
+    def test_stops_at_optional_areas_in_crawl_mode(self):
+        """In Dungeon Crawler mode (crawl), Optional areas are skipped.
+
+        Optional areas in crawl mode contain overworld zones that are not
+        accessible via fog gates in dungeon-only runs.
+        """
+        text = """Options and seed:99999 crawl
 Chapel of Anticipation
   Random: Chapel of Anticipation --> Stormhill
 Stormhill
 Optional areas:
-C
-  Random: C --> D
-D
+Limgrave
+  Preexisting: Chapel of Anticipation --> Limgrave
 """
         result = parse_spoiler_log(text, RESOLVER)
         zone_names = {z.name for z in result.zones.values()}
-        # C and D should not be parsed (after Optional areas:)
-        assert "C" not in zone_names
-        assert "D" not in zone_names
+        # Limgrave should not be parsed (after Optional areas: in crawl mode)
+        assert "Limgrave" not in zone_names
+        assert result.is_dungeon_crawler is True
+
+    def test_includes_optional_areas_in_world_shuffle_mode(self):
+        """In World Shuffle mode (no crawl), Optional areas are included.
+
+        Optional areas in World Shuffle contain zones accessible via randomized
+        fog gates, so they should be parsed and displayed.
+        """
+        text = """Options and seed:99999 shuffle
+Chapel of Anticipation
+  Random: Chapel of Anticipation --> Stormhill
+Stormhill
+Optional areas:
+Limgrave
+  Random: Stormhill --> Limgrave
+"""
+        result = parse_spoiler_log(text, RESOLVER)
+        zone_names = {z.name for z in result.zones.values()}
+        # Limgrave should be parsed (Optional areas included in World Shuffle)
+        assert "Limgrave" in zone_names
+        assert result.is_dungeon_crawler is False
 
     def test_empty_log_raises(self):
         # Empty string goes through seed parsing first, which fails
