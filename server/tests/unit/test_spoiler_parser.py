@@ -788,3 +788,83 @@ class TestEnrichConnectionsOneWay:
 
         # Random connections use pattern-based detection, not fog.txt To:
         assert result.is_one_way is False
+
+
+class TestBlocksPropagation:
+    """Tests for blocks_propagation field in ConnectionInfo.
+
+    The blocks_propagation field is set for random fog gate links where the source
+    side has a Cond: field in fog.txt. This indicates the player arrived through
+    a conditional fog gate (e.g., shortcut ladder not deployed) and shouldn't
+    trigger propagation of preexisting links from the destination zone.
+
+    Unlike is_one_way (which hides the exit from the destination), blocks_propagation
+    allows the player to see and use the exit (e.g., "return to entrance") while
+    preventing the discovery of inaccessible preexisting links.
+    """
+
+    @pytest.fixture
+    def resolver(self):
+        """Create a ZoneResolver with real data."""
+        return get_resolver()
+
+    def test_conditional_fog_gate_sets_blocks_propagation(self, resolver):
+        """Fog gates with Cond: on source should set blocks_propagation, not is_one_way."""
+        # Gideon fog gate has Cond: on the bedchamber side (shortcut ladder)
+        conn = ConnectionInfo(
+            id="test-id",
+            source="Ashen Leyndell - Queen's Bedchamber",
+            target="Some Target Zone",
+            conn_type="random",
+            source_details="outside of Gideon's arena at the base of a shortcut ladder, accessed from an open window on a second-floor rooftop",
+            is_one_way=False,
+        )
+
+        enriched = enrich_connections_with_zone_keys([conn], resolver)
+        result = enriched[0]
+
+        # Should set blocks_propagation, NOT is_one_way
+        assert result.blocks_propagation is True
+        assert result.is_one_way is False  # Player can still use the exit
+
+    def test_normal_fog_gate_no_blocks_propagation(self, resolver):
+        """Normal fog gates without Cond: should not set blocks_propagation."""
+        conn = ConnectionInfo(
+            id="test-id",
+            source="Limgrave - Stormhill",
+            target="Some Target Zone",
+            conn_type="random",
+            source_details="at the front of some area",
+            is_one_way=False,
+        )
+
+        enriched = enrich_connections_with_zone_keys([conn], resolver)
+        result = enriched[0]
+
+        assert result.blocks_propagation is False
+        assert result.is_one_way is False
+
+    def test_preexisting_link_no_blocks_propagation(self, resolver):
+        """Preexisting links should not set blocks_propagation (only affects random)."""
+        conn = ConnectionInfo(
+            id="test-id",
+            source="Some Zone",
+            target="Another Zone",
+            conn_type="preexisting",
+            source_details="some details",
+            is_one_way=False,
+        )
+
+        enriched = enrich_connections_with_zone_keys([conn], resolver)
+        result = enriched[0]
+
+        assert result.blocks_propagation is False
+
+    def test_blocks_propagation_default_false(self):
+        """ConnectionInfo should default blocks_propagation to False."""
+        conn = ConnectionInfo(
+            id="test-id",
+            source="Source",
+            target="Target",
+        )
+        assert conn.blocks_propagation is False

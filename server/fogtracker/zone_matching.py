@@ -556,21 +556,54 @@ def compute_discovery_stats(
     }
 
 
-def get_zones_via_preexisting(zone_pairs: list[dict], start_zone_id: str) -> set[str]:
+def get_zones_via_preexisting(
+    zone_pairs: list[dict],
+    start_zone_id: str,
+    discovered_links: list[dict] | None = None,
+) -> set[str]:
     """
     Get all zone_ids reachable from start_zone_id via preexisting paths.
 
     Traverses the preexisting link tree and returns all connected zone_ids,
     including the start zone itself.
+
+    Args:
+        zone_pairs: All zone pairs from spoiler log
+        start_zone_id: Starting zone for traversal
+        discovered_links: If provided, only traverse preexisting links that have
+            been discovered. This prevents showing exits from zones the player
+            can't actually access (e.g., blocked by shortcut ladder).
     """
-    preexisting_adj = build_preexisting_adjacency(zone_pairs)
+    # Build set of discovered link IDs for fast lookup
+    discovered_link_ids: set[str] | None = None
+    if discovered_links is not None:
+        discovered_link_ids = {get_zone_link_id(dl) for dl in discovered_links}
+
+    # Build adjacency, optionally filtering by discovered links
+    adj: dict[str, list[tuple[str, bool]]] = defaultdict(list)
+    for pair in zone_pairs:
+        if pair["type"] != "preexisting":
+            continue
+
+        # If filtering by discovered, skip undiscovered links
+        if discovered_link_ids is not None:
+            pair_id = pair.get("id")
+            if pair_id not in discovered_link_ids:
+                continue
+
+        source_id = pair["source_id"]
+        target_id = pair["target_id"]
+        is_bidir = not pair.get("is_one_way", False)
+        adj[source_id].append((target_id, is_bidir))
+        if is_bidir:
+            adj[target_id].append((source_id, True))
 
     visited = {start_zone_id}
     queue = [start_zone_id]
 
     while queue:
         current = queue.pop(0)
-        for neighbor, _is_bidir in preexisting_adj.get(current, []):
+        for neighbor, _is_bidir in adj.get(current, []):
             if neighbor not in visited:
                 visited.add(neighbor)
                 queue.append(neighbor)
@@ -879,7 +912,7 @@ def compute_zone_exits(
     """
     Compute all fog gate exits accessible from a zone.
 
-    Traverses preexisting paths to find all "merged" zones, then lists
+    Traverses discovered preexisting paths to find all "merged" zones, then lists
     all random links exiting from those zones.
 
     Args:
@@ -895,8 +928,9 @@ def compute_zone_exits(
         - from_zone: display name of which zone (in the preexisting group) this exit is from
         - from_zone_id: zone_id of from_zone
     """
-    # Get all zone_ids reachable via preexisting paths
-    merged_zone_ids = get_zones_via_preexisting(zone_pairs, current_zone_id)
+    # Get all zone_ids reachable via discovered preexisting paths
+    # This ensures we only show exits from zones the player can actually reach
+    merged_zone_ids = get_zones_via_preexisting(zone_pairs, current_zone_id, discovered_links)
 
     exits = []
     seen_link_ids = set()  # Deduplicate by link ID

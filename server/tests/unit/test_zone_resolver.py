@@ -1091,7 +1091,7 @@ class TestIsZoneBasedCond:
     """Tests for _is_zone_based_cond() method.
 
     This method determines if a Cond: value from fog.txt represents a zone-based
-    condition (indicating a one-way fog gate) vs an item/progression condition
+    condition (indicating blocks_propagation) vs an item/progression condition
     (bidirectional once unlocked).
     """
 
@@ -1140,11 +1140,15 @@ class TestIsZoneBasedCond:
 
 
 class TestConditionalFogGates:
-    """Tests for conditional fog gate detection (one-way indicators).
+    """Tests for conditional fog gate detection (blocks_propagation indicators).
 
     Fog gates with Cond: on one side indicate that side requires a condition
     to USE the fog gate. When the Cond is zone-based (not an item), this
     typically means a physical barrier (shortcut ladder, one-way door, drop).
+
+    These fog gates set blocks_propagation=True (not is_one_way), allowing the
+    player to see and use the exit while preventing propagation of preexisting
+    links from the destination zone.
     """
 
     def test_shortcut_ladder_detected(self, resolver):

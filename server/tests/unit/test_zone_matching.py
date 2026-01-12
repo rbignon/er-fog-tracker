@@ -1158,15 +1158,19 @@ class TestComputeZoneExits:
             },
         ]
 
-        # No discovered links
-        discovered = []
+        # Preexisting links must be discovered to merge zones for exits
+        discovered = [
+            {"zone_link_id": "link-afterloretta-elphael"},
+            {"zone_link_id": "link-elphael-afterloretta"},
+        ]
 
         # From Elphael, merged zones should include After Loretta via bidirectional preexisting
+        # Note: get_zones_via_preexisting without discovered_links still returns all connected zones
         merged = get_zones_via_preexisting(zone_pairs, "elphael")
         assert "elphael" in merged
         assert "after_loretta" in merged  # Bidirectional because reverse link exists
 
-        # Compute exits - should have 2 exits
+        # Compute exits - should have 2 exits (now that preexisting links are discovered)
         exits = compute_zone_exits(zone_pairs, discovered, "elphael")
         exit_descriptions = {e["description"] for e in exits}
 

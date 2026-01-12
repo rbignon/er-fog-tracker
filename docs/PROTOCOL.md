@@ -189,7 +189,8 @@ Parse a spoiler log and return structured data.
       "target_details": "arriving at entrance",
       "required_item": "Academy Glintstone Key",
       "required_item_from": "Raya Lucaria; Liurnia",
-      "is_one_way": false
+      "is_one_way": false,
+      "blocks_propagation": false
     }
   ]
 }
@@ -203,6 +204,8 @@ Parse a spoiler log and return structured data.
 | `zone_links[].target_id` | Target zone key |
 | `required_item` | Name of required item (null if none) |
 | `required_item_from` | Zones where item can be found (null if none) |
+| `is_one_way` | True for one-way links (sending gates, coffins) |
+| `blocks_propagation` | True for conditional fog gates (shortcut ladders, one-way doors) |
 
 **Errors**:
 - 400: Invalid spoiler log format

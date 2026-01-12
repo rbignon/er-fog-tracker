@@ -489,20 +489,24 @@ async def propagate_discovery(
     # BFS through preexisting links
     # For the initial link, use provided link_id if available
     # Mark the initial link specially so we can identify it
-    queue: list[tuple[str, str, str | None, bool]] = [(source_id, target_id, link_id, True)]
+    # Tuple: (source, target, link_id, is_main_link, blocks_propagation)
+    main_blocks_propagation = found_pair.get("blocks_propagation", False) if found_pair else False
+    queue: list[tuple[str, str, str | None, bool, bool]] = [
+        (source_id, target_id, link_id, True, main_blocks_propagation)
+    ]
     visited: set[tuple[str, str]] = set()
 
     # Also queue preexisting links from zones newly discovered via back-propagation
     # These zones are now accessible but their preexisting links haven't been propagated
     for zone in backprop_new_zones:
         for next_dst, _is_bidir in preexisting_adj.get(zone, []):
-            queue.append((zone, next_dst, None, False))
+            queue.append((zone, next_dst, None, False, False))
             logger.debug(
                 "[DISCOVERY] Queuing preexisting from backprop zone: %s → %s", zone, next_dst
             )
 
     while queue:
-        src, dst, provided_link_id, is_main_link = queue.pop(0)
+        src, dst, provided_link_id, is_main_link, blocks_prop = queue.pop(0)
         link_key = (src, dst)
 
         if link_key in visited:
@@ -562,11 +566,18 @@ async def propagate_discovery(
 
             # Propagate through ALL preexisting links from dst
             # (recursive discovery of zones connected via vanilla links)
-            for next_dst, _is_bidir in preexisting_adj.get(dst, []):
-                # Queue for recursive discovery - will be skipped if already visited
-                # These are forward-propagated links (not main)
-                queue.append((dst, next_dst, None, False))
-                logger.debug("[DISCOVERY] Queuing preexisting: %s → %s", dst, next_dst)
+            # Skip propagation if the link blocks it (e.g., conditional fog gates
+            # where the player can't access the rest of the destination zone)
+            if blocks_prop:
+                logger.debug(
+                    "[DISCOVERY] Skipping forward propagation from %s (blocks_propagation)", dst
+                )
+            else:
+                for next_dst, _is_bidir in preexisting_adj.get(dst, []):
+                    # Queue for recursive discovery - will be skipped if already visited
+                    # These are forward-propagated links (not main)
+                    queue.append((dst, next_dst, None, False, False))
+                    logger.debug("[DISCOVERY] Queuing preexisting: %s → %s", dst, next_dst)
         else:
             # Both nodes already discovered - check for preexisting links between them
             # that haven't been discovered yet (parallel links scenario)

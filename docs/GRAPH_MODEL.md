@@ -41,6 +41,7 @@ A zone link represents a fog gate connection between two zones.
   "target_id": "liurnia_academy_gate_town",
   "type": "random",
   "is_one_way": false,
+  "blocks_propagation": false,
   "source_details": "After the boss room",
   "target_details": "Near the Site of Grace",
   "required_item": "Academy Glintstone Key",
@@ -56,7 +57,8 @@ A zone link represents a fog gate connection between two zones.
 | `target` | Target zone display name |
 | `target_id` | Target zone key (from fog.txt) |
 | `type` | `random` (randomized gate) or `preexisting` (always there) |
-| `is_one_way` | True if link can only be traversed in one direction |
+| `is_one_way` | True if link can only be traversed in one direction (hides reverse exit) |
+| `blocks_propagation` | True if traversing this link should not propagate preexisting links from destination |
 | `source_details` | Description of exit location (from spoiler log) |
 | `target_details` | Description of entry location (from spoiler log) |
 | `required_item` | Key item required to traverse this link (optional) |
@@ -121,6 +123,28 @@ Zone A ──────────► Zone B
 - Undiscovery: Can reach A from B? Only if bidirectional
 - Path finding: Can only go forward on one-way links
 - Placeholder: Only created in traversable direction
+
+### Conditional Links (blocks_propagation)
+
+Some fog gates have physical barriers (shortcut ladders, one-way doors) that prevent full access to the destination zone without meeting a condition. These are detected via `Cond:` fields in fog.txt.
+
+```
+Zone A ◄────────────► Zone B
+  (ladder not deployed)   │
+                          │ preexisting links
+                          ▼ NOT propagated
+                       Zone C
+```
+
+**Example**: The fog gate at Queen's Bedchamber (shortcut ladder) leads to a catacombs boss room. The player can:
+- See and use the "return to entrance" exit from the boss room
+- But NOT access the rest of Bedchamber (ladder not deployed from their side)
+
+**Difference from `is_one_way`**:
+- `is_one_way=true`: Hides the reverse exit (player can't see it in exits list)
+- `blocks_propagation=true`: Shows the reverse exit, but doesn't propagate preexisting links from destination
+
+**Why this matters**: Without `blocks_propagation`, traversing the link would reveal all preexisting links from Bedchamber (Gideon's arena, rooftop connections), even though the player can't actually reach them.
 
 ## Discovered Zone Links
 
