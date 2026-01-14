@@ -353,6 +353,41 @@ export function undiscoverNode(nodeId) {
 }
 
 // ============================================================
+// RESTRICTED ZONES HELPERS
+// ============================================================
+
+/**
+ * Check if a zone is restricted (can't see undiscovered exits).
+ * A zone is restricted if ALL discovered links arriving at it (as target)
+ * have blocksPropagation=true. Computed dynamically, no state needed.
+ */
+export function isZoneRestricted(nodeId) {
+    if (!state.explorationState?.discoveredLinks || !state.linkIndex) {
+        return false;
+    }
+
+    // Find all discovered links where this node is the TARGET
+    const incomingDiscoveredLinks = [];
+    for (const linkId of state.explorationState.discoveredLinks) {
+        const link = state.linkIndex.byId.get(linkId);
+        if (!link) continue;
+
+        const { targetId } = getLinkEndpoints(link);
+        if (targetId === nodeId) {
+            incomingDiscoveredLinks.push(link);
+        }
+    }
+
+    // If no incoming discovered links, not restricted
+    if (incomingDiscoveredLinks.length === 0) {
+        return false;
+    }
+
+    // Restricted if ALL incoming links have blocksPropagation
+    return incomingDiscoveredLinks.every(link => link.blocksPropagation === true);
+}
+
+// ============================================================
 // DISCOVERED LINKS HELPERS
 // ============================================================
 

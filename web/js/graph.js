@@ -345,6 +345,12 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
             }
         } else if (sourceDiscovered && !targetDiscovered) {
             // Source discovered, target not: create placeholder for target
+            // BUT if source is restricted and link is not discovered, skip (can't see exits from restricted zones)
+            const linkDiscovered = State.isLinkDiscovered(sourceId, targetId);
+            if (State.isZoneRestricted(sourceId) && !linkDiscovered) {
+                return; // Skip this link - restricted zone, exit not yet discovered
+            }
+
             const placeholderId = `???_${sourceId}_${targetId}`;
             placeholderMap.set(placeholderId, targetId);
 
@@ -369,6 +375,12 @@ function buildVisibleGraph(nodes, links, nodeMap, explorationMode, explorationSt
             });
         } else if (!sourceDiscovered && targetDiscovered && !link.oneWay) {
             // Target discovered, source not (bidirectional): create placeholder for source
+            // BUT if target is restricted and link is not discovered, skip
+            const linkDiscovered = State.isLinkDiscovered(sourceId, targetId);
+            if (State.isZoneRestricted(targetId) && !linkDiscovered) {
+                return; // Skip this link - restricted zone, exit not yet discovered
+            }
+
             const placeholderId = `???_${targetId}_${sourceId}`;
             placeholderMap.set(placeholderId, sourceId);
 
