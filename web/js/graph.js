@@ -25,11 +25,9 @@ export function renderGraph(preservePositions = false) {
     const explorationMode = State.isExplorationMode();
     const explorationState = State.getExplorationState();
 
-    // Propagate discoveries through pre-existing connections
-    if (explorationMode && explorationState) {
-        Exploration.propagatePreexistingDiscoveries();
-        State.saveExplorationToStorage();
-    }
+    // Note: Propagation through preexisting connections is handled by:
+    // - Online mode: Server handles propagation, frontend just displays the result
+    // - Offline mode: discoverWithPreexisting() handles it when user marks a zone as discovered
 
     // Cleanup previous subscriptions to avoid memory leak
     graphSubscriptionCleanups.forEach(cleanup => cleanup());

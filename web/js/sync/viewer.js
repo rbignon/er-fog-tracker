@@ -113,6 +113,7 @@ function buildGraphFromSessionData(data) {
                 target: target,
                 type: linkState.type || 'fog',
                 oneWay: linkState.oneWay || false,
+                blocksPropagation: linkState.blocksPropagation || false,
             });
         }
     }

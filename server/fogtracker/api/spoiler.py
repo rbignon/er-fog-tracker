@@ -72,6 +72,7 @@ async def parse_spoiler(data: SpoilerParseRequest):
             required_item=conn.required_item,
             required_item_from=conn.required_item_from,
             is_one_way=conn.is_one_way,
+            blocks_propagation=conn.blocks_propagation,
         ).model_dump()
         for conn in enriched_connections
     ]

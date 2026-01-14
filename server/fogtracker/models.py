@@ -26,6 +26,7 @@ class ZoneLink(BaseModel):
     required_item: str | None = Field(default=None, max_length=255)  # Required item name
     required_item_from: str | None = Field(default=None, max_length=2000)  # Zones where item found
     is_one_way: bool = False  # True for sending gates, coffins, drop-downs, etc.
+    blocks_propagation: bool = False  # True for conditional fog gates (shortcut ladders, etc.)
 
 
 # Keep ZonePair as alias for backward compatibility during transition

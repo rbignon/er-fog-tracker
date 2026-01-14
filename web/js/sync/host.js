@@ -172,6 +172,7 @@ function getFullSyncState() {
             frontierHighlight: linkEl.classed('frontier-highlight'),
             type: d.type || null,
             oneWay: d.oneWay || false,
+            blocksPropagation: d.blocksPropagation || false,
             // Store original target for placeholder links
             originalTarget: d.originalTarget || null,
             originalSource: d.originalSource || null,
@@ -218,6 +219,7 @@ function getFullSyncState() {
                     frontierHighlight: false,
                     type: l.type || null,
                     oneWay: l.oneWay || false,
+                    blocksPropagation: l.blocksPropagation || false,
                     isOriginalLink: true,
                 };
             }

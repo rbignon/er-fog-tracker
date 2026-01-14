@@ -194,6 +194,7 @@ export function transformLinksFromApi(links) {
         requiredItem: link.required_item || null,
         requiredItemFrom: link.required_item_from || null,
         isOneWay: link.is_one_way || false,
+        blocksPropagation: link.blocks_propagation || false,
     }));
 }
 
@@ -237,6 +238,7 @@ export function transformLinksToApi(links, getLinkEndpoints) {
             required_item: link.requiredItem || null,
             required_item_from: link.requiredItemFrom || null,
             is_one_way: link.isOneWay || false,
+            blocks_propagation: link.blocksPropagation || false,
         };
     });
 }

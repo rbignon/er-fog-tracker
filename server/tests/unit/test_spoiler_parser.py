@@ -793,10 +793,10 @@ class TestEnrichConnectionsOneWay:
 class TestBlocksPropagation:
     """Tests for blocks_propagation field in ConnectionInfo.
 
-    The blocks_propagation field is set for random fog gate links where the source
-    side has a Cond: field in fog.txt. This indicates the player arrived through
-    a conditional fog gate (e.g., shortcut ladder not deployed) and shouldn't
-    trigger propagation of preexisting links from the destination zone.
+    The blocks_propagation field is set for random fog gate links where the target
+    side (where the player arrives) has a Cond: field in fog.txt. This indicates
+    the player arrives at a restricted area (e.g., base of a shortcut ladder) and
+    shouldn't trigger propagation of preexisting links from the destination zone.
 
     Unlike is_one_way (which hides the exit from the destination), blocks_propagation
     allows the player to see and use the exit (e.g., "return to entrance") while
@@ -809,14 +809,16 @@ class TestBlocksPropagation:
         return get_resolver()
 
     def test_conditional_fog_gate_sets_blocks_propagation(self, resolver):
-        """Fog gates with Cond: on source should set blocks_propagation, not is_one_way."""
+        """Fog gates with Cond: on target side should set blocks_propagation."""
         # Gideon fog gate has Cond: on the bedchamber side (shortcut ladder)
+        # When arriving at this side, player can't access the rest of Bedchamber
         conn = ConnectionInfo(
             id="test-id",
-            source="Ashen Leyndell - Queen's Bedchamber",
-            target="Some Target Zone",
+            source="Caelid - Gaol Cave - Frenzied Duelist",
+            target="Ashen Leyndell - Queen's Bedchamber",
             conn_type="random",
-            source_details="outside of Gideon's arena at the base of a shortcut ladder, accessed from an open window on a second-floor rooftop",
+            source_details="at the back of Frenzied Duelist's arena",
+            target_details="outside of Gideon's arena at the base of a shortcut ladder, accessed from an open window on a second-floor rooftop",
             is_one_way=False,
         )
 
@@ -825,7 +827,7 @@ class TestBlocksPropagation:
 
         # Should set blocks_propagation, NOT is_one_way
         assert result.blocks_propagation is True
-        assert result.is_one_way is False  # Player can still use the exit
+        assert result.is_one_way is False  # Player can still use the exit to return
 
     def test_normal_fog_gate_no_blocks_propagation(self, resolver):
         """Normal fog gates without Cond: should not set blocks_propagation."""
@@ -835,6 +837,7 @@ class TestBlocksPropagation:
             target="Some Target Zone",
             conn_type="random",
             source_details="at the front of some area",
+            target_details="at the entrance",
             is_one_way=False,
         )
 

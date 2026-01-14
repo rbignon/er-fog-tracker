@@ -331,7 +331,7 @@ function findReachableNodes(startNodeId, links, discoveredSet) {
  * Internal: discover area and recursively discover pre-existing connections
  * @param {string} areaId - The area to discover
  * @param {string|null} fromNodeId - The node from which we came (to record the link)
- * @param {Object|null} viaLink - The link used to get here (to check if one-way)
+ * @param {Object|null} viaLink - The link used to get here (to check if one-way or blocks propagation)
  */
 function discoverWithPreexisting(areaId, fromNodeId, viaLink) {
     const explorationState = State.getExplorationState();
@@ -352,6 +352,13 @@ function discoverWithPreexisting(areaId, fromNodeId, viaLink) {
 
     const graphData = State.getGraphData();
     if (!graphData) return;
+
+    // If the link used to get here blocks propagation (e.g., conditional fog gate
+    // like shortcut ladder), don't propagate through preexisting links from this area.
+    // The player can see/use the exit but can't access the rest of the destination zone.
+    if (viaLink && viaLink.blocksPropagation) {
+        return;
+    }
 
     // Find and follow pre-existing connections (respecting one-way)
     graphData.links.forEach(link => {

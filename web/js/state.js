@@ -164,18 +164,23 @@ export function getGameStats() {
 // ============================================================
 
 /**
- * Compute one-way property on links.
+ * Compute one-way and blocks-propagation properties on links.
  *
  * All links are bidirectional unless marked as isOneWay
  * (sending gates, coffins, drop-downs, etc.)
+ *
+ * Links with blocksPropagation prevent preexisting link discovery
+ * from the destination zone (conditional fog gates like shortcut ladders).
  */
-function computeOneWayLinks(links) {
+function computeLinkProperties(links) {
     if (!links || links.length === 0) return;
 
-    // All links are bidirectional unless explicitly marked as one-way
-    // (sending gates, coffins, drop-downs, etc.)
     links.forEach(l => {
-        l.oneWay = l.isOneWay === true;
+        // All links are bidirectional unless explicitly marked as one-way
+        // (sending gates, coffins, drop-downs, etc.)
+        l.oneWay = l.isOneWay === true || l.is_one_way === true;
+        // Conditional fog gates block preexisting link propagation
+        l.blocksPropagation = l.blocks_propagation === true;
     });
 }
 
@@ -221,9 +226,9 @@ function buildLinkIndex(links) {
 }
 
 export function setGraphData(data) {
-    // Compute one-way links before storing (ensures consistency across all entry points)
+    // Compute link properties before storing (ensures consistency across all entry points)
     if (data && data.links) {
-        computeOneWayLinks(data.links);
+        computeLinkProperties(data.links);
     }
     state.graphData = data;
     // Build link index for fast lookups

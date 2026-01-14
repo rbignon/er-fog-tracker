@@ -941,14 +941,15 @@ class ZoneResolver:
         - A drop/elevation change that prevents return
         - A boss fog gate requiring dungeon exploration first
 
-        If a random link originates from such a fog gate side, it should have
-        blocks_propagation=True (not is_one_way). This allows the player to:
+        If a random link arrives at such a fog gate side (target_details matches),
+        it should have blocks_propagation=True (not is_one_way). This allows the
+        player to:
         - See and use the exit (e.g., "return to entrance" after a boss)
         - But NOT trigger propagation of preexisting links from the destination
           zone (which would be inaccessible without meeting the condition)
 
         Args:
-            detail_text: The source_details text from the spoiler log
+            detail_text: The target_details text from the spoiler log
                         (corresponds to ASide/BSide Text: in fog.txt)
 
         Returns:

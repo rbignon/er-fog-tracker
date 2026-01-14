@@ -230,6 +230,7 @@ Caelid
         assert "required_item" in link
         assert "required_item_from" in link
         assert "is_one_way" in link
+        assert "blocks_propagation" in link
 
     def test_parse_required_item_detected(self):
         """Test that required items are detected and returned."""
