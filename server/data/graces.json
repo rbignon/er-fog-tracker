@@ -386,9 +386,9 @@
     },
     "13002959": {
       "grace_name": "Dragon Temple Rooftop",
-      "zone": "Farum Azula - Dragon Temple",
+      "zone": "Farum Azula Rooftop and Bridge",
       "map_id": null,
-      "zone_id": "farumazula_temple"
+      "zone_id": "farumazula"
     },
     "13002960": {
       "grace_name": "Beside the Great Bridge",
