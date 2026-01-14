@@ -776,15 +776,15 @@ function setupTooltip(node, nodeConnections, explorationMode, explorationState, 
         tooltip.select('.discover-btn').on('click', function () {
             const nodeId = this.getAttribute('data-node-id');
             const sourceNodeId = this.getAttribute('data-source-node-id');
-            const isOneWay = this.getAttribute('data-one-way') === 'true';
+            const linkId = this.getAttribute('data-link-id');
 
             if (nodeId) {
                 // If discovering from a placeholder, set the real node as selected
                 // so after re-render it stays selected
                 State.setSelectedNodeId(nodeId);
 
-                // Pass the source node and link info for proper link discovery tracking
-                const viaLink = sourceNodeId ? { oneWay: isOneWay } : null;
+                // Get the actual link object to preserve all properties (oneWay, blocksPropagation, etc.)
+                const viaLink = linkId ? State.getLinkById(linkId) : null;
                 Exploration.discoverArea(nodeId, sourceNodeId || null, viaLink);
                 // The graph will re-render; tooltip will be refreshed via graphNeedsRender
             }
@@ -982,8 +982,8 @@ function buildTooltipContent(
         if (pinned && !State.isViewerMode()) {
             // Include source node info for link discovery tracking
             const sourceNodeId = d.sourceNodeId || '';
-            const isOneWay = relevantLink?.oneWay ? 'true' : 'false';
-            html += `<button class="discover-btn" data-node-id="${realId}" data-source-node-id="${sourceNodeId}" data-one-way="${isOneWay}">Mark as discovered</button>`;
+            const linkId = relevantLink?.id || '';
+            html += `<button class="discover-btn" data-node-id="${realId}" data-source-node-id="${sourceNodeId}" data-link-id="${linkId}">Mark as discovered</button>`;
         }
 
         return html;

@@ -356,8 +356,13 @@ function discoverWithPreexisting(areaId, fromNodeId, viaLink) {
     // If the link used to get here blocks propagation (e.g., conditional fog gate
     // like shortcut ladder), don't propagate through preexisting links from this area.
     // The player can see/use the exit but can't access the rest of the destination zone.
+    // NOTE: blocksPropagation only applies when arriving at the TARGET of the link,
+    // not when traversing in the reverse direction (source → target has the condition).
     if (viaLink && viaLink.blocksPropagation) {
-        return;
+        const { targetId } = State.getLinkEndpoints(viaLink);
+        if (areaId === targetId) {
+            return;
+        }
     }
 
     // Find and follow pre-existing connections (respecting one-way)

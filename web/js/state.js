@@ -180,7 +180,7 @@ function computeLinkProperties(links) {
         // (sending gates, coffins, drop-downs, etc.)
         l.oneWay = l.isOneWay === true || l.is_one_way === true;
         // Conditional fog gates block preexisting link propagation
-        l.blocksPropagation = l.blocks_propagation === true;
+        l.blocksPropagation = l.blocksPropagation === true || l.blocks_propagation === true;
     });
 }
 
