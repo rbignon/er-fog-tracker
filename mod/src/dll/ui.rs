@@ -355,8 +355,8 @@ impl FogRandoTracker {
 
     /// Calculate how many exits fit in the given height at the given line height
     fn calculate_exits_that_fit(&self, available_height: f32, line_height: f32) -> Option<usize> {
-        // Get the filtered exits list
-        let exits_to_show: Vec<_> = if self.show_undiscovered_only {
+        // Get the filtered exits list (sorted same as render_exits_section)
+        let mut exits_to_show: Vec<_> = if self.show_undiscovered_only {
             self.current_exits()
                 .iter()
                 .filter(|e| e.target == "???")
@@ -364,6 +364,7 @@ impl FogRandoTracker {
         } else {
             self.current_exits().iter().collect()
         };
+        exits_to_show.sort_by_key(|e| e.target != "???");
 
         if exits_to_show.is_empty() {
             return None;
@@ -848,7 +849,8 @@ impl FogRandoTracker {
         }
 
         // Filter exits if undiscovered-only mode is active
-        let exits_to_show: Vec<_> = if self.show_undiscovered_only {
+        // Always sort undiscovered exits first
+        let mut exits_to_show: Vec<_> = if self.show_undiscovered_only {
             self.current_exits()
                 .iter()
                 .filter(|e| e.target == "???")
@@ -856,6 +858,7 @@ impl FogRandoTracker {
         } else {
             self.current_exits().iter().collect()
         };
+        exits_to_show.sort_by_key(|e| e.target != "???");
 
         // Show filter indicator when undiscovered-only mode is active
         if self.show_undiscovered_only {
