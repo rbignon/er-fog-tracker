@@ -2436,6 +2436,12 @@
       "map_id": "m61_49_48_00",
       "zone_id": "scaduview_gaius"
     },
+    "2049482951": {
+      "grace_name": "Shadow Keep, Back Gate",
+      "zone": "Specimen Storehouse - Back Section",
+      "map_id": "m61_49_48_00",
+      "zone_id": "storehouse_back"
+    },
     "1049482951": {
       "grace_name": "Shadow Keep, Back Gate",
       "zone": "Specimen Storehouse - Back Section",
