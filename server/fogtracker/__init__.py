@@ -4,4 +4,4 @@ Fog Gate Visualizer - Backend Server
 FastAPI server with REST API and WebSocket support for real-time sync.
 """
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"

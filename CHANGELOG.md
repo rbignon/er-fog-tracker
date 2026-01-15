@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-01-15
+
+### New Features
+
+#### Mod
+* Show undiscovered exits first in overlay
+
+#### Server
+* Add blocks_propagation for conditional fog gates
+* Include Optional areas in World Shuffle mode
+* Detect one-way fog gates using zone-based Cond: fields
+
+#### Web
+* Add players list page with connection status
+* Hide undiscovered exits from restricted zones
+
+### Bug Fixes
+
+#### Server
+* Update graces mapping
+* Add Aliases support for zone name resolution
+* Extend ASide/BSide zone resolution to all fog gates
+* Resolve zone_query failure for zones with duplicate display names
+* Fix blocks_propagation based on target_details, not source_details
+
+#### Web
+* Fix blocksPropagation not working in offline mode
+
 ## [1.2.0] - 2026-01-10
 
 ### New Features
