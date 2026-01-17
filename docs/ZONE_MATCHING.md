@@ -185,29 +185,66 @@ If `destination_entity_id` is provided and game has `entity_mapping`:
 }
 ```
 
-### 4. Source Zone Prioritization (Mod Context)
+### 4. Source Zone Filtering (Mod Context)
 
-If the mod provides `source_zone_id`:
+If the mod provides `source_zone_id` or `source_zone`:
 1. Get source zone candidates from map/position resolution
-2. Check if any candidate matches the mod's cached zone key
-3. If match found, move matching candidate(s) to front of list
-4. Continue with reordered candidate list
+2. Check if any candidate matches the mod's cached zone key/name
+3. If match found, **filter to only matching candidate(s)** (exclusive)
+4. If no match found, keep original list as fallback
 
-**Priority boost, not filter**: Matching candidates are prioritized, but non-matching candidates are kept as fallbacks. This handles edge cases where the mod's cached zone is stale.
+**Filter with fallback**: When a match is found, only matching candidates are kept. This prevents discovering multiple links when only one fog gate was traversed. If no match is found (e.g., stale cache), the original list is preserved.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Before prioritization:                                       │
+│ Case 1: Match found (exclusive filter)                       │
 │ candidates = [zone_a, zone_b, zone_c]                       │
-│                                                              │
 │ Mod sends: source_zone_id = "zone_b"                        │
-│                                                              │
-│ After prioritization:                                        │
-│ candidates = [zone_b, zone_a, zone_c]  (zone_b moved front) │
+│ Result: candidates = [zone_b]  (others filtered out)        │
+├─────────────────────────────────────────────────────────────┤
+│ Case 2: No match (fallback to original)                      │
+│ candidates = [zone_a, zone_b, zone_c]                       │
+│ Mod sends: source_zone_id = "zone_x"  (stale/invalid)       │
+│ Result: candidates = [zone_a, zone_b, zone_c]  (unchanged)  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Why this helps**: After traversing a fog gate, the mod knows what zone it was in (from the server's `discovery_v2_ack` or `zone_query_ack`). When the player traverses another fog gate from the same zone, this cached info helps the server pick the correct source candidate, reducing multi-link discoveries.
+**Why this helps**: After traversing a fog gate, the mod knows what zone it was in (from the server's `discovery_v2_ack` or `zone_query_ack`). When the player traverses another fog gate from the same zone, this cached info helps the server pick the correct source candidate, preventing spurious multi-link discoveries.
+
+### 4b. Animation-Based Filtering
+
+Some fog gates require a specific animation to access (e.g., the Pureblood Knight's Medal). These zones should only be candidates when that animation is used.
+
+The `Animation:` field in `fog.txt` marks zones that require a specific warp type:
+
+```yaml
+# In fog.txt - Warp definition for Pureblood Knight's Medal
+- Name: 12052021
+  ID: 12052021
+  Area: m12_05_00_00
+  Animation: Medal
+  ASide:
+    Area: chapel_start
+```
+
+**Filtering logic**:
+- **Negative filter**: When `warp_type` differs from the required animation, exclude zones with that requirement. Example: traversing a `FogWall` in Mohgwyn Palace excludes `chapel_start` (which requires `Medal`).
+- **Positive filter**: When `warp_type` matches, keep only zones requiring that animation. (Currently unused since `Medal` warps have a dedicated handler, but the code supports future animation types.)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Player traverses FogWall in Mohgwyn Palace (m12_05_00_00)    │
+│ candidates = [chapel_start, mohgwyn_postboss, mohgwyn]      │
+│                                                              │
+│ chapel_start requires Animation: Medal                       │
+│ warp_type = "FogWall" ≠ "Medal"                             │
+│                                                              │
+│ Result: candidates = [mohgwyn_postboss, mohgwyn]            │
+│ (chapel_start excluded - can only be reached via Medal)     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Note**: The `Medal` warp type has a dedicated handler (`_handle_medal_discovery`) that bypasses normal candidate resolution entirely, since the Medal can be used from any zone. The animation filter primarily serves to exclude Medal-only zones from normal fog wall traversals.
 
 ### 5. Zone Candidates (Fallback)
 

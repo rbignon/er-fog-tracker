@@ -53,7 +53,7 @@ Contains three main definition types:
 2. **Entrance definitions** - Fog gates with vanilla entity IDs
 3. **Warp definitions** - ASide/BSide with action and arrival descriptions
 
-Example:
+Example (Area definition):
 ```yaml
 - Name: chapel_start
   Text: Chapel of Anticipation
@@ -64,6 +64,21 @@ Example:
     Text: defeating any major boss
     Tags: crawlonly openonly
 ```
+
+Example (Warp definition with Animation requirement):
+```yaml
+# Pureblood Knight's Medal warp point in Mohgwyn Palace
+- Name: 12052021
+  ID: 12052021
+  Area: m12_05_00_00
+  Animation: Medal
+  ASide:
+    Area: chapel_start
+```
+
+| Field | Description |
+|-------|-------------|
+| `Animation` | Required warp type to access this fog gate (e.g., `Medal`). Zones referenced by fog gates with this field are excluded from candidates unless `warp_type` matches. See [Animation-Based Filtering](ZONE_MATCHING.md#4b-animation-based-filtering). |
 
 ### fogevents.txt Templates
 
