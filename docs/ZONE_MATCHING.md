@@ -634,6 +634,33 @@ If multiple zone links match the same candidates:
 - This can lead to incorrect matches in rare cases
 - Entity mapping helps by narrowing candidates
 
+### Destination Zone Display (Re-Traversing)
+
+When the player re-traverses an already-discovered fog gate where multiple matches exist:
+
+**Problem**: If both a `preexisting` link and a `random` link match the same source/target candidates, the in-game display might show the wrong destination zone. For example, traversing a randomized fog gate to "Limgrave Tunnels - Stonedigger Troll" could incorrectly display "Limgrave" if a preexisting link also connects those zones.
+
+**Solution**: When selecting the destination zone for display:
+1. If new links were discovered, use the primary discovery result's target
+2. If re-traversing (no new links), prefer `random` type links over `preexisting`
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Player traverses fog gate from Caelid                        │
+│ Matches found:                                               │
+│   - caelid → limgrave (preexisting) - already discovered    │
+│   - caelid → limgrave_tunnels_boss (random) - already disc. │
+│                                                              │
+│ No new links discovered (re-traversing)                      │
+│                                                              │
+│ Destination zone selection:                                  │
+│   1. Check for random link → found limgrave_tunnels_boss    │
+│   2. Display: "Limgrave Tunnels - Stonedigger Troll" ✓      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Why random links are preferred**: The player traversed a randomized fog gate, so the destination should be the randomized connection's target, not a vanilla (preexisting) connection that happens to exist between the same zones.
+
 ### Missing Zone Keys
 
 If enrichment fails:

@@ -3603,3 +3603,353 @@ class TestGameStatsUpdateHandler:
             mock_client.send.assert_called_once()
             assert mock_game.game_stats["great_runes"] == all_runes
             mock_broadcast.assert_called_once()
+
+
+# =============================================================================
+# TestDestinationZoneSelection
+# =============================================================================
+
+
+class TestDestinationZoneSelection:
+    """Tests for destination zone selection in _finalize_and_send_discovery.
+
+    When multiple resolved links are found and all are already discovered,
+    the code should prefer 'random' type links over 'preexisting' links
+    for determining the destination zone, since the player just traversed
+    a randomized fog gate.
+    """
+
+    @pytest.fixture
+    def zone_links_with_preexisting_and_random(self):
+        """Zone links with both preexisting and random connections to same target map."""
+        return [
+            {
+                "id": "link1",
+                "source": "Caelid",
+                "source_id": "caelid",
+                "target": "Limgrave",
+                "target_id": "limgrave",
+                "type": "preexisting",  # Vanilla connection
+            },
+            {
+                "id": "link2",
+                "source": "Caelid",
+                "source_id": "caelid",
+                "target": "Limgrave Tunnels - Stonedigger Troll",
+                "target_id": "limgrave_tunnels_boss",
+                "type": "random",  # Randomized fog gate
+            },
+            {
+                "id": "link3",
+                "source": "Chapel of Anticipation",
+                "source_id": "chapel_start",
+                "target": "Caelid",
+                "target_id": "caelid",
+                "type": "preexisting",
+            },
+        ]
+
+    @pytest.fixture
+    def mock_client(self):
+        """Create a ModClient with mocked WebSocket and game_id."""
+        ws = AsyncMock()
+        game_id = uuid4()
+        user = MagicMock()
+        user.id = 1
+        client = ModClient(ws, game_id, user)
+        client.send = AsyncMock()
+        return client
+
+    @pytest.mark.asyncio
+    async def test_prefers_random_link_for_destination_zone(
+        self, mock_client, zone_links_with_preexisting_and_random
+    ):
+        """When all resolved links are already discovered, should prefer random link."""
+        zone_links = zone_links_with_preexisting_and_random
+
+        # Both links already discovered - simulates re-traversing
+        discovered_links = [
+            {"zone_link_id": "link1"},  # caelid -> limgrave (preexisting)
+            {"zone_link_id": "link2"},  # caelid -> limgrave_tunnels_boss (random)
+            {"zone_link_id": "link3"},  # chapel -> caelid (preexisting)
+        ]
+
+        # Both discovery results have empty main_links (already discovered)
+        discovery_result_1 = DiscoveryResult(origin="Caelid")  # No new links
+        discovery_result_2 = DiscoveryResult(origin="Caelid")  # No new links
+        all_discovery_results = [discovery_result_1, discovery_result_2]
+
+        # resolved_links in order they were added (preexisting first in this case)
+        resolved_links = [
+            {"source": "Caelid", "target": "Limgrave"},  # preexisting
+            {"source": "Caelid", "target": "Limgrave Tunnels - Stonedigger Troll"},  # random
+        ]
+
+        target_candidates = [
+            ("limgrave", "Limgrave"),
+            ("limgrave_tunnels", "Limgrave Tunnels"),
+            ("limgrave_tunnels_boss", "Limgrave Tunnels - Stonedigger Troll"),
+        ]
+
+        mock_game = MagicMock()
+        mock_game.zone_links = zone_links
+        mock_game.discovered_zone_links = discovered_links
+        mock_game.zones = {}
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.manager") as mock_manager,
+            patch("fogtracker.websocket.mod.get_resolver") as mock_get_resolver,
+        ):
+            mock_db = MagicMock()
+            mock_db.expire_all = MagicMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_game
+            mock_db.execute = AsyncMock(return_value=mock_result)
+            mock_session.return_value.__aenter__.return_value = mock_db
+
+            mock_manager.broadcast_to_all = AsyncMock()
+
+            # Mock resolver to return zone IDs correctly
+            mock_resolver = MagicMock()
+            mock_resolver.lookup_by_display_name.side_effect = lambda name: {
+                "Caelid": "caelid",
+                "Limgrave": "limgrave",
+                "Limgrave Tunnels - Stonedigger Troll": "limgrave_tunnels_boss",
+            }.get(name)
+            mock_get_resolver.return_value = mock_resolver
+
+            await mock_client._finalize_and_send_discovery(
+                db=mock_db,
+                resolved_links=resolved_links,
+                all_discovery_results=all_discovery_results,
+                target_candidates=target_candidates,
+                error_msg_if_empty="No match",
+                warp_type="FogWall",
+            )
+
+            # Verify the ack was sent with the random link's target as destination
+            call_args = mock_client.send.call_args[0][0]
+            assert call_args["type"] == "discovery_v2_ack"
+            assert call_args["current_zone"] == "Limgrave Tunnels - Stonedigger Troll"
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_first_link_when_no_random_found(
+        self, mock_client, zone_links_with_preexisting_and_random
+    ):
+        """When all resolved links are preexisting, should use first link."""
+        zone_links = zone_links_with_preexisting_and_random
+
+        discovered_links = [{"zone_link_id": "link1"}, {"zone_link_id": "link3"}]
+
+        discovery_result = DiscoveryResult(origin="Caelid")  # No new links
+        all_discovery_results = [discovery_result]
+
+        # Only preexisting links resolved
+        resolved_links = [
+            {"source": "Caelid", "target": "Limgrave"},  # preexisting
+        ]
+
+        target_candidates = [
+            ("limgrave", "Limgrave"),
+        ]
+
+        mock_game = MagicMock()
+        mock_game.zone_links = zone_links
+        mock_game.discovered_zone_links = discovered_links
+        mock_game.zones = {}
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.manager") as mock_manager,
+            patch("fogtracker.websocket.mod.get_resolver") as mock_get_resolver,
+        ):
+            mock_db = MagicMock()
+            mock_db.expire_all = MagicMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_game
+            mock_db.execute = AsyncMock(return_value=mock_result)
+            mock_session.return_value.__aenter__.return_value = mock_db
+
+            mock_manager.broadcast_to_all = AsyncMock()
+
+            mock_resolver = MagicMock()
+            mock_resolver.lookup_by_display_name.side_effect = lambda name: {
+                "Caelid": "caelid",
+                "Limgrave": "limgrave",
+            }.get(name)
+            mock_get_resolver.return_value = mock_resolver
+
+            await mock_client._finalize_and_send_discovery(
+                db=mock_db,
+                resolved_links=resolved_links,
+                all_discovery_results=all_discovery_results,
+                target_candidates=target_candidates,
+                error_msg_if_empty="No match",
+                warp_type="FogWall",
+            )
+
+            call_args = mock_client.send.call_args[0][0]
+            assert call_args["current_zone"] == "Limgrave"
+
+    @pytest.mark.asyncio
+    async def test_uses_main_links_when_available(
+        self, mock_client, zone_links_with_preexisting_and_random
+    ):
+        """When discovery result has main_links, should use that for destination."""
+        zone_links = zone_links_with_preexisting_and_random
+
+        discovered_links = [{"zone_link_id": "link3"}]
+
+        # This time, main_links has the actual discovered link
+        discovery_result = DiscoveryResult(origin="Caelid")
+        discovery_result.main_links.append(
+            DiscoveredLink(
+                source_name="Caelid",
+                target_name="Limgrave Tunnels - Stonedigger Troll",
+                link_type="random",
+                source_id="caelid",
+                target_id="limgrave_tunnels_boss",
+            )
+        )
+        all_discovery_results = [discovery_result]
+
+        resolved_links = [
+            {"source": "Caelid", "target": "Limgrave"},  # preexisting (first)
+            {"source": "Caelid", "target": "Limgrave Tunnels - Stonedigger Troll"},  # random
+        ]
+
+        target_candidates = [
+            ("limgrave", "Limgrave"),
+            ("limgrave_tunnels_boss", "Limgrave Tunnels - Stonedigger Troll"),
+        ]
+
+        mock_game = MagicMock()
+        mock_game.zone_links = zone_links
+        mock_game.discovered_zone_links = discovered_links
+        mock_game.zones = {}
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.manager") as mock_manager,
+            patch("fogtracker.websocket.mod.get_resolver") as mock_get_resolver,
+        ):
+            mock_db = MagicMock()
+            mock_db.expire_all = MagicMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_game
+            mock_db.execute = AsyncMock(return_value=mock_result)
+            mock_session.return_value.__aenter__.return_value = mock_db
+
+            mock_manager.broadcast_to_all = AsyncMock()
+
+            mock_resolver = MagicMock()
+            mock_resolver.lookup_by_display_name.side_effect = lambda name: {
+                "Caelid": "caelid",
+                "Limgrave": "limgrave",
+                "Limgrave Tunnels - Stonedigger Troll": "limgrave_tunnels_boss",
+            }.get(name)
+            mock_get_resolver.return_value = mock_resolver
+
+            await mock_client._finalize_and_send_discovery(
+                db=mock_db,
+                resolved_links=resolved_links,
+                all_discovery_results=all_discovery_results,
+                target_candidates=target_candidates,
+                error_msg_if_empty="No match",
+                warp_type="FogWall",
+            )
+
+            call_args = mock_client.send.call_args[0][0]
+            # Should use main_links target, not fall back to random link logic
+            assert call_args["current_zone"] == "Limgrave Tunnels - Stonedigger Troll"
+
+    @pytest.mark.asyncio
+    async def test_selects_first_random_link_when_multiple_random_links(self, mock_client):
+        """When multiple random links exist, should select the first one."""
+        zone_links = [
+            {
+                "id": "link1",
+                "source": "Caelid",
+                "source_id": "caelid",
+                "target": "Limgrave",  # First random link
+                "target_id": "limgrave",
+                "type": "random",
+            },
+            {
+                "id": "link2",
+                "source": "Caelid",
+                "source_id": "caelid",
+                "target": "Stormveil Castle",  # Second random link
+                "target_id": "stormveil",
+                "type": "random",
+            },
+            {
+                "id": "link3",
+                "source": "Chapel of Anticipation",
+                "source_id": "chapel_start",
+                "target": "Caelid",
+                "target_id": "caelid",
+                "type": "preexisting",
+            },
+        ]
+
+        discovered_links = [
+            {"zone_link_id": "link1"},
+            {"zone_link_id": "link2"},
+            {"zone_link_id": "link3"},
+        ]
+
+        discovery_result = DiscoveryResult(origin="Caelid")  # No new links
+        all_discovery_results = [discovery_result]
+
+        # Multiple random links in resolved_links
+        resolved_links = [
+            {"source": "Caelid", "target": "Limgrave"},  # random (first)
+            {"source": "Caelid", "target": "Stormveil Castle"},  # random (second)
+        ]
+
+        target_candidates = [
+            ("limgrave", "Limgrave"),
+            ("stormveil", "Stormveil Castle"),
+        ]
+
+        mock_game = MagicMock()
+        mock_game.zone_links = zone_links
+        mock_game.discovered_zone_links = discovered_links
+        mock_game.zones = {}
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.manager") as mock_manager,
+            patch("fogtracker.websocket.mod.get_resolver") as mock_get_resolver,
+        ):
+            mock_db = MagicMock()
+            mock_db.expire_all = MagicMock()
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = mock_game
+            mock_db.execute = AsyncMock(return_value=mock_result)
+            mock_session.return_value.__aenter__.return_value = mock_db
+
+            mock_manager.broadcast_to_all = AsyncMock()
+
+            mock_resolver = MagicMock()
+            mock_resolver.lookup_by_display_name.side_effect = lambda name: {
+                "Caelid": "caelid",
+                "Limgrave": "limgrave",
+                "Stormveil Castle": "stormveil",
+            }.get(name)
+            mock_get_resolver.return_value = mock_resolver
+
+            await mock_client._finalize_and_send_discovery(
+                db=mock_db,
+                resolved_links=resolved_links,
+                all_discovery_results=all_discovery_results,
+                target_candidates=target_candidates,
+                error_msg_if_empty="No match",
+                warp_type="FogWall",
+            )
+
+            call_args = mock_client.send.call_args[0][0]
+            # Should select the FIRST random link (Limgrave), not the second
+            assert call_args["current_zone"] == "Limgrave"

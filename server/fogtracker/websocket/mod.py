@@ -235,7 +235,44 @@ class ModClient(Client):
                         link = rl
                         break
             if not link:
-                link = resolved_links[0]
+                # No new links discovered (re-traversing already-discovered links)
+                # Prefer 'random' type links over 'preexisting' since the player just
+                # traversed a randomized fog gate, not a vanilla connection
+                zone_links = game.zone_links or []
+                resolver = get_resolver()
+
+                # Build lookup: (source_id, target_id) -> link type
+                # Only store the canonical direction from zone_links. We also store
+                # the reverse direction only for bidirectional links (not is_one_way).
+                link_type_lookup: dict[tuple[str, str], str] = {}
+                for zl in zone_links:
+                    src_id = zl.get("source_id")
+                    tgt_id = zl.get("target_id")
+                    if src_id and tgt_id:
+                        link_type = zl.get("type", "random")
+                        link_type_lookup[(src_id, tgt_id)] = link_type
+                        # Only add reverse direction for bidirectional links
+                        if not zl.get("is_one_way", False):
+                            link_type_lookup[(tgt_id, src_id)] = link_type
+
+                # Try to find a random link first
+                for rl in resolved_links:
+                    src_id = resolver.lookup_by_display_name(rl["source"])
+                    tgt_id = resolver.lookup_by_display_name(rl["target"])
+                    if src_id and tgt_id:
+                        link_type = link_type_lookup.get((src_id, tgt_id))
+                        if link_type == "random":
+                            link = rl
+                            logger.debug(
+                                "[MOD] Selected random link for destination: %s -> %s",
+                                rl["source"],
+                                rl["target"],
+                            )
+                            break
+
+                # Fall back to first resolved link if no random link found
+                if not link:
+                    link = resolved_links[0]
 
             target_display_names = {c[1] for c in target_candidates}
             target_zone_ids = {c[0] for c in target_candidates}
