@@ -824,22 +824,20 @@ class ModClient(Client):
             target_map_id, target_pos, target_play_region_id, label="Target"
         )
 
-        # If source_zone provided by mod, prioritize matching candidate
+        # If source_zone provided by mod, filter to matching candidate only
+        # This prevents discovering multiple links when only one fog gate was traversed
         if source_zone or source_zone_id:
             prioritized = []
-            others = []
             for candidate in source_candidates:
                 zone_key, zone_display = candidate
                 if (source_zone_id and zone_key == source_zone_id) or (
                     source_zone and zone_display == source_zone
                 ):
                     prioritized.append(candidate)
-                else:
-                    others.append(candidate)
             if prioritized:
-                source_candidates = prioritized + others
+                source_candidates = prioritized
                 logger.info(
-                    "[MOD] Prioritized source zone from mod: %s (id=%s)",
+                    "[MOD] Filtered source zone from mod: %s (id=%s)",
                     prioritized[0][1],
                     prioritized[0][0],
                 )

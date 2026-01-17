@@ -2325,15 +2325,16 @@ class TestZoneQueryGraceEntityId:
 
 
 # =============================================================================
-# TestSourceZonePrioritization
+# TestSourceZoneFiltering
 # =============================================================================
 
 
-class TestSourceZonePrioritization:
-    """Tests for source_zone disambiguation in discovery_v2.
+class TestSourceZoneFiltering:
+    """Tests for source_zone filtering in discovery_v2.
 
     When the mod sends source_zone or source_zone_id, the server should
-    prioritize matching candidates to improve zone resolution accuracy.
+    filter to only matching candidates to prevent discovering multiple
+    links when only one fog gate was traversed.
     """
 
     @pytest.fixture
@@ -2391,13 +2392,12 @@ class TestSourceZonePrioritization:
         return mock_db
 
     @pytest.mark.asyncio
-    async def test_source_zone_prioritizes_matching_display_name(
+    async def test_source_zone_filters_to_matching_display_name(
         self, mock_client, mock_manager, zone_links_ambiguous
     ):
-        """When source_zone matches a candidate display name, it should be prioritized.
+        """When source_zone matches a candidate display name, filter to only that candidate.
 
-        This test verifies that find_all_matching_zone_pairs receives candidates
-        with the matching source_zone at the front of the list.
+        This prevents discovering multiple links when only one fog gate was traversed.
         """
         mock_game = self._make_mock_game(zone_links_ambiguous)
         mock_resolver = MagicMock()
@@ -2459,17 +2459,16 @@ class TestSourceZonePrioritization:
                 }
             )
 
-            # Verify source_zone caused prioritization: limgrave_east should be first
+            # Verify source_zone caused filtering: only limgrave_east should remain
             call_args = mock_find.call_args[0]
             source_candidates = call_args[1]
-            assert source_candidates[0] == ("limgrave_east", "Limgrave - East")
-            assert source_candidates[1] == ("limgrave", "Limgrave")
+            assert source_candidates == [("limgrave_east", "Limgrave - East")]
 
     @pytest.mark.asyncio
-    async def test_source_zone_id_prioritizes_matching_key(
+    async def test_source_zone_id_filters_to_matching_key(
         self, mock_client, mock_manager, zone_links_ambiguous
     ):
-        """When source_zone_id matches a candidate key, it should be prioritized."""
+        """When source_zone_id matches a candidate key, filter to only that candidate."""
         mock_game = self._make_mock_game(zone_links_ambiguous)
         mock_resolver = MagicMock()
         mock_resolver.resolve_by_col.return_value = (None, None)
@@ -2529,10 +2528,10 @@ class TestSourceZonePrioritization:
                 }
             )
 
-            # Verify source_zone_id caused prioritization
+            # Verify source_zone_id caused filtering: only limgrave_east should remain
             call_args = mock_find.call_args[0]
             source_candidates = call_args[1]
-            assert source_candidates[0] == ("limgrave_east", "Limgrave - East")
+            assert source_candidates == [("limgrave_east", "Limgrave - East")]
 
     @pytest.mark.asyncio
     async def test_source_zone_no_match_keeps_original_order(
