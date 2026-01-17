@@ -190,7 +190,7 @@ If `destination_entity_id` is provided and game has `entity_mapping`:
 If the mod provides `source_zone_id` or `source_zone`:
 1. Get source zone candidates from map/position resolution
 2. Check if any candidate matches the mod's cached zone key/name
-3. If match found, **filter to only matching candidate(s)** (exclusive)
+3. If match found, **filter to only matching candidate(s)** and mark source as **authoritative**
 4. If no match found but `source_zone_id` is valid, **inject it as a candidate**
 5. If `source_zone_id` is invalid (unknown zone), keep original list as fallback
 
@@ -202,6 +202,7 @@ If the mod provides `source_zone_id` or `source_zone`:
 │ candidates = [zone_a, zone_b, zone_c]                       │
 │ Mod sends: source_zone_id = "zone_b"                        │
 │ Result: candidates = [zone_b]  (others filtered out)        │
+│ Source marked as AUTHORITATIVE                               │
 ├─────────────────────────────────────────────────────────────┤
 │ Case 2: No match, valid zone (inject)                        │
 │ candidates = [zone_a, zone_b, zone_c]                       │
@@ -223,6 +224,45 @@ If the mod provides `source_zone_id` or `source_zone`:
 - Injecting "caelid" as a candidate enables the match to succeed
 
 **Why this helps**: After traversing a fog gate, the mod knows what zone it was in (from the server's `discovery_v2_ack` or `zone_query_ack`). When the player traverses another fog gate from the same zone, this cached info helps the server pick the correct source candidate, preventing spurious multi-link discoveries.
+
+#### Authoritative Source and Entity Mapping Interaction
+
+When the mod's `source_zone_id` matches a candidate, that source is marked as **authoritative**. This affects entity mapping expansion:
+
+- **Without authoritative source**: Entity mapping can expand source candidates by adding zones from the EMEVD source map. This helps when the mod reports a different tile than where the fog gate is defined.
+
+- **With authoritative source**: Entity mapping expansion is **skipped for source candidates**. The mod has direct game state access and definitively knows the player's zone — entity mapping suggestions should not override this.
+
+**Fallback mechanism**: If no matching zone link is found using the authoritative source, the server falls back to entity mapping expansion and retries:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Step 1: Mod sends source_zone_id = "peninsula"              │
+│         Entity mapping would add ["earthbore_cave", "limgrave"]│
+│                                                              │
+│ Step 2: Match with authoritative source only                 │
+│         source_candidates = ["peninsula"]                    │
+│         → Found match: peninsula → target_zone ✓             │
+│         → Done (entity mapping skipped)                      │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Step 1: Mod sends source_zone_id = "peninsula"              │
+│         Entity mapping would add ["earthbore_cave", "limgrave"]│
+│                                                              │
+│ Step 2: Match with authoritative source only                 │
+│         source_candidates = ["peninsula"]                    │
+│         → No match found ✗                                   │
+│                                                              │
+│ Step 3: Fallback - expand with entity mapping                │
+│         source_candidates = ["peninsula", "earthbore_cave",  │
+│                              "limgrave"]                     │
+│         → Found match: limgrave → target_zone ✓              │
+│         → Warning logged (mod's zone didn't match)           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Note**: Target candidates are always expanded by entity mapping (when available), regardless of source zone authority. Only source expansion is affected.
 
 ### 4b. Animation-Based Filtering
 
@@ -522,14 +562,14 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
                      └────────┬─────────┘
                               ▼
             ┌─────────────────────────────────────┐
-            │   Source zone from mod available?   │
+            │   Source zone from mod matches?     │
             └─────────────────┬───────────────────┘
                     Yes ┌─────┴─────┐ No
                         ▼           │
               ┌─────────────────┐   │
-              │ Prioritize      │   │
-              │ matching        │   │
-              │ candidates      │   │
+              │ Filter to mod's │   │
+              │ source zone     │   │
+              │ (AUTHORITATIVE) │   │
               └────────┬────────┘   │
                        └─────┬──────┘
                              ▼
@@ -539,9 +579,10 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
                     Yes ┌─────┴─────┐ No
                         ▼           │
               ┌─────────────────┐   │
-              │ Prioritize      │   │
-              │ candidates by   │   │
-              │ source/dest map │   │
+              │ Expand TARGET   │   │
+              │ candidates      │   │
+              │ (source only if │   │
+              │ not authoritv.) │   │
               └────────┬────────┘   │
                        └─────┬──────┘
                              ▼
@@ -550,10 +591,30 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
             │   (source_id, target_id)           │
             └─────────────────┬──────────────────┘
                     Found ┌───┴───┐ Not found
+                          ▼       │
+              ┌───────────────┐   │
+              │ Return match  │   │
+              └───────────────┘   │
+                                  ▼
+            ┌────────────────────────────────────┐
+            │   Was source authoritative?        │
+            └─────────────────┬──────────────────┘
+                    Yes ┌─────┴─────┐ No
+                        ▼           ▼
+              ┌─────────────────┐ ┌───────────────────┐
+              │ Fallback: retry │ │ Log failure and   │
+              │ with entity map │ │ skip discovery    │
+              │ expansion       │ └───────────────────┘
+              └────────┬────────┘
+                       ▼
+            ┌────────────────────────────────────┐
+            │   Retry key-based matching         │
+            └─────────────────┬──────────────────┘
+                    Found ┌───┴───┐ Not found
                           ▼       ▼
               ┌───────────────┐ ┌───────────────────┐
               │ Return match  │ │ Log failure and   │
-              │               │ │ skip discovery    │
+              │ (+ warning)   │ │ skip discovery    │
               └───────────────┘ └───────────────────┘
 ```
 

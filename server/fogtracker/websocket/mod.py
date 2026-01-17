@@ -844,6 +844,7 @@ class ModClient(Client):
         # If source_zone provided by mod, use it to improve candidate selection
         # This prevents discovering multiple links when only one fog gate was traversed
         # The mod has direct game state access and knows which zone the player was in
+        mod_source_authoritative = False
         if source_zone or source_zone_id:
             prioritized = []
             for candidate in source_candidates:
@@ -854,6 +855,7 @@ class ModClient(Client):
                     prioritized.append(candidate)
             if prioritized:
                 source_candidates = prioritized
+                mod_source_authoritative = True
                 logger.info(
                     "[MOD] Filtered source zone from mod: %s (id=%s)",
                     prioritized[0][1],
@@ -919,6 +921,8 @@ class ModClient(Client):
                 starting_zone_id = game.starting_zone_id or "chapel_start"
 
                 # If entity_mapping is available, use it to improve zone candidate ordering
+                # We compute expanded candidates separately so we can use them as fallback
+                expanded_source_candidates = source_candidates
                 if destination_entity_id and game.entity_mapping:
                     resolver = get_resolver()
                     entity_info = game.entity_mapping.get(str(destination_entity_id))
@@ -951,7 +955,7 @@ class ModClient(Client):
                                 non_prioritized = [
                                     c for c in source_candidates if c[0] not in emevd_keys
                                 ]
-                                source_candidates = (
+                                expanded_source_candidates = (
                                     prioritized_existing + new_zones + non_prioritized
                                 )
                                 if new_zones:
@@ -996,11 +1000,36 @@ class ModClient(Client):
                                     )
 
                 # Find ALL matches using zone_id-based matching, then pick lowest backprop cost
+                # Use mod's filtered source if authoritative, otherwise use expanded candidates
+                source_for_matching = (
+                    source_candidates if mod_source_authoritative else expanded_source_candidates
+                )
                 all_matches = find_all_matching_zone_pairs_by_ids(
                     game.zone_links,
-                    source_candidates[:MAX_ZONE_CANDIDATES],
+                    source_for_matching[:MAX_ZONE_CANDIDATES],
                     target_candidates[:MAX_ZONE_CANDIDATES],
                 )
+
+                # Fallback: if mod provided authoritative source but no matches found,
+                # retry with entity_mapping expanded candidates
+                if not all_matches and mod_source_authoritative:
+                    logger.warning(
+                        "[MOD] No match with mod's source_zone_id=%s, "
+                        "falling back to entity_mapping expansion",
+                        source_zone_id,
+                    )
+                    all_matches = find_all_matching_zone_pairs_by_ids(
+                        game.zone_links,
+                        expanded_source_candidates[:MAX_ZONE_CANDIDATES],
+                        target_candidates[:MAX_ZONE_CANDIDATES],
+                    )
+                    if all_matches:
+                        # Update source_for_matching for later use in lookup tables
+                        source_for_matching = expanded_source_candidates
+                        logger.info(
+                            "[MOD] Fallback succeeded: found %d match(es)", len(all_matches)
+                        )
+
                 if all_matches:
                     logger.info("[MOD] Found %d candidate match(es)", len(all_matches))
 
@@ -1038,7 +1067,7 @@ class ModClient(Client):
                     # Build lookup tables to convert zone_ids back to display names
                     # find_all_matching_zone_pairs_by_ids returns (source_id, target_id, pair)
                     source_id_to_name = {
-                        zid: name for zid, name in source_candidates[:MAX_ZONE_CANDIDATES]
+                        zid: name for zid, name in source_for_matching[:MAX_ZONE_CANDIDATES]
                     }
                     target_id_to_name = {
                         zid: name for zid, name in target_candidates[:MAX_ZONE_CANDIDATES]

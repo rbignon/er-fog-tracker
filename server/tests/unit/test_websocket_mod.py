@@ -2995,6 +2995,197 @@ class TestSourceZoneFiltering:
             assert source_candidates[0] == ("limgrave", "Limgrave")
             assert source_candidates[1] == ("limgrave_east", "Limgrave - East")
 
+    @pytest.mark.asyncio
+    async def test_source_zone_id_blocks_entity_mapping_expansion(
+        self, mock_client, mock_manager, zone_links_ambiguous
+    ):
+        """When source_zone_id is provided, entity_mapping should NOT expand source candidates.
+
+        This prevents false matches when entity_mapping suggests additional zones
+        (e.g., Limgrave from EMEVD) when the mod already knows the exact source zone.
+        """
+        # Add entity_mapping that would expand source candidates
+        entity_mapping = {
+            "755890692": {
+                "source_map": "m60_42_36_00",
+                "dest_map": "m10_00_00_00",
+            }
+        }
+        mock_game = self._make_mock_game(zone_links_ambiguous, entity_mapping=entity_mapping)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("limgrave_east", "Limgrave - East")],  # Source (only limgrave_east)
+            [("stormveil", "Stormveil Castle")],  # Target
+        ]
+        # Entity mapping would add limgrave from map_id
+        mock_resolver.resolve_from_map_id.return_value = [
+            ("limgrave", "Limgrave"),
+            ("limgrave_east", "Limgrave - East"),
+        ]
+        mock_resolver.lookup_by_display_name.return_value = "stormveil"
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
+
+        discovery_result = DiscoveryResult(origin="Limgrave - East")
+        discovery_result.main_links = [
+            DiscoveredLink("Limgrave - East", "Stormveil Castle", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_ids",
+                return_value=[
+                    (
+                        "limgrave_east",
+                        "stormveil",
+                        {
+                            "id": "link3",
+                            "source": "Limgrave - East",
+                            "source_id": "limgrave_east",
+                            "target": "Stormveil Castle",
+                            "target_id": "stormveil",
+                            "type": "random",
+                        },
+                    )
+                ],
+            ) as mock_find,
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m60_42_36_00",
+                    "target_map_id": "m10_00_00_00",
+                    "source_pos": {"x": 100, "y": 50, "z": 200},
+                    "target_pos": {"x": 200, "y": 60, "z": 300},
+                    "destination_entity_id": 755890692,
+                    "source_zone_id": "limgrave_east",  # Mod's authoritative source
+                }
+            )
+
+            # Despite entity_mapping suggesting limgrave, only limgrave_east should be used
+            call_args = mock_find.call_args[0]
+            source_candidates = call_args[1]
+            assert source_candidates == [("limgrave_east", "Limgrave - East")]
+
+    @pytest.mark.asyncio
+    async def test_source_zone_id_fallback_to_entity_mapping_when_no_match(
+        self, mock_client, mock_manager, zone_links_ambiguous
+    ):
+        """When source_zone_id finds no match, fallback to entity_mapping expansion.
+
+        If the mod's source_zone_id doesn't produce any matching links,
+        the server should retry with entity_mapping expanded candidates.
+        """
+        # Add entity_mapping that would expand source candidates
+        entity_mapping = {
+            "755890692": {
+                "source_map": "m60_42_36_00",
+                "dest_map": "m10_00_00_00",
+            }
+        }
+        mock_game = self._make_mock_game(zone_links_ambiguous, entity_mapping=entity_mapping)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("limgrave_east", "Limgrave - East")],  # Source
+            [("stormveil", "Stormveil Castle")],  # Target
+        ]
+        # Entity mapping adds limgrave
+        mock_resolver.resolve_from_map_id.return_value = [
+            ("limgrave", "Limgrave"),
+            ("limgrave_east", "Limgrave - East"),
+        ]
+        mock_resolver.lookup_by_display_name.return_value = "stormveil"
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
+
+        discovery_result = DiscoveryResult(origin="Limgrave")
+        discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
+
+        # First call with filtered source returns no match, second call with expanded returns match
+        find_call_count = [0]
+
+        def mock_find_pairs(zone_links, source_cands, target_cands):
+            find_call_count[0] += 1
+            # First call: filtered source (limgrave_east only) - no match
+            if find_call_count[0] == 1:
+                return []
+            # Second call: expanded source (includes limgrave) - match found
+            return [
+                (
+                    "limgrave",
+                    "stormveil",
+                    {
+                        "id": "link1",
+                        "source": "Limgrave",
+                        "source_id": "limgrave",
+                        "target": "Stormveil Castle",
+                        "target_id": "stormveil",
+                        "type": "random",
+                    },
+                )
+            ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_ids",
+                side_effect=mock_find_pairs,
+            ) as mock_find,
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ),
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m60_42_36_00",
+                    "target_map_id": "m10_00_00_00",
+                    "source_pos": {"x": 100, "y": 50, "z": 200},
+                    "target_pos": {"x": 200, "y": 60, "z": 300},
+                    "destination_entity_id": 755890692,
+                    "source_zone_id": "limgrave_east",  # No link for limgrave_east -> stormveil
+                }
+            )
+
+            # Verify find was called twice (first with filtered, then with expanded)
+            assert mock_find.call_count == 2
+
+            # First call should use only filtered source (limgrave_east)
+            first_call_source = mock_find.call_args_list[0][0][1]
+            assert first_call_source == [("limgrave_east", "Limgrave - East")]
+
+            # Second call should use expanded source (includes limgrave)
+            second_call_source = mock_find.call_args_list[1][0][1]
+            assert ("limgrave", "Limgrave") in second_call_source
+
 
 # =============================================================================
 # TestZoneKeyInResponses
