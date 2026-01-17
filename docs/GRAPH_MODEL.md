@@ -166,19 +166,30 @@ When a player traverses a fog gate, the specific link is marked as discovered.
 
 ### Why Track Links, Not Just Nodes?
 
-Two discovered zones might have **multiple** fog gates between them:
+Two discovered zones might have **multiple** fog gates between them (parallel links):
 
 ```
            ┌────────────────┐
-           │ Fog Gate A (?) │
+           │ Fog Gate A     │
 Zone A ────┼────────────────┼──── Zone B
-           │ Fog Gate B (✓) │
+           │ Fog Gate B     │
            └────────────────┘
 ```
 
-Even if both zones are discovered, Gate A remains hidden until traversed.
+**Parallel Links Behavior**: When discovering any link between two zones, ALL parallel links between those same zones are discovered together. This is because:
 
-**Result**: No spoilers about connection layout.
+1. The mod cannot distinguish which specific fog gate was traversed (entity IDs map to the same source/target maps)
+2. The in-game display already shows all exits to a zone as discovered if any link exists
+3. From the player's perspective, they've "found the connection" between zones A and B
+
+**Example**: Divine Tower of Caelid has 3 entrances from Dragonbarrow:
+- Middle entrance (link-1)
+- Right entrance (link-2)
+- Left entrance (link-3, leads to boss arena)
+
+When traversing any entrance to the tower, links 1 and 2 are both discovered (same `target_id: caelid_tower`). Link 3 goes to a different zone (`target_id: caelid_tower_boss`) so it remains undiscovered.
+
+**Note**: Links to different target zones are NOT auto-discovered, only links with identical `source_id` AND `target_id`.
 
 ## Placeholder Nodes (???)
 
@@ -236,6 +247,28 @@ Discover B → Also discovers C and D (via preexisting links)
    - If target not discovered AND (bidirectional OR forward direction):
      - Recursively discover target
      - Mark link as discovered
+
+### Parallel Links Propagation
+
+When discovering a link between zones A and B, ALL links with the same `source_id` and `target_id` are discovered together:
+
+```
+           ┌─ Fog Gate 1 (middle entrance) ─┐
+           │                                │
+Dragonbarrow ─ Fog Gate 2 (right entrance) ─── Divine Tower of Caelid
+           │                                │
+           └────────────────────────────────┘
+
+Traverse any entrance → Both links discovered
+```
+
+**Algorithm**:
+1. Find all zone links where (`source_id`, `target_id`) matches (either direction)
+2. For each link not already discovered:
+   - Mark link as discovered
+   - First link goes to `main_links`, others to `forward_links` in the result
+
+**Why**: The mod cannot distinguish which specific fog gate was traversed when multiple gates connect the same two zones (they have identical source/target maps in the entity mapping).
 
 ### Back-Propagation
 

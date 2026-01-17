@@ -21,7 +21,6 @@ from fogtracker.zone_matching import (
     get_discovered_nodes,
     get_zone_link_id,
     is_accessible_from_start,
-    link_exists,
 )
 
 logger = logging.getLogger(__name__)
@@ -416,6 +415,23 @@ async def propagate_discovery(
 
     now = datetime.now(UTC).isoformat()
 
+    # Build index for looking up ALL links between two zones (not just one direction)
+    def find_all_zone_link_ids(src_id: str, dst_id: str) -> list[tuple[str, str]]:
+        """Find all zone_link IDs for links between src_id and dst_id (both directions)."""
+        results = []
+        for zp in zone_pairs:
+            zp_id = zp.get("id")
+            if not zp_id:
+                continue
+            zp_src = zp.get("source_id")
+            zp_dst = zp.get("target_id")
+            if not zp_src or not zp_dst:
+                continue
+            # Match either direction
+            if (zp_src == src_id and zp_dst == dst_id) or (zp_src == dst_id and zp_dst == src_id):
+                results.append((zp_id, zp.get("type", "random")))
+        return results
+
     # Track zones newly discovered via back-propagation (need to propagate their preexisting)
     backprop_new_zones: set[str] = set()
 
@@ -430,34 +446,41 @@ async def propagate_discovery(
         if path_to_source:
             logger.debug("[DISCOVERY] Back-propagation path: %s", path_to_source)
             for src, dst in path_to_source:
-                if not link_exists(discovered_links, src, dst, zone_pairs):
-                    backprop_zone_link_id = find_zone_link_id(src, dst)
-                    if backprop_zone_link_id:
-                        new_link = {
-                            "zone_link_id": backprop_zone_link_id,
-                            "discovered_at": now,
-                            "discovered_by": f"{discovered_by} (backprop)",
-                        }
-                        discovered_links.append(new_link)
-                        link_type = get_link_type(src, dst)
-                        discovery_result.backprop_links.append(
-                            DiscoveredLink(
-                                source_id=src,
-                                source_name=get_zone_name(src),
-                                target_id=dst,
-                                target_name=get_zone_name(dst),
-                                link_type=link_type,
-                            )
+                # Discover ALL parallel links between src and dst during back-propagation
+                all_parallel_links = find_all_zone_link_ids(src, dst)
+                for link_uuid, link_type in all_parallel_links:
+                    # Check if this specific link is already discovered
+                    already_discovered = any(
+                        get_zone_link_id(dl) == link_uuid for dl in discovered_links
+                    )
+                    if already_discovered:
+                        continue
+
+                    new_link = {
+                        "zone_link_id": link_uuid,
+                        "discovered_at": now,
+                        "discovered_by": f"{discovered_by} (backprop)",
+                    }
+                    discovered_links.append(new_link)
+                    discovery_result.backprop_links.append(
+                        DiscoveredLink(
+                            source_id=src,
+                            source_name=get_zone_name(src),
+                            target_id=dst,
+                            target_name=get_zone_name(dst),
+                            link_type=link_type,
                         )
-                        logger.debug(
-                            "[DISCOVERY] Back-propagated link: %s → %s (id=%s, type=%s)",
-                            src,
-                            dst,
-                            backprop_zone_link_id,
-                            link_type,
-                        )
-                    else:
-                        logger.warning("[DISCOVERY] No zone_link_id found for %s → %s", src, dst)
+                    )
+                    logger.debug(
+                        "[DISCOVERY] Back-propagated link: %s → %s (id=%s, type=%s)",
+                        src,
+                        dst,
+                        link_uuid,
+                        link_type,
+                    )
+
+                if not all_parallel_links:
+                    logger.warning("[DISCOVERY] No zone_link_id found for %s → %s", src, dst)
             # Update discovered nodes after back-propagation
             discovered_nodes = get_discovered_nodes(discovered_links, zone_pairs, starting_zone_id)
 
@@ -470,21 +493,6 @@ async def propagate_discovery(
             logger.debug("[DISCOVERY] Zones newly accessible via backprop: %s", backprop_new_zones)
         else:
             logger.warning("[DISCOVERY] No path found from START to '%s'", source_id)
-
-    # Build index for looking up ALL links between two zones (not just one direction)
-    def find_all_zone_link_ids(src_id: str, dst_id: str) -> list[tuple[str, str]]:
-        """Find all zone_link IDs for links between src_id and dst_id (both directions)."""
-        results = []
-        for zp in zone_pairs:
-            zp_id = zp.get("id")
-            if not zp_id:
-                continue
-            zp_src = zp["source_id"]
-            zp_dst = zp["target_id"]
-            # Match either direction
-            if (zp_src == src_id and zp_dst == dst_id) or (zp_src == dst_id and zp_dst == src_id):
-                results.append((zp_id, zp["type"]))
-        return results
 
     # BFS through preexisting links
     # For the initial link, use provided link_id if available
@@ -513,51 +521,64 @@ async def propagate_discovery(
             continue
         visited.add(link_key)
 
-        # Record this link as discovered (if not already)
-        if not link_exists(discovered_links, src, dst, zone_pairs):
-            # Use provided zone_link_id if available, otherwise find it
-            resolved_zone_link_id = provided_link_id or find_zone_link_id(src, dst)
-            if resolved_zone_link_id:
-                new_link = {
-                    "zone_link_id": resolved_zone_link_id,
-                    "discovered_at": now,
-                    "discovered_by": discovered_by,
-                }
-                discovered_links.append(new_link)
-                link_type = get_link_type(src, dst)
+        # Record ALL parallel links between src and dst as discovered
+        # This handles cases where multiple fog gates connect the same two zones
+        # (e.g., multiple entrances to Divine Tower of Caelid from Dragonbarrow)
+        all_parallel_links = find_all_zone_link_ids(src, dst)
 
-                # Categorize the link
-                if is_main_link:
-                    discovery_result.main_links.append(
-                        DiscoveredLink(
-                            source_id=src,
-                            source_name=get_zone_name(src),
-                            target_id=dst,
-                            target_name=get_zone_name(dst),
-                            link_type=link_type,
-                        )
-                    )
-                else:
-                    discovery_result.forward_links.append(
-                        DiscoveredLink(
-                            source_id=src,
-                            source_name=get_zone_name(src),
-                            target_id=dst,
-                            target_name=get_zone_name(dst),
-                            link_type=link_type,
-                        )
-                    )
+        for link_uuid, link_type in all_parallel_links:
+            # Check if this specific link is already discovered
+            already_discovered = any(get_zone_link_id(dl) == link_uuid for dl in discovered_links)
+            if already_discovered:
+                continue
 
+            new_link = {
+                "zone_link_id": link_uuid,
+                "discovered_at": now,
+                "discovered_by": discovered_by,
+            }
+            discovered_links.append(new_link)
+
+            # Categorize the link: first one is main, rest are parallel
+            if is_main_link and not any(
+                dl.source_id == src and dl.target_id == dst for dl in discovery_result.main_links
+            ):
+                discovery_result.main_links.append(
+                    DiscoveredLink(
+                        source_id=src,
+                        source_name=get_zone_name(src),
+                        target_id=dst,
+                        target_name=get_zone_name(dst),
+                        link_type=link_type,
+                    )
+                )
                 logger.debug(
-                    "[DISCOVERY] New link: %s → %s (id=%s, type=%s, category=%s)",
+                    "[DISCOVERY] New link: %s → %s (id=%s, type=%s, category=main)",
                     src,
                     dst,
-                    resolved_zone_link_id,
+                    link_uuid,
                     link_type,
-                    "main" if is_main_link else "forward",
                 )
             else:
-                logger.warning("[DISCOVERY] No zone_link_id found for %s → %s", src, dst)
+                discovery_result.forward_links.append(
+                    DiscoveredLink(
+                        source_id=src,
+                        source_name=get_zone_name(src),
+                        target_id=dst,
+                        target_name=get_zone_name(dst),
+                        link_type=link_type,
+                    )
+                )
+                logger.debug(
+                    "[DISCOVERY] Parallel link: %s ↔ %s (id=%s, type=%s)",
+                    src,
+                    dst,
+                    link_uuid,
+                    link_type,
+                )
+
+        if not all_parallel_links:
+            logger.warning("[DISCOVERY] No zone_link_id found for %s → %s", src, dst)
 
         # If target was not previously discovered, propagate through preexisting
         if dst not in discovered_nodes:

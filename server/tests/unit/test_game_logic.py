@@ -3,6 +3,8 @@
 Tests for discovery result formatting and related utilities.
 """
 
+import pytest
+
 from fogtracker.game_logic import (
     DiscoveredLink,
     DiscoveryResult,
@@ -377,3 +379,151 @@ class TestFormatIngameDisplay:
 
         # Check footer
         assert "╰─" in display
+
+
+class TestParallelLinksDiscovery:
+    """Tests for parallel links discovery (multiple fog gates between same zones).
+
+    These tests verify that when discovering a link between two zones that have
+    multiple parallel connections, ALL parallel links are discovered together.
+    """
+
+    @pytest.fixture
+    def mock_game(self, parallel_links_zone_pairs):
+        """Create a mock game with parallel links."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        game = MagicMock()
+        game.id = uuid4()
+        game.zone_links = parallel_links_zone_pairs
+        game.discovered_zone_links = []
+        game.starting_zone_id = "chapel_start"
+        return game
+
+    @pytest.fixture
+    def mock_db(self, mock_game):
+        """Create a mock database session."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        db = AsyncMock()
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = mock_game
+        db.execute.return_value = result
+        db.refresh = AsyncMock()
+        db.flush = AsyncMock()
+        return db
+
+    @pytest.mark.asyncio
+    async def test_discovers_all_parallel_links_between_same_zones(
+        self, mock_db, mock_game, parallel_links_zone_pairs
+    ):
+        """When discovering dragonbarrow -> caelid_tower, both parallel links should be discovered."""
+        from fogtracker.game_logic import propagate_discovery
+
+        # First, discover the path to dragonbarrow (so it's accessible)
+        mock_game.discovered_zone_links = [{"zone_link_id": "link-start-dragonbarrow"}]
+
+        # Now discover one of the parallel links (dragonbarrow -> caelid_tower)
+        await propagate_discovery(
+            mock_db,
+            mock_game.id,
+            source_id="dragonbarrow",
+            target_id="caelid_tower",
+            discovered_by="test",
+        )
+
+        # Get all discovered zone_link_ids
+        discovered_ids = {dl.get("zone_link_id") for dl in mock_game.discovered_zone_links}
+
+        # Both parallel links between dragonbarrow and caelid_tower should be discovered
+        assert "link-parallel-1" in discovered_ids, "Middle entrance should be discovered"
+        assert "link-parallel-2" in discovered_ids, "Right entrance should be discovered"
+
+        # The link to caelid_tower_boss is a different target, so it shouldn't be discovered
+        assert (
+            "link-parallel-3" not in discovered_ids
+        ), "Left entrance (to boss) is different target"
+
+    @pytest.mark.asyncio
+    async def test_parallel_links_counted_correctly_in_result(
+        self, mock_db, mock_game, parallel_links_zone_pairs
+    ):
+        """Discovery result should count all parallel links discovered."""
+        from fogtracker.game_logic import propagate_discovery
+
+        # Setup: dragonbarrow is already accessible
+        mock_game.discovered_zone_links = [{"zone_link_id": "link-start-dragonbarrow"}]
+
+        result = await propagate_discovery(
+            mock_db,
+            mock_game.id,
+            source_id="dragonbarrow",
+            target_id="caelid_tower",
+            discovered_by="test",
+        )
+
+        # Should have 2 parallel links + preexisting propagation
+        # main_links should have 1 (the first parallel link)
+        # forward_links should have 1 (the second parallel link) + preexisting
+        assert len(result.main_links) >= 1
+        assert result.total_count() >= 2  # At least 2 parallel links
+
+    @pytest.mark.asyncio
+    async def test_backprop_also_discovers_parallel_links(
+        self, mock_db, mock_game, parallel_links_zone_pairs
+    ):
+        """Back-propagation should also discover all parallel links on the path."""
+        from fogtracker.game_logic import propagate_discovery
+
+        # Start with nothing discovered
+        mock_game.discovered_zone_links = []
+
+        # Discover from dragonbarrow -> caelid_tower (dragonbarrow not yet accessible)
+        # This triggers back-propagation: chapel_start -> dragonbarrow
+        await propagate_discovery(
+            mock_db,
+            mock_game.id,
+            source_id="dragonbarrow",
+            target_id="caelid_tower",
+            discovered_by="test",
+        )
+
+        discovered_ids = {dl.get("zone_link_id") for dl in mock_game.discovered_zone_links}
+
+        # The back-propagated link should be discovered
+        assert "link-start-dragonbarrow" in discovered_ids
+
+        # Both parallel links should be discovered
+        assert "link-parallel-1" in discovered_ids
+        assert "link-parallel-2" in discovered_ids
+
+    @pytest.mark.asyncio
+    async def test_already_discovered_parallel_links_not_duplicated(
+        self, mock_db, mock_game, parallel_links_zone_pairs
+    ):
+        """If one parallel link is already discovered, discovering again shouldn't duplicate."""
+        from fogtracker.game_logic import propagate_discovery
+
+        # Setup: one parallel link already discovered
+        mock_game.discovered_zone_links = [
+            {"zone_link_id": "link-start-dragonbarrow"},
+            {"zone_link_id": "link-parallel-1"},  # Already discovered
+        ]
+
+        await propagate_discovery(
+            mock_db,
+            mock_game.id,
+            source_id="dragonbarrow",
+            target_id="caelid_tower",
+            discovered_by="test",
+        )
+
+        # Count occurrences of each link_id
+        link_ids = [dl.get("zone_link_id") for dl in mock_game.discovered_zone_links]
+
+        # link-parallel-1 should appear only once (not duplicated)
+        assert link_ids.count("link-parallel-1") == 1
+
+        # link-parallel-2 should now be discovered
+        assert "link-parallel-2" in link_ids

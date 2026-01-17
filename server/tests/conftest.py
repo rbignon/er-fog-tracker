@@ -303,3 +303,118 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
             "is_one_way": False,
         },
     ]
+
+
+@pytest.fixture
+def parallel_links_zone_pairs() -> list[dict]:
+    """
+    Zone pairs with parallel links (multiple fog gates between same zones).
+
+    This simulates the Divine Tower of Caelid scenario where there are
+    3 different entrances from Dragonbarrow to the tower.
+
+    Graph structure:
+    START (Chapel) --random--> Dragonbarrow --parallel random x3--> Divine Tower
+                                    |
+                                    preexisting (bidirectional)
+                                    |
+                                    v
+                                  Caelid
+    """
+    return [
+        # Initial link from START
+        {
+            "id": "link-start-dragonbarrow",
+            "source": "Chapel of Anticipation",
+            "source_id": "chapel_start",
+            "target": "Dragonbarrow",
+            "target_id": "dragonbarrow",
+            "type": "random",
+            "source_details": "before Grafted Scion's arena",
+            "target_details": "arriving in Dragonbarrow",
+            "is_one_way": False,
+        },
+        # Parallel link 1: Dragonbarrow -> Divine Tower (middle entrance)
+        {
+            "id": "link-parallel-1",
+            "source": "Dragonbarrow",
+            "source_id": "dragonbarrow",
+            "target": "Divine Tower of Caelid",
+            "target_id": "caelid_tower",
+            "type": "random",
+            "source_details": "at the middle entrance to Divine Tower of Caelid",
+            "target_details": "at the right exit to Dragonbarrow",
+            "is_one_way": False,
+        },
+        # Parallel link 2: Dragonbarrow -> Divine Tower (right entrance)
+        {
+            "id": "link-parallel-2",
+            "source": "Dragonbarrow",
+            "source_id": "dragonbarrow",
+            "target": "Divine Tower of Caelid",
+            "target_id": "caelid_tower",
+            "type": "random",
+            "source_details": "at the right entrance to Divine Tower of Caelid",
+            "target_details": "before Godskin Apostle's arena",
+            "is_one_way": False,
+            "blocks_propagation": True,
+        },
+        # Parallel link 3: Dragonbarrow -> Divine Tower Boss (left entrance)
+        {
+            "id": "link-parallel-3",
+            "source": "Dragonbarrow",
+            "source_id": "dragonbarrow",
+            "target": "Divine Tower of Caelid - Boss",
+            "target_id": "caelid_tower_boss",
+            "type": "random",
+            "source_details": "at the left entrance to Divine Tower of Caelid",
+            "target_details": "at the front of Godskin Apostle's arena",
+            "is_one_way": False,
+        },
+        # Preexisting link: Dragonbarrow <-> Caelid
+        {
+            "id": "link-dragonbarrow-caelid",
+            "source": "Dragonbarrow",
+            "source_id": "dragonbarrow",
+            "target": "Caelid",
+            "target_id": "caelid",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": None,
+            "is_one_way": False,
+        },
+        {
+            "id": "link-caelid-dragonbarrow",
+            "source": "Caelid",
+            "source_id": "caelid",
+            "target": "Dragonbarrow",
+            "target_id": "dragonbarrow",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": None,
+            "is_one_way": False,
+        },
+        # Preexisting inside tower
+        {
+            "id": "link-tower-inner",
+            "source": "Divine Tower of Caelid",
+            "source_id": "caelid_tower",
+            "target": "Divine Tower of Caelid - Boss",
+            "target_id": "caelid_tower_boss",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": None,
+            "is_one_way": False,
+        },
+        {
+            "id": "link-tower-boss-inner",
+            "source": "Divine Tower of Caelid - Boss",
+            "source_id": "caelid_tower_boss",
+            "target": "Divine Tower of Caelid",
+            "target_id": "caelid_tower",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": None,
+            "is_one_way": False,
+        },
+    ]
