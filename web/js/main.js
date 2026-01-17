@@ -9,6 +9,7 @@ import * as UI from './ui.js';
 import * as Graph from './graph.js';
 import * as Sync from './sync/index.js';
 import * as Toast from './toast.js';
+import * as Exploration from './exploration.js';
 import { checkVersionCompatibility } from './api.js';
 
 // Pages
@@ -507,6 +508,10 @@ function loadExplorationFromServer(game) {
         discoveredLinks,
         tags,
     });
+
+    // Propagate preexisting links (server only stores explicit discoveries,
+    // but preexisting links should always be shown as discovered locally)
+    Exploration.propagatePreexistingDiscoveries();
 
     // Load node positions (keys are now zone_keys)
     if (game.node_positions) {
