@@ -566,6 +566,16 @@ def enrich_connections_with_zone_keys(
             if forward_exists and not reverse_exists:
                 is_one_way = True
 
+        # Determine is_one_way for random connections with musttrap tag on source side
+        # If the source fog gate side (identified by source_details) has Tags: musttrap,
+        # the player entering through this fog gate gets trapped and cannot return.
+        if (
+            conn.conn_type == "random"
+            and conn.source_details
+            and resolver.has_musttrap_by_detail(conn.source_details)
+        ):
+            is_one_way = True
+
         # Determine blocks_propagation for random connections using fog.txt Cond: fields
         # If the target fog gate side (identified by target_details) has a Cond:,
         # the link blocks forward propagation of preexisting links because the player

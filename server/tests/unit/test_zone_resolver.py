@@ -1220,3 +1220,52 @@ class TestConditionalFogGates:
             # Use partial match since the full text might be slightly different
             found = any(text in key for key in resolver.fog_gate_detail_has_cond)
             assert found, f"Expected to find '{text}' in fog_gate_detail_has_cond"
+
+
+class TestMusttrapFogGates:
+    """Tests for musttrap fog gate detection (is_one_way indicators).
+
+    Fog gates with Tags: musttrap on one side indicate that entering through
+    that side traps the player - they cannot return the way they came.
+    """
+
+    def test_war_dead_catacombs_entrance_detected(self, resolver):
+        """War-Dead Catacombs entrance from Radahn arena has musttrap."""
+        # This fog gate traps players entering from Radahn's arena
+        wardead_text = "at the far North entrance to War-Dead Catacombs"
+        assert resolver.has_musttrap_by_detail(wardead_text) is True
+
+    def test_morgott_arena_exit_detected(self, resolver):
+        """Morgott's arena back exit has musttrap."""
+        # This fog gate traps players exiting Morgott's arena
+        morgott_text = "at the back of Morgott's arena"
+        assert resolver.has_musttrap_by_detail(morgott_text) is True
+
+    def test_normal_fog_gate_not_detected(self, resolver):
+        """Normal fog gates without musttrap should not be detected."""
+        # A typical fog gate without musttrap
+        normal_text = "at the front of Stonedigger Troll's arena"
+        assert resolver.has_musttrap_by_detail(normal_text) is False
+
+    def test_none_detail_returns_false(self, resolver):
+        """None detail_text should return False."""
+        assert resolver.has_musttrap_by_detail(None) is False
+
+    def test_empty_detail_returns_false(self, resolver):
+        """Empty detail_text should return False."""
+        assert resolver.has_musttrap_by_detail("") is False
+
+    def test_musttrap_fog_gates_loaded(self, resolver):
+        """Verify that musttrap fog gates are loaded from fog.txt."""
+        # Should have loaded some musttrap entries
+        assert len(resolver.fog_gate_detail_has_musttrap) > 0
+
+        # Check expected entries exist
+        expected_texts = [
+            "at the far North entrance to War-Dead Catacombs",
+            "at the back of Morgott's arena",
+        ]
+        for text in expected_texts:
+            assert (
+                text in resolver.fog_gate_detail_has_musttrap
+            ), f"Expected to find '{text}' in fog_gate_detail_has_musttrap"

@@ -100,6 +100,10 @@ class ZoneResolver:
         # Maps detail_text -> True if that fog gate side has a Cond:
         # This allows matching specific fog gates by their source_details
         self.fog_gate_detail_has_cond: dict[str, bool] = {}
+        # Fog gate musttrap tag from fog.txt ASide/BSide Tags: fields
+        # Maps detail_text -> True if that fog gate side has Tags: musttrap
+        # This indicates a one-way trap (player cannot return after entering)
+        self.fog_gate_detail_has_musttrap: dict[str, bool] = {}
 
         if self.data_dir:
             self._load_data()
@@ -128,11 +132,12 @@ class ZoneResolver:
                     self.display_name_to_zone[display_name] = zone_key
             logger.info(
                 "Loaded %d zone display names, %d detail texts, %d known positions, "
-                "%d fog gate details with conditions from fog.txt",
+                "%d fog gate details with conditions, %d musttrap fog gates from fog.txt",
                 len(self.zone_display_names),
                 len(self.detail_text_to_zone),
                 len(self.zone_known_positions),
                 len(self.fog_gate_detail_has_cond),
+                len(self.fog_gate_detail_has_musttrap),
             )
 
         # Load foglocations2.txt
@@ -299,6 +304,8 @@ class ZoneResolver:
         bside_cond = None
         aside_text = None
         bside_text = None
+        aside_tags = None
+        bside_tags = None
         # Track fog gate's map (for ASide/BSide zone candidates)
         foggate_map = None
         # For parsing ToArea + Location entries (known zone positions)
@@ -343,6 +350,19 @@ class ZoneResolver:
                 if bside_text and bside_cond and self._is_zone_based_cond(bside_cond):
                     self.fog_gate_detail_has_cond[bside_text] = True
 
+                # Store musttrap tags from the previous entry
+                # Map detail_text -> True for fog gate sides with Tags: musttrap
+                if aside_tags and "musttrap" in aside_tags:
+                    if aside_text:
+                        self.fog_gate_detail_has_musttrap[aside_text] = True
+                    else:
+                        logger.warning("Found musttrap tag without Text field in ASide of fog gate")
+                if bside_tags and "musttrap" in bside_tags:
+                    if bside_text:
+                        self.fog_gate_detail_has_musttrap[bside_text] = True
+                    else:
+                        logger.warning("Found musttrap tag without Text field in BSide of fog gate")
+
                 current_name = line_stripped.replace("- Name:", "").strip()
                 # Initialize zone_metadata entry
                 if current_name not in self.zone_metadata:
@@ -356,6 +376,8 @@ class ZoneResolver:
                 bside_cond = None
                 aside_text = None
                 bside_text = None
+                aside_tags = None
+                bside_tags = None
                 foggate_map = None
             elif line_stripped.startswith("To:"):
                 in_to_section = True
@@ -373,12 +395,14 @@ class ZoneResolver:
                 aside_area = None
                 aside_cond = None
                 aside_text = None
+                aside_tags = None
             elif line_stripped.startswith("BSide:"):
                 in_bside = True
                 in_aside = False
                 bside_area = None
                 bside_cond = None
                 bside_text = None
+                bside_tags = None
             elif line_stripped.startswith("Cond:"):
                 cond_value = line_stripped.replace("Cond:", "").strip()
                 if in_aside:
@@ -472,6 +496,13 @@ class ZoneResolver:
                                 self.zone_known_positions[area_for_trigger] = (x, y, z)
                         except ValueError:
                             pass
+            elif line_stripped.startswith("Tags:") and (in_aside or in_bside):
+                # Parse Tags: for ASide/BSide to detect musttrap
+                tags = line_stripped.replace("Tags:", "").strip().split()
+                if in_aside:
+                    aside_tags = tags
+                elif in_bside:
+                    bside_tags = tags
             # Reset ASide/BSide context when we exit their indentation level
             elif indent <= 2 and (in_aside or in_bside):
                 in_aside = False
@@ -493,6 +524,18 @@ class ZoneResolver:
             self.fog_gate_detail_has_cond[aside_text] = True
         if bside_text and bside_cond and self._is_zone_based_cond(bside_cond):
             self.fog_gate_detail_has_cond[bside_text] = True
+
+        # Store musttrap tags for the last entry
+        if aside_tags and "musttrap" in aside_tags:
+            if aside_text:
+                self.fog_gate_detail_has_musttrap[aside_text] = True
+            else:
+                logger.warning("Found musttrap tag without Text field in ASide of fog gate")
+        if bside_tags and "musttrap" in bside_tags:
+            if bside_text:
+                self.fog_gate_detail_has_musttrap[bside_text] = True
+            else:
+                logger.warning("Found musttrap tag without Text field in BSide of fog gate")
 
         # Build display_name_to_zones reverse index
         for internal_name, display_name in self.zone_display_names.items():
@@ -958,6 +1001,32 @@ class ZoneResolver:
         if not detail_text:
             return False
         return detail_text in self.fog_gate_detail_has_cond
+
+    def has_musttrap_by_detail(self, detail_text: str | None) -> bool:
+        """
+        Check if a fog gate side (identified by its detail text) has musttrap tag.
+
+        When a fog gate side has Tags: musttrap, it means entering through this
+        side traps the player - they cannot return the way they came. This is
+        used for:
+        - Boss arena entrances that lock behind you
+        - One-way dungeon entrances
+
+        In practice, this is called with source_details from the spoiler log
+        to check if the player is entering through a trapped entrance. If so,
+        the connection should be marked is_one_way=True.
+
+        Args:
+            detail_text: The detail text to check (typically source_details
+                        from the spoiler log, corresponds to ASide/BSide
+                        Text: in fog.txt)
+
+        Returns:
+            True if this specific fog gate side has Tags: musttrap.
+        """
+        if not detail_text:
+            return False
+        return detail_text in self.fog_gate_detail_has_musttrap
 
     def lookup_spoiler_name(self, spoiler_name: str) -> tuple[str | None, str | None]:
         """
