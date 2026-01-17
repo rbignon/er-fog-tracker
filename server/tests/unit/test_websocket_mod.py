@@ -2014,6 +2014,124 @@ class TestDiscoveryV2Handler:
         assert call_args[0][2] == "caelid"  # source_id
         assert call_args[0][3] == "ellac_cave_boss"  # target_id
 
+    @pytest.mark.asyncio
+    async def test_discovery_v2_uses_matched_direction_not_stored(self, mock_client, mock_manager):
+        """Regression test: Discovery should use matched direction, not stored direction.
+
+        Bug scenario (Divine Tower of Caelid):
+        - Link stored as: dragonbarrow → caelid_tower
+        - Player traverses from: caelid_tower → dragonbarrow
+        - find_all_matching_zone_pairs_by_ids returns: (caelid_tower, dragonbarrow, pair)
+        - Before fix: propagate_discovery called with (dragonbarrow, caelid_tower) - wrong!
+        - After fix: propagate_discovery called with (caelid_tower, dragonbarrow) - correct!
+
+        This ensures backprop_cost is computed for the actual traversal source,
+        and discovery is logged in the correct direction.
+        """
+        # Link stored as dragonbarrow → caelid_tower
+        zone_links = [
+            {
+                "id": "tower-link",
+                "source": "Dragonbarrow",
+                "source_id": "dragonbarrow",
+                "target": "Divine Tower of Caelid",
+                "target_id": "caelid_tower",
+                "type": "random",
+                "source_details": "at the middle entrance to Divine Tower of Caelid",
+                "target_details": "at the right exit to Dragonbarrow, facing north",
+            },
+        ]
+        mock_game = self._make_mock_game(zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("caelid_tower", "Divine Tower of Caelid")],
+            [("dragonbarrow", "Dragonbarrow")],
+        ]
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
+
+        # Match returns the TRAVERSAL direction: caelid_tower → dragonbarrow
+        # (even though the link is stored as dragonbarrow → caelid_tower)
+        all_matches = [
+            (
+                "caelid_tower",  # Matched source (traversal direction)
+                "dragonbarrow",  # Matched target (traversal direction)
+                {
+                    "id": "tower-link",
+                    "source": "Dragonbarrow",  # Stored direction
+                    "source_id": "dragonbarrow",  # Stored direction
+                    "target": "Divine Tower of Caelid",
+                    "target_id": "caelid_tower",
+                    "type": "random",
+                },
+            ),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Divine Tower of Caelid")
+        discovery_result.main_links = [
+            DiscoveredLink("Divine Tower of Caelid", "Dragonbarrow", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_ids",
+                return_value=all_matches,
+            ),
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0) as mock_cost,
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ) as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 10, "percent": 10},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m34_13_00_00",  # Divine Tower of Caelid
+                    "target_map_id": "m60_49_41_00",  # Dragonbarrow
+                    "source_pos": {"x": 82.4, "y": 259.5, "z": -2.9},
+                    "target_pos": {"x": 77.0, "y": 260.0, "z": -0.7},
+                    "warp_type": "FogWall",
+                    "source_zone": "Divine Tower of Caelid",
+                    "source_zone_id": "caelid_tower",
+                }
+            )
+
+        # Verify compute_backprop_cost received the MATCHED source, not stored source
+        mock_cost.assert_called_once()
+        cost_call_args = mock_cost.call_args
+        # compute_backprop_cost(zone_links, discovered, source_id, starting_zone_id)
+        source_for_cost = cost_call_args[0][2]  # 3rd positional arg
+        assert source_for_cost == "caelid_tower", (
+            f"compute_backprop_cost should receive matched source 'caelid_tower', "
+            f"not stored source 'dragonbarrow'. Got: {source_for_cost}"
+        )
+
+        # Verify propagate_discovery received the MATCHED direction
+        mock_propagate.assert_called_once()
+        propagate_call_args = mock_propagate.call_args
+        # propagate_discovery(db, game_id, source_id, target_id, discovered_by=...)
+        propagate_source = propagate_call_args[0][2]  # 3rd positional arg
+        propagate_target = propagate_call_args[0][3]  # 4th positional arg
+        assert propagate_source == "caelid_tower", (
+            f"propagate_discovery should receive matched source 'caelid_tower', "
+            f"not stored source 'dragonbarrow'. Got: {propagate_source}"
+        )
+        assert propagate_target == "dragonbarrow", (
+            f"propagate_discovery should receive matched target 'dragonbarrow', "
+            f"not stored target 'caelid_tower'. Got: {propagate_target}"
+        )
+
 
 # =============================================================================
 # TestMedalDiscoveryHandler

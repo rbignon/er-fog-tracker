@@ -1121,13 +1121,18 @@ class ModClient(Client):
                         target_display = target_id_to_name.get(
                             target_id, pair.get("target", target_id)
                         )
+                        # Use matched direction (source_id), not stored direction (pair["source_id"])
+                        # This ensures backprop cost is computed from the actual traversal source
                         cost = compute_backprop_cost(
                             game.zone_links,
                             game.discovered_zone_links or [],
-                            pair["source_id"],
+                            source_id,
                             starting_zone_id,
                         )
-                        matches_with_cost.append((source_display, target_display, pair, cost))
+                        # Store matched direction along with display names and pair
+                        matches_with_cost.append(
+                            (source_id, target_id, source_display, target_display, pair, cost)
+                        )
                         logger.debug(
                             "[MOD] Match '%s' -> '%s': backprop cost = %d",
                             source_display,
@@ -1136,14 +1141,15 @@ class ModClient(Client):
                         )
 
                     # Sort by cost (ascending), -1 (unreachable) goes last
-                    matches_with_cost.sort(key=lambda x: (x[3] == -1, x[3]))
+                    # Tuple: (source_id, target_id, source_display, target_display, pair, cost)
+                    matches_with_cost.sort(key=lambda x: (x[5] == -1, x[5]))
 
                     # Get minimum cost (excluding unreachable)
-                    reachable = [m for m in matches_with_cost if m[3] >= 0]
+                    reachable = [m for m in matches_with_cost if m[5] >= 0]
                     if reachable:
-                        min_cost = reachable[0][3]
+                        min_cost = reachable[0][5]
                         # Select all matches with minimum cost
-                        best_matches = [m for m in reachable if m[3] == min_cost]
+                        best_matches = [m for m in reachable if m[5] == min_cost]
 
                         if len(best_matches) > 1:
                             logger.info(
@@ -1153,7 +1159,14 @@ class ModClient(Client):
                             )
 
                         resolution_method = "zone_keys"
-                        for source_display, target_display, pair, cost in best_matches:
+                        for (
+                            source_id,
+                            target_id,
+                            source_display,
+                            target_display,
+                            _pair,
+                            cost,
+                        ) in best_matches:
                             logger.debug(
                                 "[MOD] Discovered (cost=%d): '%s' -> '%s'",
                                 cost,
@@ -1163,12 +1176,13 @@ class ModClient(Client):
                             resolved_links.append(
                                 {"source": source_display, "target": target_display}
                             )
-                            # Use zone_ids from the pair for propagate_discovery
+                            # Use matched direction (source_id, target_id), not stored direction
+                            # This respects the actual traversal direction for discovery
                             discovery_result = await propagate_discovery(
                                 db,
                                 self.game_id,
-                                pair["source_id"],
-                                pair["target_id"],
+                                source_id,
+                                target_id,
                                 discovered_by="mod",
                             )
                             all_discovery_results.append(discovery_result)
