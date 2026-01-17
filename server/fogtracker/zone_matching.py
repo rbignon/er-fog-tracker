@@ -57,6 +57,65 @@ def build_preexisting_adjacency(
     return adj
 
 
+def propagate_initial_preexisting(
+    zone_pairs: list[dict],
+    starting_zone_id: str,
+) -> list[dict]:
+    """
+    Propagate preexisting links from the starting zone.
+
+    Called when a new game is created to discover all zones reachable
+    via preexisting (vanilla) connections from the starting zone.
+
+    Returns a list of discovered links in the format expected by discovered_zone_links.
+    """
+    if not starting_zone_id:
+        return []
+
+    # Build adjacency and index for preexisting links
+    adj = build_preexisting_adjacency(zone_pairs)
+
+    # Build index: (source_id, target_id) -> zone_link_id
+    zp_by_endpoints: dict[tuple[str, str], str] = {}
+    for zp in zone_pairs:
+        zp_id = zp.get("id")
+        src = zp.get("source_id")
+        tgt = zp.get("target_id")
+        if zp_id and src and tgt:
+            zp_by_endpoints[(src, tgt)] = zp_id
+            # Also index reverse for bidirectional links
+            if not zp.get("is_one_way", False):
+                zp_by_endpoints[(tgt, src)] = zp_id
+
+    # BFS from starting zone through preexisting links
+    discovered_links: list[dict] = []
+    visited: set[str] = {starting_zone_id}
+    queue: list[tuple[str, str]] = []  # (from_zone, to_zone)
+
+    # Queue initial neighbors
+    for neighbor, _is_bidir in adj.get(starting_zone_id, []):
+        queue.append((starting_zone_id, neighbor))
+
+    while queue:
+        src, dst = queue.pop(0)
+
+        if dst in visited:
+            continue
+        visited.add(dst)
+
+        # Find the zone_link_id for this edge
+        link_id = zp_by_endpoints.get((src, dst))
+        if link_id:
+            discovered_links.append({"zone_link_id": link_id})
+
+        # Queue neighbors of the newly discovered zone
+        for neighbor, _is_bidir in adj.get(dst, []):
+            if neighbor not in visited:
+                queue.append((dst, neighbor))
+
+    return discovered_links
+
+
 def build_full_adjacency(
     zone_pairs: list[dict],
 ) -> dict[str, list[tuple[str, bool, dict]]]:

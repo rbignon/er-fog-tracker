@@ -30,6 +30,7 @@ from fogtracker.zone_matching import (
     is_link_discovered,
     link_exists,
     names_match,
+    propagate_initial_preexisting,
     strip_parenthetical,
     undiscover_zone,
 )
@@ -1557,3 +1558,111 @@ class TestDirectionPreservation:
         source_id, target_id, pair = result[0]
         assert source_id == "farum_azula"
         assert target_id == "nokron"
+
+
+class TestPropagateInitialPreexisting:
+    """Tests for propagate_initial_preexisting function."""
+
+    def test_empty_starting_zone_id(self, simple_zone_pairs):
+        """Empty starting_zone_id returns empty list."""
+        result = propagate_initial_preexisting(simple_zone_pairs, "")
+        assert result == []
+
+    def test_none_starting_zone_id(self, simple_zone_pairs):
+        """None starting_zone_id returns empty list."""
+        result = propagate_initial_preexisting(simple_zone_pairs, None)
+        assert result == []
+
+    def test_no_preexisting_neighbors(self, simple_zone_pairs):
+        """Starting zone with no preexisting neighbors returns empty list."""
+        # chapel_start only has random links, no preexisting
+        result = propagate_initial_preexisting(simple_zone_pairs, "chapel_start")
+        assert result == []
+
+    def test_discovers_preexisting_neighbor(self, simple_zone_pairs):
+        """Starting zone with preexisting neighbor discovers it."""
+        # limgrave has preexisting link to stormveil_castle
+        result = propagate_initial_preexisting(simple_zone_pairs, "limgrave")
+        assert len(result) == 1
+        # Should discover via link-2 or link-3 (both are limgrave <-> stormveil_castle)
+        link_ids = {r["zone_link_id"] for r in result}
+        assert link_ids & {"link-2", "link-3"}
+
+    def test_chain_of_preexisting_links(self, simple_zone_pairs):
+        """Discovers all zones reachable via preexisting chain."""
+        # caelid has preexisting link to dragonbarrow
+        result = propagate_initial_preexisting(simple_zone_pairs, "caelid")
+        assert len(result) == 1
+        link_ids = {r["zone_link_id"] for r in result}
+        assert link_ids & {"link-5", "link-6"}
+
+    def test_one_way_preexisting_link(self):
+        """One-way preexisting links only traversed in correct direction."""
+        zone_pairs = [
+            {
+                "id": "oneway-1",
+                "source": "Zone A",
+                "source_id": "zone_a",
+                "target": "Zone B",
+                "target_id": "zone_b",
+                "type": "preexisting",
+                "is_one_way": True,  # Can only go A -> B
+            },
+        ]
+        # Starting from A should discover B
+        result_from_a = propagate_initial_preexisting(zone_pairs, "zone_a")
+        assert len(result_from_a) == 1
+        assert result_from_a[0]["zone_link_id"] == "oneway-1"
+
+        # Starting from B should NOT discover A (one-way)
+        result_from_b = propagate_initial_preexisting(zone_pairs, "zone_b")
+        assert result_from_b == []
+
+    def test_does_not_include_random_links(self, simple_zone_pairs):
+        """Only propagates via preexisting, not random links."""
+        # Starting from limgrave:
+        # - Should discover stormveil_castle via preexisting
+        # - Should NOT discover caelid via random link
+        result = propagate_initial_preexisting(simple_zone_pairs, "limgrave")
+        link_ids = {r["zone_link_id"] for r in result}
+        # link-4 is limgrave -> caelid (random), should not be included
+        assert "link-4" not in link_ids
+
+    def test_unknown_starting_zone(self, simple_zone_pairs):
+        """Unknown starting zone returns empty list."""
+        result = propagate_initial_preexisting(simple_zone_pairs, "nonexistent_zone")
+        assert result == []
+
+    def test_realistic_roundtable_scenario(self):
+        """
+        Realistic test: Chapel of Anticipation has preexisting link to Roundtable Hold.
+
+        This is the actual use case this function was created for.
+        """
+        zone_pairs = [
+            # Random fog gate from Chapel to Limgrave
+            {
+                "id": "fog-1",
+                "source": "Chapel of Anticipation",
+                "source_id": "chapel_start",
+                "target": "Limgrave",
+                "target_id": "limgrave",
+                "type": "random",
+                "is_one_way": False,
+            },
+            # Preexisting link from Chapel to Roundtable (the Finger Maiden invitation)
+            {
+                "id": "preexisting-roundtable",
+                "source": "Chapel of Anticipation",
+                "source_id": "chapel_start",
+                "target": "Roundtable Hold",
+                "target_id": "roundtable",
+                "type": "preexisting",
+                "is_one_way": False,
+            },
+        ]
+
+        result = propagate_initial_preexisting(zone_pairs, "chapel_start")
+
+        assert len(result) == 1
+        assert result[0]["zone_link_id"] == "preexisting-roundtable"

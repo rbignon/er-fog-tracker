@@ -40,7 +40,12 @@ from fogtracker.models import (
     ZoneLink,
 )
 from fogtracker.websocket import manager as ws_manager
-from fogtracker.zone_matching import build_zone_pairs_index, get_zone_link_id, undiscover_zone
+from fogtracker.zone_matching import (
+    build_zone_pairs_index,
+    get_zone_link_id,
+    propagate_initial_preexisting,
+    undiscover_zone,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -80,15 +85,22 @@ async def create_game(
             detail=f"Maximum games per user ({settings.max_games_per_user}) reached",
         )
 
-    # Create new game
+    # Convert zone_links to dict format for propagation
+    zone_links = [zl.model_dump() for zl in data.zone_links]
+
+    # Propagate preexisting links from starting zone
+    starting_zone_id = data.starting_zone_id or "chapel_start"
+    initial_discoveries = propagate_initial_preexisting(zone_links, starting_zone_id)
+
+    # Create new game with initial discoveries
     game = Game(
         user_id=user.id,
         seed=data.seed,
         label=data.label,
         starting_zone_id=data.starting_zone_id,
-        zone_links=[zl.model_dump() for zl in data.zone_links],
+        zone_links=zone_links,
         zones={zone_id: z.model_dump() for zone_id, z in data.zones.items()},
-        discovered_zone_links=[],
+        discovered_zone_links=initial_discoveries,
         node_positions={},
         tags={},
     )
