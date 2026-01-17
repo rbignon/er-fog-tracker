@@ -890,6 +890,194 @@ class TestDiscoveryV2Handler:
         assert mock_propagate.call_count == 2
 
     @pytest.mark.asyncio
+    async def test_discovery_v2_disambiguates_by_warp_type_one_way(
+        self, mock_client, sample_zone_links, mock_manager
+    ):
+        """PlacidusaxLieDown warp should only match one-way links."""
+        mock_game = self._make_mock_game(sample_zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("farumazula", "Farum Azula Rooftop and Bridge")],
+            [("volcano_pathway", "Volcano Manor - Audience Pathway")],
+        ]
+
+        # Two matches from same source: one is_one_way=True, one is_one_way=False
+        all_matches = [
+            (
+                "farumazula",
+                "volcano_pathway",
+                {
+                    "id": "link1",
+                    "source": "Farum Azula Rooftop and Bridge",
+                    "source_id": "farumazula",
+                    "target": "Volcano Manor - Audience Pathway",
+                    "target_id": "volcano_pathway",
+                    "type": "random",
+                    "is_one_way": True,
+                    "source_details": "lying down in front of the tempest below the great bridge",
+                },
+            ),
+            (
+                "farumazula",
+                "volcano_pretown",
+                {
+                    "id": "link2",
+                    "source": "Farum Azula Rooftop and Bridge",
+                    "source_id": "farumazula",
+                    "target": "Volcano Manor Prison Town Church",
+                    "target_id": "volcano_pretown",
+                    "type": "random",
+                    "is_one_way": False,
+                    "source_details": "at the Imp Seal leading up to the Dragon Temple Lift grace",
+                },
+            ),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Farum Azula Rooftop and Bridge")
+        discovery_result.main_links = [
+            DiscoveredLink(
+                "Farum Azula Rooftop and Bridge", "Volcano Manor - Audience Pathway", "random"
+            )
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_ids",
+                return_value=all_matches,
+            ),
+            patch(
+                "fogtracker.websocket.mod.compute_backprop_cost",
+                return_value=0,  # Same cost for both
+            ),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ) as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m13_00_00_00",
+                    "target_map_id": "m16_00_00_00",
+                    "source_pos": {"x": 53.7, "y": -186.7, "z": 405.9},
+                    "target_pos": {"x": 97.1, "y": -432.8, "z": -10.0},
+                    "warp_type": "PlacidusaxLieDown",
+                }
+            )
+
+        # Should only propagate the one-way match (volcano_pathway), not the bidirectional one
+        assert mock_propagate.call_count == 1
+        call_args = mock_propagate.call_args
+        assert call_args[0][2] == "farumazula"
+        assert call_args[0][3] == "volcano_pathway"
+
+    @pytest.mark.asyncio
+    async def test_discovery_v2_disambiguates_by_source_details_pattern(
+        self, mock_client, sample_zone_links, mock_manager
+    ):
+        """If both matches are one-way, use source_details pattern to disambiguate."""
+        mock_game = self._make_mock_game(sample_zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("farumazula", "Farum Azula Rooftop and Bridge")],
+            [("volcano_pathway", "Volcano Manor - Audience Pathway")],
+        ]
+
+        # Two one-way matches, only one has "lying down" in source_details
+        all_matches = [
+            (
+                "farumazula",
+                "volcano_pathway",
+                {
+                    "id": "link1",
+                    "source": "Farum Azula Rooftop and Bridge",
+                    "source_id": "farumazula",
+                    "target": "Volcano Manor - Audience Pathway",
+                    "target_id": "volcano_pathway",
+                    "type": "random",
+                    "is_one_way": True,
+                    "source_details": "lying down in front of the tempest below the great bridge",
+                },
+            ),
+            (
+                "farumazula",
+                "some_other_zone",
+                {
+                    "id": "link2",
+                    "source": "Farum Azula Rooftop and Bridge",
+                    "source_id": "farumazula",
+                    "target": "Some Other Zone",
+                    "target_id": "some_other_zone",
+                    "type": "random",
+                    "is_one_way": True,  # Also one-way
+                    "source_details": "using the sending gate at some location",
+                },
+            ),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Farum Azula Rooftop and Bridge")
+        discovery_result.main_links = [
+            DiscoveredLink(
+                "Farum Azula Rooftop and Bridge", "Volcano Manor - Audience Pathway", "random"
+            )
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_ids",
+                return_value=all_matches,
+            ),
+            patch(
+                "fogtracker.websocket.mod.compute_backprop_cost",
+                return_value=0,
+            ),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ) as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 3, "percent": 33},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m13_00_00_00",
+                    "target_map_id": "m16_00_00_00",
+                    "source_pos": {"x": 53.7, "y": -186.7, "z": 405.9},
+                    "target_pos": {"x": 97.1, "y": -432.8, "z": -10.0},
+                    "warp_type": "PlacidusaxLieDown",
+                }
+            )
+
+        # Should only propagate the match with "lying down" in source_details
+        assert mock_propagate.call_count == 1
+        call_args = mock_propagate.call_args
+        assert call_args[0][2] == "farumazula"
+        assert call_args[0][3] == "volcano_pathway"
+
+    @pytest.mark.asyncio
     async def test_discovery_v2_destination_zone_from_actual_discovery(
         self, mock_client, sample_zone_links, mock_manager
     ):

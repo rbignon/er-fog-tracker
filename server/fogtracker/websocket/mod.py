@@ -43,6 +43,23 @@ logger = logging.getLogger(__name__)
 # if position is slightly off. Higher = more fallback options but more spoilers.
 MAX_ZONE_CANDIDATES = 15
 
+# Warp types that are inherently one-way (used to filter ambiguous matches)
+ONE_WAY_WARP_TYPES = {
+    "PlacidusaxLieDown",  # Lying down in front of the tempest
+    "SendingGate",  # Sending gates
+    "Coffin",  # Stone coffins
+    "Abduction",  # Getting abducted by Abductor Virgins
+}
+
+# Mapping of warp_type to source_details pattern for disambiguation
+# When multiple matches remain after is_one_way filtering, use these patterns
+WARP_TYPE_DETAILS_PATTERNS: dict[str, str] = {
+    "PlacidusaxLieDown": "lying down",
+    "SendingGate": "sending gate",
+    "Coffin": "coffin",
+    "Abduction": "abducted",
+}
+
 
 class ModClient(Client):
     """Client for the game mod."""
@@ -959,6 +976,37 @@ class ModClient(Client):
                 )
                 if all_matches:
                     logger.info("[MOD] Found %d candidate match(es)", len(all_matches))
+
+                    # Disambiguation: filter matches based on warp_type
+                    if len(all_matches) > 1:
+                        # Option 2: Filter by is_one_way for known one-way warp types
+                        if warp_type in ONE_WAY_WARP_TYPES:
+                            one_way_matches = [
+                                m for m in all_matches if m[2].get("is_one_way", False)
+                            ]
+                            if one_way_matches:
+                                logger.debug(
+                                    "[MOD] Filtered to %d one-way match(es) for warp_type=%s",
+                                    len(one_way_matches),
+                                    warp_type,
+                                )
+                                all_matches = one_way_matches
+
+                        # Option 1: Filter by source_details pattern if still ambiguous
+                        if len(all_matches) > 1 and warp_type in WARP_TYPE_DETAILS_PATTERNS:
+                            pattern = WARP_TYPE_DETAILS_PATTERNS[warp_type].lower()
+                            pattern_matches = [
+                                m
+                                for m in all_matches
+                                if pattern in (m[2].get("source_details") or "").lower()
+                            ]
+                            if pattern_matches:
+                                logger.debug(
+                                    "[MOD] Filtered to %d match(es) by source_details pattern '%s'",
+                                    len(pattern_matches),
+                                    pattern,
+                                )
+                                all_matches = pattern_matches
 
                     # Build lookup tables to convert zone_ids back to display names
                     # find_all_matching_zone_pairs_by_ids returns (source_id, target_id, pair)
