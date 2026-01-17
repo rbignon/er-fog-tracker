@@ -191,9 +191,10 @@ If the mod provides `source_zone_id` or `source_zone`:
 1. Get source zone candidates from map/position resolution
 2. Check if any candidate matches the mod's cached zone key/name
 3. If match found, **filter to only matching candidate(s)** (exclusive)
-4. If no match found, keep original list as fallback
+4. If no match found but `source_zone_id` is valid, **inject it as a candidate**
+5. If `source_zone_id` is invalid (unknown zone), keep original list as fallback
 
-**Filter with fallback**: When a match is found, only matching candidates are kept. This prevents discovering multiple links when only one fog gate was traversed. If no match is found (e.g., stale cache), the original list is preserved.
+**Filter with injection fallback**: When a match is found, only matching candidates are kept. This prevents discovering multiple links when only one fog gate was traversed. When no match is found but the mod provides a valid `source_zone_id`, that zone is injected at the front of the candidate list.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -202,12 +203,24 @@ If the mod provides `source_zone_id` or `source_zone`:
 │ Mod sends: source_zone_id = "zone_b"                        │
 │ Result: candidates = [zone_b]  (others filtered out)        │
 ├─────────────────────────────────────────────────────────────┤
-│ Case 2: No match (fallback to original)                      │
+│ Case 2: No match, valid zone (inject)                        │
 │ candidates = [zone_a, zone_b, zone_c]                       │
-│ Mod sends: source_zone_id = "zone_x"  (stale/invalid)       │
+│ Mod sends: source_zone_id = "zone_x"  (valid but not here)  │
+│ Result: candidates = [zone_x, zone_a, zone_b, zone_c]       │
+├─────────────────────────────────────────────────────────────┤
+│ Case 3: No match, invalid zone (fallback)                    │
+│ candidates = [zone_a, zone_b, zone_c]                       │
+│ Mod sends: source_zone_id = "unknown"  (not in fog.txt)     │
 │ Result: candidates = [zone_a, zone_b, zone_c]  (unchanged)  │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Why injection helps**: Some fog gates are physically located in a dungeon map but conceptually considered to be in an overworld zone. For example, the fog gate at the Gaol Cave entrance:
+- Is physically in map `m31_21_00_00` (Gaol Cave dungeon)
+- But the spoiler log says `source: "Caelid"` (overworld zone)
+- The zone resolver only returns Gaol Cave zones for `m31_21_00_00`
+- The mod knows the player was in "Caelid" (from previous server response)
+- Injecting "caelid" as a candidate enables the match to succeed
 
 **Why this helps**: After traversing a fog gate, the mod knows what zone it was in (from the server's `discovery_v2_ack` or `zone_query_ack`). When the player traverses another fog gate from the same zone, this cached info helps the server pick the correct source candidate, preventing spurious multi-link discoveries.
 

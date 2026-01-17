@@ -841,8 +841,9 @@ class ModClient(Client):
             target_map_id, target_pos, target_play_region_id, label="Target"
         )
 
-        # If source_zone provided by mod, filter to matching candidate only
+        # If source_zone provided by mod, use it to improve candidate selection
         # This prevents discovering multiple links when only one fog gate was traversed
+        # The mod has direct game state access and knows which zone the player was in
         if source_zone or source_zone_id:
             prioritized = []
             for candidate in source_candidates:
@@ -858,6 +859,21 @@ class ModClient(Client):
                     prioritized[0][1],
                     prioritized[0][0],
                 )
+            elif source_zone_id:
+                # Mod's source_zone_id not in candidates - this can happen when:
+                # - Player is at a fog gate entrance in an overworld zone (e.g., Caelid)
+                # - But the fog gate is physically in a dungeon map (e.g., m31_21_00_00)
+                # - The dungeon map only has dungeon zones as candidates
+                # Trust the mod's zone info and add it as a candidate
+                resolver = get_resolver()
+                display_name = resolver.zone_display_names.get(source_zone_id)
+                if display_name:
+                    source_candidates = [(source_zone_id, display_name)] + source_candidates
+                    logger.info(
+                        "[MOD] Injected mod's source zone as candidate: %s (id=%s)",
+                        display_name,
+                        source_zone_id,
+                    )
 
         # Filter candidates based on animation requirements
         # Zones that require a specific animation (e.g., Medal for Pureblood Knight's Medal)

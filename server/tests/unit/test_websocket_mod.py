@@ -1890,6 +1890,130 @@ class TestDiscoveryV2Handler:
         # BOTH matches must be propagated (same cost)
         assert mock_propagate.call_count == 2
 
+    # -------------------------------------------------------------------------
+    # Source zone injection tests
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_discovery_v2_injects_mod_source_zone_when_not_in_candidates(
+        self, mock_client, mock_manager
+    ):
+        """Regression test: Caelid → Ellac River via fog gate at Gaol Cave entrance.
+
+        Bug scenario:
+        - Player is in "Caelid" at the entrance to Gaol Cave (a fog gate)
+        - Mod sends source_map_id=m31_21_00_00 (Gaol Cave dungeon map)
+        - Mod also sends source_zone_id="caelid" (mod knows player's actual zone)
+        - Zone resolver finds candidates for m31_21_00_00: ["Caelid - Gaol Cave", ...]
+        - "caelid" is NOT in these candidates (it's an overworld zone)
+        - Expected link: Caelid → Ellac River - Rivermouth Cave - Chief Bloodfiend
+
+        Without the fix, matching fails because "caelid" is not in source candidates.
+        With the fix, the server injects "caelid" as a candidate when the mod provides
+        source_zone_id and it's not already in the resolved candidates.
+        """
+        zone_links = [
+            {
+                "id": "gaol-to-ellac",
+                "source": "Caelid",
+                "source_id": "caelid",
+                "target": "Ellac River - Rivermouth Cave - Chief Bloodfiend",
+                "target_id": "ellac_cave_boss",
+                "type": "random",
+                "source_details": "at the entrance to Gaol Cave, with Stonesword Key",
+            },
+        ]
+        mock_game = self._make_mock_game(zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Zone resolver returns dungeon-specific zones for the dungeon map
+        # Note: "caelid" is NOT returned because it's an overworld zone
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [
+                ("caelid_gaolcave", "Caelid - Gaol Cave"),
+                ("caelid_gaolcave_boss", "Caelid - Gaol Cave - Frenzied Duelist"),
+                ("caelid_gaolcave_postboss", "Caelid - After Gaol Cave"),
+            ],
+            [
+                ("ellac_river", "Ellac River"),
+                ("ellac_cave", "Ellac River - Rivermouth Cave"),
+                ("ellac_cave_boss", "Ellac River - Rivermouth Cave - Chief Bloodfiend"),
+            ],
+        ]
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
+        # This is the key: resolver has display name for "caelid"
+        mock_resolver.zone_display_names = {"caelid": "Caelid"}
+
+        # After injection, "caelid" will be in candidates and matching will work
+        all_matches = [
+            (
+                "caelid",
+                "ellac_cave_boss",
+                {
+                    "id": "gaol-to-ellac",
+                    "source": "Caelid",
+                    "source_id": "caelid",
+                    "target": "Ellac River - Rivermouth Cave - Chief Bloodfiend",
+                    "target_id": "ellac_cave_boss",
+                    "type": "random",
+                },
+            ),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Caelid")
+        discovery_result.main_links = [
+            DiscoveredLink("Caelid", "Ellac River - Rivermouth Cave - Chief Bloodfiend", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_ids",
+                return_value=all_matches,
+            ) as mock_find_matches,
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ) as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 10, "percent": 10},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m31_21_00_00",  # Gaol Cave dungeon map
+                    "target_map_id": "m43_00_00_00",  # Ellac River map
+                    "source_pos": {"x": -63.5, "y": 88.4, "z": 32.4},
+                    "target_pos": {"x": 113.1, "y": 117.2, "z": 124.9},
+                    "warp_type": "FogWall",
+                    "source_zone": "Caelid",
+                    "source_zone_id": "caelid",  # Mod knows player is in Caelid
+                }
+            )
+
+        # Verify find_all_matching_zone_pairs_by_ids was called with "caelid" in candidates
+        call_args = mock_find_matches.call_args
+        source_candidates_used = call_args[0][1]  # Second positional arg
+        source_zone_ids = [c[0] for c in source_candidates_used]
+        assert (
+            "caelid" in source_zone_ids
+        ), f"caelid should be injected into source candidates, got: {source_zone_ids}"
+
+        # Verify the discovery was propagated
+        mock_propagate.assert_called_once()
+        call_args = mock_propagate.call_args
+        assert call_args[0][2] == "caelid"  # source_id
+        assert call_args[0][3] == "ellac_cave_boss"  # target_id
+
 
 # =============================================================================
 # TestMedalDiscoveryHandler
