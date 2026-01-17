@@ -859,6 +859,17 @@ class ModClient(Client):
                     prioritized[0][0],
                 )
 
+        # Filter candidates based on animation requirements
+        # Zones that require a specific animation (e.g., Medal for Pureblood Knight's Medal)
+        # are only valid candidates when that animation is used
+        resolver = get_resolver()
+        source_candidates = resolver.filter_candidates_by_animation(
+            source_candidates, source_map_id, warp_type
+        )
+        target_candidates = resolver.filter_candidates_by_animation(
+            target_candidates, target_map_id, warp_type
+        )
+
         logger.debug(
             "[MOD] Zone candidates: source=%s, target=%s",
             [c[1] for c in source_candidates[:5]],

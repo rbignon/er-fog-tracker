@@ -1269,3 +1269,125 @@ class TestMusttrapFogGates:
             assert (
                 text in resolver.fog_gate_detail_has_musttrap
             ), f"Expected to find '{text}' in fog_gate_detail_has_musttrap"
+
+
+class TestAnimationRequirement:
+    """Tests for Animation: field parsing and animation-based filtering.
+
+    Some fog gates require a specific animation to access (e.g., the Pureblood
+    Knight's Medal teleport). These zones should only be candidates when that
+    animation is used, and excluded otherwise.
+    """
+
+    def test_medal_animation_requirement_loaded(self, resolver):
+        """Pureblood Knight's Medal fog gate should have animation requirement."""
+        # The Medal fog gate has Animation: Medal and ASide Area: chapel_start
+        # in map m12_05_00_00 (Mohgwyn Palace)
+        required = resolver.get_zone_required_animation("chapel_start", "m12_05_00_00")
+        assert (
+            required == "Medal"
+        ), f"chapel_start in m12_05_00_00 should require Medal animation, got: {required}"
+
+    def test_normal_zone_no_animation_requirement(self, resolver):
+        """Normal zones should have no animation requirement."""
+        # mohgwyn is a normal zone in m12_05_00_00, no animation requirement
+        required = resolver.get_zone_required_animation("mohgwyn", "m12_05_00_00")
+        assert required is None, f"mohgwyn should have no animation requirement, got: {required}"
+
+    def test_filter_positive_match_medal(self, resolver):
+        """When warp_type=Medal, only zones requiring Medal should remain."""
+        candidates = [
+            ("chapel_start", "Chapel of Anticipation"),
+            ("mohgwyn_postboss", "After Mohg, Lord of Blood"),
+            ("mohgwyn", "Mohgwyn Palace"),
+        ]
+        filtered = resolver.filter_candidates_by_animation(candidates, "m12_05_00_00", "Medal")
+        # Only chapel_start requires Medal, so it should be the only one
+        assert len(filtered) == 1
+        assert filtered[0][0] == "chapel_start"
+
+    def test_filter_negative_excludes_medal_zone(self, resolver):
+        """When warp_type=FogWall, zones requiring Medal should be excluded."""
+        candidates = [
+            ("chapel_start", "Chapel of Anticipation"),
+            ("mohgwyn_postboss", "After Mohg, Lord of Blood"),
+            ("mohgwyn", "Mohgwyn Palace"),
+        ]
+        filtered = resolver.filter_candidates_by_animation(candidates, "m12_05_00_00", "FogWall")
+        # chapel_start requires Medal, so it should be excluded
+        assert ("chapel_start", "Chapel of Anticipation") not in filtered
+        # Other zones should remain
+        assert ("mohgwyn_postboss", "After Mohg, Lord of Blood") in filtered
+        assert ("mohgwyn", "Mohgwyn Palace") in filtered
+
+    def test_filter_no_warp_type_returns_unchanged(self, resolver):
+        """When warp_type is None, candidates should be unchanged."""
+        candidates = [
+            ("chapel_start", "Chapel of Anticipation"),
+            ("mohgwyn_postboss", "After Mohg, Lord of Blood"),
+        ]
+        filtered = resolver.filter_candidates_by_animation(candidates, "m12_05_00_00", None)
+        assert filtered == candidates
+
+    def test_filter_empty_candidates_returns_empty(self, resolver):
+        """Empty candidates list should return empty."""
+        filtered = resolver.filter_candidates_by_animation([], "m12_05_00_00", "Medal")
+        assert filtered == []
+
+    def test_chapel_start_still_in_map_zones(self, resolver):
+        """chapel_start should still be in map_zones for m12_05_00_00.
+
+        The animation requirement doesn't remove the zone from map_zones,
+        it just marks it for filtering during candidate resolution.
+        """
+        zones = resolver.map_zones.get("m12_05_00_00", set())
+        assert "chapel_start" in zones, (
+            "chapel_start should still be in map_zones for m12_05_00_00 "
+            "(for graph visualization)"
+        )
+
+    def test_filter_unknown_warp_type_excludes_animation_zones(self, resolver):
+        """Unknown warp_type should exclude zones with animation requirements."""
+        candidates = [
+            ("chapel_start", "Chapel of Anticipation"),
+            ("mohgwyn", "Mohgwyn Palace"),
+        ]
+        # Unknown animation type - should exclude chapel_start (requires Medal)
+        filtered = resolver.filter_candidates_by_animation(
+            candidates, "m12_05_00_00", "UnknownAnimation"
+        )
+        assert ("chapel_start", "Chapel of Anticipation") not in filtered
+        assert ("mohgwyn", "Mohgwyn Palace") in filtered
+
+    def test_filter_with_different_map_no_requirement(self, resolver):
+        """Zone with animation requirement in one map has no requirement in another map."""
+        candidates = [
+            ("chapel_start", "Chapel of Anticipation"),
+        ]
+        # chapel_start requires Medal in m12_05_00_00, but not in m10_01_00_00
+        # (its actual home map)
+        filtered = resolver.filter_candidates_by_animation(candidates, "m10_01_00_00", "FogWall")
+        # No requirement in this map, so candidate is kept
+        assert filtered == candidates
+
+    def test_filter_all_candidates_have_animation_requirement(self, resolver):
+        """When all candidates require an animation that doesn't match, return empty."""
+        # Create a scenario where all candidates have animation requirements
+        # In practice, only chapel_start has Medal requirement
+        candidates = [
+            ("chapel_start", "Chapel of Anticipation"),
+        ]
+        filtered = resolver.filter_candidates_by_animation(candidates, "m12_05_00_00", "FogWall")
+        # chapel_start requires Medal, warp_type is FogWall, so it's excluded
+        assert filtered == []
+
+    def test_filter_preserves_candidate_order(self, resolver):
+        """Filter should preserve the order of candidates."""
+        candidates = [
+            ("mohgwyn_postboss", "After Mohg, Lord of Blood"),
+            ("mohgwyn", "Mohgwyn Palace"),
+            ("mohgwyn_boss", "Mohg, Lord of Blood"),
+        ]
+        filtered = resolver.filter_candidates_by_animation(candidates, "m12_05_00_00", "FogWall")
+        # Order should be preserved
+        assert filtered == candidates

@@ -3693,6 +3693,7 @@ Warps:
 - Name: 12052021
   ID: 12052021
   Area: m12_05_00_00
+  Animation: Medal
   DebugInfos:
   - asset 12051952 (m12_05_00_00 (Mohgwyn Palace) AEG099_060_9002)
   - region 12052021 (m12_05_00_00 (Mohgwyn Palace) Sphere SpawnPoint 領域 純血騎士褒章のワープ先用 復帰ポイント)

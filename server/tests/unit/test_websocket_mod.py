@@ -500,6 +500,8 @@ class TestDiscoveryV2Handler:
             [],  # No source candidates
             [("stormveil", "Stormveil Castle")],  # Target candidates
         ]
+        # Filter returns candidates unchanged (no animation requirements in test)
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
 
         with (
             patch("fogtracker.websocket.mod.async_session") as mock_session,
@@ -531,6 +533,8 @@ class TestDiscoveryV2Handler:
             [("limgrave", "Limgrave")],  # Source candidates
             [],  # No target candidates
         ]
+        # Filter returns candidates unchanged (no animation requirements in test)
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
 
         with (
             patch("fogtracker.websocket.mod.async_session") as mock_session,
@@ -572,6 +576,8 @@ class TestDiscoveryV2Handler:
             [("weeping", "Weeping Peninsula"), ("limgrave", "Limgrave")],
             [("liurnia", "Liurnia"), ("stormveil", "Stormveil Castle")],
         ]
+        # Filter returns candidates unchanged (no animation requirements in test)
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
 
         discovery_result = DiscoveryResult(origin="Limgrave")
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
@@ -2596,6 +2602,8 @@ class TestSourceZoneFiltering:
             [("stormveil", "Stormveil Castle")],  # Target
         ]
         mock_resolver.lookup_by_display_name.return_value = "stormveil"
+        # Filter returns candidates unchanged (no animation requirements in test)
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
 
         discovery_result = DiscoveryResult(origin="Limgrave - East")
         discovery_result.main_links = [
@@ -2665,6 +2673,8 @@ class TestSourceZoneFiltering:
             [("stormveil", "Stormveil Castle")],  # Target
         ]
         mock_resolver.lookup_by_display_name.return_value = "stormveil"
+        # Filter returns candidates unchanged (no animation requirements in test)
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
 
         discovery_result = DiscoveryResult(origin="Limgrave - East")
         discovery_result.main_links = [
@@ -2734,6 +2744,8 @@ class TestSourceZoneFiltering:
             [("stormveil", "Stormveil Castle")],  # Target
         ]
         mock_resolver.lookup_by_display_name.return_value = "stormveil"
+        # Filter returns candidates unchanged (no animation requirements in test)
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
 
         discovery_result = DiscoveryResult(origin="Limgrave")
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
@@ -2802,6 +2814,8 @@ class TestSourceZoneFiltering:
             [("stormveil", "Stormveil Castle")],  # Target
         ]
         mock_resolver.lookup_by_display_name.return_value = "stormveil"
+        # Filter returns candidates unchanged (no animation requirements in test)
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda cands, m, w: cands
 
         discovery_result = DiscoveryResult(origin="Limgrave")
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]

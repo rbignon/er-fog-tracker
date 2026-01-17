@@ -104,6 +104,11 @@ class ZoneResolver:
         # Maps detail_text -> True if that fog gate side has Tags: musttrap
         # This indicates a one-way trap (player cannot return after entering)
         self.fog_gate_detail_has_musttrap: dict[str, bool] = {}
+        # Fog gate animation requirement from fog.txt Animation: field
+        # Maps (zone_key, map_id) -> required animation type (e.g., "Medal")
+        # When a zone is only reachable via a specific animation (like using an item),
+        # it should only be a candidate when that animation is used
+        self.zone_requires_animation: dict[tuple[str, str], str] = {}
 
         if self.data_dir:
             self._load_data()
@@ -308,6 +313,8 @@ class ZoneResolver:
         bside_tags = None
         # Track fog gate's map (for ASide/BSide zone candidates)
         foggate_map = None
+        # Track fog gate's required animation (e.g., "Medal" for Pureblood Knight's Medal)
+        foggate_animation = None
         # For parsing ToArea + Location entries (known zone positions)
         current_to_area = None
         # Track which section we're in - only "Areas:" contains zone definitions
@@ -337,6 +344,12 @@ class ZoneResolver:
                         if foggate_map not in self.map_zones:
                             self.map_zones[foggate_map] = set()
                         self.map_zones[foggate_map].add(aside_area)
+                        # If fog gate has Animation field, record that this zone requires
+                        # that specific animation to be a valid candidate for this map
+                        if foggate_animation:
+                            self.zone_requires_animation[(aside_area, foggate_map)] = (
+                                foggate_animation
+                            )
                     if bside_area and bside_area != "''" and not bside_area.startswith("m"):
                         if foggate_map not in self.map_zones:
                             self.map_zones[foggate_map] = set()
@@ -379,6 +392,10 @@ class ZoneResolver:
                 aside_tags = None
                 bside_tags = None
                 foggate_map = None
+                foggate_animation = None
+            elif line_stripped.startswith("Animation:") and indent <= 2:
+                # Top-level Animation field for fog gate (e.g., "Animation: Medal")
+                foggate_animation = line_stripped.replace("Animation:", "").strip()
             elif line_stripped.startswith("To:"):
                 in_to_section = True
                 in_aside = False
@@ -514,6 +531,9 @@ class ZoneResolver:
                 if foggate_map not in self.map_zones:
                     self.map_zones[foggate_map] = set()
                 self.map_zones[foggate_map].add(aside_area)
+                # Record animation requirement for last entry
+                if foggate_animation:
+                    self.zone_requires_animation[(aside_area, foggate_map)] = foggate_animation
             if bside_area and bside_area != "''" and not bside_area.startswith("m"):
                 if foggate_map not in self.map_zones:
                     self.map_zones[foggate_map] = set()
@@ -1027,6 +1047,87 @@ class ZoneResolver:
         if not detail_text:
             return False
         return detail_text in self.fog_gate_detail_has_musttrap
+
+    def get_zone_required_animation(self, zone_key: str, map_id: str) -> str | None:
+        """
+        Get the required animation for a zone to be a valid candidate for a map.
+
+        Some zones are only reachable via specific animations (e.g., using the
+        Pureblood Knight's Medal). These zones should only be candidates when
+        that specific animation is used.
+
+        Args:
+            zone_key: Internal zone key
+            map_id: Map ID where the zone is a candidate
+
+        Returns:
+            Required animation name (e.g., "Medal") or None if no requirement.
+        """
+        return self.zone_requires_animation.get((zone_key, map_id))
+
+    def filter_candidates_by_animation(
+        self,
+        candidates: list[tuple[str, str]],
+        map_id: str,
+        warp_type: str | None,
+    ) -> list[tuple[str, str]]:
+        """
+        Filter zone candidates based on animation requirements.
+
+        When a candidate has an animation requirement:
+        - If warp_type matches the requirement: keep ONLY candidates with that animation
+        - If warp_type doesn't match: EXCLUDE candidates with animation requirements
+
+        This ensures that zones reachable only via specific items (like the
+        Pureblood Knight's Medal) are only candidates when that item is used.
+
+        Args:
+            candidates: List of (zone_key, display_name) tuples
+            map_id: Map ID for looking up animation requirements
+            warp_type: The animation/warp type from the discovery event
+
+        Returns:
+            Filtered list of candidates.
+        """
+        if not candidates or not warp_type:
+            return candidates
+
+        # Check if any candidate requires the current warp_type
+        matching_animation = []
+        no_animation_requirement = []
+        has_other_animation = []
+
+        for zone_key, display_name in candidates:
+            required_animation = self.zone_requires_animation.get((zone_key, map_id))
+            if required_animation:
+                if required_animation == warp_type:
+                    matching_animation.append((zone_key, display_name))
+                else:
+                    has_other_animation.append((zone_key, display_name))
+            else:
+                no_animation_requirement.append((zone_key, display_name))
+
+        # If warp_type matches some candidates' animation requirement,
+        # return ONLY those candidates (positive filter)
+        if matching_animation:
+            logger.debug(
+                "[ANIMATION] Positive filter: warp_type=%s matches %d candidate(s), "
+                "filtering out %d without animation requirement",
+                warp_type,
+                len(matching_animation),
+                len(no_animation_requirement),
+            )
+            return matching_animation
+
+        # Otherwise, exclude candidates that require a different animation (negative filter)
+        if has_other_animation:
+            logger.debug(
+                "[ANIMATION] Negative filter: excluding %d candidate(s) requiring different animation",
+                len(has_other_animation),
+            )
+            return no_animation_requirement
+
+        return candidates
 
     def lookup_spoiler_name(self, spoiler_name: str) -> tuple[str | None, str | None]:
         """
