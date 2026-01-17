@@ -74,6 +74,7 @@ async function handleFileSelect(file) {
         // Store in format expected by createGame
         parsedData = {
             seed: apiData.seed,
+            startingZoneId: apiData.starting_zone_id,
             graphData: {
                 nodes: transformZonesFromApi(apiData.zones),
                 links: transformLinksFromApi(apiData.zone_links),
@@ -124,6 +125,7 @@ async function createGame() {
     try {
         const response = await Api.createGame({
             seed: parsedData.seed,
+            startingZoneId: parsedData.startingZoneId,
             label: label || null,
             zonePairs,
             zones,

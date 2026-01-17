@@ -32,6 +32,7 @@ class SpoilerParseResponse(BaseModel):
     """Response with parsed spoiler log data."""
 
     seed: int
+    starting_zone_id: str | None
     zones: dict[str, dict]
     zone_links: list[dict]
 
@@ -90,6 +91,7 @@ async def parse_spoiler(data: SpoilerParseRequest):
 
     return SpoilerParseResponse(
         seed=parsed.seed,
+        starting_zone_id=parsed.starting_zone_id,
         zones=zones,
         zone_links=zone_links,
     )

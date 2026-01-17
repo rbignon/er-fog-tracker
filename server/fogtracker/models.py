@@ -96,6 +96,7 @@ class GameCreate(BaseModel):
     """Request body for creating a game (from web dashboard)."""
 
     seed: int
+    starting_zone_id: str | None = None
     label: str | None = Field(default=None, max_length=200)
     zone_links: list[ZoneLink]
     zones: ZonesById

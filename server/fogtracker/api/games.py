@@ -85,6 +85,7 @@ async def create_game(
         user_id=user.id,
         seed=data.seed,
         label=data.label,
+        starting_zone_id=data.starting_zone_id,
         zone_links=[zl.model_dump() for zl in data.zone_links],
         zones={zone_id: z.model_dump() for zone_id, z in data.zones.items()},
         discovered_zone_links=[],
