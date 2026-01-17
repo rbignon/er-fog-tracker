@@ -2047,10 +2047,10 @@
       "zone_id": "caelid"
     },
     "1050382950": {
-      "grace_name": "Finger Ruins of Rhia",
-      "zone": "Finger Ruins of Rhia",
+      "grace_name": "Church of the Plague",
+      "zone": "Caelid",
       "map_id": "m60_50_38_00",
-      "zone_id": "cerulean_rhia"
+      "zone_id": "caelid"
     },
     "1050402950": {
       "grace_name": "Dragonbarrow Fork",
