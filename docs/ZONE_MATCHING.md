@@ -231,38 +231,36 @@ When the mod's `source_zone_id` matches a candidate, that source is marked as **
 
 - **Without authoritative source**: Entity mapping can expand source candidates by adding zones from the EMEVD source map. This helps when the mod reports a different tile than where the fog gate is defined.
 
-- **With authoritative source**: Entity mapping expansion is **skipped for source candidates**. The mod has direct game state access and definitively knows the player's zone — entity mapping suggestions should not override this.
+- **With authoritative source**: The mod's zone is placed **first** in the candidate list, but entity_mapping zones are **appended as lower-priority fallbacks**. This handles cases where the mod reports a parent zone (e.g., "Specimen Storehouse") but the actual fog gate link is from a sub-zone (e.g., "Specimen Storehouse - Before Messmer").
 
-**Fallback mechanism**: If no matching zone link is found using the authoritative source, the server falls back to entity mapping expansion and retries:
+**Priority order** (when authoritative source):
+1. Mod's authoritative zone (highest priority)
+2. Entity_mapping expanded zones (lower priority, deduped)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Step 1: Mod sends source_zone_id = "peninsula"              │
-│         Entity mapping would add ["earthbore_cave", "limgrave"]│
+│ Step 1: Mod sends source_zone_id = "storehouse"             │
+│         Entity mapping adds ["shadow_keep", "storehouse_back",│
+│                              "storehouse_premessmer"]       │
 │                                                              │
-│ Step 2: Match with authoritative source only                 │
-│         source_candidates = ["peninsula"]                    │
-│         → Found match: peninsula → target_zone ✓             │
-│         → Done (entity mapping skipped)                      │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│ Step 1: Mod sends source_zone_id = "peninsula"              │
-│         Entity mapping would add ["earthbore_cave", "limgrave"]│
+│ Step 2: Build merged candidate list                          │
+│         source_candidates = ["storehouse",     ← Mod's zone  │
+│                              "shadow_keep",    ← Entity exp. │
+│                              "storehouse_back",              │
+│                              "storehouse_premessmer"]        │
 │                                                              │
-│ Step 2: Match with authoritative source only                 │
-│         source_candidates = ["peninsula"]                    │
-│         → No match found ✗                                   │
+│ Step 3: Find ALL matches from merged candidates              │
+│         → storehouse → ainsel_start (already discovered)    │
+│         → storehouse_premessmer → ainsel (NEW!)              │
 │                                                              │
-│ Step 3: Fallback - expand with entity mapping                │
-│         source_candidates = ["peninsula", "earthbore_cave",  │
-│                              "limgrave"]                     │
-│         → Found match: limgrave → target_zone ✓              │
-│         → Warning logged (mod's zone didn't match)           │
+│ Step 4: Backprop cost selects best match                     │
+│         → storehouse_premessmer → ainsel discovered ✓        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Note**: Both source and target candidates use entity mapping expansion as a **fallback** mechanism. The server first tries matching with position-based candidates only. If no match is found, it retries with entity mapping expansion. This prevents false discoveries when multiple zones share the same destination map (e.g., the siofra→volcano_pathway bug where entity_mapping added volcano_pathway to target candidates even though the player went to volcano_town).
+**Additional fallback mechanism**: If still no matching zone link is found after the merged candidate search, additional fallbacks (preexisting-adjacent expansion) are applied to find a valid match.
+
+**Note for targets**: Target candidates use entity mapping expansion as a **strict fallback** mechanism. The server first tries matching with position-based candidates only. If no match is found, it retries with entity mapping expansion. This prevents false discoveries when multiple zones share the same destination map (e.g., the siofra→volcano_pathway bug where entity_mapping added volcano_pathway to target candidates even though the player went to volcano_town).
 
 ### 4b. Animation-Based Filtering
 

@@ -1042,11 +1042,19 @@ class ModClient(Client):
                                     )
 
                 # Find ALL matches using zone_id-based matching, then pick lowest backprop cost
-                # Use mod's filtered source if authoritative, otherwise use expanded candidates
+                # When mod provides authoritative source: keep mod's zone first, but also include
+                # entity_mapping expansions as fallbacks. This handles cases like fog gates that
+                # connect sub-zones (e.g., "Specimen Storehouse - Before Messmer") but the mod
+                # reports the parent zone ("Specimen Storehouse").
                 # Use position-based target candidates first (not expanded by entity_mapping)
-                source_for_matching = (
-                    source_candidates if mod_source_authoritative else expanded_source_candidates
-                )
+                if mod_source_authoritative:
+                    # Merge: mod's zone first, then entity_mapping expansions (deduped)
+                    existing_ids = {c[0] for c in source_candidates}
+                    source_for_matching = source_candidates + [
+                        c for c in expanded_source_candidates if c[0] not in existing_ids
+                    ]
+                else:
+                    source_for_matching = expanded_source_candidates
                 target_for_matching = target_candidates
 
                 # Proactively expand target candidates with preexisting-adjacent zones.
