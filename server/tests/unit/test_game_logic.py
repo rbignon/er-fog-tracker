@@ -527,3 +527,197 @@ class TestParallelLinksDiscovery:
 
         # link-parallel-2 should now be discovered
         assert "link-parallel-2" in link_ids
+
+
+class TestBidirectionalBackpropSkip:
+    """Tests for skipping back-propagation when discovering bidirectional links.
+
+    When discovering a bidirectional link where:
+    - Source is NOT accessible from START
+    - Target IS accessible from START
+    - Link is bidirectional (is_one_way=False)
+
+    Back-propagation should be SKIPPED because the source will be accessible
+    via the bidirectional link to the already-accessible target.
+
+    This is a regression test for the bug where unnecessary back-propagation
+    was triggered when discovering "Dragon's Pit Boss -> Elden Throne" even
+    though Elden Throne was already accessible and the link was bidirectional.
+    """
+
+    @pytest.fixture
+    def mock_game_bidir(self, bidirectional_backprop_zone_pairs):
+        """Create a mock game with bidirectional link setup."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        game = MagicMock()
+        game.id = uuid4()
+        game.zone_links = bidirectional_backprop_zone_pairs
+        game.discovered_zone_links = []
+        game.starting_zone_id = "chapel_start"
+        return game
+
+    @pytest.fixture
+    def mock_game_one_way(self, one_way_backprop_zone_pairs):
+        """Create a mock game with one-way link setup."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        game = MagicMock()
+        game.id = uuid4()
+        game.zone_links = one_way_backprop_zone_pairs
+        game.discovered_zone_links = []
+        game.starting_zone_id = "chapel_start"
+        return game
+
+    @pytest.fixture
+    def mock_db_bidir(self, mock_game_bidir):
+        """Create a mock database session for bidirectional test."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        db = AsyncMock()
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = mock_game_bidir
+        db.execute.return_value = result
+        db.refresh = AsyncMock()
+        db.flush = AsyncMock()
+        return db
+
+    @pytest.fixture
+    def mock_db_one_way(self, mock_game_one_way):
+        """Create a mock database session for one-way test."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        db = AsyncMock()
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = mock_game_one_way
+        db.execute.return_value = result
+        db.refresh = AsyncMock()
+        db.flush = AsyncMock()
+        return db
+
+    @pytest.mark.asyncio
+    async def test_bidirectional_link_skips_backprop_when_target_accessible(
+        self, mock_db_bidir, mock_game_bidir
+    ):
+        """Bidirectional link should NOT trigger backprop when target is accessible.
+
+        Setup:
+        - Chapel -> Elden Throne is already discovered (target accessible)
+        - Discover Dragon Pit -> Elden Throne (source NOT accessible, target accessible)
+        - Link is bidirectional
+
+        Expected:
+        - NO back-propagation (academy path should NOT be discovered)
+        - Only the main link should be discovered
+        """
+        from fogtracker.game_logic import propagate_discovery
+
+        # Elden Throne is already accessible via Chapel
+        mock_game_bidir.discovered_zone_links = [{"zone_link_id": "link-chapel-throne"}]
+
+        result = await propagate_discovery(
+            mock_db_bidir,
+            mock_game_bidir.id,
+            source_id="gravesite_dragonpit_boss",
+            target_id="leyndell2_throne",
+            discovered_by="test",
+        )
+
+        discovered_ids = {dl.get("zone_link_id") for dl in mock_game_bidir.discovered_zone_links}
+
+        # Main link should be discovered
+        assert "link-dragonpit-throne" in discovered_ids
+
+        # Back-propagation path should NOT be discovered
+        assert (
+            "link-chapel-academy" not in discovered_ids
+        ), "Academy link should NOT be back-propagated"
+        assert (
+            "link-academy-dragonpit" not in discovered_ids
+        ), "Dragon pit path should NOT be back-propagated"
+
+        # Result should have NO backprop_links
+        assert len(result.backprop_links) == 0, "Should have no back-propagated links"
+
+    @pytest.mark.asyncio
+    async def test_one_way_link_triggers_backprop_even_when_target_accessible(
+        self, mock_db_one_way, mock_game_one_way
+    ):
+        """One-way link SHOULD trigger backprop even when target is accessible.
+
+        Setup:
+        - Chapel -> Elden Throne is already discovered (target accessible)
+        - Discover Dragon Pit -> Elden Throne (source NOT accessible, target accessible)
+        - Link is ONE-WAY (can't traverse from throne to dragon pit)
+
+        Expected:
+        - Back-propagation SHOULD occur (academy path discovered)
+        """
+        from fogtracker.game_logic import propagate_discovery
+
+        # Elden Throne is already accessible via Chapel
+        mock_game_one_way.discovered_zone_links = [{"zone_link_id": "link-chapel-throne"}]
+
+        result = await propagate_discovery(
+            mock_db_one_way,
+            mock_game_one_way.id,
+            source_id="gravesite_dragonpit_boss",
+            target_id="leyndell2_throne",
+            discovered_by="test",
+        )
+
+        discovered_ids = {dl.get("zone_link_id") for dl in mock_game_one_way.discovered_zone_links}
+
+        # Main link should be discovered
+        assert "link-dragonpit-throne" in discovered_ids
+
+        # Back-propagation path SHOULD be discovered for one-way link
+        assert "link-chapel-academy" in discovered_ids, "Academy link should be back-propagated"
+        assert (
+            "link-academy-dragonpit" in discovered_ids
+        ), "Dragon pit path should be back-propagated"
+
+        # Result should have backprop_links
+        assert len(result.backprop_links) > 0, "Should have back-propagated links"
+
+    @pytest.mark.asyncio
+    async def test_bidirectional_link_still_backprops_when_target_not_accessible(
+        self, mock_db_bidir, mock_game_bidir
+    ):
+        """Bidirectional link SHOULD trigger backprop when target is NOT accessible.
+
+        Setup:
+        - Nothing is discovered yet
+        - Discover Dragon Pit -> Elden Throne
+        - Both source AND target are NOT accessible
+
+        Expected:
+        - Back-propagation SHOULD occur
+        """
+        from fogtracker.game_logic import propagate_discovery
+
+        # Nothing discovered yet - target is NOT accessible
+        mock_game_bidir.discovered_zone_links = []
+
+        result = await propagate_discovery(
+            mock_db_bidir,
+            mock_game_bidir.id,
+            source_id="gravesite_dragonpit_boss",
+            target_id="leyndell2_throne",
+            discovered_by="test",
+        )
+
+        discovered_ids = {dl.get("zone_link_id") for dl in mock_game_bidir.discovered_zone_links}
+
+        # Main link should be discovered
+        assert "link-dragonpit-throne" in discovered_ids
+
+        # Back-propagation path SHOULD be discovered when target not accessible
+        assert (
+            "link-chapel-academy" in discovered_ids or "link-chapel-throne" in discovered_ids
+        ), "Some path should be back-propagated when target not accessible"
+
+        # Result should have backprop_links
+        assert len(result.backprop_links) > 0, "Should have back-propagated links"

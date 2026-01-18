@@ -436,7 +436,20 @@ async def propagate_discovery(
     backprop_new_zones: set[str] = set()
 
     # Back-propagation: if source is not accessible from START, find path and discover it
-    if not is_accessible_from_start(discovered_links, source_id, zone_pairs, starting_zone_id):
+    # For bidirectional links, if target is already accessible, source will be accessible
+    # via this new link, so no back-propagation is needed.
+    # When found_pair is None (link not in graph), we default to normal backprop (is_bidir=False).
+    source_accessible = is_accessible_from_start(
+        discovered_links, source_id, zone_pairs, starting_zone_id
+    )
+    is_bidir = not found_pair.get("is_one_way", False) if found_pair else False
+    target_accessible = (
+        is_accessible_from_start(discovered_links, target_id, zone_pairs, starting_zone_id)
+        if is_bidir and not source_accessible
+        else False
+    )
+
+    if not source_accessible and not target_accessible:
         logger.debug(
             "[DISCOVERY] Source '%s' not accessible from START, back-propagating", source_id
         )

@@ -564,3 +564,148 @@ def parallel_links_zone_pairs() -> list[dict]:
             "is_one_way": False,
         },
     ]
+
+
+@pytest.fixture
+def bidirectional_backprop_zone_pairs() -> list[dict]:
+    """
+    Zone pairs for testing bidirectional link back-propagation skip.
+
+    This simulates the bug where back-propagation was triggered unnecessarily
+    when discovering a bidirectional link where:
+    - Source zone is NOT accessible from START
+    - Target zone IS accessible from START
+    - Link is bidirectional (is_one_way=False)
+
+    In this case, back-propagation should be SKIPPED because the source
+    will be accessible via the bidirectional link to the target.
+
+    Graph structure:
+    START (Chapel) --random--> Elden Throne (accessible)
+                                    |
+                                    bidirectional random (is_one_way=False)
+                                    |
+                                    v
+                              Dragon Pit Boss (NOT yet accessible)
+                                    |
+                              (would require backprop through alternative path)
+                                    |
+    START (Chapel) --random--> Academy --random--> Dragon Pit Boss
+    """
+    return [
+        # Direct path: Chapel -> Elden Throne
+        {
+            "id": "link-chapel-throne",
+            "source": "Chapel of Anticipation",
+            "source_id": "chapel_start",
+            "target": "Ashen Leyndell - Elden Throne",
+            "target_id": "leyndell2_throne",
+            "type": "random",
+            "source_details": "before Grafted Scion's arena",
+            "target_details": "at the back of Hoarah Loux's arena",
+            "is_one_way": False,
+        },
+        # The bidirectional link being tested (stored as dragon_pit -> throne)
+        # When discovered from throne->dragon_pit direction, should NOT backprop
+        {
+            "id": "link-dragonpit-throne",
+            "source": "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man",
+            "source_id": "gravesite_dragonpit_boss",
+            "target": "Ashen Leyndell - Elden Throne",
+            "target_id": "leyndell2_throne",
+            "type": "random",
+            "source_details": "return to entrance after Ancient Dragon-Man",
+            "target_details": "at the back of Hoarah Loux's arena",
+            "is_one_way": False,  # Bidirectional!
+        },
+        # Alternative path that would be used for back-propagation if incorrectly triggered
+        {
+            "id": "link-chapel-academy",
+            "source": "Chapel of Anticipation",
+            "source_id": "chapel_start",
+            "target": "Academy of Raya Lucaria",
+            "target_id": "academy",
+            "type": "random",
+            "source_details": "before Grafted Scion's arena",
+            "target_details": "arriving in Academy",
+            "is_one_way": False,
+        },
+        {
+            "id": "link-academy-dragonpit",
+            "source": "Academy of Raya Lucaria",
+            "source_id": "academy",
+            "target": "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man",
+            "target_id": "gravesite_dragonpit_boss",
+            "type": "random",
+            "source_details": "at the front of Rennala's arena",
+            "target_details": "at the front of Ancient Dragon-Man's arena",
+            "is_one_way": False,
+        },
+    ]
+
+
+@pytest.fixture
+def one_way_backprop_zone_pairs() -> list[dict]:
+    """
+    Zone pairs for testing one-way link back-propagation (SHOULD trigger).
+
+    Same structure as bidirectional_backprop_zone_pairs but with is_one_way=True.
+    Back-propagation SHOULD occur because you can't traverse a one-way link backwards.
+
+    Graph structure:
+    START (Chapel) --random--> Elden Throne (accessible)
+                                    |
+                              one-way random (is_one_way=True)
+                                    |
+                                    v
+                              Dragon Pit Boss (NOT accessible from throne)
+    """
+    return [
+        # Direct path: Chapel -> Elden Throne
+        {
+            "id": "link-chapel-throne",
+            "source": "Chapel of Anticipation",
+            "source_id": "chapel_start",
+            "target": "Ashen Leyndell - Elden Throne",
+            "target_id": "leyndell2_throne",
+            "type": "random",
+            "source_details": "before Grafted Scion's arena",
+            "target_details": "at the back of Hoarah Loux's arena",
+            "is_one_way": False,
+        },
+        # One-way link: dragon_pit -> throne (can only go FROM dragon_pit TO throne)
+        {
+            "id": "link-dragonpit-throne",
+            "source": "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man",
+            "source_id": "gravesite_dragonpit_boss",
+            "target": "Ashen Leyndell - Elden Throne",
+            "target_id": "leyndell2_throne",
+            "type": "random",
+            "source_details": "return to entrance after Ancient Dragon-Man",
+            "target_details": "at the back of Hoarah Loux's arena",
+            "is_one_way": True,  # One-way!
+        },
+        # Alternative path for back-propagation
+        {
+            "id": "link-chapel-academy",
+            "source": "Chapel of Anticipation",
+            "source_id": "chapel_start",
+            "target": "Academy of Raya Lucaria",
+            "target_id": "academy",
+            "type": "random",
+            "source_details": "before Grafted Scion's arena",
+            "target_details": "arriving in Academy",
+            "is_one_way": False,
+        },
+        {
+            "id": "link-academy-dragonpit",
+            "source": "Academy of Raya Lucaria",
+            "source_id": "academy",
+            "target": "Gravesite Plain - Dragon's Pit - Ancient Dragon-Man",
+            "target_id": "gravesite_dragonpit_boss",
+            "type": "random",
+            "source_details": "at the front of Rennala's arena",
+            "target_details": "at the front of Ancient Dragon-Man's arena",
+            "is_one_way": False,
+        },
+    ]
