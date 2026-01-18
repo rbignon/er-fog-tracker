@@ -1560,6 +1560,80 @@ class TestDirectionPreservation:
         assert target_id == "nokron"
 
 
+class TestPreexistingAdjacentFallback:
+    """
+    Tests for preexisting-adjacent fallback zone expansion.
+
+    This tests the scenario from the Volcano Manor bug where:
+    - Player is in Zone A (volcano_pretown)
+    - Player walks through preexisting one-way door to Zone B (volcano_town)
+    - Player uses fog gate in Zone B that leads to a boss
+    - Mod reports source as Zone A (cached), not Zone B
+
+    The fix expands source candidates to include zones reachable via preexisting
+    links, allowing the spoiler log link (Zone B -> Boss) to be found.
+    """
+
+    def test_get_zones_via_preexisting_includes_adjacent(self, preexisting_adjacent_zone_pairs):
+        """get_zones_via_preexisting from Church should include Town."""
+        zones = get_zones_via_preexisting(preexisting_adjacent_zone_pairs, "volcano_pretown")
+        assert "volcano_pretown" in zones
+        assert "volcano_town" in zones  # Reachable via one-way door
+
+    def test_get_zones_via_preexisting_respects_one_way(self, preexisting_adjacent_zone_pairs):
+        """get_zones_via_preexisting from Town should NOT include Church (one-way)."""
+        zones = get_zones_via_preexisting(preexisting_adjacent_zone_pairs, "volcano_town")
+        assert "volcano_town" in zones
+        assert "volcano_pretown" not in zones  # Cannot go back through one-way door
+
+    def test_expanded_source_finds_matching_link(self, preexisting_adjacent_zone_pairs):
+        """
+        With expanded source candidates, should find the spoiler log link.
+
+        Scenario:
+        - Mod reports source: volcano_pretown (Church)
+        - Spoiler log has: volcano_town (Town) -> limgrave_tunnels_boss
+        - After expanding source via preexisting, should find the link
+        """
+        # Original source candidate (from mod)
+        source_candidates = [("volcano_pretown", "Volcano Manor Prison Town Church")]
+        target_candidates = [("limgrave_tunnels_boss", "Limgrave Tunnels - Stonedigger Troll")]
+
+        # Without expansion: no match (link is from volcano_town, not volcano_pretown)
+        result_without_expansion = find_all_matching_zone_pairs_by_ids(
+            preexisting_adjacent_zone_pairs, source_candidates, target_candidates
+        )
+        assert len(result_without_expansion) == 0, "Should not match without expansion"
+
+        # With expansion: get zones reachable via preexisting from volcano_pretown
+        adjacent_zones = get_zones_via_preexisting(
+            preexisting_adjacent_zone_pairs, "volcano_pretown"
+        )
+
+        # Build expanded source candidates (volcano_pretown + volcano_town)
+        expanded_source_candidates = list(source_candidates)
+        zone_names = {
+            "volcano_pretown": "Volcano Manor Prison Town Church",
+            "volcano_town": "Volcano Manor Prison Town",
+        }
+        for zone_id in adjacent_zones:
+            if zone_id not in {c[0] for c in expanded_source_candidates}:
+                display_name = zone_names.get(zone_id, zone_id)
+                expanded_source_candidates.append((zone_id, display_name))
+
+        # With expansion: should find the link
+        result_with_expansion = find_all_matching_zone_pairs_by_ids(
+            preexisting_adjacent_zone_pairs, expanded_source_candidates, target_candidates
+        )
+        assert len(result_with_expansion) == 1, "Should find link after expansion"
+
+        # Verify the match is correct
+        source_id, target_id, pair = result_with_expansion[0]
+        assert source_id == "volcano_town"
+        assert target_id == "limgrave_tunnels_boss"
+        assert pair["id"] == "link-town-boss"
+
+
 class TestPropagateInitialPreexisting:
     """Tests for propagate_initial_preexisting function."""
 

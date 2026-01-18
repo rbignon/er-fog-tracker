@@ -33,6 +33,7 @@ from fogtracker.zone_matching import (
     find_all_matching_zone_pairs_by_ids,
     get_discovered_nodes,
     get_zone_scaling,
+    get_zones_via_preexisting,
 )
 from fogtracker.zone_resolver import get_resolver
 
@@ -1073,7 +1074,52 @@ class ModClient(Client):
                             "[MOD] Source fallback succeeded: found %d match(es)", len(all_matches)
                         )
 
-                # Fallback 2: if still no matches, try with entity_mapping expanded target
+                # Fallback 2: if still no matches, try expanding source to include
+                # zones reachable via preexisting links (vanilla doors/elevators).
+                # This handles cases where the player walked through a preexisting
+                # door before using the fog gate, so their cached zone is adjacent
+                # to the actual fog gate location.
+                if not all_matches and source_zone_id:
+                    # Note: We intentionally don't pass discovered_links here.
+                    # This allows expansion to zones the player reached via vanilla
+                    # game paths (doors, elevators) that may not be explicitly
+                    # tracked as "discovered" preexisting links.
+                    preexisting_adjacent_zones = get_zones_via_preexisting(
+                        game.zone_links, source_zone_id
+                    )
+                    # Add adjacent zones to source candidates
+                    resolver = get_resolver()
+                    preexisting_source_candidates = list(source_for_matching)
+                    existing_source_ids = {c[0] for c in preexisting_source_candidates}
+                    for adjacent_zone_id in preexisting_adjacent_zones:
+                        if adjacent_zone_id not in existing_source_ids:
+                            display_name = resolver.zone_display_names.get(adjacent_zone_id)
+                            if display_name:
+                                preexisting_source_candidates.append(
+                                    (adjacent_zone_id, display_name)
+                                )
+                    if len(preexisting_source_candidates) > len(source_for_matching):
+                        logger.warning(
+                            "[MOD] No match found, falling back to preexisting-adjacent zones: %s",
+                            [
+                                c[1]
+                                for c in preexisting_source_candidates
+                                if c[0] not in existing_source_ids
+                            ][:3],
+                        )
+                        all_matches = find_all_matching_zone_pairs_by_ids(
+                            game.zone_links,
+                            preexisting_source_candidates[:MAX_ZONE_CANDIDATES],
+                            target_for_matching[:MAX_ZONE_CANDIDATES],
+                        )
+                        if all_matches:
+                            source_for_matching = preexisting_source_candidates
+                            logger.info(
+                                "[MOD] Preexisting-adjacent fallback succeeded: found %d match(es)",
+                                len(all_matches),
+                            )
+
+                # Fallback 3: if still no matches, try with entity_mapping expanded target
                 if not all_matches and expanded_target_candidates != target_candidates:
                     logger.warning(
                         "[MOD] No match with position-based targets, "

@@ -299,6 +299,43 @@ The `Animation:` field in `fog.txt` marks zones that require a specific warp typ
 
 **Note**: The `Medal` warp type has a dedicated handler (`_handle_medal_discovery`) that bypasses normal candidate resolution entirely, since the Medal can be used from any zone. The animation filter primarily serves to exclude Medal-only zones from normal fog wall traversals.
 
+### 4c. Preexisting-Adjacent Zone Expansion
+
+When the mod's authoritative source zone doesn't match any spoiler log link, the server expands source candidates to include zones reachable via **preexisting links** (vanilla doors, elevators, ladders).
+
+**Scenario**: Player walks through a vanilla door before using a randomized fog gate:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Player is in "Prison Town Church" (volcano_pretown)          │
+│ Player walks through one-way door to "Prison Town"           │
+│ Player uses randomized fog gate in Prison Town               │
+│                                                              │
+│ Mod sends: source_zone_id = "volcano_pretown" (cached)       │
+│ Spoiler log has: volcano_town → limgrave_tunnels_boss        │
+│                                                              │
+│ Problem: No match for volcano_pretown as source              │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Fallback: Preexisting-adjacent expansion                     │
+│                                                              │
+│ 1. Get zones reachable via preexisting from volcano_pretown  │
+│    → {volcano_pretown, volcano_town}  (via one-way door)    │
+│                                                              │
+│ 2. Add volcano_town to source candidates                     │
+│    → ["volcano_pretown", "volcano_town"]                    │
+│                                                              │
+│ 3. Retry matching                                            │
+│    → Found: volcano_town → limgrave_tunnels_boss ✓          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Why this helps**: The mod caches the player's zone from previous server responses. When the player walks through a vanilla game connection (not a randomized fog gate), the cached zone may become stale. This fallback handles that case by checking adjacent zones.
+
+**Note**: This fallback traverses **all** preexisting links, not just discovered ones. This is intentional because vanilla doors/elevators may not be explicitly tracked as "discovered" preexisting links, but the player can still physically traverse them.
+
 ### 5. Zone Candidates (Fallback)
 
 If no exact match:
@@ -534,6 +571,7 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
 | Col-based (play_region_id) | ~95% | When mod sends play_region_id |
 | Source zone prioritization | ~93% | When mod has cached zone info |
 | Entity mapping + key matching | ~92% | Launcher with EMEVD parsing |
+| Preexisting-adjacent fallback | ~88% | When mod's source has preexisting neighbors |
 | Key matching only | ~82% | Spoiler log with fog.txt enrichment |
 | Position rules (submaps.txt) | ~70% | Always (fallback) |
 | Sibling map fallback | ~65% | When map has no direct zones |
@@ -597,7 +635,7 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
                                   ▼
             ┌────────────────────────────────────┐
             │   Fallback 1: Source expansion     │
-            │   (if source was authoritative)    │
+            │   (entity mapping, if authoritative)│
             └─────────────────┬──────────────────┘
                     Found ┌───┴───┐ Not found
                           ▼       │
@@ -607,7 +645,18 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
               └───────────────┘   │
                                   ▼
             ┌────────────────────────────────────┐
-            │   Fallback 2: Target expansion     │
+            │   Fallback 2: Preexisting-adjacent │
+            │   source expansion                 │
+            └─────────────────┬──────────────────┘
+                    Found ┌───┴───┐ Not found
+                          ▼       │
+              ┌───────────────┐   │
+              │ Return match  │   │
+              │ (+ warning)   │   │
+              └───────────────┘   │
+                                  ▼
+            ┌────────────────────────────────────┐
+            │   Fallback 3: Target expansion     │
             │   (if expanded != original)        │
             └─────────────────┬──────────────────┘
                     Found ┌───┴───┐ Not found

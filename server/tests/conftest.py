@@ -306,6 +306,67 @@ def backprop_preexisting_zone_pairs() -> list[dict]:
 
 
 @pytest.fixture
+def preexisting_adjacent_zone_pairs() -> list[dict]:
+    """
+    Zone pairs for testing preexisting-adjacent fallback.
+
+    This simulates the Volcano Manor bug where:
+    - Player is in "Prison Town Church" (volcano_pretown)
+    - Player walks through preexisting one-way door to "Prison Town" (volcano_town)
+    - Player uses fog gate in Prison Town that leads to a boss
+    - Mod reports source as volcano_pretown (cached), not volcano_town
+
+    Graph structure:
+    START (Chapel) --random--> volcano_pretown --preexisting(one-way)--> volcano_town
+                                                                            |
+                                                                          random
+                                                                            v
+                                                                      limgrave_tunnels_boss
+
+    The fix should expand volcano_pretown to include volcano_town via the preexisting
+    link when matching, so that the spoiler log link (volcano_town -> limgrave_tunnels_boss)
+    can be found.
+    """
+    return [
+        {
+            "id": "link-start-church",
+            "source": "Chapel of Anticipation",
+            "source_id": "chapel_start",
+            "target": "Volcano Manor Prison Town Church",
+            "target_id": "volcano_pretown",
+            "type": "random",
+            "source_details": None,
+            "target_details": None,
+            "is_one_way": False,
+        },
+        # Preexisting one-way link: Church -> Town (one-way door)
+        {
+            "id": "link-church-town",
+            "source": "Volcano Manor Prison Town Church",
+            "source_id": "volcano_pretown",
+            "target": "Volcano Manor Prison Town",
+            "target_id": "volcano_town",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": "opening the door to Prison Town",
+            "is_one_way": True,  # One-way door
+        },
+        # Random fog gate: Town -> Boss (the actual link in spoiler log)
+        {
+            "id": "link-town-boss",
+            "source": "Volcano Manor Prison Town",
+            "source_id": "volcano_town",
+            "target": "Limgrave Tunnels - Stonedigger Troll",
+            "target_id": "limgrave_tunnels_boss",
+            "type": "random",
+            "source_details": "at the fog gate in Prison Town",
+            "target_details": "before Stonedigger Troll's arena",
+            "is_one_way": False,
+        },
+    ]
+
+
+@pytest.fixture
 def parallel_links_zone_pairs() -> list[dict]:
     """
     Zone pairs with parallel links (multiple fog gates between same zones).
