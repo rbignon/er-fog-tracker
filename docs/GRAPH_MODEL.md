@@ -290,6 +290,20 @@ Player is at D (not discovered), discovers C
 
 **Why**: The graph must remain connected to the starting area.
 
+**Bidirectional link optimization**: For bidirectional links (`is_one_way: false`), back-propagation is skipped if the **target** is already accessible from START. In this case, the source will become accessible via the bidirectional link itself:
+
+```
+                              bidirectional
+START ──► ... ──► Target ◄────────────────────► Source
+          (accessible)                        (not yet accessible)
+
+Discover Source→Target (bidirectional link)
+→ NO back-propagation needed
+→ Source is now accessible via the link to Target
+```
+
+**One-way links** (`is_one_way: true`) always trigger back-propagation when the source is not accessible, because you cannot traverse a one-way link backwards to reach the source from the target.
+
 ## Undiscovery Cascade
 
 When undiscovering a zone, all zones that become unreachable from START are also undiscovered.
