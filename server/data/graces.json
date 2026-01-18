@@ -2304,11 +2304,11 @@
       "map_id": "m61_55_39_00",
       "zone_id": "jaggedpeak_bayle"
     },
-    "1044452950": {
+    "2044452950": {
       "grace_name": "Ancient Ruins, Grand Stairway",
       "zone": "Ancient Ruins of Rauh - Central Stairs",
       "map_id": "m60_44_45_00",
-      "zone_id": "rauhruins_high"
+      "zone_id": "rauhruins_west"
     },
     "2044452951": {
       "grace_name": "Church of the Bud",
