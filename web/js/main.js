@@ -18,6 +18,7 @@ import * as DashboardPage from './pages/dashboard.js';
 import * as UsersListPage from './pages/users-list.js';
 import * as ViewerListPage from './pages/viewer-list.js';
 import * as HelpPage from './pages/help.js';
+import * as NotFoundPage from './pages/not-found.js';
 
 // Track if version notification was already shown
 let versionNotificationShown = false;
@@ -238,7 +239,7 @@ async function handleViewerRoute({ params, query }) {
     }
 
     // Load game and connect as viewer
-    await initViewerMode(gameId);
+    await initViewerMode(gameId, username);
 
     // Return cleanup function
     return () => {
@@ -337,16 +338,24 @@ async function initPlayMode(gameId) {
     } catch (e) {
         setGraphLoading(false);
         console.error('Failed to load game:', e);
-        const Toast = await import('./toast.js');
-        Toast.error(`Failed to load game: ${e.message}`);
-        Router.navigate('/dashboard', { replace: true });
+
+        // Redirect to not-found page for 404 errors
+        if (e.status === 404) {
+            Router.navigate('/not-found?type=game', { replace: true });
+        } else {
+            const Toast = await import('./toast.js');
+            Toast.error(`Failed to load game: ${e.message}`);
+            Router.navigate('/dashboard', { replace: true });
+        }
     }
 }
 
 /**
  * Initialize viewer mode - load game and connect as viewer.
+ * @param {string} gameId - The game ID
+ * @param {string} username - The streamer's username (for back URL on error)
  */
-async function initViewerMode(gameId) {
+async function initViewerMode(gameId, username) {
     setGraphLoading(true);
     try {
         const { getGame } = await import('./api.js');
@@ -387,8 +396,19 @@ async function initViewerMode(gameId) {
     } catch (e) {
         setGraphLoading(false);
         console.error('Failed to load game:', e);
-        const Toast = await import('./toast.js');
-        Toast.error(`Failed to load game: ${e.message}`);
+
+        // Redirect to not-found page for 404 errors
+        if (e.status === 404) {
+            const backUrl = username ? `/watch/${encodeURIComponent(username)}` : null;
+            const queryParams = backUrl ? `type=game&back=${encodeURIComponent(backUrl)}` : 'type=game';
+            Router.navigate(`/not-found?${queryParams}`, { replace: true });
+        } else {
+            const Toast = await import('./toast.js');
+            Toast.error(`Failed to load game: ${e.message}`);
+            // Navigate to user's games or watch list as fallback
+            const fallbackUrl = username ? `/watch/${encodeURIComponent(username)}` : '/watch';
+            Router.navigate(fallbackUrl, { replace: true });
+        }
     }
 }
 
@@ -561,6 +581,7 @@ async function init() {
     UsersListPage.init();
     ViewerListPage.init();
     HelpPage.init();
+    NotFoundPage.init();
 
     // Initialize UI event listeners (for graph UI)
     UI.initUI();
@@ -607,6 +628,7 @@ async function init() {
     Router.addRoute('/watch/:username', ViewerListPage.handleRoute);
     Router.addRoute('/watch/:username/:gameId', handleViewerRoute);
     Router.addRoute('/help', HelpPage.handleRoute);
+    Router.addRoute('/not-found', NotFoundPage.handleRoute);
 
     // Initialize router (handles current URL)
     Router.init();

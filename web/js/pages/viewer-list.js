@@ -4,6 +4,7 @@
  */
 
 import * as Api from '../api.js';
+import * as Router from '../router.js';
 
 /**
  * Show the user games page.
@@ -71,12 +72,13 @@ async function loadUserGames(username) {
     } catch (e) {
         loadingEl.classList.add('hidden');
 
+        // Redirect to not-found page for 404 errors
         if (e.status === 404) {
-            errorEl.textContent = 'User not found';
+            Router.navigate('/not-found?type=user', { replace: true });
         } else {
             errorEl.textContent = e.detail || e.message || 'Failed to load games';
+            errorEl.classList.remove('hidden');
         }
-        errorEl.classList.remove('hidden');
     }
 }
 
