@@ -259,6 +259,7 @@ export async function getUsers() {
             username: user.username,
             displayName: user.display_name || user.username,
             avatarUrl: user.avatar_url || null,
+            lastSeenAt: user.last_seen_at || null,
             modConnected: user.mod_connected || false,
             hostConnected: user.host_connected || false,
             viewerCount: user.viewer_count || 0,

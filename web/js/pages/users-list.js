@@ -79,6 +79,12 @@ function createUserRow(user) {
         statusHtml += '<span class="status-badge status-playing" title="Playing now">Playing</span>';
     } else if (user.hostConnected) {
         statusHtml += '<span class="status-badge status-online" title="Online">Online</span>';
+    } else if (user.lastSeenAt) {
+        const relativeTime = formatRelativeTime(user.lastSeenAt);
+        if (relativeTime) {
+            const tooltip = escapeHtml(new Date(user.lastSeenAt).toLocaleString());
+            statusHtml += `<span class="last-seen" title="${tooltip}">${escapeHtml(relativeTime)}</span>`;
+        }
     }
     if (user.viewerCount > 0) {
         statusHtml += `<span class="viewer-count" title="${user.viewerCount} viewer${user.viewerCount > 1 ? 's' : ''}">👁 ${user.viewerCount}</span>`;
@@ -101,6 +107,33 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+/**
+ * Format a date as relative time (e.g., "2h ago", "3 days ago").
+ * Returns null if date is invalid.
+ */
+function formatRelativeTime(dateString) {
+    if (!dateString) return null;
+
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+
+    const now = new Date();
+    const diffMs = now - date;
+
+    // Handle future dates (clock skew)
+    if (diffMs < 0) return 'just now';
+
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHour < 24) return `${diffHour}h ago`;
+    if (diffDay < 30) return `${diffDay}d ago`;
+    return date.toLocaleDateString();
 }
 
 /**

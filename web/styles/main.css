@@ -4103,6 +4103,12 @@ p#last-discovery {
     color: #9a8d75;
 }
 
+.user-row .last-seen {
+    font-size: 0.85rem;
+    color: #6a5d45;
+    font-style: italic;
+}
+
 .user-row .user-arrow {
     color: #6a5d45;
     font-size: 1.2rem;
