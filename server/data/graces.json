@@ -510,6 +510,12 @@
       "map_id": "m16_00_00_00",
       "zone_id": "volcano_posttemple"
     },
+    "16002962": {
+      "grace_name": "Abductor Virgin",
+      "zone": "Volcano Manor - Abductor Virgins",
+      "map_id": "m16_00_00_00",
+      "zone_id": "volcano_abductors"
+    },
     "16002956": {
       "grace_name": "Abductor Virgin",
       "zone": "Volcano Manor - Abductor Virgins",
@@ -1558,13 +1564,13 @@
       "grace_name": "Ranni's Rise",
       "zone": "Liurnia",
       "map_id": "m60_34_50_00",
-      "zone_id": "liurnia"
+      "zone_id": "liurnia_postmanor"
     },
     "1034502951": {
       "grace_name": "Ranni's Chamber",
       "zone": "Liurnia",
       "map_id": "m60_34_50_00",
-      "zone_id": "liurnia"
+      "zone_id": "liurnia_postmanor"
     },
     "1035422950": {
       "grace_name": "Cathedral of Manus Celes",
@@ -1588,7 +1594,7 @@
       "grace_name": "Main Academy Gate",
       "zone": "Liurnia",
       "map_id": "m60_35_46_00",
-      "zone_id": "liurnia"
+      "zone_id": "academy_entrance"
     },
     "1035472950": {
       "grace_name": "East Gate Bridge Trestle",
@@ -1812,7 +1818,7 @@
       "map_id": "m60_37_51_00",
       "zone_id": "altus"
     },
-    "1037522950": {
+    "1037522951": {
       "grace_name": "Seethewater River",
       "zone": "Mt. Gelmir",
       "map_id": "m60_37_52_00",
@@ -2466,7 +2472,7 @@
       "map_id": "m60_50_45_00",
       "zone_id": "scadualtus"
     },
-    "1050482950": {
+    "2050482950": {
       "grace_name": "Hinterland",
       "zone": "Hinterland",
       "map_id": "m60_50_48_00",
@@ -2484,25 +2490,25 @@
       "map_id": "m60_51_44_00",
       "zone_id": "scadualtus"
     },
-    "1051452950": {
+    "2051452950": {
       "grace_name": "Cathedral of Manus Metyr",
       "zone": "West Scadu Altus",
       "map_id": "m60_51_45_00",
-      "zone_id": "scadualtus"
+      "zone_id": "scadualtus_lower"
     },
-    "1051472950": {
+    "2051472950": {
       "grace_name": "Church District Highroad",
       "zone": "West Scadu Altus",
       "map_id": "m60_51_47_00",
-      "zone_id": "scadualtus"
+      "zone_id": "scadualtus_lower"
     },
-    "1051482950": {
+    "2051482950": {
       "grace_name": "Fingerstone Hill",
       "zone": "Hinterland",
       "map_id": "m60_51_48_00",
       "zone_id": "hinterland"
     },
-    "1051482951": {
+    "2051482951": {
       "grace_name": "Hinterland Bridge",
       "zone": "Hinterland",
       "map_id": "m60_51_48_00",
