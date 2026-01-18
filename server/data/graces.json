@@ -664,7 +664,7 @@
       "grace_name": "Dark Chamber Entrance",
       "zone": "Specimen Storehouse",
       "map_id": null,
-      "zone_id": "storehouse"
+      "zone_id": "storehouse_premessmer"
     },
     "21012956": {
       "grace_name": "Storehouse, Back Section",
@@ -2591,6 +2591,12 @@
       "zone": "Divine Tower of Caelid",
       "map_id": "m34_13_00_00",
       "zone_id": "caelid_tower"
+    },
+    "2050382950": {
+      "grace_name": "Fingers Ruins of Rhia",
+      "zone": "Fingers Ruins of Rhia",
+      "map_id": "m34_13_00_00",
+      "zone_id": "cerulean_rhia"
     }
   }
 }
