@@ -641,10 +641,14 @@ class TestDiscoveryV2Handler:
     # -------------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_discovery_v2_entity_mapping_prioritizes_candidates(
+    async def test_discovery_v2_entity_mapping_fallback_for_target(
         self, mock_client, sample_zone_links, mock_manager
     ):
-        """Should use entity_mapping to prioritize zone candidates."""
+        """Entity_mapping should expand target candidates only as fallback.
+
+        When position-based candidates don't match any links, the server falls
+        back to entity_mapping expanded candidates for target zones.
+        """
         entity_mapping = {
             "755890001": {
                 "source_map": "m60_41_36_00",
@@ -655,38 +659,48 @@ class TestDiscoveryV2Handler:
 
         mock_resolver = MagicMock()
         mock_resolver.resolve_by_col.return_value = (None, None)
-        # Position candidates
+        # Position candidates - these won't match any links
         mock_resolver.resolve_all_candidates.side_effect = [
             [("weeping", "Weeping Peninsula")],  # Source
-            [("liurnia", "Liurnia")],  # Target
+            [("liurnia", "Liurnia")],  # Target (no link exists)
         ]
-        # EMEVD map resolution adds more candidates
+        # EMEVD map resolution adds the actual matching zones
         mock_resolver.resolve_from_map_id.side_effect = [
             [("limgrave", "Limgrave")],  # From source EMEVD map
             [("stormveil", "Stormveil Castle")],  # From dest EMEVD map
         ]
+        # filter_candidates_by_animation should return candidates unchanged
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda c, m, w: c
 
         discovery_result = DiscoveryResult(origin="Limgrave")
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
+
+        # First call with position candidates returns no match, triggering fallback
+        # Second call (source fallback) also returns no match
+        # Third call (target fallback) finds the match
+        match_result = [
+            (
+                "limgrave",
+                "stormveil_castle",
+                {
+                    "id": "link1",
+                    "source": "Limgrave",
+                    "source_id": "limgrave",
+                    "target": "Stormveil Castle",
+                    "target_id": "stormveil_castle",
+                    "type": "random",
+                },
+            )
+        ]
 
         with (
             patch("fogtracker.websocket.mod.async_session") as mock_session,
             patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
                 "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_ids",
-                return_value=[
-                    (
-                        "limgrave",
-                        "stormveil_castle",
-                        {
-                            "id": "link1",
-                            "source": "Limgrave",
-                            "source_id": "limgrave",
-                            "target": "Stormveil Castle",
-                            "target_id": "stormveil_castle",
-                            "type": "random",
-                        },
-                    )
+                side_effect=[
+                    [],  # First call: position candidates → no match
+                    match_result,  # Second call: target fallback → match found
                 ],
             ) as mock_find,
             patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
@@ -714,13 +728,139 @@ class TestDiscoveryV2Handler:
                 }
             )
 
-        # EMEVD-resolved zones should be prioritized
-        call_args = mock_find.call_args[0]
-        source_candidates = call_args[1]
-        target_candidates = call_args[2]
-        # EMEVD candidates should be first (prioritized)
-        assert ("limgrave", "Limgrave") in source_candidates
-        assert ("stormveil", "Stormveil Castle") in target_candidates
+        # Should have called find_all_matching twice (first attempt + target fallback)
+        assert mock_find.call_count == 2
+
+        # First call: position-based candidates only
+        first_call_args = mock_find.call_args_list[0][0]
+        first_source = first_call_args[1]
+        first_target = first_call_args[2]
+        # Source includes entity_mapping expansion (no mod_source_authoritative)
+        assert ("limgrave", "Limgrave") in first_source
+        # Target uses position-based only (no entity_mapping expansion yet)
+        assert ("liurnia", "Liurnia") in first_target
+        assert ("stormveil", "Stormveil Castle") not in first_target
+
+        # Second call (fallback): target includes entity_mapping expansion
+        second_call_args = mock_find.call_args_list[1][0]
+        second_target = second_call_args[2]
+        assert ("stormveil", "Stormveil Castle") in second_target
+
+    @pytest.mark.asyncio
+    async def test_regression_siofra_to_volcano_manor_no_false_discovery(
+        self, mock_client, mock_manager
+    ):
+        """Regression test: entity_mapping should not cause false discoveries.
+
+        Bug scenario (report 260118_1346):
+        - Player goes from Siofra River to Volcano Manor Prison Town
+        - Position resolution correctly finds volcano_town as target
+        - Entity_mapping for dest_map=m16_00_00_00 would add volcano_pathway
+        - Both siofra→volcano_town AND siofra→volcano_pathway were discovered
+        - But only siofra→volcano_town was actually traversed
+
+        Fix: Entity_mapping expansion for target is now a fallback. Since
+        position-based matching succeeds (volcano_town), the fallback is not
+        triggered and volcano_pathway is never added to candidates.
+        """
+        zone_links = [
+            {
+                "id": "link-volcano-siofra",
+                "source": "Volcano Manor Prison Town",
+                "source_id": "volcano_town",
+                "target": "Siofra River",
+                "target_id": "siofra",
+                "type": "random",
+                "is_one_way": False,  # Bidirectional
+            },
+            {
+                "id": "link-siofra-pathway",
+                "source": "Siofra River",
+                "source_id": "siofra",
+                "target": "Volcano Manor - Audience Pathway",
+                "target_id": "volcano_pathway",
+                "type": "random",
+                "is_one_way": True,  # One-way sending gate
+            },
+        ]
+        entity_mapping = {
+            "755890270": {
+                "source_map": "m60_45_37_10",
+                "dest_map": "m16_00_00_00",
+            }
+        }
+        mock_game = self._make_mock_game(zone_links, entity_mapping=entity_mapping)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Position resolution: siofra (source) → volcano_town (target)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("siofra", "Siofra River")],  # Source
+            [("volcano_town", "Volcano Manor Prison Town")],  # Target - correct zone
+        ]
+        # Entity_mapping would add volcano_pathway from dest_map m16_00_00_00
+        mock_resolver.resolve_from_map_id.side_effect = [
+            [("siofra", "Siofra River")],  # From source EMEVD map
+            [
+                ("volcano_town", "Volcano Manor Prison Town"),
+                ("volcano_pathway", "Volcano Manor - Audience Pathway"),
+            ],  # From dest EMEVD map - includes the problematic zone
+        ]
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda c, m, w: c
+
+        discovery_result = DiscoveryResult(origin="Siofra River")
+        discovery_result.main_links = [
+            DiscoveredLink("Siofra River", "Volcano Manor Prison Town", "random")
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ) as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 2, "percent": 50},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m60_45_37_10",
+                    "target_map_id": "m16_00_00_00",
+                    "source_pos": {"x": 86.7, "y": 27.1, "z": 6.9},
+                    "target_pos": {"x": 16.3, "y": 7.1, "z": -189.6},
+                    "destination_entity_id": 755890270,
+                    "source_zone_id": "siofra",  # Mod knows player was at Siofra
+                }
+            )
+
+        # Verify propagate_discovery was called exactly ONCE (not twice)
+        # This is the key assertion: before the fix, it would be called twice
+        # (once for volcano_town, once for volcano_pathway)
+        mock_propagate.assert_called_once()
+
+        # Verify it was called with the correct link (volcano_town ↔ siofra)
+        call_args = mock_propagate.call_args
+        # propagate_discovery(db, game_id, source_id, target_id, discovered_by)
+        source_id = call_args[0][2]
+        target_id = call_args[0][3]
+
+        # The matched link is stored as volcano_town → siofra, but we're
+        # traversing in reverse (siofra → volcano_town), so source_id should
+        # be the pair's source_id and target_id should be the pair's target_id
+        assert source_id == "volcano_town"
+        assert target_id == "siofra"
+
+        # The problematic link (siofra → volcano_pathway) should NOT be discovered
+        # If it were, propagate_discovery would have been called twice
 
     # -------------------------------------------------------------------------
     # Backprop cost tests

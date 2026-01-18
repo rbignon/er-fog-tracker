@@ -262,7 +262,7 @@ When the mod's `source_zone_id` matches a candidate, that source is marked as **
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Note**: Target candidates are always expanded by entity mapping (when available), regardless of source zone authority. Only source expansion is affected.
+**Note**: Both source and target candidates use entity mapping expansion as a **fallback** mechanism. The server first tries matching with position-based candidates only. If no match is found, it retries with entity mapping expansion. This prevents false discoveries when multiple zones share the same destination map (e.g., the siofra→volcano_pathway bug where entity_mapping added volcano_pathway to target candidates even though the player went to volcano_town).
 
 ### 4b. Animation-Based Filtering
 
@@ -579,16 +579,15 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
                     Yes ┌─────┴─────┐ No
                         ▼           │
               ┌─────────────────┐   │
-              │ Expand TARGET   │   │
+              │ Prepare expanded│   │
               │ candidates      │   │
-              │ (source only if │   │
-              │ not authoritv.) │   │
+              │ (for fallback)  │   │
               └────────┬────────┘   │
                        └─────┬──────┘
                              ▼
             ┌────────────────────────────────────┐
             │   Try key-based matching           │
-            │   (source_id, target_id)           │
+            │   (position-based candidates)      │
             └─────────────────┬──────────────────┘
                     Found ┌───┴───┐ Not found
                           ▼       │
@@ -597,18 +596,19 @@ If a dest_entity has no corresponding reverse entry (where its source_entity is 
               └───────────────┘   │
                                   ▼
             ┌────────────────────────────────────┐
-            │   Was source authoritative?        │
+            │   Fallback 1: Source expansion     │
+            │   (if source was authoritative)    │
             └─────────────────┬──────────────────┘
-                    Yes ┌─────┴─────┐ No
-                        ▼           ▼
-              ┌─────────────────┐ ┌───────────────────┐
-              │ Fallback: retry │ │ Log failure and   │
-              │ with entity map │ │ skip discovery    │
-              │ expansion       │ └───────────────────┘
-              └────────┬────────┘
-                       ▼
+                    Found ┌───┴───┐ Not found
+                          ▼       │
+              ┌───────────────┐   │
+              │ Return match  │   │
+              │ (+ warning)   │   │
+              └───────────────┘   │
+                                  ▼
             ┌────────────────────────────────────┐
-            │   Retry key-based matching         │
+            │   Fallback 2: Target expansion     │
+            │   (if expanded != original)        │
             └─────────────────┬──────────────────┘
                     Found ┌───┴───┐ Not found
                           ▼       ▼

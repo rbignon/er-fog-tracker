@@ -959,7 +959,10 @@ class ModClient(Client):
 
                 # If entity_mapping is available, use it to improve zone candidate ordering
                 # We compute expanded candidates separately so we can use them as fallback
+                # This prevents false discoveries when entity_mapping adds zones that weren't
+                # found by position resolution (e.g., siofra->volcano_pathway bug)
                 expanded_source_candidates = source_candidates
+                expanded_target_candidates = target_candidates
                 if destination_entity_id and game.entity_mapping:
                     resolver = get_resolver()
                     entity_info = game.entity_mapping.get(str(destination_entity_id))
@@ -1022,12 +1025,13 @@ class ModClient(Client):
                                 non_prioritized = [
                                     c for c in target_candidates if c[0] not in emevd_keys
                                 ]
-                                target_candidates = (
+                                # Store expanded candidates for fallback (don't mutate original)
+                                expanded_target_candidates = (
                                     prioritized_existing + new_zones + non_prioritized
                                 )
                                 if new_zones:
                                     logger.debug(
-                                        "[MOD] Added target candidates from entity_mapping: %s",
+                                        "[MOD] Prepared expanded target candidates from entity_mapping: %s",
                                         [c[1] for c in new_zones[:3]],
                                     )
                                 elif prioritized_existing:
@@ -1038,33 +1042,52 @@ class ModClient(Client):
 
                 # Find ALL matches using zone_id-based matching, then pick lowest backprop cost
                 # Use mod's filtered source if authoritative, otherwise use expanded candidates
+                # Use position-based target candidates first (not expanded by entity_mapping)
                 source_for_matching = (
                     source_candidates if mod_source_authoritative else expanded_source_candidates
                 )
+                target_for_matching = target_candidates
                 all_matches = find_all_matching_zone_pairs_by_ids(
                     game.zone_links,
                     source_for_matching[:MAX_ZONE_CANDIDATES],
-                    target_candidates[:MAX_ZONE_CANDIDATES],
+                    target_for_matching[:MAX_ZONE_CANDIDATES],
                 )
 
-                # Fallback: if mod provided authoritative source but no matches found,
-                # retry with entity_mapping expanded candidates
+                # Fallback 1: if mod provided authoritative source but no matches found,
+                # retry with entity_mapping expanded source candidates
                 if not all_matches and mod_source_authoritative:
                     logger.warning(
                         "[MOD] No match with mod's source_zone_id=%s, "
-                        "falling back to entity_mapping expansion",
+                        "falling back to entity_mapping source expansion",
                         source_zone_id,
                     )
                     all_matches = find_all_matching_zone_pairs_by_ids(
                         game.zone_links,
                         expanded_source_candidates[:MAX_ZONE_CANDIDATES],
-                        target_candidates[:MAX_ZONE_CANDIDATES],
+                        target_for_matching[:MAX_ZONE_CANDIDATES],
                     )
                     if all_matches:
                         # Update source_for_matching for later use in lookup tables
                         source_for_matching = expanded_source_candidates
                         logger.info(
-                            "[MOD] Fallback succeeded: found %d match(es)", len(all_matches)
+                            "[MOD] Source fallback succeeded: found %d match(es)", len(all_matches)
+                        )
+
+                # Fallback 2: if still no matches, try with entity_mapping expanded target
+                if not all_matches and expanded_target_candidates != target_candidates:
+                    logger.warning(
+                        "[MOD] No match with position-based targets, "
+                        "falling back to entity_mapping target expansion"
+                    )
+                    all_matches = find_all_matching_zone_pairs_by_ids(
+                        game.zone_links,
+                        source_for_matching[:MAX_ZONE_CANDIDATES],
+                        expanded_target_candidates[:MAX_ZONE_CANDIDATES],
+                    )
+                    if all_matches:
+                        target_for_matching = expanded_target_candidates
+                        logger.info(
+                            "[MOD] Target fallback succeeded: found %d match(es)", len(all_matches)
                         )
 
                 if all_matches:
@@ -1107,7 +1130,7 @@ class ModClient(Client):
                         zid: name for zid, name in source_for_matching[:MAX_ZONE_CANDIDATES]
                     }
                     target_id_to_name = {
-                        zid: name for zid, name in target_candidates[:MAX_ZONE_CANDIDATES]
+                        zid: name for zid, name in target_for_matching[:MAX_ZONE_CANDIDATES]
                     }
 
                     # Calculate back-propagation cost for each match
