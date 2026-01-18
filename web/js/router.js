@@ -100,9 +100,9 @@ async function handleRoute() {
         }
     }
 
-    // No route matched - show 404 or redirect to home
+    // No route matched - show 404 page
     console.warn(`No route matched for path: ${path}`);
-    navigate('/', { replace: true });
+    navigate('/not-found?type=page', { replace: true });
 }
 
 /**

@@ -1,6 +1,6 @@
 /**
- * Not Found page - Displayed when a game or user doesn't exist.
- * Route: /not-found?type=game|user&back=/optional/back/url
+ * Not Found page - Displayed when a resource doesn't exist.
+ * Route: /not-found?type=game|user|page&back=/optional/back/url
  */
 
 import * as Auth from '../auth.js';
@@ -45,7 +45,7 @@ function sanitizeBackUrl(url) {
 /**
  * Route handler for not-found page.
  * Query params:
- * - type: 'game' | 'user' (determines message)
+ * - type: 'game' | 'user' | 'page' (determines message)
  * - back: URL to use for back button (optional)
  */
 export function handleRoute({ query }) {
@@ -63,6 +63,9 @@ export function handleRoute({ query }) {
     if (type === 'user') {
         titleEl.textContent = 'User not found';
         messageEl.textContent = "This user doesn't exist.";
+    } else if (type === 'page') {
+        titleEl.textContent = 'Page not found';
+        messageEl.textContent = "This page doesn't exist.";
     } else {
         titleEl.textContent = 'Game not found';
         messageEl.textContent = "This game doesn't exist or has been deleted.";
@@ -80,6 +83,10 @@ export function handleRoute({ query }) {
         // No back URL, user not found -> go to players list
         defaultBackUrl = '/watch';
         actionText = 'Browse Players';
+    } else if (type === 'page') {
+        // No back URL, page not found -> go to home
+        defaultBackUrl = '/';
+        actionText = 'Go Home';
     } else if (Auth.isAuthenticated()) {
         // No back URL, game not found, logged in -> go to dashboard
         defaultBackUrl = '/dashboard';
