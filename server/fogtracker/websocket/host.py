@@ -12,7 +12,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from fogtracker.database import Game, async_session
 from fogtracker.game_logic import format_discovery_summary, propagate_discovery
-from fogtracker.websocket.auth import authenticate_ws, verify_game_access
+from fogtracker.websocket.auth import authenticate_ws, update_last_seen, verify_game_access
 from fogtracker.websocket.base import WS_CLOSE_SESSION_REPLACED, Client, build_game_state
 from fogtracker.websocket.manager import manager
 from fogtracker.zone_matching import compute_discovery_stats, expand_discovered_links
@@ -198,6 +198,7 @@ class HostClient(Client):
 
         client = cls(websocket, game_id, user)
         room.host = client
+        await update_last_seen(user.id)
         logger.info(
             "[HOST#%d@%s] Connected to game %s (user: %s)",
             client._conn_id,
@@ -223,6 +224,8 @@ class HostClient(Client):
             logger.info(
                 "[HOST#%d@%s] Disconnected from game %s", client._conn_id, client._remote, game_id
             )
+            if client.user:
+                await update_last_seen(client.user.id)
             # Only clear room.host if we're still the current host (not replaced by a reconnection)
             if room.host is client:
                 room.host = None

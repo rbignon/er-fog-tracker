@@ -22,7 +22,7 @@ from fogtracker.game_logic import (
     format_zone_resolution,
     propagate_discovery,
 )
-from fogtracker.websocket.auth import authenticate_ws, verify_game_access
+from fogtracker.websocket.auth import authenticate_ws, update_last_seen, verify_game_access
 from fogtracker.websocket.base import Client
 from fogtracker.websocket.manager import manager
 from fogtracker.zone_matching import (
@@ -1242,6 +1242,7 @@ class ModClient(Client):
 
         client = cls(websocket, game_id, user)
         room.mod = client
+        await update_last_seen(user.id)
         logger.info("[MOD#%d@%s] Connected to game %s", client._conn_id, client._remote, game_id)
 
         # Notify host and viewers
@@ -1256,6 +1257,8 @@ class ModClient(Client):
             logger.info(
                 "[MOD#%d@%s] Disconnected from game %s", client._conn_id, client._remote, game_id
             )
+            if client.user:
+                await update_last_seen(client.user.id)
             # Only clear room.mod if we're still the current mod
             if room.mod is client:
                 room.mod = None

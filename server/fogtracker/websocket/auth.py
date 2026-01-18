@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import WebSocket
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select, update
 
-from fogtracker.database import Game, User
+from fogtracker.database import Game, User, async_session
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,3 +79,13 @@ async def verify_game_access(
         query = query.where(Game.user_id == user.id)
     result = await db.execute(query)
     return result.scalar_one_or_none()
+
+
+async def update_last_seen(user_id: int) -> None:
+    """Update user's last_seen_at timestamp."""
+    try:
+        async with async_session() as db:
+            await db.execute(update(User).where(User.id == user_id).values(last_seen_at=func.now()))
+            await db.commit()
+    except Exception as e:
+        logger.warning("Failed to update last_seen_at for user %d: %s", user_id, e)

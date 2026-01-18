@@ -64,6 +64,7 @@ async def list_users(
                 username=user.twitch_username,
                 display_name=user.twitch_display_name,
                 avatar_url=user.twitch_avatar_url,
+                last_seen_at=user.last_seen_at,
                 mod_connected=mod_connected,
                 host_connected=host_connected,
                 viewer_count=viewer_count,
@@ -99,6 +100,7 @@ async def get_user_public(
         username=user.twitch_username,
         display_name=user.twitch_display_name,
         avatar_url=user.twitch_avatar_url,
+        last_seen_at=user.last_seen_at,
     )
 
 

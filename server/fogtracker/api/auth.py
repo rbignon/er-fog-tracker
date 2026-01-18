@@ -113,6 +113,7 @@ async def get_me(user: User = Depends(get_current_user)):
         twitch_username=user.twitch_username,
         twitch_display_name=user.twitch_display_name,
         twitch_avatar_url=user.twitch_avatar_url,
+        last_seen_at=user.last_seen_at,
         api_token=user.api_token,
         mod_token=user.mod_token,
     )
@@ -132,6 +133,7 @@ async def regenerate_mod_token(
         twitch_username=user.twitch_username,
         twitch_display_name=user.twitch_display_name,
         twitch_avatar_url=user.twitch_avatar_url,
+        last_seen_at=user.last_seen_at,
         api_token=user.api_token,
         mod_token=user.mod_token,
     )

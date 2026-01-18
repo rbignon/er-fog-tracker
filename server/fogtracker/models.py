@@ -56,6 +56,7 @@ class UserPublic(BaseModel):
     username: str
     display_name: str | None
     avatar_url: str | None
+    last_seen_at: datetime | None = None
 
 
 class UserWithStatus(BaseModel):
@@ -64,6 +65,7 @@ class UserWithStatus(BaseModel):
     username: str
     display_name: str | None
     avatar_url: str | None
+    last_seen_at: datetime | None = None
     mod_connected: bool = False  # True if mod connected to one of their games
     host_connected: bool = False  # True if host web connected to one of their games
     viewer_count: int = 0  # Total viewers across all their games
@@ -83,6 +85,7 @@ class UserMe(BaseModel):
     twitch_username: str
     twitch_display_name: str | None
     twitch_avatar_url: str | None
+    last_seen_at: datetime | None = None
     api_token: str
     mod_token: str
 
