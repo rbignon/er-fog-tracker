@@ -228,6 +228,9 @@ pub struct FogRandoTracker {
     // Throttle for game stats checking (avoid scanning inventory every frame)
     last_game_stats_check: Instant,
 
+    // Last time game stats were actually sent (for periodic updates)
+    last_game_stats_send: Instant,
+
     // Icon atlas texture (loaded in initialize())
     pub(crate) icon_atlas: Option<IconAtlas>,
 
@@ -331,6 +334,7 @@ impl FogRandoTracker {
             last_logged_warp_requested: false,
             previous_game_stats: None,
             last_game_stats_check: Instant::now(),
+            last_game_stats_send: Instant::now(),
             icon_atlas: None,
             log_file_path,
         })
@@ -441,11 +445,13 @@ impl FogRandoTracker {
 
     /// Check for game stats changes and send update if connected
     ///
-    /// Only sends updates when:
+    /// Sends updates when:
     /// - WebSocket is connected
     /// - Stats can be read (player is in-game)
     /// - Stats are not empty (player is in an active game session)
-    /// - Stats have meaningfully changed (ignoring play_time_ms alone)
+    /// - AND one of:
+    ///   - Stats have meaningfully changed (runes, kindling, deaths)
+    ///   - 10 seconds have elapsed since last send (to keep play_time_ms fresh)
     fn check_and_send_game_stats(&mut self) {
         // Don't check if not connected
         if !self.ws_client.is_connected() {
@@ -466,18 +472,22 @@ impl FogRandoTracker {
             }
 
             // Check if stats have meaningfully changed
-            let should_send = match &self.previous_game_stats {
+            let meaningful_change = match &self.previous_game_stats {
                 None => true, // First time, send initial stats
                 Some(prev) => prev.has_meaningful_change(&current_stats),
             };
 
-            if should_send {
+            // Also send periodically to keep play_time_ms fresh
+            let periodic_update = self.last_game_stats_send.elapsed() >= Duration::from_secs(10);
+
+            if meaningful_change || periodic_update {
                 info!(
                     runes = ?current_stats.great_runes,
                     kindling = current_stats.kindling_count,
                     deaths = current_stats.death_count,
                     igt_ms = current_stats.play_time_ms,
-                    "[STATS] Game stats changed, sending update"
+                    periodic = periodic_update && !meaningful_change,
+                    "[STATS] Sending game stats update"
                 );
 
                 // Send update to server
@@ -488,8 +498,9 @@ impl FogRandoTracker {
                     current_stats.play_time_ms,
                 );
 
-                // Update previous stats
+                // Update tracking state
                 self.previous_game_stats = Some(current_stats);
+                self.last_game_stats_send = Instant::now();
             }
         }
         // If stats can't be read (player quit), don't update previous_stats
