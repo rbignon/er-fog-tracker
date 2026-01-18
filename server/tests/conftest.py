@@ -367,6 +367,91 @@ def preexisting_adjacent_zone_pairs() -> list[dict]:
 
 
 @pytest.fixture
+def target_preexisting_adjacent_zone_pairs() -> list[dict]:
+    """
+    Zone pairs for testing target-side preexisting-adjacent expansion.
+
+    This simulates the Academy -> Altus/Gelmir bug where:
+    - Player is in academy_entrance
+    - Player uses fog gate that leads to Mt. Gelmir (Wyndham Catacombs)
+    - Landing position resolves to Altus Plateau (wrong zone due to boundary)
+    - The fix should expand target candidates to include Mt. Gelmir (preexisting-adjacent)
+
+    Graph structure:
+    START (Chapel) --random--> academy_entrance --random--> altus (wrong match)
+                                        |
+                                      random
+                                        v
+                                     gelmir <--preexisting--> altus
+                                   (correct match)
+
+    The fix should expand target candidates from [altus] to [altus, gelmir]
+    so both matches are found, and backprop cost can select the correct one.
+    """
+    return [
+        # Random link to academy_entrance
+        {
+            "id": "link-start-academy",
+            "source": "Chapel of Anticipation",
+            "source_id": "chapel_start",
+            "target": "Academy of Raya Lucaria Main Entrance",
+            "target_id": "academy_entrance",
+            "type": "random",
+            "source_details": None,
+            "target_details": None,
+            "is_one_way": False,
+        },
+        # Preexisting bidirectional link: Altus <-> Gelmir (shared map boundary)
+        {
+            "id": "link-altus-gelmir",
+            "source": "Altus Plateau",
+            "source_id": "altus",
+            "target": "Mt. Gelmir",
+            "target_id": "gelmir",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": "in map",
+            "is_one_way": False,
+        },
+        {
+            "id": "link-gelmir-altus",
+            "source": "Mt. Gelmir",
+            "source_id": "gelmir",
+            "target": "Altus Plateau",
+            "target_id": "altus",
+            "type": "preexisting",
+            "source_details": None,
+            "target_details": "in map",
+            "is_one_way": False,
+        },
+        # Random fog gate: Academy -> Altus (at Sainted Hero's Grave)
+        {
+            "id": "link-altus-academy",
+            "source": "Altus Plateau",
+            "source_id": "altus",
+            "target": "Academy of Raya Lucaria Main Entrance",
+            "target_id": "academy_entrance",
+            "type": "random",
+            "source_details": "at the entrance to Sainted Hero's Grave",
+            "target_details": "arriving at Raya Lucaria Main Academy Gate from the East",
+            "is_one_way": False,
+        },
+        # Random fog gate: Academy -> Gelmir (at Wyndham Catacombs) - THE CORRECT LINK
+        {
+            "id": "link-gelmir-academy",
+            "source": "Mt. Gelmir",
+            "source_id": "gelmir",
+            "target": "Academy of Raya Lucaria Main Entrance",
+            "target_id": "academy_entrance",
+            "type": "random",
+            "source_details": "at the entrance to Wyndham Catacombs",
+            "target_details": "arriving at Raya Lucaria Main Academy Gate from the South",
+            "is_one_way": False,
+        },
+    ]
+
+
+@pytest.fixture
 def parallel_links_zone_pairs() -> list[dict]:
     """
     Zone pairs with parallel links (multiple fog gates between same zones).

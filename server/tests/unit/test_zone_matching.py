@@ -1634,6 +1634,84 @@ class TestPreexistingAdjacentFallback:
         assert pair["id"] == "link-town-boss"
 
 
+class TestTargetPreexistingAdjacentExpansion:
+    """
+    Tests for target-side preexisting-adjacent expansion.
+
+    This tests the Academy -> Altus/Gelmir bug where:
+    - Player is in academy_entrance
+    - Player uses fog gate that leads to Mt. Gelmir (Wyndham Catacombs)
+    - Landing position resolves to Altus Plateau (wrong zone due to boundary)
+    - The fix should expand target candidates to include Mt. Gelmir (preexisting-adjacent)
+
+    Similar to TestPreexistingAdjacentFallback, but for TARGET instead of SOURCE.
+    """
+
+    def test_target_expansion_includes_adjacent_zones(self, target_preexisting_adjacent_zone_pairs):
+        """get_zones_via_preexisting from Altus should include Gelmir."""
+        zones = get_zones_via_preexisting(target_preexisting_adjacent_zone_pairs, "altus")
+        assert "altus" in zones
+        assert "gelmir" in zones  # Reachable via bidirectional preexisting link
+
+    def test_without_expansion_finds_wrong_match(self, target_preexisting_adjacent_zone_pairs):
+        """Without target expansion, only altus match is found (incorrect)."""
+        source_candidates = [("academy_entrance", "Academy of Raya Lucaria Main Entrance")]
+        # Only altus in target candidates (simulating position resolution)
+        target_candidates = [("altus", "Altus Plateau")]
+
+        result = find_all_matching_zone_pairs_by_ids(
+            target_preexisting_adjacent_zone_pairs, source_candidates, target_candidates
+        )
+
+        # Should find 1 match: academy_entrance -> altus
+        assert len(result) == 1
+        source_id, target_id, pair = result[0]
+        assert source_id == "academy_entrance"
+        assert target_id == "altus"
+        assert pair["id"] == "link-altus-academy"
+
+    def test_expanded_target_finds_both_matches(self, target_preexisting_adjacent_zone_pairs):
+        """
+        With expanded target candidates, should find both matches.
+
+        Scenario:
+        - Source: academy_entrance
+        - Position resolves to: altus (wrong)
+        - Actual destination: gelmir (correct)
+        - After expanding target via preexisting, should find both links
+        """
+        source_candidates = [("academy_entrance", "Academy of Raya Lucaria Main Entrance")]
+        target_candidates = [("altus", "Altus Plateau")]
+
+        # Expand target candidates with preexisting-adjacent zones
+        adjacent_zones = get_zones_via_preexisting(target_preexisting_adjacent_zone_pairs, "altus")
+
+        expanded_target_candidates = list(target_candidates)
+        zone_names = {
+            "altus": "Altus Plateau",
+            "gelmir": "Mt. Gelmir",
+        }
+        for zone_id in adjacent_zones:
+            if zone_id not in {c[0] for c in expanded_target_candidates}:
+                display_name = zone_names.get(zone_id, zone_id)
+                expanded_target_candidates.append((zone_id, display_name))
+
+        # Now search with expanded target candidates
+        result = find_all_matching_zone_pairs_by_ids(
+            target_preexisting_adjacent_zone_pairs,
+            source_candidates,
+            expanded_target_candidates,
+        )
+
+        # Should find 2 matches: academy_entrance -> altus AND academy_entrance -> gelmir
+        assert len(result) == 2, "Should find both links after target expansion"
+
+        # Verify both matches
+        match_ids = {r[2]["id"] for r in result}
+        assert "link-altus-academy" in match_ids  # academy -> altus
+        assert "link-gelmir-academy" in match_ids  # academy -> gelmir
+
+
 class TestPropagateInitialPreexisting:
     """Tests for propagate_initial_preexisting function."""
 

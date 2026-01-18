@@ -1048,6 +1048,37 @@ class ModClient(Client):
                     source_candidates if mod_source_authoritative else expanded_source_candidates
                 )
                 target_for_matching = target_candidates
+
+                # Proactively expand target candidates with preexisting-adjacent zones.
+                # This handles cases where the fog gate landing position is near a zone
+                # boundary and resolves to the wrong zone (e.g., landing at Wyndham
+                # Catacombs entrance resolves to Altus Plateau instead of Mt. Gelmir).
+                # By including adjacent zones, we can find all potential matches and
+                # use backprop cost to select the correct one.
+                # NOTE: This must be proactive (not a fallback) because we DO find a match
+                # with the wrong zone - the fix is to find ALL potential matches first,
+                # then let backprop cost disambiguation select the correct one.
+                preexisting_target_candidates = list(target_for_matching)
+                existing_target_ids = {c[0] for c in preexisting_target_candidates}
+                added_adjacent_targets = []
+                for zone_id, _ in target_for_matching[:3]:  # Only expand top 3
+                    adjacent_zones = get_zones_via_preexisting(game.zone_links, zone_id)
+                    for adjacent_zone_id in adjacent_zones:
+                        if adjacent_zone_id not in existing_target_ids:
+                            display_name = resolver.zone_display_names.get(adjacent_zone_id)
+                            if display_name:
+                                preexisting_target_candidates.append(
+                                    (adjacent_zone_id, display_name)
+                                )
+                                existing_target_ids.add(adjacent_zone_id)
+                                added_adjacent_targets.append(display_name)
+                if added_adjacent_targets:
+                    logger.debug(
+                        "[MOD] Expanded target candidates with preexisting-adjacent zones: %s",
+                        added_adjacent_targets[:5],
+                    )
+                    target_for_matching = preexisting_target_candidates
+
                 all_matches = find_all_matching_zone_pairs_by_ids(
                     game.zone_links,
                     source_for_matching[:MAX_ZONE_CANDIDATES],
