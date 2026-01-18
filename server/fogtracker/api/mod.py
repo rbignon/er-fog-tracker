@@ -21,6 +21,7 @@ from fogtracker.spoiler_parser import (
     parse_spoiler_log,
 )
 from fogtracker.websocket import manager as ws_manager
+from fogtracker.zone_matching import propagate_initial_preexisting
 from fogtracker.zone_resolver import get_resolver
 
 router = APIRouter(prefix="/mod", tags=["mod"])
@@ -162,7 +163,11 @@ async def create_game(
         for zone in parsed.zones.values()
     }
 
-    # Create new game
+    # Propagate preexisting links from starting zone
+    starting_zone_id = parsed.starting_zone_id or "chapel_start"
+    initial_discoveries = propagate_initial_preexisting(zone_links, starting_zone_id)
+
+    # Create new game with initial discoveries
     game = Game(
         user_id=user.id,
         seed=parsed.seed,
@@ -171,7 +176,7 @@ async def create_game(
         zones=zones,
         entity_mapping=data.entity_mapping,
         starting_zone_id=parsed.starting_zone_id,
-        discovered_zone_links=[],
+        discovered_zone_links=initial_discoveries,
         node_positions={},
         tags={},
     )
