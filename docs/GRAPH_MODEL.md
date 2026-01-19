@@ -117,6 +117,8 @@ Zone A ──────────► Zone B
 - Drop-downs (can't climb back up)
 - Some boss fog walls (enter but can't exit)
 
+**fog.txt override for preexisting links**: For preexisting links, `fog.txt` is the source of truth for bidirectionality. Even if the spoiler log says "dropping down" (which normally indicates one-way), if `fog.txt` defines both directions (e.g., A→B and B→A in their respective `To:` sections), the link is treated as bidirectional. This handles cases like spiritsprings where you can go up (spiritspring) and down (dropping).
+
 **Unified logic**: Both random and preexisting links use the same `is_one_way` field. A link is bidirectional unless explicitly marked as one-way. The absence of a reverse link does NOT imply one-way (doors and elevators are bidirectional even without explicit reverse entries).
 
 **Impact**:
