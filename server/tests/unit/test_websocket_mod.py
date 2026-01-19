@@ -854,10 +854,10 @@ class TestDiscoveryV2Handler:
         target_id = call_args[0][3]
 
         # The matched link is stored as volcano_town → siofra, but we're
-        # traversing in reverse (siofra → volcano_town), so source_id should
-        # be the pair's source_id and target_id should be the pair's target_id
-        assert source_id == "volcano_town"
-        assert target_id == "siofra"
+        # traversing in reverse (siofra → volcano_town). The matched direction
+        # (travel direction) should be used, not the stored direction.
+        assert source_id == "siofra"
+        assert target_id == "volcano_town"
 
         # The problematic link (siofra → volcano_pathway) should NOT be discovered
         # If it were, propagate_discovery would have been called twice
@@ -1196,6 +1196,101 @@ class TestDiscoveryV2Handler:
 
         # Should propagate BOTH matches (same cost)
         assert mock_propagate.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_discovery_v2_backprop_cost_uses_matched_source_not_stored(
+        self, mock_client, sample_zone_links, mock_manager
+    ):
+        """Backprop cost should use matched direction source, not stored direction.
+
+        When a link is stored as A→B but matched as B→A (reverse direction),
+        the backprop cost should be computed for B (where player is coming from),
+        not A (the stored source). This regression test ensures the fix for:
+        - Bug: Wrong link selected because backprop cost used stored source_id
+        - Example: Link stored "Caelid → East Scadu", matched "East Scadu → Caelid"
+          should compute cost for East Scadu, not Caelid.
+        """
+        mock_game = self._make_mock_game(sample_zone_links)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Player is traveling from zone_b to zone_a (reverse of stored direction)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("zone_b", "Zone B")],  # Source candidates
+            [("zone_a", "Zone A")],  # Target candidates
+        ]
+
+        # Link stored as zone_a → zone_b, but matched in reverse (zone_b → zone_a)
+        all_matches = [
+            (
+                "zone_b",  # Matched source (travel direction)
+                "zone_a",  # Matched target (travel direction)
+                {
+                    "id": "link_stored_a_to_b",
+                    "source": "Zone A",  # Stored source
+                    "source_id": "zone_a",  # Stored source_id
+                    "target": "Zone B",  # Stored target
+                    "target_id": "zone_b",  # Stored target_id
+                    "type": "random",
+                },
+            ),
+        ]
+
+        discovery_result = DiscoveryResult(origin="Zone B")
+        discovery_result.main_links = [DiscoveredLink("Zone B", "Zone A", "random")]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch(
+                "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_ids",
+                return_value=all_matches,
+            ),
+            patch(
+                "fogtracker.websocket.mod.compute_backprop_cost",
+            ) as mock_backprop_cost,
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ) as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 2, "percent": 50},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            mock_backprop_cost.return_value = 0
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m60_41_36_00",
+                    "target_map_id": "m10_00_00_00",
+                    "source_pos": {"x": 0, "y": 0, "z": 0},
+                    "target_pos": {"x": 100, "y": 50, "z": 200},
+                }
+            )
+
+        # compute_backprop_cost should be called with the MATCHED source_id (zone_b),
+        # NOT the stored source_id (zone_a).
+        # Args: (zone_pairs, discovered_links, source_zone_id, starting_zone_id)
+        mock_backprop_cost.assert_called_once()
+        call_args = mock_backprop_cost.call_args[0]
+        actual_source_id = call_args[2]  # 3rd positional arg is source_zone_id
+        assert actual_source_id == "zone_b", (
+            f"Expected backprop cost for matched source 'zone_b', "
+            f"but got stored source '{actual_source_id}'"
+        )
+
+        # propagate_discovery should also be called with the MATCHED direction
+        # (zone_b → zone_a), NOT the stored direction (zone_a → zone_b).
+        # Args: (db, game_id, source_id, target_id, discovered_by)
+        mock_propagate.assert_called_once()
+        propagate_args = mock_propagate.call_args[0]
+        assert propagate_args[2] == "zone_b", "propagate_discovery source should be matched source"
+        assert propagate_args[3] == "zone_a", "propagate_discovery target should be matched target"
 
     @pytest.mark.asyncio
     async def test_discovery_v2_disambiguates_by_warp_type_one_way(
