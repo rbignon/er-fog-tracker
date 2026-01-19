@@ -1398,7 +1398,7 @@
       "map_id": "m60_45_41_00",
       "zone_id": "gravesite"
     },
-    "1045422950": {
+    "2045422950": {
       "grace_name": "Main Gate Cross",
       "zone": "Gravesite Plain",
       "map_id": "m60_45_42_00",
@@ -1416,19 +1416,19 @@
       "map_id": "m60_46_40_00",
       "zone_id": "caelid"
     },
-    "1046422950": {
+    "2046422950": {
       "grace_name": "Three-Path Cross",
       "zone": "Gravesite Plain",
       "map_id": "m60_46_42_00",
       "zone_id": "gravesite"
     },
-    "1046442950": {
+    "2046442950": {
       "grace_name": "Greatbridge, North",
       "zone": "Gravesite Plain",
       "map_id": "m60_46_44_00",
       "zone_id": "gravesite"
     },
-    "1047412950": {
+    "2047412950": {
       "grace_name": "Scorched Ruins",
       "zone": "Gravesite Plain",
       "map_id": "m60_47_41_00",
@@ -1440,25 +1440,25 @@
       "map_id": "m60_47_43_00",
       "zone_id": "ellac"
     },
-    "1047442950": {
+    "2047442950": {
       "grace_name": "Castle Front",
       "zone": "Gravesite Plain",
       "map_id": "m60_47_44_00",
       "zone_id": "gravesite"
     },
-    "1047442951": {
+    "2047442951": {
       "grace_name": "Castle Ensis Checkpoint",
       "zone": "Castle Ensis",
       "map_id": "m60_47_44_00",
       "zone_id": "ensis"
     },
-    "1048422950": {
+    "2048422950": {
       "grace_name": "Pillar Path Waypoint",
       "zone": "Gravesite Plain",
       "map_id": "m60_48_42_00",
       "zone_id": "gravesite"
     },
-    "1048432950": {
+    "2048432950": {
       "grace_name": "Divided Falls",
       "zone": "Abyssal Woods",
       "map_id": "m60_48_43_00",
