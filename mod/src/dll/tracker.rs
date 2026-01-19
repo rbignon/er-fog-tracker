@@ -406,7 +406,13 @@ impl FogRandoTracker {
                         }
                         CoreConnectionStatus::Error => {
                             if let Some(err) = self.ws_client.last_error() {
-                                self.set_status(format!("Server error: {}", err));
+                                // Show user-friendly message for common HTTP errors
+                                let detail = if err.contains("502") || err.contains("Bad Gateway") {
+                                    "Server under maintenance".to_string()
+                                } else {
+                                    err.to_string()
+                                };
+                                self.set_status(format!("Server error: {}", detail));
                             }
                         }
                         CoreConnectionStatus::Reconnecting => {
