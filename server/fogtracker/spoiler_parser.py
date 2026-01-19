@@ -556,13 +556,17 @@ def enrich_connections_with_zone_keys(
             target_id = resolver.lookup_by_display_name(conn.target)
 
         # Determine is_one_way for preexisting connections using fog.txt To: structure
+        # fog.txt is the source of truth: if both directions exist, it's bidirectional
+        # even if the text says "dropping down" (which would normally indicate one-way)
         is_one_way = conn.is_one_way
-        if conn.conn_type == "preexisting" and source_id and target_id and not is_one_way:
+        if conn.conn_type == "preexisting" and source_id and target_id:
             # Check if link exists in fog.txt To: sections
             forward_exists = resolver.has_preexisting_link(source_id, target_id)
             reverse_exists = resolver.has_preexisting_link(target_id, source_id)
-            # If only one direction exists, mark as one-way
-            if forward_exists and not reverse_exists:
+            # fog.txt overrides text patterns for bidirectionality
+            if forward_exists and reverse_exists:
+                is_one_way = False
+            elif forward_exists and not reverse_exists:
                 is_one_way = True
 
         # Determine is_one_way for random connections with musttrap tag on source side

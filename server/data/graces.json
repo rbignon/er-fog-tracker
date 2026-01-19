@@ -1416,6 +1416,12 @@
       "map_id": "m60_46_40_00",
       "zone_id": "caelid"
     },
+    "2046402950": {
+      "grace_name": "Gravesite Plain",
+      "zone": "Gravesite Plain",
+      "map_id": "m61_46_40_00",
+      "zone_id": "gravesite"
+    },
     "2046422950": {
       "grace_name": "Three-Path Cross",
       "zone": "Gravesite Plain",
@@ -2394,37 +2400,37 @@
       "map_id": "m60_48_47_00",
       "zone_id": "rauhbase"
     },
-    "1049432950": {
+    "2049432950": {
       "grace_name": "Moorth Highway, South",
       "zone": "West Scadu Altus",
       "map_id": "m60_49_43_00",
       "zone_id": "scadualtus"
     },
-    "1049432951": {
+    "2049432951": {
       "grace_name": "Fort of Reprimand",
       "zone": "West Scadu Altus",
       "map_id": "m60_49_43_00",
       "zone_id": "scadualtus"
     },
-    "1049432952": {
+    "2049432952": {
       "grace_name": "Behind the Fort of Reprimand",
       "zone": "West Scadu Altus",
       "map_id": "m60_49_43_00",
       "zone_id": "scadualtus"
     },
-    "1049442950": {
+    "2049442950": {
       "grace_name": "Moorth Ruins",
       "zone": "West Scadu Altus",
       "map_id": "m60_49_44_00",
       "zone_id": "scadualtus"
     },
-    "1049442951": {
+    "2049442951": {
       "grace_name": "Bonny Village",
       "zone": "West Scadu Altus",
       "map_id": "m60_49_44_00",
       "zone_id": "scadualtus"
     },
-    "1049472950": {
+    "2049472950": {
       "grace_name": "Castle Watering Hole",
       "zone": "West Scadu Altus",
       "map_id": "m60_49_47_00",

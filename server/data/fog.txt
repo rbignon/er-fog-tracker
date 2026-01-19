@@ -2546,6 +2546,9 @@ Areas:
 - Name: gravesite
   Text: Gravesite Plain
   Maps: m61_44_41_00 m61_44_43_00 m61_45_40_00 m61_45_41_00 m61_45_42_00 m61_45_43_00 m61_45_44_00 m61_46_40_00 m61_46_41_00 m61_46_42_00 m61_46_43_00 m61_46_44_00 m61_47_40_00 m61_47_41_00 m61_47_42_00 m61_47_43_00 m61_47_44_00 m61_47_45_00 m61_47_46_00 m61_48_40_00 m61_48_41_00 m61_48_42_00 m61_48_43_00 m61_49_42_00 m61_49_43_00
+  To:
+  - Area: scadualtus
+    Text: using a spiritspring
   Tags: dlc overworld
 - Name: gravesite_dragon_boss
   Text: Gravesite Plain - Ghostflame Dragon
