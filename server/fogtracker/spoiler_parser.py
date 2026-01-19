@@ -72,7 +72,7 @@ KNOWN_KEY_ITEMS = [
     "Rusty Key",
     "Academy Glintstone Key",
     "Dectus Medallion",
-    "Haligtree Secret Medallion",
+    "Haligtree secret medallion",
     "Rold Medallion",
     "Cursemark of Death",
     "Dark Moon Ring",
@@ -279,15 +279,14 @@ def _extract_required_item(source_details: str, target_details: str) -> str | No
     Returns:
         The item/action name if found, None otherwise
     """
-    text = f"{source_details} {target_details}"
+    text_lower = f"{source_details} {target_details}".lower()
 
     # Check for known key items
     for item in KNOWN_KEY_ITEMS:
-        if item in text:
+        if item.lower() in text_lower:
             return item
 
     # Check for known actions (case-insensitive)
-    text_lower = text.lower()
     for action in KNOWN_ACTIONS:
         if action.lower() in text_lower:
             return action
