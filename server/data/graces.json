@@ -608,9 +608,9 @@
     },
     "21002952": {
       "grace_name": "Shadow Keep Main Gate",
-      "zone": "Shadow Keep",
-      "map_id": null,
-      "zone_id": "shadowkeep"
+      "zone": "Shadow Keep - Before Golden Hippopotamus",
+      "map_id": "m21_00_00_00",
+      "zone_id": "shadowkeep_preboss"
     },
     "21002956": {
       "grace_name": "Church District Entrance",
@@ -2352,13 +2352,13 @@
       "map_id": "m60_45_45_00",
       "zone_id": "rauhruins_west"
     },
-    "1045462950": {
+    "2045462950": {
       "grace_name": "Temple Town Ruins",
       "zone": "Rauh Base",
       "map_id": "m60_45_46_00",
       "zone_id": "rauhbase"
     },
-    "1045472950": {
+    "2045472950": {
       "grace_name": "Ravine North",
       "zone": "Rauh Base",
       "map_id": "m60_45_47_00",
@@ -2426,9 +2426,9 @@
     },
     "2049442951": {
       "grace_name": "Bonny Village",
-      "zone": "West Scadu Altus",
+      "zone": "East Scadu Altus",
       "map_id": "m60_49_44_00",
-      "zone_id": "scadualtus"
+      "zone_id": "scadualtus_lower"
     },
     "2049472950": {
       "grace_name": "Castle Watering Hole",
@@ -2484,27 +2484,27 @@
       "map_id": "m60_50_48_00",
       "zone_id": "hinterland"
     },
-    "1050482951": {
+    "2050482951": {
       "grace_name": "Scadutree Base",
       "zone": "Scadutree Base - Scadutree Avatar",
       "map_id": "m61_50_48_00",
       "zone_id": "scadutree_base"
     },
-    "1051442950": {
+    "2051442950": {
       "grace_name": "Bridge Leading to the Village",
-      "zone": "West Scadu Altus",
+      "zone": "East Scadu Altus",
       "map_id": "m60_51_44_00",
-      "zone_id": "scadualtus"
+      "zone_id": "scadualtus_lower"
     },
     "2051452950": {
       "grace_name": "Cathedral of Manus Metyr",
-      "zone": "West Scadu Altus",
+      "zone": "East Scadu Altus",
       "map_id": "m60_51_45_00",
       "zone_id": "scadualtus_lower"
     },
     "2051472950": {
       "grace_name": "Church District Highroad",
-      "zone": "West Scadu Altus",
+      "zone": "East Scadu Altus",
       "map_id": "m60_51_47_00",
       "zone_id": "scadualtus_lower"
     },
