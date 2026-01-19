@@ -231,34 +231,51 @@ When the mod's `source_zone_id` matches a candidate, that source is marked as **
 
 - **Without authoritative source**: Entity mapping can expand source candidates by adding zones from the EMEVD source map. This helps when the mod reports a different tile than where the fog gate is defined.
 
-- **With authoritative source**: The mod's zone is placed **first** in the candidate list, but entity_mapping zones are **appended as lower-priority fallbacks**. This handles cases where the mod reports a parent zone (e.g., "Specimen Storehouse") but the actual fog gate link is from a sub-zone (e.g., "Specimen Storehouse - Before Messmer").
+- **With authoritative source**: The mod's zone is **trusted completely** in the initial search. Entity_mapping expansion is NOT included initially, preventing false discoveries when the expansion adds a parent zone (e.g., "Liurnia") while the mod reports a specific sub-zone (e.g., "liurnia_evergaol_bols").
 
-**Priority order** (when authoritative source):
-1. Mod's authoritative zone (highest priority)
-2. Entity_mapping expanded zones (lower priority, deduped)
+**Two-phase search** (when authoritative source):
+1. **Initial search**: Only the mod's authoritative zone is used
+2. **Fallback 1**: If no match found, retry with entity_mapping expanded zones
+
+This approach prevents false discoveries like `liurnia → isolated_tower` when the player was actually in `liurnia_evergaol_bols` (an evergaol within Liurnia).
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
+│ Case A: Match found with mod's zone (common case)            │
+│                                                              │
+│ Step 1: Mod sends source_zone_id = "liurnia_evergaol_bols"  │
+│         Entity mapping would add "liurnia" (parent zone)    │
+│                                                              │
+│ Step 2: Initial search with mod's zone ONLY                  │
+│         source_candidates = ["liurnia_evergaol_bols"]       │
+│         (entity_mapping NOT included)                        │
+│                                                              │
+│ Step 3: Find match                                           │
+│         → liurnia_evergaol_bols → leyndell2_bedchamber ✓    │
+│                                                              │
+│ Result: Single correct discovery (no false liurnia match)    │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Case B: No match with mod's zone, fallback needed            │
+│                                                              │
 │ Step 1: Mod sends source_zone_id = "storehouse"             │
-│         Entity mapping adds ["shadow_keep", "storehouse_back",│
-│                              "storehouse_premessmer"]       │
+│         Entity mapping adds ["storehouse_premessmer", ...]  │
 │                                                              │
-│ Step 2: Build merged candidate list                          │
-│         source_candidates = ["storehouse",     ← Mod's zone  │
-│                              "shadow_keep",    ← Entity exp. │
-│                              "storehouse_back",              │
-│                              "storehouse_premessmer"]        │
+│ Step 2: Initial search with mod's zone ONLY                  │
+│         source_candidates = ["storehouse"]                  │
+│         → No match found                                     │
 │                                                              │
-│ Step 3: Find ALL matches from merged candidates              │
-│         → storehouse → ainsel_start (already discovered)    │
-│         → storehouse_premessmer → ainsel (NEW!)              │
+│ Step 3: Fallback 1 - retry with entity_mapping expansion     │
+│         source_candidates = ["storehouse",                  │
+│                              "storehouse_premessmer", ...]  │
+│         → storehouse_premessmer → ainsel found ✓            │
 │                                                              │
-│ Step 4: Backprop cost selects best match                     │
-│         → storehouse_premessmer → ainsel discovered ✓        │
+│ Result: Correct discovery via fallback                       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Additional fallback mechanism**: If still no matching zone link is found after the merged candidate search, additional fallbacks (preexisting-adjacent expansion) are applied to find a valid match.
+**Additional fallback mechanisms**: If still no matching zone link is found after Fallback 1, additional fallbacks (preexisting-adjacent expansion, target expansion) are applied to find a valid match.
 
 **Note for targets**: Target candidates use entity mapping expansion as a **strict fallback** mechanism. The server first tries matching with position-based candidates only. If no match is found, it retries with entity mapping expansion. This prevents false discoveries when multiple zones share the same destination map (e.g., the siofra→volcano_pathway bug where entity_mapping added volcano_pathway to target candidates even though the player went to volcano_town).
 

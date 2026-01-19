@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Bug Fixes
+
+#### Server
+* Prevent entity_mapping expansion from causing false discoveries when mod provides authoritative source_zone_id
+
 ## [1.3.0] - 2026-01-15
 
 ### New Features
