@@ -99,9 +99,16 @@ class ConnectionManager:
             room.viewers.remove(viewer)
 
     async def broadcast_to_all(
-        self, game_id: UUID, message: dict, exclude: WebSocket | None = None
+        self, game_id: UUID, message: dict, exclude: WebSocket | None = None, quiet: bool = False
     ):
-        """Broadcast message to host and all viewers."""
+        """Broadcast message to host and all viewers.
+
+        Args:
+            game_id: The game ID to broadcast to.
+            message: The message to broadcast.
+            exclude: Optional WebSocket to exclude from broadcast.
+            quiet: If True, suppress debug logs (for high-frequency messages).
+        """
         room = self.rooms.get(game_id)
         if not room:
             logger.warning("[BROADCAST] No room found for game %s", game_id)
@@ -111,11 +118,12 @@ class ConnectionManager:
         if room.host and room.host.ws != exclude:
             try:
                 await room.host.send(message)
-                logger.debug("[BROADCAST] Sent to host for game %s", game_id)
+                if not quiet:
+                    logger.debug("[BROADCAST] Sent to host for game %s", game_id)
             except Exception as e:
                 logger.warning("[BROADCAST] Failed to send to host: %s", e)
                 room.host = None
-        elif not room.host:
+        elif not room.host and not quiet:
             logger.debug(
                 "[BROADCAST] No host connected for game %s (room has: mod=%s, viewers=%d)",
                 game_id,

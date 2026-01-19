@@ -499,14 +499,6 @@ class ModClient(Client):
             logger.warning("[MOD] game_stats_update: invalid play_time_ms")
             return
 
-        logger.info(
-            "[MOD] Game stats update: runes=%s, kindling=%d, deaths=%d, igt=%dms",
-            great_runes,
-            kindling_count,
-            death_count,
-            play_time_ms,
-        )
-
         # Update database
         async with async_session() as db:
             result = await db.execute(select(Game).where(Game.id == self.game_id))
@@ -525,7 +517,7 @@ class ModClient(Client):
         # Send acknowledgment to mod
         await self.send({"type": "game_stats_update_ack"})
 
-        # Broadcast to host and viewers
+        # Broadcast to host and viewers (quiet=True to avoid log spam every 5s)
         await manager.broadcast_to_all(
             self.game_id,
             {
@@ -536,6 +528,7 @@ class ModClient(Client):
                 "play_time_ms": play_time_ms,
             },
             exclude=self.ws,
+            quiet=True,
         )
 
     async def _handle_zone_query(self, data: dict):
