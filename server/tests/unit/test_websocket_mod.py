@@ -3298,14 +3298,20 @@ class TestSourceZoneFiltering:
             assert source_candidates[1] == ("limgrave_east", "Limgrave - East")
 
     @pytest.mark.asyncio
-    async def test_source_zone_id_includes_entity_mapping_expansion_as_fallback(
+    async def test_source_zone_id_excludes_entity_mapping_from_initial_search(
         self, mock_client, mock_manager, zone_links_ambiguous
     ):
-        """When source_zone_id is provided, entity_mapping expansions are included as fallbacks.
+        """When source_zone_id is provided, entity_mapping is NOT in the initial search.
 
-        The mod's authoritative zone is first, but entity_mapping zones are appended.
-        This handles cases where the mod reports a parent zone but the actual link is
-        from a sub-zone (e.g., "Specimen Storehouse" vs "Specimen Storehouse - Before Messmer").
+        Regression test for report 260119_2104:
+        - Player was in liurnia_evergaol_bols (specific sub-zone)
+        - Mod correctly sent source_zone_id=liurnia_evergaol_bols
+        - Entity_mapping added Liurnia (parent zone) as candidate
+        - Bug: Both zones searched together caused false discovery (liurnia → isolated_tower)
+        - Fix: Trust mod's zone completely, don't merge entity_mapping expansion
+
+        Entity_mapping expansion is only used as Fallback 1 if no match is found
+        with the mod's authoritative zone.
         """
         # Add entity_mapping that would expand source candidates
         entity_mapping = {
@@ -3322,7 +3328,7 @@ class TestSourceZoneFiltering:
             [("limgrave_east", "Limgrave - East")],  # Source (only limgrave_east)
             [("stormveil", "Stormveil Castle")],  # Target
         ]
-        # Entity mapping would add limgrave from map_id
+        # Entity mapping would add limgrave from map_id (but should NOT be used initially)
         mock_resolver.resolve_from_map_id.return_value = [
             ("limgrave", "Limgrave"),
             ("limgrave_east", "Limgrave - East"),
@@ -3381,24 +3387,28 @@ class TestSourceZoneFiltering:
                 }
             )
 
-            # Mod's zone is first, entity_mapping expansion is appended
+            # Only mod's zone should be in the source candidates (no entity_mapping expansion)
             call_args = mock_find.call_args[0]
             source_candidates = call_args[1]
-            # Mod's authoritative zone is first
+            # Mod's authoritative zone is used
             assert source_candidates[0] == ("limgrave_east", "Limgrave - East")
-            # Entity_mapping expansion is included as fallback
-            assert ("limgrave", "Limgrave") in source_candidates
+            # Entity_mapping expansion is NOT included (prevents false discoveries)
+            assert ("limgrave", "Limgrave") not in source_candidates
+            # Only one candidate (the mod's zone)
+            assert len(source_candidates) == 1
 
     @pytest.mark.asyncio
-    async def test_source_zone_id_proactive_entity_mapping_finds_subzone_link(
+    async def test_fallback1_entity_mapping_finds_subzone_link(
         self, mock_client, mock_manager, zone_links_ambiguous
     ):
-        """Entity_mapping expansion proactively finds links from sub-zones.
+        """Fallback 1: entity_mapping expansion finds links when mod's zone has no match.
 
-        Regression test for report 260118_2143:
-        - Mod reports parent zone (e.g., "Specimen Storehouse")
-        - Actual link is from sub-zone (e.g., "Specimen Storehouse - Before Messmer")
-        - Entity_mapping should proactively include sub-zone, allowing match on first try
+        Scenario (report 260118_2143):
+        - Mod reports parent zone (e.g., "Limgrave - East")
+        - Actual link is from different zone (e.g., "Limgrave") via entity_mapping
+        - First search with mod's zone finds no match
+        - Fallback 1 retries with entity_mapping expanded candidates
+        - Match is found on second try
         """
         # Add entity_mapping that would expand source candidates
         entity_mapping = {
@@ -3412,10 +3422,10 @@ class TestSourceZoneFiltering:
         mock_resolver = MagicMock()
         mock_resolver.resolve_by_col.return_value = (None, None)
         mock_resolver.resolve_all_candidates.side_effect = [
-            [("limgrave_east", "Limgrave - East")],  # Source
+            [("limgrave_east", "Limgrave - East")],  # Source (mod's zone)
             [("stormveil", "Stormveil Castle")],  # Target
         ]
-        # Entity mapping adds limgrave (simulating a sub-zone scenario)
+        # Entity mapping adds limgrave (the zone that has the actual link)
         mock_resolver.resolve_from_map_id.return_value = [
             ("limgrave", "Limgrave"),
             ("limgrave_east", "Limgrave - East"),
@@ -3426,25 +3436,33 @@ class TestSourceZoneFiltering:
         discovery_result = DiscoveryResult(origin="Limgrave")
         discovery_result.main_links = [DiscoveredLink("Limgrave", "Stormveil Castle", "random")]
 
+        # Mock find_all_matching_zone_pairs_by_ids to return:
+        # - First call (mod's zone only): no match
+        # - Second call (entity_mapping expanded): match found
+        find_results = [
+            [],  # First call: no match with mod's zone (limgrave_east)
+            [
+                (
+                    "limgrave",
+                    "stormveil",
+                    {
+                        "id": "link1",
+                        "source": "Limgrave",
+                        "source_id": "limgrave",
+                        "target": "Stormveil Castle",
+                        "target_id": "stormveil",
+                        "type": "random",
+                    },
+                )
+            ],  # Second call (Fallback 1): match with entity_mapping expansion
+        ]
+
         with (
             patch("fogtracker.websocket.mod.async_session") as mock_session,
             patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
             patch(
                 "fogtracker.websocket.mod.find_all_matching_zone_pairs_by_ids",
-                return_value=[
-                    (
-                        "limgrave",
-                        "stormveil",
-                        {
-                            "id": "link1",
-                            "source": "Limgrave",
-                            "source_id": "limgrave",
-                            "target": "Stormveil Castle",
-                            "target_id": "stormveil",
-                            "type": "random",
-                        },
-                    )
-                ],
+                side_effect=find_results,
             ) as mock_find,
             patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
             patch(
@@ -3468,18 +3486,22 @@ class TestSourceZoneFiltering:
                     "source_pos": {"x": 100, "y": 50, "z": 200},
                     "target_pos": {"x": 200, "y": 60, "z": 300},
                     "destination_entity_id": 755890692,
-                    "source_zone_id": "limgrave_east",  # Mod reports "parent" zone
+                    "source_zone_id": "limgrave_east",  # Mod reports zone with no link
                 }
             )
 
-            # With proactive entity_mapping expansion, first call includes both zones
-            # No fallback needed - match found on first try
-            assert mock_find.call_count == 1
+            # Should have called find twice: initial search + Fallback 1
+            assert mock_find.call_count == 2
 
-            # First call should include both mod's zone AND entity_mapping expansion
+            # First call: only mod's zone (no entity_mapping expansion)
             first_call_source = mock_find.call_args_list[0][0][1]
-            assert first_call_source[0] == ("limgrave_east", "Limgrave - East")  # Mod's zone first
-            assert ("limgrave", "Limgrave") in first_call_source  # Entity_mapping expansion
+            assert first_call_source == [("limgrave_east", "Limgrave - East")]
+            assert ("limgrave", "Limgrave") not in first_call_source
+
+            # Second call (Fallback 1): entity_mapping expanded candidates
+            second_call_source = mock_find.call_args_list[1][0][1]
+            assert ("limgrave", "Limgrave") in second_call_source
+            assert ("limgrave_east", "Limgrave - East") in second_call_source
 
 
 # =============================================================================

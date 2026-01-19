@@ -1047,17 +1047,16 @@ class ModClient(Client):
                                     )
 
                 # Find ALL matches using zone_id-based matching, then pick lowest backprop cost
-                # When mod provides authoritative source: keep mod's zone first, but also include
-                # entity_mapping expansions as fallbacks. This handles cases like fog gates that
-                # connect sub-zones (e.g., "Specimen Storehouse - Before Messmer") but the mod
-                # reports the parent zone ("Specimen Storehouse").
+                # When mod provides authoritative source: trust the mod's zone completely.
+                # If no match is found, Fallback 1 (lines below) will retry with entity_mapping
+                # expansion. This two-phase approach prevents false discoveries like discovering
+                # "liurnia -> isolated_tower" when the player was in "liurnia_evergaol_bols"
+                # (entity_mapping added "Liurnia" as parent zone, causing false match).
                 # Use position-based target candidates first (not expanded by entity_mapping)
                 if mod_source_authoritative:
-                    # Merge: mod's zone first, then entity_mapping expansions (deduped)
-                    existing_ids = {c[0] for c in source_candidates}
-                    source_for_matching = source_candidates + [
-                        c for c in expanded_source_candidates if c[0] not in existing_ids
-                    ]
+                    # Trust mod completely - don't merge entity_mapping expansions
+                    # Fallback 1 will retry with expansions if no match found
+                    source_for_matching = source_candidates
                 else:
                     source_for_matching = expanded_source_candidates
                 target_for_matching = target_candidates
