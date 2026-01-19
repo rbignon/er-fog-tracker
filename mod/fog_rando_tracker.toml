@@ -2,36 +2,6 @@
 # ==============================
 #
 # This file MUST be placed next to fog_rando_tracker.dll for the mod to work.
-#
-# =============================================================================
-# HOTKEY FORMAT
-# =============================================================================
-#
-# Hotkeys support optional modifiers: ctrl, shift, alt
-# Format: "key" or "modifier+key" or "modifier+modifier+key"
-#
-# Examples:
-#   "f9"           - Just F9
-#   "ctrl+f9"      - Ctrl + F9
-#   "shift+a"      - Shift + A
-#   "ctrl+shift+s" - Ctrl + Shift + S
-#   "alt+1"        - Alt + 1
-#
-# =============================================================================
-# VALID KEY NAMES
-# =============================================================================
-#
-# Letters:      a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z
-# Numbers:      0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-# Function:     f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12
-# Numpad:       numpad0-numpad9, num0-num9, multiply, add, subtract, decimal, divide
-# Navigation:   insert (ins), delete (del, suppr), home, end, pageup (pgup), pagedown (pgdn)
-# Arrows:       up, down, left, right
-# Special:      escape (esc), enter (return), space, tab, backspace
-# Punctuation:  semicolon (;), equals (=), comma (,), minus (-), period (.), slash (/), etc.
-#
-# Key names are case-insensitive: "F9", "f9", "F9" all work the same.
-# =============================================================================
 
 # =============================================================================
 # KEYBINDINGS
@@ -65,19 +35,19 @@ upload_logs = "ctrl+f12"
 #   - Absolute path "C:\Fonts\MyFont.ttf": Uses the specified file
 font_path = ""
 
-# Font size in pixels (16.0 recommended for 1080p, 24.0 for 4K)
-font_size = 16.0
+# Font size in pixels (32.0 recommended for 1080p, 64.0 for 4K)
+font_size = 32
 
 # Icon size in pixels for rune_icons and kindling_icon (optional)
 # If not set, uses font_size
-# icon_size = 24.0
+# icon_size = 32.0
 
 # Maximum overlay height in pixels (optional)
 # If the overlay exceeds this height, the exits section font will be scaled
 # down (to exits_min_font_scale). If it still doesn't fit, the exits list
 # will be truncated with a "+ X others" indicator.
 # If not set, no height limit is applied.
-# max_height = 300.0
+max_height = 500.0
 
 # Minimum font scale for exits section when max_height is exceeded (0.0 to 1.0)
 # Default: 0.5 (50% of original size). Below this threshold, exits are
@@ -148,8 +118,8 @@ border_color = "#404040"         # Border color (only used if show_border = true
 #   "{rune_icons} {kindling_icon}{kindling}"             - Rune icons + kindling icon with count
 #   "{death_icon}{deaths}"                               - Death icon with count
 #   "{zone}$n{scaling}$>{status} {discovered}/{total}"   - Two lines with zone scaling
-#
-status_template = "{status} {zone}$>{discovered}/{total} | {igt}$n{rune_icons}{kindling_icon}{kindling}$>{death_icon}{deaths}"
+
+status_template = "{status} {zone}$>{igt:blue}$n{scaling:yellow}$>{discovered:green}/{total}$n{rune_icons}{kindling_icon}{kindling}$>{death_icon}{deaths}"
 
 # Text shown when zone is unknown (before first fog traversal)
 zone_unknown_text = "(traverse a fog to identify)"
