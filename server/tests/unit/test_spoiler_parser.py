@@ -153,7 +153,7 @@ class TestExtractRequiredItem:
 
     def test_haligtree_medallion(self):
         assert (
-            _extract_required_item("using the Haligtree Secret Medallion", "")
+            _extract_required_item("using the Haligtree secret medallion", "")
             == "Haligtree Secret Medallion"
         )
 

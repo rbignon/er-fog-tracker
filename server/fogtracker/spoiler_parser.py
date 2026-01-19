@@ -72,7 +72,7 @@ KNOWN_KEY_ITEMS = [
     "Rusty Key",
     "Academy Glintstone Key",
     "Dectus Medallion",
-    "Haligtree secret medallion",
+    "Haligtree Secret Medallion",
     "Rold Medallion",
     "Cursemark of Death",
     "Dark Moon Ring",
