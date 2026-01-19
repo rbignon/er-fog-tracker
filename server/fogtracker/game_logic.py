@@ -228,6 +228,7 @@ def format_resolution_failure(
     map_id: str,
     reason: str,
     candidates: list[str] | None = None,
+    grace_entity_id: int | None = None,
 ) -> str:
     """Format a resolution failure as a visual warning for logging."""
     lines = []
@@ -236,6 +237,8 @@ def format_resolution_failure(
     lines.append("╭─ Resolution Failed ─────────────────────────────────────────")
     lines.append(f"│ Context:    {context}")
     lines.append(f"│ Map:        {map_id}")
+    if grace_entity_id:
+        lines.append(f"│ Grace ID:   {grace_entity_id}")
     lines.append(f"│ Reason:     {reason}")
 
     if candidates:
