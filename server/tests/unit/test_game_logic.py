@@ -721,3 +721,190 @@ class TestBidirectionalBackpropSkip:
 
         # Result should have backprop_links
         assert len(result.backprop_links) > 0, "Should have back-propagated links"
+
+
+class TestForwardPropagationFromAlreadyDiscoveredNode:
+    """Tests for forward propagation when target is already in discovered_nodes.
+
+    This is a regression test for the bug where preexisting links from a zone
+    were NOT propagated when that zone was already in discovered_nodes (reachable
+    via preexisting from another discovered zone).
+
+    Bug scenario (Castle Sol issue):
+    1. Mountaintops discovered via random link from Siofra River
+    2. Castle Sol becomes reachable via preexisting link from Mountaintops
+       (so Castle Sol is in discovered_nodes)
+    3. Player discovers random link: Catacombs Boss -> Castle Sol
+    4. BUG: Preexisting link Castle Sol -> Mountaintops was NOT recorded
+       because Castle Sol was already in discovered_nodes
+
+    After fix:
+    - Even if target is already in discovered_nodes, its preexisting links
+      should be propagated and recorded.
+    """
+
+    @pytest.fixture
+    def forward_prop_zone_pairs(self) -> list[dict]:
+        """Zone pairs that reproduce the Castle Sol bug."""
+        return [
+            # Path to Siofra River (where Mountaintops was discovered from)
+            {
+                "id": "link-start-siofra",
+                "source": "Chapel of Anticipation",
+                "source_id": "chapel_start",
+                "target": "Siofra River",
+                "target_id": "siofra",
+                "type": "random",
+                "is_one_way": False,
+            },
+            # Siofra -> Mountaintops (discovered earlier)
+            {
+                "id": "link-siofra-mountaintops",
+                "source": "Siofra River",
+                "source_id": "siofra",
+                "target": "Mountaintops of the Giants",
+                "target_id": "mountaintops",
+                "type": "random",
+                "is_one_way": False,
+            },
+            # Preexisting: Mountaintops <-> Castle Sol
+            {
+                "id": "link-mountaintops-sol",
+                "source": "Mountaintops of the Giants",
+                "source_id": "mountaintops",
+                "target": "Castle Sol",
+                "target_id": "mountaintops_sol",
+                "type": "preexisting",
+                "is_one_way": False,
+            },
+            {
+                "id": "link-sol-mountaintops",
+                "source": "Castle Sol",
+                "source_id": "mountaintops_sol",
+                "target": "Mountaintops of the Giants",
+                "target_id": "mountaintops",
+                "type": "preexisting",
+                "is_one_way": False,
+            },
+            # Path to Catacombs Boss
+            {
+                "id": "link-start-altus",
+                "source": "Chapel of Anticipation",
+                "source_id": "chapel_start",
+                "target": "Altus Plateau",
+                "target_id": "altus",
+                "type": "random",
+                "is_one_way": False,
+            },
+            {
+                "id": "link-altus-catacombs-boss",
+                "source": "Altus Plateau",
+                "source_id": "altus",
+                "target": "Unsightly Catacombs Boss",
+                "target_id": "altus_catacombs_boss",
+                "type": "random",
+                "is_one_way": False,
+            },
+            # THE LINK BEING DISCOVERED: Catacombs Boss -> Castle Sol
+            {
+                "id": "link-boss-sol",
+                "source": "Unsightly Catacombs Boss",
+                "source_id": "altus_catacombs_boss",
+                "target": "Castle Sol",
+                "target_id": "mountaintops_sol",
+                "type": "random",
+                "is_one_way": False,
+                "blocks_propagation": False,
+            },
+        ]
+
+    @pytest.fixture
+    def mock_game_forward_prop(self, forward_prop_zone_pairs):
+        """Create a mock game with Mountaintops already discovered."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        game = MagicMock()
+        game.id = uuid4()
+        game.zone_links = forward_prop_zone_pairs
+        # Mountaintops already discovered (via Siofra), but NOT Castle Sol directly
+        game.discovered_zone_links = [
+            {"zone_link_id": "link-start-siofra"},
+            {"zone_link_id": "link-siofra-mountaintops"},  # Mountaintops discovered!
+            {"zone_link_id": "link-start-altus"},
+            {"zone_link_id": "link-altus-catacombs-boss"},
+        ]
+        game.starting_zone_id = "chapel_start"
+        return game
+
+    @pytest.fixture
+    def mock_db_forward_prop(self, mock_game_forward_prop):
+        """Create a mock database session."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        db = AsyncMock()
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = mock_game_forward_prop
+        db.execute.return_value = result
+        db.refresh = AsyncMock()
+        db.flush = AsyncMock()
+        return db
+
+    def test_castle_sol_already_in_discovered_nodes(self, forward_prop_zone_pairs):
+        """Verify that Castle Sol is already in discovered_nodes via preexisting."""
+        from fogtracker.zone_matching import get_discovered_nodes
+
+        discovered_links = [
+            {"zone_link_id": "link-start-siofra"},
+            {"zone_link_id": "link-siofra-mountaintops"},
+            {"zone_link_id": "link-start-altus"},
+            {"zone_link_id": "link-altus-catacombs-boss"},
+        ]
+        discovered_nodes = get_discovered_nodes(
+            discovered_links, forward_prop_zone_pairs, "chapel_start"
+        )
+
+        # Mountaintops is discovered directly
+        assert "mountaintops" in discovered_nodes
+        # Castle Sol should be in discovered_nodes via preexisting from Mountaintops
+        assert "mountaintops_sol" in discovered_nodes
+
+    @pytest.mark.asyncio
+    async def test_forward_propagates_preexisting_from_already_discovered_node(
+        self, mock_db_forward_prop, mock_game_forward_prop
+    ):
+        """Forward propagation should record preexisting links even if target is already discovered.
+
+        This is the main regression test for the Castle Sol bug.
+        """
+        from fogtracker.game_logic import propagate_discovery
+
+        result = await propagate_discovery(
+            mock_db_forward_prop,
+            mock_game_forward_prop.id,
+            source_id="altus_catacombs_boss",
+            target_id="mountaintops_sol",
+            discovered_by="test",
+        )
+
+        discovered_ids = {
+            dl.get("zone_link_id") for dl in mock_game_forward_prop.discovered_zone_links
+        }
+
+        # Main link should be discovered
+        assert "link-boss-sol" in discovered_ids
+
+        # Preexisting links from Castle Sol should be propagated
+        # (this was the bug - these were NOT propagated before)
+        assert (
+            "link-sol-mountaintops" in discovered_ids
+        ), "Preexisting link Castle Sol -> Mountaintops should be propagated"
+        assert (
+            "link-mountaintops-sol" in discovered_ids
+        ), "Preexisting link Mountaintops -> Castle Sol should be propagated"
+
+        # The result should show forward_links
+        forward_link_targets = [(link.source_id, link.target_id) for link in result.forward_links]
+        assert any(
+            src == "mountaintops_sol" and tgt == "mountaintops" for src, tgt in forward_link_targets
+        ), "Forward links should include Castle Sol -> Mountaintops"

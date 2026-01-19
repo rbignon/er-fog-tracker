@@ -639,7 +639,25 @@ async def propagate_discovery(
                     queue.append((dst, next_dst, None, False, False))
                     logger.debug("[DISCOVERY] Queuing preexisting: %s → %s", dst, next_dst)
         else:
-            # Both nodes already discovered - check for preexisting links between them
+            # Target was already in discovered_nodes (reachable via preexisting from
+            # another discovered zone). However, its preexisting links may not have been
+            # explicitly recorded. Queue them for discovery if not blocking.
+            # This handles the case where:
+            # 1. Zone A is discovered
+            # 2. Zone B is reachable via preexisting from A (so B is in discovered_nodes)
+            # 3. Later, player discovers random link X -> B
+            # 4. B's preexisting links (e.g., B -> C) should now be recorded
+            if not blocks_prop:
+                for next_dst, _is_bidir in preexisting_adj.get(dst, []):
+                    # Queue for discovery - will be skipped if already visited
+                    queue.append((dst, next_dst, None, False, False))
+                    logger.debug(
+                        "[DISCOVERY] Queuing preexisting from already-discovered zone: %s → %s",
+                        dst,
+                        next_dst,
+                    )
+
+            # Also check for preexisting links between src and dst
             # that haven't been discovered yet (parallel links scenario)
             all_links = find_all_zone_link_ids(src, dst)
             for link_uuid, link_type in all_links:

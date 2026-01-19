@@ -241,12 +241,34 @@ Zone A ─────► Zone B ◄──────────────�
 Discover B → Also discovers C and D (via preexisting links)
 ```
 
-**Algorithm** (recursive):
-1. Mark zone as discovered
-2. For each preexisting link from this zone:
-   - If target not discovered AND (bidirectional OR forward direction):
-     - Recursively discover target
-     - Mark link as discovered
+**Algorithm** (recursive BFS):
+1. Queue the newly discovered link (source → target)
+2. While queue is not empty:
+   - Process link (src → dst)
+   - If dst is a newly discovered node:
+     - Queue all preexisting links from dst
+   - Else if dst was already reachable (via preexisting from another zone):
+     - **Still queue preexisting links from dst** (ensures they're explicitly recorded)
+   - Mark link as discovered
+
+**Important**: Preexisting links are propagated even when the target zone was already
+in `discovered_nodes` (reachable via preexisting expansion). This ensures that:
+- All preexisting links are explicitly recorded in `discovered_zone_links`
+- Exits are correctly displayed in the UI
+
+**Example** (Castle Sol scenario):
+```
+                random                     preexisting                 preexisting
+Siofra River ─────────► Mountaintops ◄───────────────────► Castle Sol ◄─────────────► Flame Peak
+                           (discovered)                      (reachable)               (reachable)
+
+1. Siofra → Mountaintops discovered
+   → Castle Sol becomes reachable (in discovered_nodes via preexisting)
+
+2. Later: Catacombs Boss → Castle Sol discovered
+   → Castle Sol was already reachable, but preexisting links NOT recorded
+   → Now: Castle Sol → Mountaintops and Mountaintops → Flame Peak are propagated
+```
 
 ### Parallel Links Propagation
 
