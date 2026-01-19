@@ -58,7 +58,8 @@ class DiscoveredLink:
 class DiscoveryResult:
     """Structured result of a discovery propagation."""
 
-    origin: str  # The zone where the player was when discovering
+    origin: str  # The zone display name where the player was when discovering
+    origin_id: str | None = None  # The zone_id where the player was when discovering
     main_links: list[DiscoveredLink] = field(
         default_factory=list
     )  # The directly discovered link(s)
@@ -99,9 +100,23 @@ def format_discovery_summary(
     """Format a discovery result as a visual summary for logging."""
     lines = []
 
+    def format_zone(name: str, zone_id: str | None) -> str:
+        """Format zone name with ID in parentheses."""
+        if zone_id and zone_id != name:
+            return f"{name} ({zone_id})"
+        return name
+
+    def format_link(link: DiscoveredLink) -> str:
+        """Format a link with zone IDs."""
+        arrow = "───>" if link.link_type == "random" else "--->"
+        src = format_zone(link.source_name, link.source_id)
+        tgt = format_zone(link.target_name, link.target_id)
+        return f"{src} {arrow} {tgt}"
+
     # Header
     lines.append("╭─ Discovery Summary ─────────────────────────────────────────")
-    lines.append(f"│ Origin:     {result.origin}")
+    origin_str = format_zone(result.origin, result.origin_id)
+    lines.append(f"│ Origin:     {origin_str}")
     if warp_type:
         lines.append(f"│ Warp type:  {warp_type}")
     if resolution_method:
@@ -110,22 +125,19 @@ def format_discovery_summary(
     # Main discovered link(s)
     if result.main_links:
         for link in result.main_links:
-            arrow = "───>" if link.link_type == "random" else "--->"
-            lines.append(f"│ Link:       {link.source_name} {arrow} {link.target_name}")
+            lines.append(f"│ Link:       {format_link(link)}")
 
     # Back-propagation section
     if result.backprop_links:
         lines.append(f"├─ Back-propagation ({len(result.backprop_links)}):")
         for link in result.backprop_links:
-            arrow = "───>" if link.link_type == "random" else "--->"
-            lines.append(f"│   ◂ {link.source_name} {arrow} {link.target_name}")
+            lines.append(f"│   ◂ {format_link(link)}")
 
     # Forward-propagation section
     if result.forward_links:
         lines.append(f"├─ Forward-propagation ({len(result.forward_links)}):")
         for link in result.forward_links:
-            arrow = "───>" if link.link_type == "random" else "--->"
-            lines.append(f"│   ▸ {link.source_name} {arrow} {link.target_name}")
+            lines.append(f"│   ▸ {format_link(link)}")
 
     # Footer with stats
     total = result.total_count()
@@ -182,17 +194,27 @@ def format_zone_resolution(
     method: str,
     exits_count: int,
     stats: dict,
+    zone_id: str | None = None,
     grace_entity_id: int | None = None,
+    grace_name: str | None = None,
 ) -> str:
     """Format a zone resolution result as a visual summary for logging."""
     lines = []
 
     # Header
     lines.append("╭─ Zone Resolution ───────────────────────────────────────────")
-    lines.append(f"│ Zone:       {zone}")
+    # Display zone with ID in parentheses
+    if zone_id:
+        lines.append(f"│ Zone:       {zone} ({zone_id})")
+    else:
+        lines.append(f"│ Zone:       {zone}")
     lines.append(f"│ Method:     {method}")
+    # Always display Grace ID if available
     if grace_entity_id:
         lines.append(f"│ Grace ID:   {grace_entity_id}")
+        # If we matched via grace_id, also show the grace name for reference
+        if method == "Grace entity ID" and grace_name:
+            lines.append(f"│ Grace Name: {grace_name}")
 
     # Footer with stats
     stats_str = f"{stats.get('discovered', 0)}/{stats.get('total', 0)}"
@@ -324,6 +346,7 @@ async def propagate_discovery(
         return zone_name_by_id.get(zone_id, zone_id)
 
     discovery_result.origin = get_zone_name(source_id)
+    discovery_result.origin_id = source_id
 
     # Build index to look up link type by zone_ids (source_id/target_id)
     def get_link_type(src_id: str, dst_id: str) -> str:

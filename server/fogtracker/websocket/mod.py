@@ -587,9 +587,11 @@ class ModClient(Client):
 
             # 1. Try grace entity ID resolution (most precise for fast travel)
             resolver = get_resolver()
+            grace_name = None  # Store for logging
             if grace_entity_id:
                 grace_info = resolver.get_grace_info(grace_entity_id)
                 if grace_info:
+                    grace_name = grace_info.get("grace_name")
                     # Use zone_id directly from graces.json (avoids display name ambiguity)
                     grace_zone_id = grace_info.get("zone_id")
                     grace_zone = grace_info.get("zone")
@@ -678,7 +680,9 @@ class ModClient(Client):
             method=resolution_method or "Unknown",
             exits_count=len(exits),
             stats=stats,
-            grace_entity_id=grace_entity_id if resolution_method == "Grace entity ID" else None,
+            zone_id=zone_internal,
+            grace_entity_id=grace_entity_id,
+            grace_name=grace_name,
         )
         for line in resolution.split("\n"):
             logger.info(line)
