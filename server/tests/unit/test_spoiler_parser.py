@@ -758,8 +758,8 @@ class TestEnrichConnectionsOneWay:
         assert result.target_id == "shadowkeep_sanctum"
         assert result.is_one_way is True  # Should be corrected to True
 
-    def test_already_one_way_not_changed(self, resolver):
-        """Connections already marked one-way should stay one-way."""
+    def test_already_one_way_not_changed_when_not_in_fog_txt(self, resolver):
+        """Connections already marked one-way should stay one-way if not in fog.txt."""
         conn = ConnectionInfo(
             id="test-id",
             source="Some Zone",
@@ -771,7 +771,33 @@ class TestEnrichConnectionsOneWay:
         enriched = enrich_connections_with_zone_keys([conn], resolver)
         result = enriched[0]
 
+        # Zone not in fog.txt, so pattern-based detection is kept
         assert result.is_one_way is True
+
+    def test_fog_txt_bidirectional_overrides_pattern_one_way(self, resolver):
+        """fog.txt bidirectional should override pattern-based one-way detection.
+
+        Regression test: scadualtus -> gravesite has 'dropping down' in description
+        which would normally make it one-way, but fog.txt defines both directions
+        (dropping down one way, spiritspring the other), so it should be bidirectional.
+        """
+        conn = ConnectionInfo(
+            id="test-id",
+            source="West Scadu Altus",
+            target="Gravesite Plain",
+            conn_type="preexisting",
+            source_details=None,
+            target_details="dropping down",
+            is_one_way=True,  # Pattern says one-way (from "dropping")
+        )
+
+        enriched = enrich_connections_with_zone_keys([conn], resolver)
+        result = enriched[0]
+
+        assert result.source_id == "scadualtus"
+        assert result.target_id == "gravesite"
+        # fog.txt has both directions, so it should be bidirectional
+        assert result.is_one_way is False
 
     def test_random_connection_unchanged(self, resolver):
         """Random connections should not be affected by fog.txt To: structure."""
