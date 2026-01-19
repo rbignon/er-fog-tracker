@@ -654,6 +654,7 @@ class ModClient(Client):
                     map_id=map_id,
                     reason=reason,
                     candidates=all_candidates[:5] if all_candidates else None,
+                    grace_entity_id=grace_entity_id,
                 )
                 for line in failure.split("\n"):
                     logger.warning(line)
@@ -984,7 +985,14 @@ class ModClient(Client):
                         # Add and prioritize candidates from EMEVD maps
                         # The mod reports the player's tile, but the fog gate may be in a
                         # different tile. EMEVD maps tell us where the fog gate actually is.
-                        if emevd_source_map:
+                        # IMPORTANT: Only expand source candidates when emevd_source_map
+                        # matches the player's actual source_map_id. If they differ, the
+                        # entity_mapping's source_map likely refers to where the fog gate
+                        # LEADS (the destination), not where the entrance is. Adding zones
+                        # from the wrong map causes false matches (e.g., stormveil_start
+                        # -> caelid_tower bug where caelid_tower zones were added as source
+                        # candidates because entity_mapping said source=m34_13_00_00).
+                        if emevd_source_map and emevd_source_map == source_map_id:
                             emevd_source_zones = resolver.resolve_from_map_id(emevd_source_map)
                             if emevd_source_zones:
                                 emevd_keys = {z[0] for z in emevd_source_zones}

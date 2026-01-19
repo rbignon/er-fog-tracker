@@ -862,6 +862,168 @@ class TestDiscoveryV2Handler:
         # The problematic link (siofra → volcano_pathway) should NOT be discovered
         # If it were, propagate_discovery would have been called twice
 
+    @pytest.mark.asyncio
+    async def test_regression_stormveil_to_caelid_tower_no_false_discovery(
+        self, mock_client, mock_manager
+    ):
+        """Regression test: entity_mapping with mismatched source_map should not expand source candidates.
+
+        Bug scenario (report 260119_1925):
+        - Player goes from stormveil_start (m10_00_00_00) through fog gate to caelid_tower
+        - Entity_mapping for fog gate 755890734 says source=m34_13_00_00, dest=m34_13_00_00
+        - This caused caelid_tower zones to be added as SOURCE candidates (wrong!)
+        - Matches were found between caelid_tower zones (as source) and target zones
+        - The correct link (stormveil → caelid_tower_postboss via preexisting-adjacent) was never found
+
+        Fix: Only expand source candidates from entity_mapping when emevd_source_map
+        matches the player's actual source_map_id. When they differ (m34_13_00_00 vs
+        m10_00_00_00), the entity_mapping's source_map refers to the destination, not
+        the actual source.
+        """
+        zone_links = [
+            # The correct link (from stormveil, not stormveil_start)
+            {
+                "id": "link-stormveil-caelid",
+                "source": "Stormveil Castle after Gate",
+                "source_id": "stormveil",
+                "target": "Divine Tower of Caelid - After Godskin Apostle",
+                "target_id": "caelid_tower_postboss",
+                "type": "random",
+                "is_one_way": False,
+            },
+            # Preexisting link between stormveil_start and stormveil
+            {
+                "id": "link-stormveil-preexisting",
+                "source": "Stormveil Castle before Gate",
+                "source_id": "stormveil_start",
+                "target": "Stormveil Castle after Gate",
+                "target_id": "stormveil",
+                "type": "preexisting",
+                "is_one_way": False,
+            },
+            # Links that would cause false matches if caelid_tower zones were added as source
+            {
+                "id": "link-caelid-inner",
+                "source": "Divine Tower of Caelid",
+                "source_id": "caelid_tower",
+                "target": "Divine Tower of Caelid Interior",
+                "target_id": "caelid_tower_inner",
+                "type": "random",
+                "is_one_way": False,
+            },
+            {
+                "id": "link-caelid-dragonbarrow",
+                "source": "Divine Tower of Caelid",
+                "source_id": "caelid_tower",
+                "target": "Dragonbarrow",
+                "target_id": "dragonbarrow",
+                "type": "random",
+                "is_one_way": False,
+            },
+        ]
+        # Entity_mapping with MISMATCHED source_map (m34 instead of m10)
+        entity_mapping = {
+            "755890734": {
+                "source_map": "m34_13_00_00",  # Wrong! Should be m10 where fog gate entrance is
+                "dest_map": "m34_13_00_00",
+            }
+        }
+        mock_game = self._make_mock_game(zone_links, entity_mapping=entity_mapping)
+
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_by_col.return_value = (None, None)
+        # Position resolution: stormveil_start (source) → caelid_tower zones (target)
+        mock_resolver.resolve_all_candidates.side_effect = [
+            [("stormveil_start", "Stormveil Castle before Gate")],  # Source from position
+            [
+                ("caelid_tower", "Divine Tower of Caelid"),
+                ("caelid_tower_postboss", "Divine Tower of Caelid - After Godskin Apostle"),
+                ("caelid_tower_inner", "Divine Tower of Caelid Interior"),
+            ],  # Target candidates
+        ]
+        # Entity_mapping would add these zones (but should be ignored for source since maps don't match)
+        mock_resolver.resolve_from_map_id.side_effect = [
+            [
+                ("caelid_tower", "Divine Tower of Caelid"),
+                ("caelid_tower_postboss", "Divine Tower of Caelid - After Godskin Apostle"),
+                ("caelid_tower_inner", "Divine Tower of Caelid Interior"),
+            ],  # From emevd_source_map m34 - should NOT be added to source candidates!
+            [
+                ("caelid_tower", "Divine Tower of Caelid"),
+                ("caelid_tower_postboss", "Divine Tower of Caelid - After Godskin Apostle"),
+                ("caelid_tower_inner", "Divine Tower of Caelid Interior"),
+            ],  # From emevd_dest_map m34
+        ]
+        mock_resolver.filter_candidates_by_animation.side_effect = lambda c, m, w: c
+        mock_resolver.zone_display_names = {
+            "stormveil": "Stormveil Castle after Gate",
+            "stormveil_start": "Stormveil Castle before Gate",
+            "caelid_tower": "Divine Tower of Caelid",
+            "caelid_tower_postboss": "Divine Tower of Caelid - After Godskin Apostle",
+            "caelid_tower_inner": "Divine Tower of Caelid Interior",
+        }
+
+        discovery_result = DiscoveryResult(origin="Stormveil Castle after Gate")
+        discovery_result.main_links = [
+            DiscoveredLink(
+                "Stormveil Castle after Gate",
+                "Divine Tower of Caelid - After Godskin Apostle",
+                "random",
+            )
+        ]
+
+        with (
+            patch("fogtracker.websocket.mod.async_session") as mock_session,
+            patch("fogtracker.websocket.mod.get_resolver", return_value=mock_resolver),
+            patch("fogtracker.websocket.mod.compute_backprop_cost", return_value=0),
+            patch(
+                "fogtracker.websocket.mod.propagate_discovery",
+                return_value=discovery_result,
+            ) as mock_propagate,
+            patch("fogtracker.websocket.mod.compute_zone_exits", return_value=[]),
+            patch(
+                "fogtracker.websocket.mod.compute_discovery_stats",
+                return_value={"discovered": 1, "total": 2, "percent": 50},
+            ),
+            patch("fogtracker.websocket.mod.expand_discovered_links", return_value=[]),
+            patch("fogtracker.websocket.mod.manager", mock_manager),
+        ):
+            self._setup_db_mock(mock_session, mock_game)
+
+            await mock_client._handle_discovery_v2(
+                {
+                    "source_map_id": "m10_00_00_00",  # Player is in Stormveil map
+                    "target_map_id": "m34_13_00_00",  # Going to Caelid Tower map
+                    "source_pos": {"x": -78.2, "y": 38.5, "z": 120.1},
+                    "target_pos": {"x": 77.0, "y": 36.4, "z": -109.4},
+                    "destination_entity_id": 755890734,
+                    "source_zone_id": "stormveil_start",  # Mod knows player was at stormveil_start
+                    "source_zone": "Stormveil Castle before Gate",
+                }
+            )
+
+        # Verify propagate_discovery was called exactly ONCE with the correct link
+        # The preexisting-adjacent fallback should find stormveil → caelid_tower_postboss
+        mock_propagate.assert_called_once()
+
+        # Verify it was called with the correct link (stormveil → caelid_tower_postboss)
+        call_args = mock_propagate.call_args
+        source_id = call_args[0][2]
+        target_id = call_args[0][3]
+
+        assert source_id == "stormveil", f"Expected source 'stormveil', got '{source_id}'"
+        assert (
+            target_id == "caelid_tower_postboss"
+        ), f"Expected target 'caelid_tower_postboss', got '{target_id}'"
+
+        # Key assertion: verify that resolve_from_map_id was only called ONCE (for dest map)
+        # With the fix, the source map call is skipped because emevd_source_map != source_map_id
+        # If this fails, it means the guard condition isn't working
+        assert mock_resolver.resolve_from_map_id.call_count == 1, (
+            f"Expected resolve_from_map_id called once (dest only), "
+            f"got {mock_resolver.resolve_from_map_id.call_count}"
+        )
+
     # -------------------------------------------------------------------------
     # Backprop cost tests
     # -------------------------------------------------------------------------
