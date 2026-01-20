@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     max_games_per_user: int = 10
     max_viewers_per_game: int = 10
 
+    # Discord integration (optional)
+    discord_webhook_url: str | None = None
+
+    # Base URL for external links (used in Discord notifications)
+    base_url: str = "https://fogtracker.malenia.win"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

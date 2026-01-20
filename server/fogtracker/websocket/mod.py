@@ -2,6 +2,7 @@
 Mod WebSocket client handler.
 """
 
+import asyncio
 import contextlib
 import logging
 from datetime import datetime
@@ -14,6 +15,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from fogtracker.config import get_settings
 from fogtracker.database import Game, async_session
+from fogtracker.discord import notify_player_connected
 from fogtracker.game_logic import (
     DiscoveryResult,
     format_discovery_summary,
@@ -1376,6 +1378,19 @@ class ModClient(Client):
             with contextlib.suppress(Exception):
                 await room.host.send({"type": "mod_connected"})
         await manager.broadcast_to_viewers(game_id, {"type": "mod_connected"})
+
+        # Fire-and-forget Discord notification
+        task = asyncio.create_task(
+            notify_player_connected(
+                twitch_username=user.twitch_username,
+                twitch_display_name=user.twitch_display_name,
+                twitch_avatar_url=user.twitch_avatar_url,
+                game_id=str(game_id),
+                game_label=game.label,
+            )
+        )
+        # Suppress "Task exception was never retrieved" warnings
+        task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
 
         try:
             await client.run()
