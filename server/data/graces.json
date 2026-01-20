@@ -1592,9 +1592,9 @@
     },
     "1035452950": {
       "grace_name": "South Raya Lucaria Gate",
-      "zone": "Liurnia - South Raya Lucaria Gate",
+      "zone": "Liurnia",
       "map_id": "m60_35_45_00",
-      "zone_id": "liurnia_south_raya_lucaria_gate"
+      "zone_id": "liurnia"
     },
     "1035462950": {
       "grace_name": "Main Academy Gate",
@@ -1718,9 +1718,9 @@
     },
     "1038412950": {
       "grace_name": "Laskyar Ruins",
-      "zone": "Liurnia - Laskyar Ruins",
+      "zone": "Liurnia",
       "map_id": "m60_38_41_00",
-      "zone_id": "liurnia_laskyar_ruins"
+      "zone_id": "liurnia"
     },
     "1038432950": {
       "grace_name": "Gate Town Bridge",
