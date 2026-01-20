@@ -1212,14 +1212,41 @@ class TestConditionalFogGates:
         assert len(resolver.fog_gate_detail_has_cond) > 0
 
         # Check some expected entries exist
+        # Keys are tuples (detail_text, area) since fixing the disambiguation bug
         expected_texts = [
             "before Soldier of Godrick's arena",
             "outside of Godfrey's arena at the base of a shortcut ladder",
         ]
         for text in expected_texts:
             # Use partial match since the full text might be slightly different
-            found = any(text in key for key in resolver.fog_gate_detail_has_cond)
+            # Check the first element of each tuple key (the detail_text)
+            found = any(text in key[0] for key in resolver.fog_gate_detail_has_cond)
             assert found, f"Expected to find '{text}' in fog_gate_detail_has_cond"
+
+    def test_disambiguates_aside_bside_with_same_text(self, resolver):
+        """Test that ASide and BSide with same text are correctly disambiguated.
+
+        The Limgrave-Nokron boundary fog gate (AEG099_231_9000) has:
+        - ASide: area=limgrave, text="at the start of Nokron from Limgrave", Cond: caelid_radahn
+        - BSide: area=siofrabank_prenokron, text="at the start of Nokron from Limgrave" (no Cond)
+
+        When arriving at siofrabank_prenokron via a random link, the link should NOT
+        have blocks_propagation=True because BSide has no Cond:. This ensures the
+        preexisting link from siofrabank_prenokron to siofrabank_nokron is propagated.
+        """
+        detail_text = "at the start of Nokron from Limgrave"
+
+        # ASide (limgrave) has Cond: caelid_radahn
+        assert resolver.has_conditional_fog_gate_by_detail(detail_text, "limgrave") is True
+
+        # BSide (siofrabank_prenokron) has NO Cond:
+        assert (
+            resolver.has_conditional_fog_gate_by_detail(detail_text, "siofrabank_prenokron")
+            is False
+        )
+
+        # Without target_zone_id, fallback returns True (any match)
+        assert resolver.has_conditional_fog_gate_by_detail(detail_text) is True
 
 
 class TestMusttrapFogGates:

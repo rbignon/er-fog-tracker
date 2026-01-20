@@ -580,17 +580,18 @@ def enrich_connections_with_zone_keys(
             is_one_way = True
 
         # Determine blocks_propagation for random connections using fog.txt Cond: fields
-        # If the target fog gate side (identified by target_details) has a Cond:,
+        # If the target fog gate side (identified by target_details + target_id) has a Cond:,
         # the link blocks forward propagation of preexisting links because the player
         # arrives at a restricted area and cannot access the rest of the destination
         # zone without meeting the condition (shortcut ladder, one-way door, drop, etc.)
         # Note: We don't set is_one_way here because the player CAN still use the
         # exit to return (e.g., "return to entrance" after a boss).
+        # We pass target_id to distinguish between ASide/BSide when they share the same text.
         blocks_propagation = False
         if (
             conn.conn_type == "random"
             and conn.target_details
-            and resolver.has_conditional_fog_gate_by_detail(conn.target_details)
+            and resolver.has_conditional_fog_gate_by_detail(conn.target_details, target_id)
         ):
             blocks_propagation = True
 

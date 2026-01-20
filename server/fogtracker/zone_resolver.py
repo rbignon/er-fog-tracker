@@ -97,9 +97,14 @@ class ZoneResolver:
         # source_zone -> {target_zones}
         self.preexisting_links: dict[str, set[str]] = {}
         # Fog gate conditional access from fog.txt ASide/BSide Cond: fields
-        # Maps detail_text -> True if that fog gate side has a Cond:
-        # This allows matching specific fog gates by their source_details
-        self.fog_gate_detail_has_cond: dict[str, bool] = {}
+        # Maps (detail_text, area) -> True if that specific fog gate side has a Cond:
+        # Using both detail_text and area as the key allows distinguishing between
+        # ASide and BSide when they share the same Text: value but only one has Cond:
+        # Note: This assumes (detail_text, area) uniquely identifies a fog gate side.
+        # If multiple fog gates lead to the same zone with identical detail text,
+        # only the last one's condition would be stored. This is acceptable for
+        # current fog.txt data where this combination is unique.
+        self.fog_gate_detail_has_cond: dict[tuple[str, str], bool] = {}
         # Fog gate musttrap tag from fog.txt ASide/BSide Tags: fields
         # Maps detail_text -> True if that fog gate side has Tags: musttrap
         # This indicates a one-way trap (player cannot return after entering)
@@ -356,12 +361,23 @@ class ZoneResolver:
                         self.map_zones[foggate_map].add(bside_area)
 
                 # Store fog gate conditions from the previous entry
-                # Map detail_text -> True for fog gate sides with Cond:
+                # Map (detail_text, area) -> True for fog gate sides with Cond:
                 # Only store if Cond is a simple zone name (not an item or complex condition)
-                if aside_text and aside_cond and self._is_zone_based_cond(aside_cond):
-                    self.fog_gate_detail_has_cond[aside_text] = True
-                if bside_text and bside_cond and self._is_zone_based_cond(bside_cond):
-                    self.fog_gate_detail_has_cond[bside_text] = True
+                # Using (detail_text, area) allows distinguishing ASide/BSide with same text
+                if (
+                    aside_text
+                    and aside_area
+                    and aside_cond
+                    and self._is_zone_based_cond(aside_cond)
+                ):
+                    self.fog_gate_detail_has_cond[(aside_text, aside_area)] = True
+                if (
+                    bside_text
+                    and bside_area
+                    and bside_cond
+                    and self._is_zone_based_cond(bside_cond)
+                ):
+                    self.fog_gate_detail_has_cond[(bside_text, bside_area)] = True
 
                 # Store musttrap tags from the previous entry
                 # Map detail_text -> True for fog gate sides with Tags: musttrap
@@ -540,10 +556,10 @@ class ZoneResolver:
                 self.map_zones[foggate_map].add(bside_area)
 
         # Store fog gate conditions for the last entry
-        if aside_text and aside_cond and self._is_zone_based_cond(aside_cond):
-            self.fog_gate_detail_has_cond[aside_text] = True
-        if bside_text and bside_cond and self._is_zone_based_cond(bside_cond):
-            self.fog_gate_detail_has_cond[bside_text] = True
+        if aside_text and aside_area and aside_cond and self._is_zone_based_cond(aside_cond):
+            self.fog_gate_detail_has_cond[(aside_text, aside_area)] = True
+        if bside_text and bside_area and bside_cond and self._is_zone_based_cond(bside_cond):
+            self.fog_gate_detail_has_cond[(bside_text, bside_area)] = True
 
         # Store musttrap tags for the last entry
         if aside_tags and "musttrap" in aside_tags:
@@ -993,7 +1009,9 @@ class ZoneResolver:
         """
         return target_key in self.preexisting_links.get(source_key, set())
 
-    def has_conditional_fog_gate_by_detail(self, detail_text: str | None) -> bool:
+    def has_conditional_fog_gate_by_detail(
+        self, detail_text: str | None, target_zone_id: str | None = None
+    ) -> bool:
         """
         Check if a fog gate side (identified by its detail text) has conditional access.
 
@@ -1014,13 +1032,22 @@ class ZoneResolver:
         Args:
             detail_text: The target_details text from the spoiler log
                         (corresponds to ASide/BSide Text: in fog.txt)
+            target_zone_id: The target zone key (e.g., "siofrabank_prenokron").
+                           When provided, checks if the specific side matching
+                           this zone has a Cond:. This is important when ASide
+                           and BSide share the same Text: but only one has Cond:.
 
         Returns:
             True if this specific fog gate side has a Cond: field.
         """
         if not detail_text:
             return False
-        return detail_text in self.fog_gate_detail_has_cond
+        if target_zone_id:
+            # Check if this specific (detail_text, area) combination has a condition
+            return (detail_text, target_zone_id) in self.fog_gate_detail_has_cond
+        # Fallback: check if any side with this detail text has a condition
+        # This is less precise but provides backwards compatibility
+        return any(key[0] == detail_text for key in self.fog_gate_detail_has_cond)
 
     def has_musttrap_by_detail(self, detail_text: str | None) -> bool:
         """
