@@ -1660,13 +1660,13 @@
       "grace_name": "East Raya Lucaria Gate",
       "zone": "Liurnia",
       "map_id": "m60_36_48_00",
-      "zone_id": "liurnia"
+      "zone_id": "bellum"
     },
     "1036492950": {
       "grace_name": "Bellum Church",
       "zone": "Liurnia",
       "map_id": "m60_36_49_00",
-      "zone_id": "liurnia"
+      "zone_id": "bellum"
     },
     "1036492951": {
       "grace_name": "The Ravine",
@@ -1762,7 +1762,7 @@
       "grace_name": "Grand Lift of Dectus",
       "zone": "Liurnia",
       "map_id": "m60_38_50_00",
-      "zone_id": "liurnia"
+      "zone_id": "bellum"
     },
     "1038502951": {
       "grace_name": "Ravine-Veiled Village",
