@@ -408,7 +408,7 @@ impl FogRandoTracker {
                             if let Some(err) = self.ws_client.last_error() {
                                 // Show user-friendly message for common HTTP errors
                                 let detail = if err.contains("502") || err.contains("Bad Gateway") {
-                                    "Server under maintenance".to_string()
+                                    "Maintenance".to_string()
                                 } else {
                                     err.to_string()
                                 };
