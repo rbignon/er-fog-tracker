@@ -2376,25 +2376,25 @@
       "map_id": "m60_46_47_00",
       "zone_id": "rauhruins_east"
     },
-    "1047452950": {
+    "2047452950": {
       "grace_name": "Scadu Altus, West",
       "zone": "West Scadu Altus",
       "map_id": "m60_47_45_00",
       "zone_id": "scadualtus"
     },
-    "1047472950": {
+    "2047472950": {
       "grace_name": "Viaduct Minor Tower",
       "zone": "Ancient Ruins of Rauh - East",
       "map_id": "m60_47_47_00",
       "zone_id": "rauhruins_east"
     },
-    "1048452950": {
+    "2048452950": {
       "grace_name": "Highroad Cross",
       "zone": "West Scadu Altus",
       "map_id": "m60_48_45_00",
       "zone_id": "scadualtus"
     },
-    "1048472950": {
+    "2048472950": {
       "grace_name": "Ancient Ruins Base",
       "zone": "Rauh Base",
       "map_id": "m60_48_47_00",
