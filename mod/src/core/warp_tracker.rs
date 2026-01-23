@@ -270,8 +270,16 @@ impl WarpTracker {
     // =========================================================================
 
     /// Clear pending warp if it has timed out.
+    ///
+    /// Pendings with `warp_was_requested=true` are never expired: they represent
+    /// a real warp in progress (e.g., loading screen after a waygate). Timing out
+    /// such a pending would cause the discovery to be lost.
     fn expire_timed_out_pending(&mut self) {
-        if self.pending_warp.as_ref().is_some_and(|p| p.is_timed_out()) {
+        if self
+            .pending_warp
+            .as_ref()
+            .is_some_and(|p| p.is_timed_out() && !p.warp_was_requested)
+        {
             self.pending_warp = None;
         }
     }
@@ -446,7 +454,18 @@ impl WarpTracker {
                 return;
             }
 
-            // Legitimate warp - mark as requested
+            // Legitimate warp - mark as requested.
+            // Update transport_type to the current animation if it's a teleport,
+            // because the pending may have been created by an earlier animation in
+            // a continuous teleport cycle (e.g., PostBossWarp cutscene before Waygate).
+            if frame.is_teleport_anim && frame.transport_type != pending.transport_type {
+                tracing::debug!(
+                    old_transport = pending.transport_type,
+                    new_transport = frame.transport_type,
+                    "[WARP] transport_type updated to current animation"
+                );
+                pending.transport_type = frame.transport_type.clone();
+            }
             tracing::debug!(
                 dest_entity = frame.dest_entity_id,
                 transport_type = pending.transport_type,
@@ -1878,6 +1897,162 @@ mod tests {
             tracker.pending_warp().unwrap().transport_type,
             "FOG_RANDO",
             "Fog Rando trigger should take priority over VanillaWarp"
+        );
+    }
+
+    #[test]
+    fn test_waygate_after_continuous_teleport_cycle() {
+        // Bug reproduction: Divine Tower of Limgrave plays continuous teleport
+        // animations (PostBossWarp, LiurniaDivineTower, BurningScalingTree) as
+        // cutscene effects. The player takes a Waygate during this cycle.
+        //
+        // Previously:
+        // - PostBossWarp created a pending early in the cycle
+        // - All subsequent anims were teleport→teleport (no new pending)
+        // - Pending accumulated 28+ seconds before the warp started
+        // - Pending timed out (30s) during the loading screen
+        // - No discovery was produced
+        //
+        // Fix 1: Don't timeout pending with warp_was_requested=true
+        // Fix 2: Update transport_type to current anim when warp_was_requested becomes true
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x22_0A_00_00, 100.0, 50.0, 200.0)), // Divine Tower
+                Some(make_pos(0x22_0A_00_00, 100.0, 50.0, 200.0)), // PostBossWarp starts
+                Some(make_pos(0x22_0A_00_00, 100.0, 50.0, 200.0)), // LiurniaDivineTower
+                Some(make_pos(0x22_0A_00_00, 100.0, 50.0, 200.0)), // Waygate
+                Some(make_pos(0x22_0A_00_00, 100.0, 50.0, 200.0)), // Waygate + warp_requested
+                None,                                              // Loading
+                None,                                              // Still loading
+                Some(make_pos(0x0A_01_00_00, 22.8, 13.2, 2.3)),    // Arrived
+            ],
+            vec![
+                Some(0),                                      // Idle
+                Some(Animation::PostBossWarp.as_u32()),       // Cutscene animation
+                Some(Animation::LiurniaDivineTower.as_u32()), // Another cutscene anim
+                Some(Animation::Waygate.as_u32()),            // Player takes waygate
+                Some(Animation::Waygate.as_u32()),            // Still in waygate
+                Some(Animation::Waygate.as_u32()),            // During loading
+                Some(0),                                      // Animation unreadable
+                Some(0),                                      // Arrived
+            ],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: PostBossWarp starts - creates pending
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "PostBossWarp"
+        );
+        game_state.advance_frame();
+
+        // Frame 2: LiurniaDivineTower (teleport→teleport, no new pending)
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "PostBossWarp"
+        );
+        game_state.advance_frame();
+
+        // Frame 3: Waygate (teleport→teleport, no new pending)
+        tracker.check_warp(&game_state, &warp);
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type,
+            "PostBossWarp"
+        );
+        game_state.advance_frame();
+
+        // Simulate pending being 28s old (warp_requested fires before 30s timeout)
+        if let Some(ref mut pending) = tracker.pending_warp {
+            pending.created_at = Instant::now() - Duration::from_secs(28);
+        }
+
+        // Frame 4: warp_requested becomes true (player entered waygate)
+        warp.set_warp(true, 10012690, 0x0A_01_00_00);
+        tracker.check_warp(&game_state, &warp);
+
+        // Fix 2: transport_type should be updated to Waygate (current animation)
+        assert!(tracker.has_pending_warp(), "Pending should still exist");
+        assert_eq!(
+            tracker.pending_warp().unwrap().transport_type, "Waygate",
+            "transport_type should be updated to current animation when warp_was_requested becomes true"
+        );
+        assert!(tracker.pending_warp().unwrap().warp_was_requested);
+        game_state.advance_frame();
+
+        // Now simulate the pending being >30s old (loading takes several seconds)
+        if let Some(ref mut pending) = tracker.pending_warp {
+            pending.created_at = Instant::now() - Duration::from_secs(35);
+        }
+
+        // Frame 5: Loading (position=None, animation still readable)
+        // Fix 1: pending should NOT timeout despite being >30s old
+        tracker.check_warp(&game_state, &warp);
+        assert!(
+            tracker.has_pending_warp(),
+            "Pending with warp_was_requested=true should NOT timeout"
+        );
+        game_state.advance_frame();
+
+        // Frame 6: Still loading, animation unreadable
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        game_state.advance_frame();
+
+        // Frame 7: Arrived - delayed completion
+        let discovery = tracker.check_warp(&game_state, &warp);
+        assert!(discovery.is_some(), "Discovery should be produced");
+        let d = discovery.unwrap();
+        assert_eq!(
+            d.transport_type, "Waygate",
+            "Should be Waygate, not PostBossWarp"
+        );
+        assert_eq!(d.destination_entity_id, 10012690);
+        assert!(d.warp_was_requested);
+        assert!(d.is_valid());
+    }
+
+    #[test]
+    fn test_timeout_still_works_without_warp_requested() {
+        // Verify that timeout still clears false positive pendings (warp_was_requested=false)
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x22_0A_00_00, 100.0, 50.0, 200.0)),
+                Some(make_pos(0x22_0A_00_00, 100.0, 50.0, 200.0)),
+            ],
+            vec![Some(0), Some(Animation::PostBossWarp.as_u32())],
+        );
+
+        let warp = MockWarpDetector::new();
+        let mut tracker = WarpTracker::new();
+
+        // Frame 0: Idle
+        tracker.check_warp(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: PostBossWarp creates pending (no warp_requested)
+        tracker.check_warp(&game_state, &warp);
+        assert!(tracker.has_pending_warp());
+        assert!(!tracker.pending_warp().unwrap().warp_was_requested);
+
+        // Simulate timeout
+        if let Some(ref mut pending) = tracker.pending_warp {
+            pending.created_at = Instant::now() - Duration::from_secs(35);
+        }
+
+        // Next check_warp should expire it
+        tracker.check_warp(&game_state, &warp);
+        assert!(
+            !tracker.has_pending_warp(),
+            "Pending without warp_was_requested should still timeout"
         );
     }
 

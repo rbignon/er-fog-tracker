@@ -241,7 +241,9 @@ The complete warp detection workflow:
 │      → CLEAR the pending (it was a false positive from an earlier animation)  │
 │      → The zone_query flow will handle zone resolution instead                │
 │                                                                               │
-│  • Otherwise: pending.warp_was_requested = true                               │
+│  • Otherwise:                                                                 │
+│      → Update transport_type to current animation (if teleport and different) │
+│      → pending.warp_was_requested = true                                      │
 │                                                                               │
 │  Also:                                                                        │
 │  • If pending.dest_entity_id == 0 && dest_entity_id != 0                      │
@@ -518,7 +520,9 @@ State transitions:
 
 **Note**: When a pending has `warp_was_requested=true`, new teleport animations (e.g., PostBossWarp, LiurniaDivineTower playing on the destination map) do NOT create new pendings. This prevents losing the original pending during the loading/arrival phase.
 
-**Timeout handling**: If a pending warp stays unresolved for more than 30 seconds, it's discarded to avoid stale state.
+**Timeout handling**: If a pending warp stays unresolved for more than 30 seconds, it's discarded to avoid stale state. However, pendings with `warp_was_requested=true` are never timed out, since they represent a real warp in progress (e.g., a long loading screen after a waygate traversal).
+
+**Transport type update**: When `warp_was_requested` becomes true, the pending's `transport_type` is updated to the current teleport animation if different. This handles cases where the pending was created by an earlier animation in a continuous teleport cycle (e.g., PostBossWarp cutscene animations at Divine Towers) but the actual warp is triggered by a different animation (e.g., Waygate).
 
 **Delayed exit handling**: If the animation ends while position is still unreadable (loading screen), the pending warp is kept and the discovery is sent on the next frame when position becomes readable.
 
