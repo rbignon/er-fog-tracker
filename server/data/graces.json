@@ -1440,7 +1440,7 @@
       "map_id": "m60_47_41_00",
       "zone_id": "gravesite"
     },
-    "1047432950": {
+    "2047432950": {
       "grace_name": "Ellac River Cave",
       "zone": "Ellac River",
       "map_id": "m60_47_43_00",
@@ -2002,7 +2002,7 @@
       "grace_name": "Deep Siofra Well",
       "zone": "Caelid",
       "map_id": "m60_48_40_00",
-      "zone_id": "caelid"
+      "zone_id": "caelid_greatjar"
     },
     "1048402951": {
       "grace_name": "Dragonbarrow West",
@@ -2244,11 +2244,11 @@
       "map_id": "m60_47_36_00",
       "zone_id": "cerulean"
     },
-    "1047412951": {
+    "2047412951": {
       "grace_name": "Ellac River Downstream",
       "zone": "Gravesite Plain",
       "map_id": "m60_47_41_00",
-      "zone_id": "gravesite"
+      "zone_id": "ellac"
     },
     "1048392951": {
       "grace_name": "Charo's Hidden Grave",
