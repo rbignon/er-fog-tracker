@@ -2915,7 +2915,7 @@ Areas:
   DebugInfo: 'DefeatFlag: 2044450800 - m61_44_45_00 - Romina, Saint of the Bud'
   DefeatFlag: 2044450800
   BossTrigger: 2044452805
-  Maps: m61_44_45_00
+  Maps: m61_44_45_00 m61_44_46_00
   Tags: dlc remembrance ownstart
 - Name: rauhruins_postromina
   Text: Ancient Ruins of Rauh - After Romina

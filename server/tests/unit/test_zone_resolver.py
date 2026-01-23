@@ -399,6 +399,21 @@ class TestResolveAllCandidates:
                 assert len(candidates) >= 1
                 break
 
+    def test_rauhruins_romina_candidate_for_adjacent_tile(self, resolver):
+        """rauhruins_romina should be a candidate for m61_44_46_00.
+
+        When the randomizer warps a player to Romina's arena, the landing
+        position can be on tile m61_44_46_00 (adjacent to m61_44_45_00 where
+        the boss arena is defined). Without this, the link
+        shadowkeep_sanctum -> rauhruins_romina cannot be resolved.
+        """
+        # Position from actual mod report: (-47.8, 625.4, -84.5) on m61_44_46_00
+        candidates = resolver.resolve_all_candidates("m61_44_46_00", -47.8, 625.4, -84.5)
+        internal_names = [c[0] for c in candidates]
+        assert (
+            "rauhruins_romina" in internal_names
+        ), f"rauhruins_romina should be a candidate for m61_44_46_00, got: {internal_names}"
+
 
 class TestLookupByDetailText:
     """Tests for ZoneResolver.lookup_by_detail_text method."""
