@@ -2,12 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.4.0] - 2026-01-24
+
+### New Features
+
+#### Mod
+* Send game stats updates every 10 seconds for more responsive UI
+
+#### Server
+* Add Discord notification when player connects mod
+* Detect musttrap fog gates as one-way connections
+* Track and expose user last_seen_at timestamp
+* Add Grace ID and zone_ids to resolution failure logs
+
+#### Web
+* Add 404 page for unknown routes
+* Display last seen time on players list
 
 ### Bug Fixes
 
+#### Mod
+* Prevent waygate discovery loss on maps with continuous teleport animation cycles
+* Display friendly message for 502 server errors
+
 #### Server
-* Prevent entity_mapping expansion from causing false discoveries when mod provides authoritative source_zone_id
+* Update graces mapping
+* Prevent entity_mapping expansion from causing false discoveries
+* Disambiguate ASide/BSide when checking for conditional fog gates
+* Disambiguate zone matches using warp_type and animation requirement
+* Filter to mod-provided source zone instead of just prioritizing
+* Skip entity_mapping source expansion when maps don't match or mod provides authoritative source_zone_id
+* Include entity_mapping expansions for authoritative source zones
+* Make entity_mapping target expansion a fallback mechanism
+* Add preexisting-adjacent fallback for zone resolution
+* Propagate preexisting links at game creation, in /mod/games endpoint, and when target is already discovered
+* Propagate starting_zone_id through online game creation flow
+* Use matched direction for backprop cost and propagation
+* Skip backprop for bidirectional links when target already accessible
+* Discover all parallel links between same zones
+* Prefer random links for destination zone when re-traversing discovered gates
+* Add bidirectional preexisting link gravesite <-> scadualtus
+* Add m61_44_46_00 to rauhruins_romina maps for warp landing resolution
+* Inject mod's source_zone_id when not in resolver candidates
+* Restore Halightree Secret Medallion case
+* Correctly match items case-insensitive
+* Reduce log noise from periodic game stats updates
+
+#### Web
+* Propagate preexisting links when loading online game state
 
 ## [1.3.0] - 2026-01-15
 
