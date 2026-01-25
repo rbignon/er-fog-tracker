@@ -2112,7 +2112,7 @@ p#last-discovery {
 }
 
 @media (max-width: 1300px) {
-    h1 {
+    .graph-mode h1 {
         font-size: 1.0rem !important;
     }
 }
@@ -2451,9 +2451,9 @@ p#last-discovery {
 
 .landing-links {
     display: flex;
-    gap: 16px;
+    gap: 14px;
     justify-content: center;
-    margin-top: 32px;
+    margin-top: 48px;
 }
 
 .btn-twitch {
@@ -2466,7 +2466,7 @@ p#last-discovery {
     color: #fff;
     padding: 14px 32px;
     font-family: 'Cinzel', serif;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
     border-radius: 8px;
     cursor: pointer;
@@ -2480,8 +2480,8 @@ p#last-discovery {
 }
 
 .btn-twitch .twitch-icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
 }
 
 .landing-actions .btn-secondary {
@@ -2531,13 +2531,13 @@ p#last-discovery {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     background: transparent;
     border: 1px solid #5865f2;
     color: #7c8af2;
-    padding: 12px 28px;
+    padding: 10px 22px;
     font-family: 'Cinzel', serif;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
@@ -2558,21 +2558,21 @@ p#last-discovery {
 }
 
 .btn-discord-landing .discord-icon {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
 }
 
 .btn-setup-guide {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     background: transparent;
     border: 1px solid #c9a227;
     color: #c9a227;
-    padding: 12px 28px;
+    padding: 10px 22px;
     font-family: 'Cinzel', serif;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
@@ -2593,8 +2593,43 @@ p#last-discovery {
 }
 
 .btn-setup-guide svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+}
+
+.btn-offline-landing {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid #6b6b6b;
+    color: #8a8a8a;
+    padding: 10px 22px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    letter-spacing: 0.03em;
+}
+
+.btn-offline-landing:hover {
+    border-color: #8a8a8a;
+    color: #a8a8a8;
+    background: rgba(107, 107, 107, 0.1);
+}
+
+.btn-offline-landing:focus,
+.btn-offline-landing:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(107, 107, 107, 0.3);
+}
+
+.btn-offline-landing svg {
+    width: 18px;
+    height: 18px;
 }
 
 .landing-screenshots {
