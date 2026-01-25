@@ -2449,20 +2449,11 @@ p#last-discovery {
     flex-wrap: wrap;
 }
 
-.landing-help-link {
+.landing-links {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
     margin-top: 32px;
-    font-size: 0.9rem;
-    color: #6a6050;
-}
-
-.landing-help-link a {
-    color: #9a8d75;
-    text-decoration: none;
-    transition: color 0.2s;
-}
-
-.landing-help-link a:hover {
-    color: #c9a227;
 }
 
 .btn-twitch {
@@ -2504,18 +2495,6 @@ p#last-discovery {
     transform: scale(1.02);
 }
 
-.landing-divider {
-    display: none;
-}
-
-.landing-divider::before,
-.landing-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: #3a3020;
-}
-
 .landing-footer {
     text-align: center;
     color: #5a5040;
@@ -2548,24 +2527,17 @@ p#last-discovery {
     color: #3a3020;
 }
 
-/* Landing community section */
-.landing-community {
-    margin-top: 48px;
-    text-align: center;
-}
-
 .btn-discord-landing {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
-    border: none;
-    color: #fff;
+    background: transparent;
+    border: 1px solid #5865f2;
+    color: #7c8af2;
     padding: 12px 28px;
     font-family: 'Cinzel', serif;
     font-size: 0.95rem;
-    font-weight: 500;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
@@ -2574,11 +2546,53 @@ p#last-discovery {
 }
 
 .btn-discord-landing:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 20px rgba(88, 101, 242, 0.4);
+    border-color: #7c8af2;
+    color: #a0aaf5;
+    background: rgba(88, 101, 242, 0.1);
+}
+
+.btn-discord-landing:focus,
+.btn-discord-landing:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.3);
 }
 
 .btn-discord-landing .discord-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.btn-setup-guide {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: transparent;
+    border: 1px solid #c9a227;
+    color: #c9a227;
+    padding: 12px 28px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    letter-spacing: 0.03em;
+}
+
+.btn-setup-guide:hover {
+    border-color: #d4b44a;
+    color: #d4b44a;
+    background: rgba(201, 162, 39, 0.1);
+}
+
+.btn-setup-guide:focus,
+.btn-setup-guide:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.3);
+}
+
+.btn-setup-guide svg {
     width: 20px;
     height: 20px;
 }
@@ -2690,8 +2704,9 @@ p#last-discovery {
         gap: 12px;
     }
 
-    .landing-divider {
-        display: flex;
+    .landing-links {
+        flex-direction: column;
+        gap: 12px;
     }
 }
 
