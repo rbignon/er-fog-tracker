@@ -180,7 +180,10 @@ class ModClient(Client):
         if not primary_result and all_discovery_results:
             primary_result = all_discovery_results[0]
 
-        merged_result = DiscoveryResult(origin=primary_result.origin if primary_result else "")
+        merged_result = DiscoveryResult(
+            origin=primary_result.origin if primary_result else "",
+            origin_id=primary_result.origin_id if primary_result else None,
+        )
         for dr in all_discovery_results:
             merged_result.main_links.extend(dr.main_links)
             merged_result.backprop_links.extend(dr.backprop_links)
@@ -340,13 +343,13 @@ class ModClient(Client):
             else:
                 map_id_str = "unknown"
 
-            # Build candidates list for failure log
+            # Build candidates list for failure log (with zone_ids)
             candidates = []
             if source_candidates:
-                candidates.extend([c[1] for c in source_candidates[:3]])
+                candidates.extend([f"{c[1]} ({c[0]})" for c in source_candidates])
                 candidates.append("->")
             if target_candidates:
-                candidates.extend([c[1] for c in target_candidates[:3]])
+                candidates.extend([f"{c[1]} ({c[0]})" for c in target_candidates])
 
             failure = format_resolution_failure(
                 context="discovery_v2",
@@ -644,11 +647,15 @@ class ModClient(Client):
                     reason = f"Ambiguous ({len(all_candidates)} candidates, none unique)"
                 else:
                     reason = "No zone candidates found"
+                # Format candidates with zone_ids: "Display Name (zone_id)"
+                formatted_candidates = None
+                if candidates:
+                    formatted_candidates = [f"{c[1]} ({c[0]})" for c in candidates]
                 failure = format_resolution_failure(
                     context="zone_query",
                     map_id=map_id,
                     reason=reason,
-                    candidates=all_candidates[:5] if all_candidates else None,
+                    candidates=formatted_candidates,
                     grace_entity_id=grace_entity_id,
                 )
                 for line in failure.split("\n"):
