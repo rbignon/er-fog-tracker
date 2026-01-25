@@ -982,7 +982,7 @@
       "grace_name": "Spiritcaller Cave",
       "zone": "Mountaintops of the Giants",
       "map_id": null,
-      "zone_id": "mountaintops"
+      "zone_id": "mountaintops_cave"
     },
     "32002950": {
       "grace_name": "Morne Tunnel",
