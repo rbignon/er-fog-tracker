@@ -2232,13 +2232,13 @@
       "map_id": "m60_54_55_00",
       "zone_id": "mountaintops"
     },
-    "1046392950": {
+    "2046392950": {
       "grace_name": "Cerulean Coast West",
       "zone": "Cerulean Coast",
       "map_id": "m60_46_39_00",
       "zone_id": "cerulean"
     },
-    "1047362950": {
+    "2047362950": {
       "grace_name": "The Fissure",
       "zone": "Cerulean Coast",
       "map_id": "m60_47_36_00",
@@ -2250,49 +2250,49 @@
       "map_id": "m60_47_41_00",
       "zone_id": "ellac"
     },
-    "1048392951": {
+    "2048392951": {
       "grace_name": "Charo's Hidden Grave",
       "zone": "Charo's Hidden Grave",
       "map_id": "m60_48_39_00",
       "zone_id": "charo"
     },
-    "1050422950": {
+    "2050422950": {
       "grace_name": "Abyssal Woods",
       "zone": "Abyssal Woods",
       "map_id": "m60_50_42_00",
       "zone_id": "abyssal"
     },
-    "1051422950": {
+    "2051422950": {
       "grace_name": "Woodland Trail",
       "zone": "Abyssal Woods",
       "map_id": "m60_51_42_00",
       "zone_id": "abyssal"
     },
-    "1052402950": {
+    "2052402950": {
       "grace_name": "Foot of the Jagged Peak",
       "zone": "Foot of the Jagged Peak",
       "map_id": "m60_52_40_00",
       "zone_id": "jaggedpeak_foot"
     },
-    "1052432950": {
+    "2052432950": {
       "grace_name": "Forsaken Graveyard",
       "zone": "Abyssal Woods",
       "map_id": "m60_52_43_00",
       "zone_id": "abyssal"
     },
-    "1053392950": {
+    "2053392950": {
       "grace_name": "Jagged Peak Mountainside",
       "zone": "Jagged Peak",
       "map_id": "m60_53_39_00",
       "zone_id": "jaggedpeak"
     },
-    "1053412950": {
+    "2053412950": {
       "grace_name": "Church Ruins",
       "zone": "Abyssal Woods",
       "map_id": "m60_53_41_00",
       "zone_id": "abyssal"
     },
-    "1054392950": {
+    "2054392950": {
       "grace_name": "Jagged Peak Summit",
       "zone": "Jagged Peak",
       "map_id": "m60_54_39_00",
