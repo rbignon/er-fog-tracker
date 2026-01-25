@@ -995,7 +995,7 @@ Areas:
   Maps: m11_00_00_00
 - Name: leyndell_erdtree
   Text: Leyndell - Erdtree Entrance
-  Maps: m11_00_00_00
+  Maps: m11_00_00_00 m11_05_00_00
   To:
   - Area: leyndell2_erdtree
     Text: after burning the Erdtree by defeating the boss in Maliketh's arena
