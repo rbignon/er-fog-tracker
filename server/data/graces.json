@@ -1974,7 +1974,7 @@
       "map_id": "m60_48_36_00",
       "zone_id": "caelid"
     },
-    "1048372950": {
+    "2048372950": {
       "grace_name": "Cerulean Coast Cross",
       "zone": "Cerulean Coast",
       "map_id": "m60_48_37_00",
@@ -1992,7 +1992,7 @@
       "map_id": "m60_48_38_00",
       "zone_id": "caelid"
     },
-    "1048392950": {
+    "2048392950": {
       "grace_name": "Cerulean Coast",
       "zone": "Cerulean Coast",
       "map_id": "m60_48_39_00",
@@ -2224,7 +2224,7 @@
       "grace_name": "Forge of the Giants",
       "zone": "Flame Peak",
       "map_id": "m60_54_53_00",
-      "zone_id": "flamepeak"
+      "zone_id": "flamepeak_firegiant"
     },
     "1054552950": {
       "grace_name": "First Church of Marika",
@@ -2236,6 +2236,12 @@
       "grace_name": "Cerulean Coast West",
       "zone": "Cerulean Coast",
       "map_id": "m60_46_39_00",
+      "zone_id": "cerulean"
+    },
+    "2047352950": {
+      "grace_name": "The Fissure",
+      "zone": "Cerulean Coast",
+      "map_id": "m60_47_36_00",
       "zone_id": "cerulean"
     },
     "2047362950": {
