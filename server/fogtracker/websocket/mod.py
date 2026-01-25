@@ -1104,6 +1104,7 @@ class ModClient(Client):
                     game.zone_links,
                     source_for_matching[:MAX_ZONE_CANDIDATES],
                     target_for_matching[:MAX_ZONE_CANDIDATES],
+                    only_random=True,  # Mod only reports randomized fog gates, not vanilla connections
                 )
 
                 # Fallback 1: if mod provided authoritative source but no matches found,
@@ -1118,6 +1119,7 @@ class ModClient(Client):
                         game.zone_links,
                         expanded_source_candidates[:MAX_ZONE_CANDIDATES],
                         target_for_matching[:MAX_ZONE_CANDIDATES],
+                        only_random=True,
                     )
                     if all_matches:
                         # Update source_for_matching for later use in lookup tables
@@ -1163,6 +1165,7 @@ class ModClient(Client):
                             game.zone_links,
                             preexisting_source_candidates[:MAX_ZONE_CANDIDATES],
                             target_for_matching[:MAX_ZONE_CANDIDATES],
+                            only_random=True,
                         )
                         if all_matches:
                             source_for_matching = preexisting_source_candidates
@@ -1181,6 +1184,7 @@ class ModClient(Client):
                         game.zone_links,
                         source_for_matching[:MAX_ZONE_CANDIDATES],
                         expanded_target_candidates[:MAX_ZONE_CANDIDATES],
+                        only_random=True,
                     )
                     if all_matches:
                         target_for_matching = expanded_target_candidates

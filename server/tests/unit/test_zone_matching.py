@@ -772,6 +772,59 @@ class TestFindZonePairByIds:
         assert result is not None
         assert result["id"] == "2"
 
+    def test_only_random_excludes_preexisting(self):
+        """
+        Test that only_random=True filters out preexisting links.
+
+        This is a regression test for a bug where discovery_v2 would match
+        preexisting links when the mod's cached source zone was stale.
+
+        Scenario:
+        - Player is in Fringefolk Hero's Grave (graveyard_grave)
+        - Mod reports source as Stranded Graveyard (graveyard) - stale cache
+        - Zone pairs has: graveyard -> graveyard_grave (preexisting)
+        - Zone pairs has: graveyard_grave -> graveyard_cave_back (random)
+        - With only_random=True, only the random link should match
+        """
+        pairs = [
+            {
+                "id": "preexisting-link",
+                "source": "Stranded Graveyard",
+                "target": "Fringefolk Hero's Grave",
+                "source_id": "graveyard",
+                "target_id": "graveyard_grave",
+                "type": "preexisting",
+                "is_one_way": False,
+            },
+            {
+                "id": "random-link",
+                "source": "Fringefolk Hero's Grave",
+                "target": "Cave of Knowledge - Back",
+                "source_id": "graveyard_grave",
+                "target_id": "graveyard_cave_back",
+                "type": "random",
+                "is_one_way": False,
+            },
+        ]
+
+        # Without only_random: finds preexisting link
+        result_default = find_zone_pair_by_ids(pairs, "graveyard", "graveyard_grave")
+        assert result_default is not None
+        assert result_default["id"] == "preexisting-link"
+
+        # With only_random=True: does NOT find preexisting link
+        result_only_random = find_zone_pair_by_ids(
+            pairs, "graveyard", "graveyard_grave", only_random=True
+        )
+        assert result_only_random is None
+
+        # With only_random=True: finds random link
+        result_random = find_zone_pair_by_ids(
+            pairs, "graveyard_grave", "graveyard_cave_back", only_random=True
+        )
+        assert result_random is not None
+        assert result_random["id"] == "random-link"
+
 
 class TestFindMatchingZonePairByIds:
     """Tests for find_matching_zone_pair_by_ids function."""

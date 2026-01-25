@@ -289,6 +289,7 @@ def find_zone_pair_by_ids(
     source_id: str,
     target_id: str,
     source_details: str | None = None,
+    only_random: bool = False,
 ) -> dict | None:
     """
     Find a zone pair by matching on zone_ids (zone_keys from fog.txt).
@@ -301,6 +302,9 @@ def find_zone_pair_by_ids(
         source_id: Zone key for source
         target_id: Zone key for target
         source_details: Optional ASide/BSide text for disambiguation
+        only_random: If True, only match random links (ignore preexisting).
+                     Use this for discovery_v2 since the mod only reports
+                     randomized fog gate traversals, not vanilla connections.
 
     Returns:
         The matching zone pair, or None if not found.
@@ -308,6 +312,10 @@ def find_zone_pair_by_ids(
     matches = []
 
     for pair in zone_pairs:
+        # Skip preexisting links if only_random is True
+        if only_random and pair["type"] != "random":
+            continue
+
         pair_source_id = pair["source_id"]
         pair_target_id = pair["target_id"]
 
@@ -401,6 +409,7 @@ def find_all_matching_zone_pairs_by_ids(
     source_candidates: list[tuple[str, str]],
     target_candidates: list[tuple[str, str]],
     source_details: str | None = None,
+    only_random: bool = False,
 ) -> list[tuple[str, str, dict]]:
     """
     Find ALL matching zone pairs using zone_ids from candidate lists.
@@ -414,6 +423,9 @@ def find_all_matching_zone_pairs_by_ids(
         source_candidates: List of (zone_id, display_name) for source
         target_candidates: List of (zone_id, display_name) for target
         source_details: Optional ASide/BSide text for disambiguation
+        only_random: If True, only match random links (ignore preexisting).
+                     Use this for discovery_v2 since the mod only reports
+                     randomized fog gate traversals, not vanilla connections.
 
     Returns:
         List of (source_id, target_id, zone_pair) tuples for all matches.
@@ -424,7 +436,9 @@ def find_all_matching_zone_pairs_by_ids(
 
     for source_id, _source_display in source_candidates:
         for target_id, _target_display in target_candidates:
-            pair = find_zone_pair_by_ids(zone_pairs, source_id, target_id, source_details)
+            pair = find_zone_pair_by_ids(
+                zone_pairs, source_id, target_id, source_details, only_random
+            )
             if pair:
                 pair_id = pair.get("id")
                 if pair_id and pair_id not in seen_pair_ids:
