@@ -284,6 +284,23 @@ class TestParseConnectionLine:
         assert conn is not None
         assert conn.is_one_way is True
 
+    def test_one_way_belfry(self):
+        """Belfries are sending gates and should be one-way."""
+        # Four Belfries in Liurnia
+        conn = _parse_connection_line(
+            "  Random: Liurnia (using the 1st Belfry labeled Crumbling Lands) "
+            "--> Farum Azula via Belfries (arriving in the isolated section)"
+        )
+        assert conn is not None
+        assert conn.is_one_way is True
+
+        # Scadu Altus Belfry
+        conn = _parse_connection_line(
+            "  Random: West Scadu Altus (using the Scadu Altus Belfry) --> Ashen Leyndell (warp)"
+        )
+        assert conn is not None
+        assert conn.is_one_way is True
+
     def test_bidirectional_fog_gate(self):
         conn = _parse_connection_line("  Random: Limgrave (near beach) --> Caelid (at the border)")
         assert conn is not None

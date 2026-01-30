@@ -21,6 +21,9 @@ ALWAYS_ONE_WAY_PATTERNS = [
     # NOT when mentioned as a location landmark (e.g., "opposite the Sending Gate")
     re.compile(r"using (?:the|a|an|either|a new) (?:new )?sending gate", re.IGNORECASE),
     re.compile(r"arriving at (?:the|a) sending gate", re.IGNORECASE),
+    # Belfries are sending gates (Four Belfries in Liurnia, Scadu Altus Belfry)
+    # e.g., "using the 1st Belfry labeled Crumbling Lands", "using the Scadu Altus Belfry"
+    re.compile(r"using (?:the )?.*belfry", re.IGNORECASE),
     re.compile(r"abducted", re.IGNORECASE),
     re.compile(r"dying", re.IGNORECASE),
     re.compile(r"burning the Sealing Tree", re.IGNORECASE),
@@ -50,6 +53,8 @@ PREEXISTING_ONE_WAY_PATTERNS = [
 TELEPORT_SOURCE_PATTERNS = [
     # "sending gate" only triggers when actively being used as a teleport
     re.compile(r"using (?:the|a|an|either|a new) (?:new )?sending gate", re.IGNORECASE),
+    # Belfries are sending gates
+    re.compile(r"using (?:the )?.*belfry", re.IGNORECASE),
     re.compile(r"abducted", re.IGNORECASE),
     re.compile(r"coffin", re.IGNORECASE),
     re.compile(r"Pureblood", re.IGNORECASE),
