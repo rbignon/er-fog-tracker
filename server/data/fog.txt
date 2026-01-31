@@ -927,7 +927,7 @@ Areas:
   Tags: trivial overworld
 - Name: leyndell_start
   Text: Leyndell Start
-  Maps: m11_00_00_00 m60_45_52_00
+  Maps: m11_00_00_00 m11_05_00_00 m60_45_52_00
   Tags: trivial
 - Name: leyndell
   Text: Leyndell

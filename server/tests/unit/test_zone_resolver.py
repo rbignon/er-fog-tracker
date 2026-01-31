@@ -1313,6 +1313,52 @@ class TestMusttrapFogGates:
             ), f"Expected to find '{text}' in fog_gate_detail_has_musttrap"
 
 
+class TestLeyndellStartInAshenCapital:
+    """Tests for Leyndell Start zone resolution in Ashen Leyndell.
+
+    Bug fix: The fog gate at "the Leyndell entrance from Capital Rampart"
+    exists in m11_05_00_00 (Ashen Leyndell), but leyndell_start was originally
+    only mapped to m11_00_00_00 (Royal Capital) and m60_45_52_00 (overworld).
+
+    When the player enters Ashen Leyndell and uses this fog gate, the zone
+    resolver couldn't find leyndell_start as a candidate, causing discovery
+    failures.
+
+    The fix adds m11_05_00_00 to leyndell_start's Maps: list in fog.txt.
+
+    See: analysis/reports/260131_2210/REPORT.md
+    """
+
+    def test_leyndell_start_is_candidate_for_ashen_leyndell(self, resolver):
+        """leyndell_start should be a candidate for m11_05_00_00."""
+        zones = resolver.map_zones.get("m11_05_00_00", set())
+        assert (
+            "leyndell_start" in zones
+        ), f"leyndell_start should be in m11_05_00_00 candidates, got: {zones}"
+
+    def test_leyndell_start_maps_include_ashen(self, resolver):
+        """leyndell_start zone metadata should include m11_05_00_00."""
+        meta = resolver.zone_metadata.get("leyndell_start")
+        assert meta is not None, "leyndell_start should have metadata"
+        assert (
+            "m11_05_00_00" in meta.map_ids
+        ), f"leyndell_start should include m11_05_00_00, got: {meta.map_ids}"
+
+    def test_resolve_all_candidates_includes_leyndell_start(self, resolver):
+        """resolve_all_candidates for Ashen Leyndell should include Leyndell Start."""
+        # Position from the failed discovery: (-6.6, 1.0, 1.7)
+        candidates = resolver.resolve_all_candidates("m11_05_00_00", -6.6, 1.0, 1.7)
+        candidate_keys = [c[0] for c in candidates]
+        candidate_names = [c[1] for c in candidates]
+
+        assert (
+            "leyndell_start" in candidate_keys
+        ), f"leyndell_start should be in candidates, got: {candidate_keys}"
+        assert (
+            "Leyndell Start" in candidate_names
+        ), f"'Leyndell Start' should be in candidate display names, got: {candidate_names}"
+
+
 class TestAnimationRequirement:
     """Tests for Animation: field parsing and animation-based filtering.
 
