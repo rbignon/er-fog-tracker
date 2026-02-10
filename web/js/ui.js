@@ -3,6 +3,7 @@
 // ============================================================
 
 import { parseSpoilerLog, transformZonesFromApi, transformLinksFromApi } from './api.js';
+import { escapeHtml } from './sanitize.js';
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
 import * as Toast from './toast.js';
@@ -237,10 +238,10 @@ function handleSearch(query) {
                 html += `
                     <div class="search-result">
                         <div>
-                            <span class="search-result-name">${n.name || n.id}</span>
+                            <span class="search-result-name">${escapeHtml(n.name || n.id)}</span>
                             <span class="search-result-status">(not discovered)</span>
                         </div>
-                        <button class="search-result-btn" data-node-id="${n.id}">🎯 I've reached</button>
+                        <button class="search-result-btn" data-node-id="${escapeHtml(n.id)}">🎯 I've reached</button>
                     </div>
                 `;
             });

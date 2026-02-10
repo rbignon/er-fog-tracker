@@ -3,6 +3,7 @@ Base WebSocket client class and helper functions.
 """
 
 import asyncio
+import json
 import logging
 from abc import ABC, abstractmethod
 from uuid import UUID
@@ -17,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 # Custom WebSocket close codes (4000-4999 are available for application use)
 WS_CLOSE_SESSION_REPLACED = 4001  # Another session took over (don't reconnect)
+
+# Maximum WebSocket message size (64KB - generous for any legitimate message)
+MAX_MESSAGE_SIZE = 65536
 
 
 def build_game_state(game: Game) -> dict:
@@ -101,7 +105,17 @@ class Client(ABC):
         """Receive and dispatch messages to handlers."""
         try:
             while self._running:
-                data = await self.ws.receive_json()
+                text = await self.ws.receive_text()
+                if len(text) > MAX_MESSAGE_SIZE:
+                    logger.warning(
+                        "[%s#%d@%s] Message too large (%d bytes), dropping",
+                        self.__class__.__name__,
+                        self._conn_id,
+                        self._remote,
+                        len(text),
+                    )
+                    continue
+                data = json.loads(text)
                 msg_type = data.get("type")
 
                 handler = self._handlers.get(msg_type)

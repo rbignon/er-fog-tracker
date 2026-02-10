@@ -4,6 +4,7 @@
  */
 
 import * as Api from '../api.js';
+import { escapeHtml } from '../sanitize.js';
 
 /**
  * Show the users list page.
@@ -91,22 +92,20 @@ function createUserRow(user) {
     }
 
     row.innerHTML = `
-        <img class="user-avatar" src="${user.avatarUrl || defaultAvatar}" alt="${escapeHtml(user.displayName)}" onerror="this.src='${defaultAvatar}'">
+        <img class="user-avatar" src="" alt="${escapeHtml(user.displayName)}">
         <span class="user-name">${escapeHtml(user.displayName)}</span>
         <div class="user-status">${statusHtml}</div>
         <span class="user-arrow">→</span>
     `;
 
-    return row;
-}
+    // Set avatar src programmatically (CSP blocks inline onerror handlers)
+    const avatarImg = row.querySelector('.user-avatar');
+    avatarImg.src = user.avatarUrl || defaultAvatar;
+    avatarImg.onerror = () => {
+        avatarImg.src = defaultAvatar;
+    };
 
-/**
- * Escape HTML to prevent XSS.
- */
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return row;
 }
 
 /**

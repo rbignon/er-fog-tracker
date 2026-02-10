@@ -8,6 +8,7 @@ import { transformZonesFromApi, transformLinksFromApi, transformZonesToApi, tran
 import { navigate } from '../router.js';
 import * as Toast from '../toast.js';
 import { getLinkEndpoints } from '../state.js';
+import { escapeHtml } from '../sanitize.js';
 
 // Module state
 let currentUser = null;
@@ -174,7 +175,7 @@ async function loadGames() {
         listEl.appendChild(createPlaceholderCard());
     } catch (e) {
         loadingEl.classList.add('hidden');
-        listEl.innerHTML = `<p class="error-message">Failed to load games: ${e.message}</p>`;
+        listEl.innerHTML = `<p class="error-message">Failed to load games: ${escapeHtml(e.message)}</p>`;
     }
 }
 
@@ -263,7 +264,7 @@ function createGameCard(game) {
       <button class="game-delete-btn" title="Delete game">&times;</button>
     </div>
     <div class="game-card-body">
-      <div class="game-seed">Seed: ${game.seed}</div>
+      <div class="game-seed">Seed: ${escapeHtml(game.seed)}</div>
       <div class="game-progress">
         <span class="progress-text">${game.discovery_count}/${game.total_zones}</span>
         <span class="progress-percent">(${percent}%)</span>
@@ -274,7 +275,7 @@ function createGameCard(game) {
       <div class="game-updated">Updated: ${updatedDate}</div>
     </div>
     <div class="game-card-footer">
-      <a href="/play/${game.id}" class="btn-primary btn-small">Play</a>
+      <a href="/play/${encodeURIComponent(game.id)}" class="btn-primary btn-small">Play</a>
     </div>
   `;
 
@@ -302,15 +303,6 @@ function createGameCard(game) {
     });
 
     return card;
-}
-
-/**
- * Escape HTML to prevent XSS.
- */
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
 }
 
 // =============================================================================

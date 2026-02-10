@@ -3,6 +3,7 @@
 // ============================================================
 
 import { parseRequiredItemZones } from './keyItems.js';
+import { escapeHtml } from './sanitize.js';
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
 import * as PositionManager from './positionManager.js';
@@ -555,7 +556,7 @@ function updateTagStats() {
         const tagEl = document.createElement('div');
         tagEl.className = `stats-tag${selectedTagFilters.has(tag.id) ? ' active' : ''}`;
         tagEl.setAttribute('data-tag-id', tag.id);
-        tagEl.innerHTML = `<span class="tag-emoji">${tag.emoji}</span><span class="tag-count">${count}</span>`;
+        tagEl.innerHTML = `<span class="tag-emoji">${escapeHtml(tag.emoji)}</span><span class="tag-count">${count}</span>`;
         tagEl.title = `Click to highlight areas with this tag`;
 
         tagEl.addEventListener('click', () => {
@@ -964,23 +965,23 @@ function buildTooltipContent(
             const fromDetails = isReversed ? relevantLink.targetDetails || '' : relevantLink.sourceDetails || '';
             const toDetails = isReversed ? relevantLink.sourceDetails || '' : relevantLink.targetDetails || '';
 
-            html += `<div class="conn-item ${relevantLink.type}${relevantLink.requiredItem ? ' has-requirement' : ''}">`;
+            html += `<div class="conn-item ${escapeHtml(relevantLink.type)}${relevantLink.requiredItem ? ' has-requirement' : ''}">`;
             // Get display name from link metadata (more reliable than nodeMap lookup)
             const fromDisplayName = isReversed
                 ? relevantLink.targetName || fromNodeId
                 : relevantLink.sourceName || fromNodeId;
-            html += `← ${fromDisplayName}`;
+            html += `← ${escapeHtml(fromDisplayName)}`;
             // Show where we depart FROM (not where we arrive - that would be a spoiler)
             if (fromDetails) {
-                html += `<div class="conn-details expanded">From: ${fromDetails}</div>`;
+                html += `<div class="conn-details expanded">From: ${escapeHtml(fromDetails)}</div>`;
             }
 
             // Required item info
             if (relevantLink.requiredItem) {
-                html += `<div class="requires-info">🔑 Requires: ${relevantLink.requiredItem}`;
+                html += `<div class="requires-info">🔑 Requires: ${escapeHtml(relevantLink.requiredItem)}`;
                 if (relevantLink.requiredItemFrom) {
                     const zones = parseRequiredItemZones(relevantLink.requiredItemFrom);
-                    html += `<span class="zones-hint" title="${zones.join(', ')}"> (hover for locations)</span>`;
+                    html += `<span class="zones-hint" title="${escapeHtml(zones.join(', '))}"> (hover for locations)</span>`;
                 }
                 html += `</div>`;
             }
@@ -995,7 +996,7 @@ function buildTooltipContent(
             // Include source node info for link discovery tracking
             const sourceNodeId = d.sourceNodeId || '';
             const linkId = relevantLink?.id || '';
-            html += `<button class="discover-btn" data-node-id="${realId}" data-source-node-id="${sourceNodeId}" data-link-id="${linkId}">Mark as discovered</button>`;
+            html += `<button class="discover-btn" data-node-id="${escapeHtml(realId)}" data-source-node-id="${escapeHtml(sourceNodeId)}" data-link-id="${escapeHtml(linkId)}">Mark as discovered</button>`;
         }
 
         return html;
@@ -1012,10 +1013,10 @@ function buildTooltipContent(
         html += `<p class="scaling" style="font-style: italic; color: #6a5a4a;">Discover this area to reveal its details</p>`;
     } else {
         // Use d.name for display, fallback to d.id (zone_key)
-        html = `<h3>${d.name || d.id}${d.isBoss ? '<span class="boss-badge">Boss</span>' : ''}</h3>`;
+        html = `<h3>${escapeHtml(d.name || d.id)}${d.isBoss ? '<span class="boss-badge">Boss</span>' : ''}</h3>`;
 
         if (d.scaling) {
-            html += `<p class="scaling">Scaling: ${d.scaling}</p>`;
+            html += `<p class="scaling">Scaling: ${escapeHtml(d.scaling)}</p>`;
         }
 
         // Tags
@@ -1026,14 +1027,14 @@ function buildTooltipContent(
                 html += '<div class="node-tags">';
                 State.AVAILABLE_TAGS.forEach(tag => {
                     const isActive = activeTags.includes(tag.id);
-                    html += `<span class="node-tag clickable${isActive ? '' : ' inactive'}" data-tag-id="${tag.id}" data-node-id="${d.id}">${tag.emoji}</span>`;
+                    html += `<span class="node-tag clickable${isActive ? '' : ' inactive'}" data-tag-id="${escapeHtml(tag.id)}" data-node-id="${escapeHtml(d.id)}">${escapeHtml(tag.emoji)}</span>`;
                 });
                 html += '</div>';
             } else if (activeTags.length > 0) {
                 html += '<div class="node-tags">';
                 activeTags.forEach(tagId => {
                     const tag = State.AVAILABLE_TAGS.find(t => t.id === tagId);
-                    if (tag) html += `<span class="node-tag">${tag.emoji}</span>`;
+                    if (tag) html += `<span class="node-tag">${escapeHtml(tag.emoji)}</span>`;
                 });
                 html += '</div>';
             }
@@ -1084,11 +1085,11 @@ function buildTooltipContent(
 
     // Action buttons (not shown for viewers)
     if (isUndiscovered && pinned && !State.isViewerMode()) {
-        html += `<button class="discover-btn" data-node-id="${d.id}">Mark as discovered</button>`;
+        html += `<button class="discover-btn" data-node-id="${escapeHtml(d.id)}">Mark as discovered</button>`;
     }
 
     if (explorationMode && !isUndiscovered && pinned && d.id !== State.getStartNodeId() && !State.isViewerMode()) {
-        html += `<button class="undiscover-btn" data-node-id="${d.id}">↩️ Mark as undiscovered</button>`;
+        html += `<button class="undiscover-btn" data-node-id="${escapeHtml(d.id)}">↩️ Mark as undiscovered</button>`;
     }
 
     return html;
@@ -1147,35 +1148,35 @@ function buildConnectionsList(
             }
         }
 
-        html += `<div class="conn-item ${link.type}${link.requiredItem ? ' has-requirement' : ''}">`;
-        html += direction === 'incoming' ? `← ${displayName}` : `→ ${displayName}`;
+        html += `<div class="conn-item ${escapeHtml(link.type)}${link.requiredItem ? ' has-requirement' : ''}">`;
+        html += direction === 'incoming' ? `← ${escapeHtml(displayName)}` : `→ ${escapeHtml(displayName)}`;
 
         // Details: show arrival details (toDetails) for incoming, departure details (fromDetails) for outgoing
         // But hide source info for undiscovered incoming links (no spoilers)
         if (isUndiscovered && direction === 'incoming') {
             // Placeholder node: show where it arrives
-            if (toDetails) html += `<div class="conn-details">To: ${toDetails}</div>`;
+            if (toDetails) html += `<div class="conn-details">To: ${escapeHtml(toDetails)}</div>`;
         } else if (displayName === '???') {
             // Unknown connection: show only the "safe" side details
             if (direction === 'incoming' && toDetails) {
-                html += `<div class="conn-details">To: ${toDetails}</div>`;
+                html += `<div class="conn-details">To: ${escapeHtml(toDetails)}</div>`;
             } else if (direction === 'outgoing' && fromDetails) {
-                html += `<div class="conn-details">From: ${fromDetails}</div>`;
+                html += `<div class="conn-details">From: ${escapeHtml(fromDetails)}</div>`;
             }
         } else if (fromDetails || toDetails) {
             html += `<div class="conn-details">`;
-            if (fromDetails) html += `From: ${fromDetails}`;
+            if (fromDetails) html += `From: ${escapeHtml(fromDetails)}`;
             if (fromDetails && toDetails) html += `<br>`;
-            if (toDetails) html += `To: ${toDetails}`;
+            if (toDetails) html += `To: ${escapeHtml(toDetails)}`;
             html += `</div>`;
         }
 
         // Required item info
         if (link.requiredItem) {
-            html += `<div class="requires-info">🔑 Requires: ${link.requiredItem}`;
+            html += `<div class="requires-info">🔑 Requires: ${escapeHtml(link.requiredItem)}`;
             if (link.requiredItemFrom) {
                 const zones = parseRequiredItemZones(link.requiredItemFrom);
-                html += `<span class="zones-hint" title="${zones.join(', ')}"> (hover for locations)</span>`;
+                html += `<span class="zones-hint" title="${escapeHtml(zones.join(', '))}"> (hover for locations)</span>`;
             }
             html += `</div>`;
         }

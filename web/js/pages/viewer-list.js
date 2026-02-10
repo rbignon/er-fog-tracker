@@ -5,6 +5,7 @@
 
 import * as Api from '../api.js';
 import * as Router from '../router.js';
+import { escapeHtml } from '../sanitize.js';
 
 /**
  * Show the user games page.
@@ -143,7 +144,7 @@ function createGameCard(game, username) {
       ${statusBadges ? `<div class="game-status">${statusBadges}</div>` : ''}
     </div>
     <div class="game-card-body">
-      <div class="game-seed">Seed: ${game.seed}</div>
+      <div class="game-seed">Seed: ${escapeHtml(game.seed)}</div>
       <div class="game-progress">
         <span class="progress-text">${game.discovery_count}/${game.total_zones}</span>
         <span class="progress-percent">(${percent}%)</span>
@@ -154,20 +155,11 @@ function createGameCard(game, username) {
       <div class="game-updated">Updated: ${updatedDate}</div>
     </div>
     <div class="game-card-footer">
-      <a href="/watch/${encodeURIComponent(username)}/${game.id}" class="btn-primary btn-small">Watch</a>
+      <a href="/watch/${encodeURIComponent(username)}/${encodeURIComponent(game.id)}" class="btn-primary btn-small">Watch</a>
     </div>
   `;
 
     return card;
-}
-
-/**
- * Escape HTML to prevent XSS.
- */
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
 }
 
 /**

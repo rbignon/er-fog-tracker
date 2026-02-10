@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from fogtracker.main import app
 from fogtracker.zone_resolver import init_resolver
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -25,6 +26,12 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 def init_data_files():
     """Initialize zone resolver (includes grace mapping) for all tests."""
     init_resolver(DATA_DIR)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_rate_limiting():
+    """Disable HTTP rate limiting during tests."""
+    app.state.disable_rate_limiting = True
 
 
 def pytest_addoption(parser):

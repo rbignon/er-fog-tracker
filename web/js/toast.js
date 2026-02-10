@@ -2,6 +2,8 @@
 // TOAST - Non-intrusive notification system
 // ============================================================
 
+import { escapeHtml } from './sanitize.js';
+
 const TOAST_DURATION = 5000;
 const TOAST_DURATION_LONG = 8000;
 
@@ -25,7 +27,7 @@ export function show(message, options = {}) {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
-        <span class="toast-message">${message}</span>
+        <span class="toast-message">${escapeHtml(message)}</span>
         <button class="toast-close">&times;</button>
     `;
 
@@ -81,7 +83,7 @@ export function showUpdateAvailable(newVersion) {
     const toast = document.createElement('div');
     toast.className = 'toast toast-info toast-update';
     toast.innerHTML = `
-        <span class="toast-message">New version ${newVersion} available</span>
+        <span class="toast-message">New version ${escapeHtml(newVersion)} available</span>
         <button class="toast-action-btn">Refresh</button>
         <button class="toast-close">&times;</button>
     `;
@@ -113,7 +115,7 @@ export function showVersionIncompatible(serverVersion) {
     const toast = document.createElement('div');
     toast.className = 'toast toast-error toast-update';
     toast.innerHTML = `
-        <span class="toast-message">Version incompatible (server: ${serverVersion}). Please refresh.</span>
+        <span class="toast-message">Version incompatible (server: ${escapeHtml(serverVersion)}). Please refresh.</span>
         <button class="toast-action-btn">Refresh</button>
     `;
 

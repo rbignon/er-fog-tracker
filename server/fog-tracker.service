@@ -13,5 +13,19 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/var/www/fog-tracker/server/.env
 
+# Security sandboxing
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/www/fog-tracker/server
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
 [Install]
 WantedBy=multi-user.target

@@ -20,6 +20,7 @@ from fogtracker.api import api_router
 from fogtracker.config import settings
 from fogtracker.database import init_db
 from fogtracker.logging_config import configure_logging, get_logger
+from fogtracker.middleware import RateLimitMiddleware
 from fogtracker.websocket import HostClient, ModClient, ViewerClient
 from fogtracker.zone_resolver import init_resolver
 
@@ -73,14 +74,15 @@ class VersionHeaderMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(VersionHeaderMiddleware)
+app.add_middleware(RateLimitMiddleware)
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Mount API routes
