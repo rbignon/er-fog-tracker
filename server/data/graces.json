@@ -600,6 +600,12 @@
       "map_id": null,
       "zone_id": "enirilim"
     },
+    "20012952": {
+      "grace_name": "Enir-Ilim: Outer Wall",
+      "zone": "Enir-Ilim",
+      "map_id": null,
+      "zone_id": "enirilim"
+    },
     "21002951": {
       "grace_name": "Main Gate Plaza",
       "zone": "Shadow Keep - Golden Hippopotamus",
