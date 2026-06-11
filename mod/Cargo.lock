@@ -303,7 +303,7 @@ dependencies = [
 
 [[package]]
 name = "fog-rando-tracker"
-version = "1.4.0"
+version = "1.4.1"
 dependencies = [
  "byteorder",
  "chrono",
@@ -639,7 +639,7 @@ checksum = "37c93d8daa9d8a012fd8ab92f088405fb202ea0b6ab73ee2482ae66af4f42091"
 [[package]]
 name = "libeldenring"
 version = "0.1.0"
-source = "git+https://github.com/veeenu/eldenring-practice-tool?tag=1.9.4#fbbf42504fe56efcb9913ffc4df4d73446f4864d"
+source = "git+https://github.com/rbignon/eldenring-practice-tool?rev=0f31a4f4ab4b2513f7035d7a336cb9249dc3fcd2#0f31a4f4ab4b2513f7035d7a336cb9249dc3fcd2"
 dependencies = [
  "log",
  "macro-param",
@@ -717,7 +717,7 @@ dependencies = [
 [[package]]
 name = "macro-param"
 version = "0.1.0"
-source = "git+https://github.com/veeenu/eldenring-practice-tool?tag=1.9.4#fbbf42504fe56efcb9913ffc4df4d73446f4864d"
+source = "git+https://github.com/rbignon/eldenring-practice-tool?rev=0f31a4f4ab4b2513f7035d7a336cb9249dc3fcd2#0f31a4f4ab4b2513f7035d7a336cb9249dc3fcd2"
 dependencies = [
  "heck",
  "proc-macro2",
