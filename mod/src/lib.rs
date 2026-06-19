@@ -92,8 +92,10 @@ mod dll_entry {
             setup_debug_console();
         }
 
-        // Initialize logging (console and/or file)
-        if enable_console || log_path.is_some() {
+        // Initialize logging (console and/or file). With the profile-tracy
+        // feature we always initialize so the Tracy layer and client are set up
+        // even when file/console logging is otherwise disabled.
+        if enable_console || log_path.is_some() || cfg!(feature = "profile-tracy") {
             init_logging(enable_console, log_path);
             info!("FogRandoTracker logging initialized");
         }

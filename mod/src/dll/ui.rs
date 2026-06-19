@@ -8,6 +8,7 @@ use tracing::{debug, error, info};
 
 use crate::core::color::parse_hex_color;
 use crate::core::map_utils::format_map_id;
+use crate::core::profile::frame_mark;
 use crate::core::status_template::{render_template, ContentSpan, TemplateColor, TemplateContext};
 
 use super::hotkey::begin_hotkey_frame;
@@ -67,6 +68,8 @@ impl ImguiRenderLoop for FogRandoTracker {
     }
 
     fn render(&mut self, ui: &mut hudhook::imgui::Ui) {
+        crate::profile_span!("imgui_render");
+
         // Handle keyboard shortcuts
         self.handle_hotkeys();
 
@@ -85,6 +88,7 @@ impl ImguiRenderLoop for FogRandoTracker {
                 .size([1.0, 1.0], Condition::Always)
                 .no_decoration()
                 .build(|| {});
+            frame_mark();
             return;
         }
 
@@ -147,6 +151,8 @@ impl ImguiRenderLoop for FogRandoTracker {
 
                 self.render_status_message(ui);
             });
+
+        frame_mark();
     }
 }
 

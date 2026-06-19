@@ -349,6 +349,8 @@ impl FogRandoTracker {
     /// 4. Handles session events (discoveries, zone updates, etc.)
     /// 5. Sends game stats updates when they change
     pub fn update(&mut self) {
+        crate::profile_span!("tracker_update");
+
         // 1. Capture all game state in a single pass
         let snapshot = FrameSnapshot::capture(&self.game_state, &self.game_man);
 

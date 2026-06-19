@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Internal
+
+#### Mod
+* Add opt-in Tracy profiling behind the `profile-tracy` feature (off by default, zero cost when disabled). See `docs/MOD_PROFILING.md`.
+
 ## [1.4.1] - 2026-06-11
 
 ### Fixes

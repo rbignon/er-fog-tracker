@@ -63,6 +63,28 @@ hudhook = { version = "0.7.0", features = ["dx12", "inject"], default-features =
 # --- retour for function hooking (warp detection) ---
 retour = { version = "0.3", default-features = false }
 
+# --- Profiling (optional, behind the `profile-tracy` feature) ---
+# `enable` is the master switch on both crates; removing it makes the profiler a no-op.
+# Versions kept in sync with speedfog-racing for Tracy protocol parity.
+tracing-tracy = { version = "0.11", optional = true, default-features = false, features = [
+    "enable",
+    "system-tracing",
+    "context-switch-tracing",
+    "sampling",
+    "code-transfer",
+    "broadcast",
+    "callstack-inlines",
+] }
+tracy-client = { version = "0.18", optional = true, default-features = false, features = [
+    "enable",
+    "system-tracing",
+    "context-switch-tracing",
+    "sampling",
+    "code-transfer",
+    "broadcast",
+    "callstack-inlines",
+] }
+
 # --- Windows API ---
 [target.'cfg(windows)'.dependencies.windows]
 version = "0.54.0"
@@ -89,6 +111,9 @@ embed-resource = "2.4"
 
 [features]
 launcher = ["native-windows-gui", "native-windows-derive", "ureq", "dirs", "flate2", "byteorder", "thiserror"]
+# Opt-in Tracy profiling. Off by default: the shipped DLL contains zero profiling
+# code. See docs/MOD_PROFILING.md.
+profile-tracy = ["dep:tracing-tracy", "dep:tracy-client"]
 
 [profile.release]
 strip = "symbols"

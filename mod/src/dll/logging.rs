@@ -59,11 +59,24 @@ pub fn init_logging(enable_console: bool, log_file_path: Option<PathBuf>) {
     };
 
     // Build and set the subscriber
-    tracing_subscriber::registry()
+    let registry = tracing_subscriber::registry()
         .with(filter)
         .with(file_layer)
-        .with(console_layer)
-        .init();
+        .with(console_layer);
+
+    // Opt-in Tracy layer: forwards `profile_span!` spans to the Tracy profiler.
+    #[cfg(feature = "profile-tracy")]
+    let registry = registry.with(tracing_tracy::TracyLayer::default());
+
+    registry.init();
+
+    // Start the Tracy client now so `frame_mark()` finds it running on the first
+    // frame. The client is a process-wide singleton; drop the returned handle.
+    #[cfg(feature = "profile-tracy")]
+    {
+        let _ = tracy_client::Client::start();
+        tracing::info!("Tracy profiling client started");
+    }
 
     // Store guards to keep logging alive
     let _ = LOG_GUARD.set(guards);

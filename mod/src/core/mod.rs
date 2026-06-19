@@ -9,6 +9,7 @@ pub mod constants;
 pub mod entity_utils;
 pub mod io_traits;
 pub mod map_utils;
+pub mod profile;
 pub mod protocol;
 pub mod session;
 pub mod status_template;

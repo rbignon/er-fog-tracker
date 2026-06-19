@@ -61,6 +61,7 @@ impl GameState {
     ///
     /// Returns the total number of deaths for the current character.
     pub fn read_deaths(&self) -> Option<u32> {
+        crate::profile_span!("read_deaths");
         self.death_count_ptr.read()
     }
 
@@ -68,6 +69,7 @@ impl GameState {
     ///
     /// Returns the IGT in milliseconds.
     pub fn read_igt(&self) -> Option<u32> {
+        crate::profile_span!("read_igt");
         // libeldenring reads IGT as usize but it's actually a u32 in milliseconds
         self.pointers.igt.read().map(|v| v as u32)
     }
@@ -77,6 +79,8 @@ impl GameState {
     /// Returns the set of unique Great Runes the player has.
     /// Restored and unrestored versions are deduplicated.
     pub fn read_great_runes(&self) -> Option<HashSet<GreatRune>> {
+        crate::profile_span!("read_great_runes");
+
         let (key_items_head, key_items_count) = self.read_key_items_info()?;
 
         let mut found_runes: HashSet<GreatRune> = HashSet::new();
@@ -123,6 +127,8 @@ impl GameState {
     ///
     /// Returns the total quantity of Kindling items.
     pub fn read_kindling_count(&self) -> Option<u32> {
+        crate::profile_span!("read_kindling_count");
+
         let (key_items_head, key_items_count) = self.read_key_items_info()?;
 
         let mut total = 0u32;

@@ -12,6 +12,7 @@ Elden Ring Fog Gate Randomizer Tracker - a web-based tool to visualize and track
 - `docs/MOD_INTERNALS.md` - Memory reading and warp detection
 - `docs/GRAPH_MODEL.md` - Zone links, discovery logic
 - `docs/ZONE_MATCHING.md` - Zone resolution strategies
+- `docs/MOD_PROFILING.md` - Opt-in Tracy profiling of the mod
 
 ## Project Structure
 
@@ -174,6 +175,7 @@ pytest --run-integration                                  # Integration tests (r
 cd mod
 cargo test                          # Run all tests (works on Linux!)
 cargo test --lib -- --nocapture     # With output
+cargo build --lib --release --features profile-tracy  # Opt-in Tracy profiling (Windows; see docs/MOD_PROFILING.md)
 ```
 
 The mod's `core/` module is platform-independent - tests run on Linux without Windows dependencies.
