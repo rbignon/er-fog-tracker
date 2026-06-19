@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+#### Mod
+* Overlay default colors now follow the SpeedFog graphic-charter foundations (deep blue-black background, off-white text, emerald discovered green, blue-grey border); default background opacity is now 0.55
+
 ### Internal
 
 #### Mod

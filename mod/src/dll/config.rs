@@ -152,29 +152,32 @@ fn default_font_path() -> String {
 fn default_font_size() -> f32 {
     16.0
 }
+// Default overlay palette: SpeedFog graphic-charter foundations (proven values),
+// adapted to the fog-tracker overlay. Foundations, text, and opacity only; no
+// gold accent (that is speedfog's own signature). See docs/SPEEDFOG_PORT_PLAN.md.
 fn default_bg_color() -> String {
-    "#141414".to_string()
+    "#0F1923".to_string()
 }
 fn default_bg_opacity() -> f32 {
-    0.7
+    0.55
 }
 fn default_text_color() -> String {
-    "#FFFFFF".to_string()
+    "#E8E6E1".to_string()
 }
 fn default_text_disabled_color() -> String {
-    "#808080".to_string()
+    "#6B7280".to_string()
 }
 fn default_discovered_color() -> String {
-    "#80FF80".to_string()
+    "#10B981".to_string()
 }
 fn default_undiscovered_color() -> String {
-    "#B3B3B3".to_string()
+    "#9CA3AF".to_string()
 }
 fn default_show_border() -> bool {
     false
 }
 fn default_border_color() -> String {
-    "#404040".to_string()
+    "#253550".to_string()
 }
 fn default_status_template() -> String {
     "{zone}$>{status} {discovered}/{total}".to_string()

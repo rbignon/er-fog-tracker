@@ -60,21 +60,21 @@ max_height = 500.0
 # position_offset_x = 20.0
 # position_offset_y = 20.0
 
-# Background color and opacity
-background_color = "#141414"
-background_opacity = 0.3  # 0.0 = fully transparent, 1.0 = fully opaque
+# Background color and opacity (SpeedFog graphic-charter foundations)
+background_color = "#0F1923"
+background_opacity = 0.55  # 0.0 = fully transparent, 1.0 = fully opaque
 
 # Text colors
-text_color = "#FFFFFF"           # Main text
-text_disabled_color = "#808080"  # Secondary/disabled text
+text_color = "#E8E6E1"           # Main text
+text_disabled_color = "#6B7280"  # Secondary/disabled text
 
 # Exit colors
-discovered_color = "#80FF80"     # Known destinations (green)
-undiscovered_color = "#B3B3B3"   # Unknown destinations "???" (gray)
+discovered_color = "#10B981"     # Known destinations (green)
+undiscovered_color = "#9CA3AF"   # Unknown destinations "???" (gray)
 
 # Window border
 show_border = false              # Set to true to show a border
-border_color = "#404040"         # Border color (only used if show_border = true)
+border_color = "#253550"         # Border color (only used if show_border = true)
 
 # Status line template
 # Variables:
