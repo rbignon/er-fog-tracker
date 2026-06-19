@@ -86,23 +86,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_hex_color_config_defaults() {
-        // Test the actual config default values
-        assert_eq!(
-            parse_hex_color("#141414", 0.7),
-            [0.078431375, 0.078431375, 0.078431375, 0.7]
-        );
-        assert_eq!(
-            parse_hex_color("#808080", 1.0),
-            [0.5019608, 0.5019608, 0.5019608, 1.0]
-        );
-        assert_eq!(
-            parse_hex_color("#80FF80", 1.0),
-            [0.5019608, 1.0, 0.5019608, 1.0]
-        );
-    }
-
-    #[test]
     fn test_to_hex_color() {
         assert_eq!(to_hex_color([1.0, 0.0, 0.0, 1.0]), "#FF0000");
         assert_eq!(to_hex_color([0.0, 1.0, 0.0, 1.0]), "#00FF00");

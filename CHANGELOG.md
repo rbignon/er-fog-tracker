@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 
 #### Mod
 * Add opt-in Tracy profiling behind the `profile-tracy` feature (off by default, zero cost when disabled). See `docs/MOD_PROFILING.md`.
+* Parse overlay colors once at startup instead of re-parsing hex strings every frame (CachedColors)
 
 ## [1.4.1] - 2026-06-11
 

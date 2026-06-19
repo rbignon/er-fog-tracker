@@ -97,12 +97,13 @@ impl ImguiRenderLoop for FogRandoTracker {
         // Scale factor for window positioning (based on font size relative to default 16px)
         let scale = s.font_size / 16.0;
 
-        // Parse colors from config
-        let bg_color = parse_hex_color(&s.background_color, s.background_opacity);
-        let text_color = parse_hex_color(&s.text_color, 1.0);
-        let text_disabled_color = parse_hex_color(&s.text_disabled_color, 1.0);
+        // Colors are parsed once at startup (see CachedColors); avoid per-frame
+        // hex parsing in the render path.
+        let bg_color = self.cached_colors.background;
+        let text_color = self.cached_colors.text;
+        let text_disabled_color = self.cached_colors.text_disabled;
         let border_color = if s.show_border {
-            parse_hex_color(&s.border_color, 1.0)
+            self.cached_colors.border
         } else {
             [0.0, 0.0, 0.0, 0.0]
         };
@@ -700,20 +701,14 @@ impl FogRandoTracker {
     /// Resolve a TemplateColor to an RGBA value
     fn resolve_template_color(&self, color: &TemplateColor) -> [f32; 4] {
         match color {
-            TemplateColor::Default => parse_hex_color(&self.config.overlay.text_color, 1.0),
+            TemplateColor::Default => self.cached_colors.text,
             TemplateColor::Status => {
                 let (status_color, _) = self.get_status_indicator();
                 status_color
             }
-            TemplateColor::Discovered => {
-                parse_hex_color(&self.config.overlay.discovered_color, 1.0)
-            }
-            TemplateColor::Undiscovered => {
-                parse_hex_color(&self.config.overlay.undiscovered_color, 1.0)
-            }
-            TemplateColor::Disabled => {
-                parse_hex_color(&self.config.overlay.text_disabled_color, 1.0)
-            }
+            TemplateColor::Discovered => self.cached_colors.discovered,
+            TemplateColor::Undiscovered => self.cached_colors.undiscovered,
+            TemplateColor::Disabled => self.cached_colors.text_disabled,
             TemplateColor::Named(named) => named.to_rgba(),
             TemplateColor::Hex(hex) => parse_hex_color(hex, 1.0),
         }
@@ -832,9 +827,9 @@ impl FogRandoTracker {
     /// `max_exits` limits how many exits to show. If Some(n), only n exits are shown
     /// and a "+ X others" line is added. If None, all exits are shown.
     fn render_exits_section(&self, ui: &hudhook::imgui::Ui, max_exits: Option<usize>) {
-        // Get colors from config
-        let discovered_color = parse_hex_color(&self.config.overlay.discovered_color, 1.0);
-        let undiscovered_color = parse_hex_color(&self.config.overlay.undiscovered_color, 1.0);
+        // Colors parsed once at startup (see CachedColors).
+        let discovered_color = self.cached_colors.discovered;
+        let undiscovered_color = self.cached_colors.undiscovered;
 
         if self.current_exits().is_empty() {
             ui.text_disabled("No exits available");

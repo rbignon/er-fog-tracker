@@ -16,6 +16,7 @@ use tracing::{debug, error, info, warn};
 use windows::Win32::Foundation::HINSTANCE;
 
 use crate::core::animations::{get_animation_label, get_teleport_type};
+use crate::core::color::parse_hex_color;
 use crate::core::constants::GreatRune;
 use crate::core::entity_utils::is_fog_rando_entity;
 use crate::core::io_traits::{
@@ -29,7 +30,7 @@ use crate::core::types::SpEffectDebugInfo;
 use crate::core::warp_tracker::DiscoveryEvent;
 use crate::eldenring::{GameMan, GameState, SpEffect};
 
-use super::config::Config;
+use super::config::{Config, OverlaySettings};
 use super::frame_state::FrameSnapshot;
 use super::icon_atlas::IconAtlas;
 use super::websocket::{ConnectionStatus as WsConnectionStatus, IncomingMessage, WebSocketClient};
@@ -187,6 +188,33 @@ impl ServerEventReceiver for WebSocketAdapter<'_> {
 // FOG RANDO TRACKER
 // =============================================================================
 
+/// Overlay colors parsed once from the config, so the per-frame render path does
+/// not re-parse hex strings every frame. Config is load-once (no hot-reload), so
+/// caching at construction is safe.
+pub(crate) struct CachedColors {
+    pub(crate) background: [f32; 4],
+    pub(crate) text: [f32; 4],
+    pub(crate) text_disabled: [f32; 4],
+    pub(crate) border: [f32; 4],
+    pub(crate) discovered: [f32; 4],
+    pub(crate) undiscovered: [f32; 4],
+}
+
+impl CachedColors {
+    /// Parse all overlay colors once. `background` folds in the configured
+    /// opacity; the others use full alpha.
+    fn from_overlay(overlay: &OverlaySettings) -> Self {
+        Self {
+            background: parse_hex_color(&overlay.background_color, overlay.background_opacity),
+            text: parse_hex_color(&overlay.text_color, 1.0),
+            text_disabled: parse_hex_color(&overlay.text_disabled_color, 1.0),
+            border: parse_hex_color(&overlay.border_color, 1.0),
+            discovered: parse_hex_color(&overlay.discovered_color, 1.0),
+            undiscovered: parse_hex_color(&overlay.undiscovered_color, 1.0),
+        }
+    }
+}
+
 /// Fog gate traversal tracking state
 ///
 /// This is the main DLL-side tracker that:
@@ -212,6 +240,8 @@ pub struct FogRandoTracker {
     pub(crate) show_exits: bool,
     pub(crate) show_undiscovered_only: bool,
     pub(crate) config: Config,
+    // Overlay colors parsed once at startup (see CachedColors)
+    pub(crate) cached_colors: CachedColors,
     pub(crate) status_message: Option<(String, Instant)>,
     pub(crate) font_data: Option<Vec<u8>>,
 
@@ -314,6 +344,9 @@ impl FogRandoTracker {
             }
         };
 
+        // Parse overlay colors once (config is load-once, no hot-reload).
+        let cached_colors = CachedColors::from_overlay(&config.overlay);
+
         Some(Self {
             game_state,
             sp_effect,
@@ -325,6 +358,7 @@ impl FogRandoTracker {
             show_exits: true,
             show_undiscovered_only: false,
             config,
+            cached_colors,
             status_message: None,
             font_data,
             last_logged_speffect_state: None,
