@@ -115,14 +115,6 @@ impl GameState {
         Some(found_runes)
     }
 
-    /// Read the count of possessed Great Runes
-    ///
-    /// Returns the number of unique Great Runes (0-7).
-    /// Restored and unrestored versions are deduplicated.
-    pub fn read_great_runes_count(&self) -> Option<u32> {
-        self.read_great_runes().map(|set| set.len() as u32)
-    }
-
     /// Read the count of Messmer's Kindling
     ///
     /// Returns the total quantity of Kindling items.

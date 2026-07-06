@@ -210,6 +210,20 @@ impl CachedColors {
     }
 }
 
+/// How often the overlay re-scans the key-item inventory for stats. Runes and
+/// kindling change rarely, so a short throttle keeps the display responsive
+/// without scanning on every frame.
+const STATS_READ_INTERVAL: Duration = Duration::from_millis(250);
+
+/// Inventory-derived stats (Great Runes, Messmer's Kindling) cached and
+/// refreshed on a throttle, so the overlay reads a slightly stale copy instead
+/// of re-scanning the key-item inventory on every frame.
+#[derive(Default)]
+pub(crate) struct CachedGameStats {
+    pub(crate) great_runes: Option<HashSet<GreatRune>>,
+    pub(crate) kindling_count: Option<u32>,
+}
+
 /// Fog gate traversal tracking state
 ///
 /// This is the main DLL-side tracker that:
@@ -255,6 +269,11 @@ pub struct FogRandoTracker {
 
     // Last time game stats were actually sent (for periodic updates)
     last_game_stats_send: Instant,
+
+    // Cached inventory stats for the overlay, refreshed on a throttle so the
+    // per-frame render does not re-scan the key-item inventory every frame.
+    pub(crate) cached_game_stats: CachedGameStats,
+    last_stats_read: Instant,
 
     // Icon atlas texture (loaded in initialize())
     pub(crate) icon_atlas: Option<IconAtlas>,
@@ -364,6 +383,8 @@ impl FogRandoTracker {
             previous_game_stats: None,
             last_game_stats_check: Instant::now(),
             last_game_stats_send: Instant::now(),
+            cached_game_stats: CachedGameStats::default(),
+            last_stats_read: Instant::now(),
             icon_atlas: None,
             log_file_path,
         })
@@ -473,8 +494,25 @@ impl FogRandoTracker {
             }
         }
 
+        // Refresh cached inventory stats (throttled) so the render pass reads
+        // them without re-scanning the inventory every frame.
+        self.refresh_cached_game_stats();
+
         // 6. Check for game stats changes and send updates if connected
         self.check_and_send_game_stats();
+    }
+
+    /// Refresh the cached inventory stats at most once per STATS_READ_INTERVAL,
+    /// so the render pass can read runes/kindling without scanning the key-item
+    /// inventory on every frame. A failed read (player not in-game) clears the
+    /// cache to None, matching a live read.
+    fn refresh_cached_game_stats(&mut self) {
+        if self.last_stats_read.elapsed() < STATS_READ_INTERVAL {
+            return;
+        }
+        self.last_stats_read = Instant::now();
+        self.cached_game_stats.great_runes = self.game_state.read_great_runes();
+        self.cached_game_stats.kindling_count = self.game_state.read_kindling_count();
     }
 
     /// Check for game stats changes and send update if connected
@@ -669,21 +707,6 @@ impl FogRandoTracker {
     /// Get the in-game time from game memory (in milliseconds)
     pub fn read_igt(&self) -> Option<u32> {
         self.game_state.read_igt()
-    }
-
-    /// Get the Great Runes count from game memory
-    pub fn read_great_runes_count(&self) -> Option<u32> {
-        self.game_state.read_great_runes_count()
-    }
-
-    /// Get the set of possessed Great Runes
-    pub fn read_great_runes(&self) -> Option<HashSet<GreatRune>> {
-        self.game_state.read_great_runes()
-    }
-
-    /// Get the Messmer's Kindling count from game memory
-    pub fn read_kindling_count(&self) -> Option<u32> {
-        self.game_state.read_kindling_count()
     }
 
     /// Log GameMan warp state changes (with deduplication)

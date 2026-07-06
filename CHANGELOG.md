@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 * Add opt-in Tracy profiling behind the `profile-tracy` feature (off by default, zero cost when disabled). See `docs/MOD_PROFILING.md`.
 * Parse overlay colors once at startup instead of re-parsing hex strings every frame (CachedColors)
 * Answer server pings in the WebSocket worker thread instead of round-tripping through the main thread
+* Cache Great Runes and Kindling counts (throttled) instead of re-scanning the key-item inventory on every overlay frame
 
 ## [1.4.1] - 2026-06-11
 

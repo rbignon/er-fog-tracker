@@ -212,8 +212,12 @@ impl FogRandoTracker {
             map_id,
             deaths: self.read_deaths(),
             igt_ms: self.read_igt(),
-            runes: self.read_great_runes_count(),
-            kindling: self.read_kindling_count(),
+            runes: self
+                .cached_game_stats
+                .great_runes
+                .as_ref()
+                .map(|s| s.len() as u32),
+            kindling: self.cached_game_stats.kindling_count,
             scaling: self.current_zone_scaling().map(String::from),
         }
     }
@@ -642,13 +646,13 @@ impl FogRandoTracker {
             return;
         };
 
-        let possessed = self.read_great_runes();
+        let possessed = self.cached_game_stats.great_runes.as_ref();
         let icon_size = self.icon_size();
 
         let mut first_icon = true;
 
         for rune in IconAtlas::runes_in_order() {
-            let is_possessed = possessed.as_ref().is_some_and(|set| set.contains(&rune));
+            let is_possessed = possessed.is_some_and(|set| set.contains(&rune));
             let (uv0, uv1) = atlas.get_rune_uvs(rune, is_possessed);
 
             if !first_icon {
