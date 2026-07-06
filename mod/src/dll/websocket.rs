@@ -63,8 +63,6 @@ pub enum OutgoingMessage {
         /// Entity ID of the grace being fast traveled to
         grace_entity_id: Option<u32>,
     },
-    /// Respond to server ping
-    Pong,
     /// Upload logs to server
     UploadLogs { content: String },
     /// Game stats update (runes, kindling, deaths, play time)
@@ -105,8 +103,6 @@ pub enum IncomingMessage {
     },
     /// Error message
     Error(String),
-    /// Server sent a ping
-    Ping,
     /// Upload logs acknowledgment
     UploadLogsAck {
         success: bool,
@@ -332,12 +328,6 @@ impl WebSocketClient {
                 if let IncomingMessage::Error(err) = &msg {
                     self.last_error = Some(err.clone());
                 }
-                if let IncomingMessage::Ping = &msg {
-                    // Auto-respond to pings
-                    if let Some(tx) = &self.tx {
-                        let _ = tx.try_send(OutgoingMessage::Pong);
-                    }
-                }
                 Some(msg)
             }
             Err(TryRecvError::Empty) => None,
@@ -383,6 +373,9 @@ fn websocket_thread(
 ) {
     let mut reconnect_delay = Duration::from_secs(1);
     let max_reconnect_delay = Duration::from_secs(30);
+    // Set when we hit a permanent error (bad token, server rejection): we stop
+    // reconnecting and leave the status as Error rather than Disconnected.
+    let mut permanent_error = false;
 
     loop {
         if shutdown_flag.load(Ordering::SeqCst) {
@@ -423,25 +416,45 @@ fn websocket_thread(
                 // Main message loop
                 let result = message_loop(&mut socket, &outgoing_rx, &incoming_tx, &shutdown_flag);
 
-                if let Err(ref e) = result {
-                    info!(error = %e, "[WS] Message loop ended");
-                }
-
                 // Close socket gracefully
                 let _ = socket.close(None);
 
-                if result.is_err()
-                    && settings.auto_reconnect
-                    && !shutdown_flag.load(Ordering::SeqCst)
-                {
-                    let _ = incoming_tx.send(IncomingMessage::StatusChanged(
-                        ConnectionStatus::Reconnecting,
-                    ));
+                match result {
+                    Ok(()) => {}
+                    Err(e) if e.is_permanent() => {
+                        error!(
+                            error = e.message(),
+                            "[WS] Permanent error; not reconnecting"
+                        );
+                        let _ = incoming_tx.send(IncomingMessage::Error(e.message().to_string()));
+                        let _ = incoming_tx
+                            .send(IncomingMessage::StatusChanged(ConnectionStatus::Error));
+                        permanent_error = true;
+                        break;
+                    }
+                    Err(e) => {
+                        info!(error = e.message(), "[WS] Message loop ended");
+                        if settings.auto_reconnect && !shutdown_flag.load(Ordering::SeqCst) {
+                            let _ = incoming_tx.send(IncomingMessage::StatusChanged(
+                                ConnectionStatus::Reconnecting,
+                            ));
+                        }
+                    }
                 }
             }
+            Err(e) if e.is_permanent() => {
+                error!(
+                    error = e.message(),
+                    "[WS] Permanent connection error; not reconnecting"
+                );
+                let _ = incoming_tx.send(IncomingMessage::Error(e.message().to_string()));
+                let _ = incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Error));
+                permanent_error = true;
+                break;
+            }
             Err(e) => {
-                error!(error = %e, "[WS] Connection failed");
-                let _ = incoming_tx.send(IncomingMessage::Error(e.clone()));
+                error!(error = e.message(), "[WS] Connection failed");
+                let _ = incoming_tx.send(IncomingMessage::Error(e.message().to_string()));
                 let _ = incoming_tx.send(IncomingMessage::StatusChanged(ConnectionStatus::Error));
 
                 if !settings.auto_reconnect {
@@ -466,9 +479,56 @@ fn websocket_thread(
         reconnect_delay = (reconnect_delay * 2).min(max_reconnect_delay);
     }
 
-    let _ = incoming_tx.send(IncomingMessage::StatusChanged(
-        ConnectionStatus::Disconnected,
-    ));
+    // Leave the status as Error after a permanent failure; otherwise mark the
+    // worker as cleanly disconnected.
+    if !permanent_error {
+        let _ = incoming_tx.send(IncomingMessage::StatusChanged(
+            ConnectionStatus::Disconnected,
+        ));
+    }
+}
+
+/// An error from a connection attempt or the message loop, tagged with whether
+/// reconnecting could ever succeed.
+enum WsError {
+    /// Worth retrying: network blip, server restart, timeout, transient I/O.
+    Transient(String),
+    /// Reconnecting will not help: bad token, or a server close code >= 4000.
+    Permanent(String),
+}
+
+impl WsError {
+    fn message(&self) -> &str {
+        match self {
+            WsError::Transient(m) | WsError::Permanent(m) => m,
+        }
+    }
+
+    fn is_permanent(&self) -> bool {
+        matches!(self, WsError::Permanent(_))
+    }
+}
+
+impl From<String> for WsError {
+    /// Plain string errors (from the `.map_err(|e| e.to_string())?` sites)
+    /// default to transient; permanence is opted into explicitly.
+    fn from(message: String) -> Self {
+        WsError::Transient(message)
+    }
+}
+
+/// Classify a WebSocket close: application close codes (>= 4000) mean the server
+/// is refusing us and reconnecting will not help; everything else is transient.
+fn classify_close(code: Option<u16>, reason: &str, context: &str) -> WsError {
+    match code {
+        Some(code) if code >= 4000 => WsError::Permanent(format!(
+            "Server closed connection {context} (code {code}): {reason}"
+        )),
+        Some(code) => WsError::Transient(format!(
+            "Server closed connection {context} (code {code}): {reason}"
+        )),
+        None => WsError::Transient(format!("Server closed connection {context}")),
+    }
 }
 
 /// Connect to the WebSocket server and authenticate
@@ -477,7 +537,7 @@ fn websocket_thread(
 fn connect_and_authenticate(
     url: &str,
     api_token: &str,
-) -> Result<(WebSocket<MaybeTlsStream<TcpStream>>, Option<DiscoveryStats>), String> {
+) -> Result<(WebSocket<MaybeTlsStream<TcpStream>>, Option<DiscoveryStats>), WsError> {
     // tungstenite handles TLS automatically for wss:// URLs
     debug!(url, "[WS] Opening socket");
     let (mut socket, _response) = connect(url).map_err(|e| format!("Connection failed: {}", e))?;
@@ -509,12 +569,27 @@ fn connect_and_authenticate(
                 }
                 ServerResponse::AuthError { message } => {
                     error!(message = %message, "[WS] Auth failed");
-                    Err(format!("Auth failed: {}", message))
+                    // A bad or expired token will never succeed on retry.
+                    Err(WsError::Permanent(format!("Auth failed: {}", message)))
                 }
-                other => Err(format!("Unexpected response during auth: {:?}", other)),
+                other => Err(WsError::Transient(format!(
+                    "Unexpected response during auth: {:?}",
+                    other
+                ))),
             }
         }
-        other => Err(format!("Unexpected message type during auth: {:?}", other)),
+        Message::Close(frame) => {
+            let code = frame.as_ref().map(|f| u16::from(f.code));
+            let reason = frame
+                .as_ref()
+                .map(|f| f.reason.to_string())
+                .unwrap_or_default();
+            Err(classify_close(code, &reason, "during auth"))
+        }
+        other => Err(WsError::Transient(format!(
+            "Unexpected message type during auth: {:?}",
+            other
+        ))),
     }
 }
 
@@ -524,7 +599,7 @@ fn message_loop(
     outgoing_rx: &Receiver<OutgoingMessage>,
     incoming_tx: &Sender<IncomingMessage>,
     shutdown_flag: &Arc<AtomicBool>,
-) -> Result<(), String> {
+) -> Result<(), WsError> {
     // Set socket to non-blocking for polling
     // Note: For TLS streams, we access the underlying TCP socket
     match socket.get_ref() {
@@ -617,14 +692,6 @@ fn message_loop(
                     .send(Message::Text(json))
                     .map_err(|e| e.to_string())?;
             }
-            Ok(OutgoingMessage::Pong) => {
-                let msg = ServerMessage::Pong;
-                let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
-                socket
-                    .send(Message::Text(json))
-                    .map_err(|e| e.to_string())?;
-                last_ping_response = Instant::now();
-            }
             Ok(OutgoingMessage::UploadLogs { ref content }) => {
                 debug!(bytes = content.len(), "[WS TX] UploadLogs");
                 let msg = ServerMessage::UploadLogs {
@@ -665,7 +732,9 @@ fn message_loop(
             }
             Err(TryRecvError::Empty) => {}
             Err(TryRecvError::Disconnected) => {
-                return Err("Outgoing channel disconnected".to_string());
+                return Err(WsError::Transient(
+                    "Outgoing channel disconnected".to_string(),
+                ));
             }
         }
 
@@ -676,7 +745,15 @@ fn message_loop(
                 match serde_json::from_str::<ServerResponse>(&text) {
                     Ok(resp) => match resp {
                         ServerResponse::Ping => {
-                            let _ = incoming_tx.send(IncomingMessage::Ping);
+                            // Respond to the server's application-level ping
+                            // immediately in the worker: keeps latency low and
+                            // avoids a round-trip through the main thread.
+                            let json = serde_json::to_string(&ServerMessage::Pong)
+                                .map_err(|e| e.to_string())?;
+                            socket
+                                .send(Message::Text(json))
+                                .map_err(|e| e.to_string())?;
+                            last_ping_response = Instant::now();
                         }
                         ServerResponse::DiscoveryV2Ack {
                             ref propagated,
@@ -781,21 +858,26 @@ fn message_loop(
                     }
                 }
             }
-            Ok(Message::Close(_)) => {
-                return Err("Server closed connection".to_string());
+            Ok(Message::Close(frame)) => {
+                let code = frame.as_ref().map(|f| u16::from(f.code));
+                let reason = frame
+                    .as_ref()
+                    .map(|f| f.reason.to_string())
+                    .unwrap_or_default();
+                return Err(classify_close(code, &reason, "by server"));
             }
             Err(tungstenite::Error::Io(ref e)) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 // No data available, continue
             }
             Err(e) => {
-                return Err(format!("Read error: {}", e));
+                return Err(WsError::Transient(format!("Read error: {}", e)));
             }
             _ => {}
         }
 
         // Check for ping timeout
         if last_ping_response.elapsed() > ping_timeout {
-            return Err("Ping timeout".to_string());
+            return Err(WsError::Transient("Ping timeout".to_string()));
         }
 
         // Small sleep to avoid busy-waiting

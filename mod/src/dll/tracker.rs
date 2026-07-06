@@ -170,11 +170,6 @@ impl ServerEventReceiver for WebSocketAdapter<'_> {
                 scaling,
             }),
             IncomingMessage::Error(msg) => ServerEvent::Error(msg),
-            IncomingMessage::Ping => {
-                // Ping is auto-handled by WebSocketClient, but we still need to return something
-                // We'll filter this out in the session
-                ServerEvent::Error("ping".to_string())
-            }
             IncomingMessage::UploadLogsAck { success, message } => {
                 ServerEvent::UploadLogsAck { success, message }
             }
@@ -458,10 +453,7 @@ impl FogRandoTracker {
                     }
                 }
                 SessionEvent::ServerError(msg) => {
-                    // Filter out ping "errors" (they're not real errors)
-                    if msg != "ping" {
-                        error!(error = %msg, "WebSocket error");
-                    }
+                    error!(error = %msg, "WebSocket error");
                 }
                 SessionEvent::LogsUploaded { success, message } => {
                     if success {

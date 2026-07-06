@@ -9,11 +9,17 @@ All notable changes to this project will be documented in this file.
 #### Mod
 * Overlay default colors now follow the SpeedFog graphic-charter foundations (deep blue-black background, off-white text, emerald discovered green, blue-grey border); default background opacity is now 0.55
 
+### Fixed
+
+#### Mod
+* Stop reconnecting forever when the server permanently rejects the connection (e.g. an invalid or expired token, or a close code >= 4000); the overlay now shows a clear Error status instead of an endless reconnect loop
+
 ### Internal
 
 #### Mod
 * Add opt-in Tracy profiling behind the `profile-tracy` feature (off by default, zero cost when disabled). See `docs/MOD_PROFILING.md`.
 * Parse overlay colors once at startup instead of re-parsing hex strings every frame (CachedColors)
+* Answer server pings in the WebSocket worker thread instead of round-tripping through the main thread
 
 ## [1.4.1] - 2026-06-11
 
