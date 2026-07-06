@@ -491,6 +491,18 @@ impl FogRandoTracker {
                         "[STATS] Stats updated (zone/exits preserved)"
                     );
                 }
+                SessionEvent::DiscoveryBuffered(discovery) => {
+                    info!(
+                        transport_type = discovery.transport_type,
+                        dest_entity = discovery.destination_entity_id,
+                        "[WARP] Discovery buffered (server offline), will replay on reconnect"
+                    );
+                    self.set_status("Discovery saved (offline)".to_string());
+                }
+                SessionEvent::DiscoveriesReplayed(count) => {
+                    info!(count, "[WARP] Replayed buffered discoveries on reconnect");
+                    self.set_status(format!("Replayed {count} offline discoveries"));
+                }
             }
         }
 

@@ -10,7 +10,8 @@ use crate::core::io_traits::{
 use crate::core::protocol::{DiscoveryStats, FogExit};
 use crate::core::traits::{GameStateReader, WarpDetector};
 use crate::core::warp_tracker::{DiscoveryEvent, WarpTracker};
-use tracing::debug;
+use std::collections::VecDeque;
+use tracing::{debug, warn};
 
 // =============================================================================
 // SESSION EVENTS
@@ -38,6 +39,10 @@ pub enum SessionEvent {
     ServerError(String),
     /// Stats updated (on reconnection, without zone/exits reset)
     StatsUpdated(DiscoveryStats),
+    /// A discovery was buffered because the server was disconnected
+    DiscoveryBuffered(DiscoveryEvent),
+    /// Buffered discoveries were replayed on reconnect (number replayed)
+    DiscoveriesReplayed(usize),
 }
 
 // =============================================================================
@@ -63,6 +68,19 @@ pub struct SessionState {
 // TRACKER SESSION
 // =============================================================================
 
+/// Maximum number of discoveries buffered while disconnected. Discoveries are
+/// rare (one per fog gate traversal), so this is far above any realistic offline
+/// session; on overflow the oldest entry is dropped.
+const MAX_PENDING_DISCOVERIES: usize = 256;
+
+/// A discovery captured while the server was disconnected, with the source zone
+/// context at the time, replayed verbatim on reconnect.
+struct BufferedDiscovery {
+    discovery: DiscoveryEvent,
+    source_zone: Option<String>,
+    source_zone_id: Option<String>,
+}
+
 /// TrackerSession orchestrates WarpTracker with server I/O
 ///
 /// This struct manages the full tracking lifecycle:
@@ -86,6 +104,8 @@ pub struct TrackerSession {
     /// Map ID before the loading screen (captured when zone_query is sent)
     /// Used for same-map fallback comparison
     pre_loading_map_id: Option<u32>,
+    /// Discoveries made while disconnected, replayed on reconnect (bounded).
+    pending_discoveries: VecDeque<BufferedDiscovery>,
 }
 
 impl TrackerSession {
@@ -98,6 +118,7 @@ impl TrackerSession {
             was_warp_requested: false,
             last_known_map_id: None,
             pre_loading_map_id: None,
+            pending_discoveries: VecDeque::new(),
         }
     }
 
@@ -131,6 +152,11 @@ impl TrackerSession {
         self.state.current_zone_scaling.as_deref()
     }
 
+    /// Number of discoveries buffered while disconnected (awaiting replay).
+    pub fn pending_discovery_count(&self) -> usize {
+        self.pending_discoveries.len()
+    }
+
     /// Check if there's a pending warp
     pub fn has_pending_warp(&self) -> bool {
         self.warp_tracker.has_pending_warp()
@@ -156,6 +182,47 @@ impl TrackerSession {
         let _ = self.warp_tracker.check_warp(game_state, warp_detector);
         // Also sync warp_requested state
         self.was_warp_requested = warp_detector.is_warp_requested();
+    }
+
+    /// Buffer a discovery made while disconnected, for replay on reconnect.
+    fn buffer_discovery(
+        &mut self,
+        discovery: DiscoveryEvent,
+        source_zone: Option<String>,
+        source_zone_id: Option<String>,
+    ) {
+        if self.pending_discoveries.len() >= MAX_PENDING_DISCOVERIES {
+            // Drop the oldest so the most recent traversals survive a long outage.
+            self.pending_discoveries.pop_front();
+            warn!(
+                cap = MAX_PENDING_DISCOVERIES,
+                "Discovery buffer full; dropping the oldest buffered discovery"
+            );
+        }
+        self.pending_discoveries.push_back(BufferedDiscovery {
+            discovery,
+            source_zone,
+            source_zone_id,
+        });
+    }
+
+    /// Drain the buffered discoveries, sending each to the (re)connected server
+    /// in the order they were made. Returns the number replayed.
+    ///
+    /// Best-effort by design (not at-least-once): the buffer is drained as it is
+    /// sent, so if the connection drops mid-replay the un-transmitted entries are
+    /// lost. Guaranteed delivery would require message-id acks, deliberately out
+    /// of scope here.
+    fn replay_buffered_discoveries<S: DiscoverySender>(&mut self, server: &S) -> usize {
+        let count = self.pending_discoveries.len();
+        for buffered in self.pending_discoveries.drain(..) {
+            server.send_discovery(
+                &buffered.discovery,
+                buffered.source_zone.as_deref(),
+                buffered.source_zone_id.as_deref(),
+            );
+        }
+        count
     }
 
     /// Update tracker each frame
@@ -202,6 +269,13 @@ impl TrackerSession {
                     self.state.current_zone_id.as_deref(),
                 );
                 events.push(SessionEvent::DiscoverySent(discovery));
+            } else {
+                // Server is down: buffer the discovery (with the source zone
+                // context captured now) for replay when the connection returns.
+                let source_zone = self.state.current_zone.clone();
+                let source_zone_id = self.state.current_zone_id.clone();
+                self.buffer_discovery(discovery.clone(), source_zone, source_zone_id);
+                events.push(SessionEvent::DiscoveryBuffered(discovery));
             }
         }
 
@@ -229,6 +303,12 @@ impl TrackerSession {
         while let Some(event) = server.poll_event() {
             match event {
                 ServerEvent::StatusChanged(status) => {
+                    // On reconnect, replay any discoveries buffered while offline.
+                    if status == ConnectionStatus::Connected && !self.pending_discoveries.is_empty()
+                    {
+                        let replayed = self.replay_buffered_discoveries(server);
+                        events.push(SessionEvent::DiscoveriesReplayed(replayed));
+                    }
                     events.push(SessionEvent::ConnectionChanged(status));
                 }
                 ServerEvent::DiscoveryAck(result) => {
@@ -408,6 +488,125 @@ mod tests {
 
         // No discovery should have been sent
         assert_eq!(server.discovery_count(), 0);
+    }
+
+    #[test]
+    fn test_discovery_buffered_when_disconnected() {
+        // A fog traversal made while the server is disconnected must be
+        // buffered for later replay, not dropped.
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
+            ],
+            vec![Some(0), Some(Animation::FogWall.as_u32()), Some(0)],
+        );
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890042, 0x0A0A1000);
+
+        let mut server = MockServerConnection::disconnected();
+        let mut session = synced_session(&game_state, &warp);
+        game_state.advance_frame();
+
+        // Frame 1: animation starts (pending warp)
+        session.update(&game_state, &warp, &mut server);
+        game_state.advance_frame();
+
+        // Frame 2: warp completes but server is down, so it must be buffered
+        let events = session.update(&game_state, &warp, &mut server);
+
+        assert_eq!(
+            server.discovery_count(),
+            0,
+            "must not be sent while disconnected"
+        );
+        assert_eq!(
+            session.pending_discovery_count(),
+            1,
+            "the discovery must be buffered"
+        );
+        assert!(
+            events.iter().any(|e| matches!(
+                e,
+                SessionEvent::DiscoveryBuffered(d) if d.destination_entity_id == 755890042
+            )),
+            "must emit DiscoveryBuffered, got {events:?}"
+        );
+    }
+
+    #[test]
+    fn test_buffered_discoveries_replayed_on_reconnect() {
+        // A discovery buffered while offline is sent to the server once the
+        // connection is reported back, then the buffer is drained.
+        let game_state = MockGameState::new(
+            vec![
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x3C2C2400, 100.0, 0.0, 100.0)),
+                Some(make_pos(0x0A0A1000, 200.0, 0.0, 200.0)),
+            ],
+            vec![Some(0), Some(Animation::FogWall.as_u32()), Some(0)],
+        );
+        let warp = MockWarpDetector::new();
+        warp.set_warp(true, 755890042, 0x0A0A1000);
+
+        let mut server = MockServerConnection::disconnected();
+        let mut session = synced_session(&game_state, &warp);
+        game_state.advance_frame();
+        session.update(&game_state, &warp, &mut server); // pending warp
+        game_state.advance_frame();
+        session.update(&game_state, &warp, &mut server); // buffered
+        assert_eq!(session.pending_discovery_count(), 1);
+
+        // Reconnect: connection restored, server reports the status change.
+        server.set_connected(true);
+        server.queue_event(ServerEvent::StatusChanged(ConnectionStatus::Connected));
+        let events = session.update(&game_state, &warp, &mut server);
+
+        assert_eq!(server.discovery_count(), 1, "buffered discovery replayed");
+        assert_eq!(
+            server.last_discovery().unwrap().destination_entity_id,
+            755890042
+        );
+        assert_eq!(session.pending_discovery_count(), 0, "buffer drained");
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, SessionEvent::DiscoveriesReplayed(1))),
+            "must emit DiscoveriesReplayed(1), got {events:?}"
+        );
+    }
+
+    #[test]
+    fn test_discovery_buffer_caps_at_256_dropping_oldest() {
+        // The buffer is bounded; on overflow the oldest entry is dropped so the
+        // most recent traversals survive a long offline session.
+        let mut session = TrackerSession::new();
+        for i in 0..300u32 {
+            let discovery = DiscoveryEvent {
+                entry: make_pos(0x1000, 0.0, 0.0, 0.0),
+                exit: make_pos(0x2000, 0.0, 0.0, 0.0),
+                transport_type: "FogWall".to_string(),
+                destination_entity_id: 755890000 + i,
+                warp_was_requested: true,
+            };
+            session.buffer_discovery(discovery, None, None);
+        }
+        assert_eq!(
+            session.pending_discovery_count(),
+            256,
+            "buffer capped at 256"
+        );
+        // The 44 oldest (ids ...000..=...043) were dropped; front is now ...044.
+        assert_eq!(
+            session
+                .pending_discoveries
+                .front()
+                .unwrap()
+                .discovery
+                .destination_entity_id,
+            755890000 + (300 - 256)
+        );
     }
 
     #[test]

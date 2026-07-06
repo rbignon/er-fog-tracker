@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 
 #### Mod
 * Stop reconnecting forever when the server permanently rejects the connection (e.g. an invalid or expired token, or a close code >= 4000); the overlay now shows a clear Error status instead of an endless reconnect loop
+* Discoveries made while the server is unreachable are now buffered and replayed on reconnect instead of being lost
 
 ### Internal
 
