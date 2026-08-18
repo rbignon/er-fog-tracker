@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 # Custom WebSocket close codes (4000-4999 are available for application use)
 WS_CLOSE_SESSION_REPLACED = 4001  # Another session took over (don't reconnect)
 
-# Maximum WebSocket message size (64KB - generous for any legitimate message)
-MAX_MESSAGE_SIZE = 65536
+# Maximum WebSocket message size (640KB - generous for any legitimate message)
+MAX_MESSAGE_SIZE = 655360
 
 
 def build_game_state(game: Game) -> dict:
