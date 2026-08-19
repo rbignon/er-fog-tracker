@@ -2132,9 +2132,9 @@
     },
     "1049532950": {
       "grace_name": "Zamor Ruins",
-      "zone": "Mountaintops of the Giants - Zamor Ruins",
+      "zone": "Mountaintops of the Giants",
       "map_id": "m60_49_53_00",
-      "zone_id": "mountaintops_zamor_ruins"
+      "zone_id": "mountaintops"
     },
     "1049532951": {
       "grace_name": "Grand Lift of Rold",
