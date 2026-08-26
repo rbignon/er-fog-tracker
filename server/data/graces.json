@@ -2046,6 +2046,12 @@
       "map_id": "m60_49_39_00",
       "zone_id": "caelid_crypt_boss"
     },
+    "1049392950": {
+      "grace_name": "Sellia Backstreets",
+      "zone": "Caelid",
+      "map_id": "m60_49_39_00",
+      "zone_id": "caelid"
+    },
     "1049392952": {
       "grace_name": "Sellia Under-Stair",
       "zone": "Caelid",
