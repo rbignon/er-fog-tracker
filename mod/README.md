@@ -27,6 +27,17 @@ cargo build --release --features launcher
 - `target/release/fog_rando_tracker.dll` - The mod DLL
 - `target/release/fog-rando-tracker-launcher.exe` - GUI launcher (with `--features launcher`)
 
+**Supporting a new Elden Ring version:**
+
+Game structure offsets come from `libeldenring`, pinned in `Cargo.toml` to a commit of the
+[rbignon/eldenring-practice-tool](https://github.com/rbignon/eldenring-practice-tool) fork.
+This mod still uses `hudhook` 0.7 / `windows` 0.54, so the pinned commit must come from a
+`speedfog-vX.Y.Z-on-1.9.4` branch (version-support commits on top of upstream 1.9.4), not from
+the `speedfog-vX.Y.Z` branches used by speedfog-racing (based on 1.9.5, which moved to `hudhook`
+0.9 / `windows` 0.62). To bump: cherry-pick the fork's "Add support for Elden Ring X.Y.Z" commit
+onto the latest `-on-1.9.4` branch, push it as `speedfog-vX.Y.Z-on-1.9.4`, update `rev` in
+`Cargo.toml` and run `cargo update -p libeldenring -p macro-param`.
+
 ## Installation
 
 1. Use the Launcher (recommended):
