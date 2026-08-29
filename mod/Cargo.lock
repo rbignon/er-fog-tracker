@@ -303,7 +303,7 @@ dependencies = [
 
 [[package]]
 name = "fog-rando-tracker"
-version = "1.4.1"
+version = "1.5.0"
 dependencies = [
  "byteorder",
  "chrono",
