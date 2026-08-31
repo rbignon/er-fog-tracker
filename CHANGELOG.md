@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+#### Mod
+* Overlay exit list now shows current-zone exits before exits from other zones of the merged group, within both the undiscovered and discovered groups (undiscovered exits still come first)
+
 ## 1.5.0
 
 ### Changed

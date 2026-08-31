@@ -9,6 +9,7 @@ use tracing::{debug, error, info};
 use crate::core::color::parse_hex_color;
 use crate::core::map_utils::format_map_id;
 use crate::core::profile::frame_mark;
+use crate::core::protocol::{sort_exits_for_display, FogExit};
 use crate::core::status_template::{render_template, ContentSpan, TemplateColor, TemplateContext};
 
 use super::hotkey::begin_hotkey_frame;
@@ -327,6 +328,21 @@ impl FogRandoTracker {
         (min_scale, max_exits)
     }
 
+    /// Build the exit list as displayed: filtered by undiscovered-only mode,
+    /// undiscovered exits first, current-zone exits first within each group
+    fn exits_to_show(&self) -> Vec<&FogExit> {
+        let mut exits: Vec<&FogExit> = if self.show_undiscovered_only {
+            self.current_exits()
+                .iter()
+                .filter(|e| e.target == "???")
+                .collect()
+        } else {
+            self.current_exits().iter().collect()
+        };
+        sort_exits_for_display(&mut exits);
+        exits
+    }
+
     /// Estimate the natural height of the exits section (at scale 1.0)
     fn estimate_exits_height(&self, ui: &hudhook::imgui::Ui) -> f32 {
         let line_height = ui.text_line_height_with_spacing();
@@ -336,15 +352,7 @@ impl FogRandoTracker {
             return line_height;
         }
 
-        // Filter exits like render_exits_section does
-        let exits_to_show: Vec<_> = if self.show_undiscovered_only {
-            self.current_exits()
-                .iter()
-                .filter(|e| e.target == "???")
-                .collect()
-        } else {
-            self.current_exits().iter().collect()
-        };
+        let exits_to_show = self.exits_to_show();
 
         let mut line_count = 0;
 
@@ -366,16 +374,7 @@ impl FogRandoTracker {
 
     /// Calculate how many exits fit in the given height at the given line height
     fn calculate_exits_that_fit(&self, available_height: f32, line_height: f32) -> Option<usize> {
-        // Get the filtered exits list (sorted same as render_exits_section)
-        let mut exits_to_show: Vec<_> = if self.show_undiscovered_only {
-            self.current_exits()
-                .iter()
-                .filter(|e| e.target == "???")
-                .collect()
-        } else {
-            self.current_exits().iter().collect()
-        };
-        exits_to_show.sort_by_key(|e| e.target != "???");
+        let exits_to_show = self.exits_to_show();
 
         if exits_to_show.is_empty() {
             return None;
@@ -853,17 +852,7 @@ impl FogRandoTracker {
             return;
         }
 
-        // Filter exits if undiscovered-only mode is active
-        // Always sort undiscovered exits first
-        let mut exits_to_show: Vec<_> = if self.show_undiscovered_only {
-            self.current_exits()
-                .iter()
-                .filter(|e| e.target == "???")
-                .collect()
-        } else {
-            self.current_exits().iter().collect()
-        };
-        exits_to_show.sort_by_key(|e| e.target != "???");
+        let exits_to_show = self.exits_to_show();
 
         // Show filter indicator when undiscovered-only mode is active
         if self.show_undiscovered_only {

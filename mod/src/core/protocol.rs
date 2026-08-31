@@ -43,6 +43,14 @@ pub struct FogExit {
     pub from_zone: Option<String>,
 }
 
+/// Sort exits for overlay display: undiscovered exits first, and within each
+/// group, exits from the current zone (`from_zone == None`) before exits from
+/// other zones of the preexisting group. The sort is stable, so the server's
+/// order is preserved within each subgroup.
+pub fn sort_exits_for_display(exits: &mut [&FogExit]) {
+    exits.sort_by_key(|e| (e.target != "???", e.from_zone.is_some()));
+}
+
 /// Discovery statistics from the server
 #[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 pub struct DiscoveryStats {
@@ -225,6 +233,53 @@ mod tests {
         let exit: FogExit = serde_json::from_str(json).unwrap();
         assert_eq!(exit.target, "???");
         assert_eq!(exit.description, "Through the fog wall");
+    }
+
+    fn make_exit(target: &str, description: &str, from_zone: Option<&str>) -> FogExit {
+        FogExit {
+            target: target.to_string(),
+            description: description.to_string(),
+            from_zone: from_zone.map(String::from),
+        }
+    }
+
+    #[test]
+    fn test_sort_exits_undiscovered_first_then_current_zone_first() {
+        let discovered_other = make_exit("Stormveil Castle", "North gate", Some("Limgrave"));
+        let discovered_current = make_exit("Roundtable Hold", "South door", None);
+        let undiscovered_other = make_exit("???", "East fog wall", Some("Limgrave"));
+        let undiscovered_current = make_exit("???", "West fog wall", None);
+
+        let mut exits = vec![
+            &discovered_other,
+            &undiscovered_other,
+            &discovered_current,
+            &undiscovered_current,
+        ];
+        sort_exits_for_display(&mut exits);
+
+        assert_eq!(
+            exits,
+            vec![
+                &undiscovered_current,
+                &undiscovered_other,
+                &discovered_current,
+                &discovered_other,
+            ]
+        );
+    }
+
+    #[test]
+    fn test_sort_exits_preserves_order_within_groups() {
+        let first = make_exit("???", "First fog wall", None);
+        let second = make_exit("???", "Second fog wall", None);
+        let third = make_exit("???", "Third fog wall", Some("Limgrave"));
+        let fourth = make_exit("???", "Fourth fog wall", Some("Liurnia"));
+
+        let mut exits = vec![&third, &first, &fourth, &second];
+        sort_exits_for_display(&mut exits);
+
+        assert_eq!(exits, vec![&first, &second, &third, &fourth]);
     }
 
     // -------------------------------------------------------------------------

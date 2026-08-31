@@ -697,7 +697,7 @@ The mod tracks `was_position_readable` to:
 
 The mod displays an ImGui overlay showing:
 - Current zone name (from server)
-- Available exits (with ??? for undiscovered destinations)
+- Available exits (with ??? for undiscovered destinations). Undiscovered exits are listed first; within each group, exits from the current zone come before exits from other zones of the merged group.
 - Discovery progress (X/Y zones)
 - Connection status
 
