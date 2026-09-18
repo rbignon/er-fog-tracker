@@ -9,6 +9,11 @@ All notable changes to this project will be documented in this file.
 #### Mod
 * Overlay exit list now shows current-zone exits before exits from other zones of the merged group, within both the undiscovered and discovered groups (undiscovered exits still come first)
 
+### Fixed
+
+#### Mod
+* Support Elden Ring v1.17.1 (exe 2.7.1)
+
 ## 1.5.0
 
 ### Changed

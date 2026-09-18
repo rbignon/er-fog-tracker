@@ -55,7 +55,7 @@ thiserror = { version = "1.0", optional = true }
 # =============================================================================
 
 [target.'cfg(windows)'.dependencies]
-libeldenring = { git = "https://github.com/rbignon/eldenring-practice-tool", rev = "d3453d9a8db0a40f7fef02d8c4308bd49c0a18d8" }
+libeldenring = { git = "https://github.com/rbignon/eldenring-practice-tool", rev = "a6b08b68101ef872866d67528fd949e4c63f74a8" }
 
 # --- hudhook for ImGui overlay (includes imgui as transitive dependency) ---
 hudhook = { version = "0.7.0", features = ["dx12", "inject"], default-features = false }

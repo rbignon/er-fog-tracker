@@ -656,7 +656,7 @@ checksum = "37c93d8daa9d8a012fd8ab92f088405fb202ea0b6ab73ee2482ae66af4f42091"
 [[package]]
 name = "libeldenring"
 version = "0.1.0"
-source = "git+https://github.com/rbignon/eldenring-practice-tool?rev=d3453d9a8db0a40f7fef02d8c4308bd49c0a18d8#d3453d9a8db0a40f7fef02d8c4308bd49c0a18d8"
+source = "git+https://github.com/rbignon/eldenring-practice-tool?rev=a6b08b68101ef872866d67528fd949e4c63f74a8#a6b08b68101ef872866d67528fd949e4c63f74a8"
 dependencies = [
  "log",
  "macro-param",
@@ -747,7 +747,7 @@ dependencies = [
 [[package]]
 name = "macro-param"
 version = "0.1.0"
-source = "git+https://github.com/rbignon/eldenring-practice-tool?rev=d3453d9a8db0a40f7fef02d8c4308bd49c0a18d8#d3453d9a8db0a40f7fef02d8c4308bd49c0a18d8"
+source = "git+https://github.com/rbignon/eldenring-practice-tool?rev=a6b08b68101ef872866d67528fd949e4c63f74a8#a6b08b68101ef872866d67528fd949e4c63f74a8"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -1783,7 +1783,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5f7c95348f20c1c913d72157b3c6dee6ea3e30b3d19502c5a7f6d3f160dacbf"
 dependencies = [
  "cc",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
