@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+#### Web
+* Temporarily disable the search dropdown that listed undiscovered zones with an "I've reached" button, as it was often clicked by accident; search still highlights matching zones in the graph
+
 ## 1.5.1
 
 ### Changed

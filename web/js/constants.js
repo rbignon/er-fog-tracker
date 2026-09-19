@@ -46,4 +46,8 @@ export const UI = {
     TOAST_DURATION: 5000, // Default toast notification duration
     MAX_SEARCH_RESULTS: 8, // Maximum search results to show
     DEBOUNCE_DELAY: 150, // Default debounce delay for inputs
+    // Search dropdown listing undiscovered matches with an "I've reached" button.
+    // Disabled: players clicked it by accident, revealing the whole path to the zone.
+    // Kept behind a flag until a less error-prone UX is designed.
+    SEARCH_REACH_DROPDOWN_ENABLED: false,
 };

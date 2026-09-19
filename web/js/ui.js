@@ -3,6 +3,7 @@
 // ============================================================
 
 import { parseSpoilerLog, transformZonesFromApi, transformLinksFromApi } from './api.js';
+import { UI } from './constants.js';
 import { escapeHtml } from './sanitize.js';
 import * as State from './state.js';
 import * as Exploration from './exploration.js';
@@ -227,8 +228,9 @@ function handleSearch(query) {
 
     State.emit('searchMatched', { matchingIds: new Set(matching.map(n => n.id)) });
 
-    // Show dropdown with undiscovered matches in exploration mode (not for viewers)
-    if (State.isExplorationMode() && !State.isViewerMode()) {
+    // Show dropdown with undiscovered matches in exploration mode (not for viewers).
+    // Currently disabled, see UI.SEARCH_REACH_DROPDOWN_ENABLED.
+    if (UI.SEARCH_REACH_DROPDOWN_ENABLED && State.isExplorationMode() && !State.isViewerMode()) {
         const explorationState = State.getExplorationState();
         const undiscoveredMatches = matching.filter(n => !explorationState.discovered.has(n.id));
 
